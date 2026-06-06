@@ -14,6 +14,8 @@
 #import "LAActivatorPersistence.h"
 #import "LAActivatorPrivate.h"
 #import "LAActivatorResourceManager.h"
+#import "LAActivatorRuntimeStateProvider.h"
+#import "LAApplicationIconProvider.h"
 #import "LADefaultEventDataSource.h"
 #import "LARemoteListener.h"
 
@@ -23,6 +25,7 @@
 @property(nonatomic, strong) LAActivatorBackend *backend;
 @property(nonatomic, strong) LAActivatorIPCClient *ipcClient;
 @property(nonatomic, strong) LAActivatorIPCServer *ipcServer;
+@property(nonatomic, strong) LAActivatorRuntimeStateProvider *runtimeStateProvider;
 - (BOOL)la_assignEventWithExplicitMode:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
 - (BOOL)la_unassignEventWithExplicitMode:(LAEvent *)event;
 - (NSArray *)la_dispatchableListenerNames:(NSArray *)listenerNames forEvent:(LAEvent *)event;
@@ -61,6 +64,8 @@ LAActivator *LASharedActivator;
     if (self) {
         _backend = [[LAActivatorBackend alloc] initWithAuthoritativeRole:self.runningInsideSpringBoard
                                                              persistence:[LAActivatorPersistence defaultPersistence]];
+        _runtimeStateProvider =
+            [[LAActivatorRuntimeStateProvider alloc] initWithSpringBoardRole:self.runningInsideSpringBoard];
         if (self.runningInsideSpringBoard) {
             [LADefaultEventDataSource.sharedDataSource registerAvailableEventsWithActivator:self];
         } else {
@@ -583,17 +588,25 @@ LAActivator *LASharedActivator;
 
 - (BOOL)eventWithName:(NSString *)eventName isCompatibleWithMode:(NSString *)eventMode {
     if (!self.runningInsideSpringBoard) {
+        NSMutableDictionary *userInfo = [@{LAActivatorIPCKeyEventName : eventName ?: @""} mutableCopy];
+        if (eventMode.length > 0) {
+            userInfo[LAActivatorIPCKeyEventMode] = eventMode;
+        }
         return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageEventIsCompatibleWithMode
-                                              userInfo:@{
-                                                  LAActivatorIPCKeyEventName : eventName ?: @"",
-                                                  LAActivatorIPCKeyEventMode : eventMode ?: @"",
-                                              }
+                                              userInfo:userInfo
                                           defaultValue:NO];
     }
-    if (eventName.length == 0 || eventMode.length == 0) {
+    if (eventName.length == 0) {
         return NO;
     }
-    return [[self compatibleModesForEventWithName:eventName] containsObject:eventMode];
+    id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
+    if (!dataSource) {
+        return NO;
+    }
+    if ([dataSource respondsToSelector:@selector(eventWithName:isCompatibleWithMode:)]) {
+        return [dataSource eventWithName:eventName isCompatibleWithMode:eventMode];
+    }
+    return eventMode.length == 0 || [self.availableEventModes containsObject:eventMode];
 }
 
 - (BOOL)eventWithNameSupportsUnlockingDeviceToSend:(NSString *)eventName {
@@ -650,14 +663,7 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)eventWithNameSupportsConfiguration:(NSString *)eventName {
-    if (!self.runningInsideSpringBoard) {
-        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageEventSupportsConfiguration
-                                              userInfo:@{LAActivatorIPCKeyEventName : eventName ?: @""}
-                                          defaultValue:NO];
-    }
-    id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
-    return dataSource &&
-           [dataSource respondsToSelector:@selector(configurationViewControllerClassNameForEventWithName:bundle:)];
+    return NO;
 }
 
 - (LAEventConfigurationViewController *)configurationViewControllerForEventWithName:(NSString *)eventName {
@@ -887,6 +893,11 @@ LAActivator *LASharedActivator;
             return [UIImage imageWithData:data scale:1.0f];
         }
     }
+    UIImage *applicationIcon =
+        [LAApplicationIconProvider.sharedProvider smallIconForDisplayIdentifier:listenerName scale:scale];
+    if (applicationIcon) {
+        return applicationIcon;
+    }
     return [LAActivatorResourceManager.sharedManager iconForListenerName:listenerName small:YES scale:scale];
 }
 
@@ -922,19 +933,7 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)listenerWithNameSupportsConfiguration:(NSString *)listenerName {
-    if (!self.runningInsideSpringBoard) {
-        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerSupportsConfiguration
-                                              userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}
-                                          defaultValue:NO];
-    }
-    id<LAListener> listener = [self listenerForName:listenerName];
-    return (listener && [listener respondsToSelector:@selector
-                                  (activator:
-                                      requiresConfigurationViewControllerClassNameForListenerWithName:bundle:)]) ||
-           (listener && [listener respondsToSelector:@selector(activator:requestsConfigurationForListenerWithName:)]) ||
-           [[LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"configuration"
-                                                               forListenerName:listenerName]
-               isKindOfClass:NSString.class];
+    return NO;
 }
 
 - (LAListenerConfigurationViewController *)configurationViewControllerForListenerWithName:(NSString *)listenerName {
@@ -948,21 +947,21 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)currentEventMode {
-    return self.runningInsideSpringBoard ? LAEventModeSpringBoard : LAEventModeApplication;
+    return [self.runtimeStateProvider currentEventMode];
 }
 
 - (NSString *)currentEventModeUnderneathLockScreen {
-    return LAEventModeApplication;
+    return [self.runtimeStateProvider currentEventModeUnderneathLockScreen];
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {
-    return NO;
+    return [self.runtimeStateProvider supportsUnlockingDeviceToSendEvents];
 }
 
 #pragma mark - Blacklist
 
 - (NSString *)displayIdentifierForCurrentApplication {
-    return [[NSBundle mainBundle] bundleIdentifier];
+    return [self.runtimeStateProvider displayIdentifierForCurrentApplication];
 }
 
 - (BOOL)applicationWithDisplayIdentifierIsBlacklisted:(NSString *)displayIdentifier {

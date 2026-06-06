@@ -196,7 +196,6 @@
                                                                             forKey:LAActivatorIPCKeyProfileName]];
         return [self replyWithOK:YES value:@(changed)];
     }
-
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchAssignedEvent]) {
         LAEvent *event = [self eventWithUserInfo:userInfo];
         if (!event) {

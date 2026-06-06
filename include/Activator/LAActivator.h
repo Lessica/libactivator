@@ -15,9 +15,12 @@ NS_ASSUME_NONNULL_BEGIN
 // Main event dispatcher that is responsible for sending events, maintaining the list of actions/events, and querying
 // information about them
 
-@class LAEvent, LAListenerConfigurationViewController, LAEventConfigurationViewController;
-@protocol LAListener
-, LAEventDataSource;
+@class LAEvent;
+@class LAListenerConfigurationViewController;
+@class LAEventConfigurationViewController;
+
+@protocol LAListener;
+@protocol LAEventDataSource;
 
 @interface LAActivator : NSObject
 LA_PRIVATE_IVARS(LAActivator)
