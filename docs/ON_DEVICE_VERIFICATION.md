@@ -79,6 +79,10 @@ Run a temporary client process linked against `libactivator.dylib` and verify:
   event data source. Assigning an event without a mode wrote all compatible
   modes, querying without a mode used the current event mode, and unassigning
   without a mode removed all event modes.
+- SpringBoard-only event dispatch was verified with temporary listeners.
+  Assigned dispatch, explicit dispatch, compatibility filtering, handled-state
+  propagation, abort fallback, preview, deactivate broadcast, and blacklist
+  filtering all behaved as expected.
 
 ### Persistence Check
 
@@ -90,7 +94,7 @@ Run a temporary client process linked against `libactivator.dylib` and verify:
 
 ### Not Covered
 
-- Event delivery.
+- Built-in event delivery.
 - Cross-process listener object registration.
 - Cross-process event data-source object registration.
 - Foreground application state.

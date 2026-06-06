@@ -18,6 +18,10 @@
 - (BOOL)la_unassignEventWithExplicitMode:(LAEvent *)event;
 - (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
 - (BOOL)la_setCurrentProfileName:(NSString *)currentProfileName;
+- (NSArray *)la_dispatchableListenerNames:(NSArray *)listenerNames forEvent:(LAEvent *)event;
+- (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames;
+- (void)la_sendAbortEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames;
+- (void)la_notifyListenersThatListener:(id<LAListener>)handlingListener handledEvent:(LAEvent *)event;
 @end
 
 static NSDictionary *LAActivatorIPCUserInfoForEvent(LAEvent *event) {
@@ -98,27 +102,166 @@ LAActivator *LASharedActivator;
 }
 
 - (void)sendEventToListener:(LAEvent *)event {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:event waitUntilDone:YES];
+        return;
+    }
+    [self la_sendEvent:event toListenerNames:[self assignedListenerNamesForEvent:event]];
 }
 
 - (void)sendEvent:(LAEvent *)event toListenerWithName:(NSString *)listenerName {
+    [self sendEvent:event toListenersWithNames:listenerName.length > 0 ? @[ listenerName ] : @[]];
 }
 
 - (void)sendEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
+    if (![NSThread isMainThread]) {
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            [self sendEvent:event toListenersWithNames:listenerNames];
+        });
+        return;
+    }
+    [self la_sendEvent:event toListenerNames:listenerNames];
 }
 
 - (void)sendAbortToListener:(LAEvent *)event {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:event waitUntilDone:YES];
+        return;
+    }
+    [self la_sendAbortEvent:event toListenerNames:[self assignedListenerNamesForEvent:event]];
 }
 
 - (void)sendAbortEvent:(LAEvent *)event toListenerWithName:(NSString *)listenerName {
+    [self sendAbortEvent:event toListenersWithNames:listenerName.length > 0 ? @[ listenerName ] : @[]];
 }
 
 - (void)sendAbortEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
+    if (![NSThread isMainThread]) {
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            [self sendAbortEvent:event toListenersWithNames:listenerNames];
+        });
+        return;
+    }
+    [self la_sendAbortEvent:event toListenerNames:listenerNames];
 }
 
 - (void)sendPreviewEventToListenerWithName:(NSString *)listenerName {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:listenerName waitUntilDone:YES];
+        return;
+    }
+    if (!self.runningInsideSpringBoard || listenerName.length == 0) {
+        return;
+    }
+    id<LAListener> listener = [self listenerForName:listenerName];
+    if ([listener respondsToSelector:@selector(activator:receivePreviewEventForListenerName:)]) {
+        [listener activator:self receivePreviewEventForListenerName:listenerName];
+    }
 }
 
 - (void)sendDeactivateEventToListeners:(LAEvent *)event {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:event waitUntilDone:YES];
+        return;
+    }
+    if (!self.runningInsideSpringBoard || !event) {
+        return;
+    }
+
+    BOOL handled = event.handled;
+    event.handled = NO;
+    for (id<LAListener> listener in [self.backend registeredListeners]) {
+        if ([listener respondsToSelector:@selector(activator:receiveDeactivateEvent:)]) {
+            [listener activator:self receiveDeactivateEvent:event];
+            if (event.handled) {
+                handled = YES;
+                event.handled = NO;
+            }
+        }
+    }
+    event.handled = handled;
+}
+
+- (NSArray *)la_dispatchableListenerNames:(NSArray *)listenerNames forEvent:(LAEvent *)event {
+    if (!self.runningInsideSpringBoard || event.name.length == 0) {
+        return @[];
+    }
+
+    NSString *eventMode = event.mode ?: self.currentEventMode;
+    if (eventMode.length == 0) {
+        return @[];
+    }
+
+    NSMutableArray *dispatchableNames = [NSMutableArray array];
+    NSMutableSet *seenNames = [NSMutableSet set];
+    for (id value in listenerNames) {
+        if (![value isKindOfClass:NSString.class] || [value length] == 0 || [seenNames containsObject:value]) {
+            continue;
+        }
+        NSString *listenerName = value;
+        [seenNames addObject:listenerName];
+        if (![self listenerForName:listenerName]) {
+            continue;
+        }
+        if (![self listenerWithName:listenerName isCompatibleWithMode:eventMode]) {
+            continue;
+        }
+        if (![self listenerWithName:listenerName isCompatibleWithEventName:event.name]) {
+            continue;
+        }
+        [dispatchableNames addObject:listenerName];
+    }
+    return [dispatchableNames copy];
+}
+
+- (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames {
+    if (!self.runningInsideSpringBoard || !event) {
+        return;
+    }
+
+    NSString *displayIdentifier = self.displayIdentifierForCurrentApplication;
+    if (displayIdentifier.length > 0 && [self applicationWithDisplayIdentifierIsBlacklisted:displayIdentifier]) {
+        return;
+    }
+
+    for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
+        id<LAListener> listener = [self listenerForName:listenerName];
+        BOOL wasHandled = event.handled;
+        if ([listener respondsToSelector:@selector(activator:receiveEvent:forListenerName:)]) {
+            [listener activator:self receiveEvent:event forListenerName:listenerName];
+        } else if ([listener respondsToSelector:@selector(activator:receiveEvent:)]) {
+            [listener activator:self receiveEvent:event];
+        }
+        if (!wasHandled && event.handled) {
+            [self la_notifyListenersThatListener:listener handledEvent:event];
+        }
+    }
+}
+
+- (void)la_sendAbortEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames {
+    if (!self.runningInsideSpringBoard || !event) {
+        return;
+    }
+
+    for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
+        id<LAListener> listener = [self listenerForName:listenerName];
+        if ([listener respondsToSelector:@selector(activator:abortEvent:forListenerName:)]) {
+            [listener activator:self abortEvent:event forListenerName:listenerName];
+        } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
+            [listener activator:self abortEvent:event];
+        }
+    }
+}
+
+- (void)la_notifyListenersThatListener:(id<LAListener>)handlingListener handledEvent:(LAEvent *)event {
+    for (id<LAListener> listener in [self.backend registeredListeners]) {
+        if (listener == handlingListener) {
+            continue;
+        }
+        if ([listener respondsToSelector:@selector(activator:otherListenerDidHandleEvent:)]) {
+            [listener activator:self otherListenerDidHandleEvent:event];
+        }
+    }
 }
 
 #pragma mark - Listener Registry

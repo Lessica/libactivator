@@ -20,7 +20,7 @@ They must not be mistaken for completed runtime behavior.
 
 | Area | Current state | Required follow-up |
 | --- | --- | --- |
-| Event delivery | `sendEvent*`, `sendAbort*`, `sendPreview*`, and `sendDeactivate*` are non-crashing stubs. | Implement SpringBoard runtime dispatch, listener compatibility checks, handled state, abort, preview, deactivate, and multi-listener delivery. |
+| Event delivery | SpringBoard-only dispatch engine exists for event, abort, preview, deactivate, listener compatibility filtering, blacklist filtering, and handled-state propagation. Non-SpringBoard dispatch remains a safe no-op. | Implement built-in event sources and modern runtime state providers separately. |
 | Listener object lookup across processes | Non-SpringBoard clients can query assigned listener names through IPC, but `listenerForName:` still returns only local in-process objects. | Keep object registration SpringBoard-only and define which public object-returning selectors are local-only versus runtime-backed. |
 | Listener and event data-source registration | Registration works only in the authoritative in-process backend; non-SpringBoard calls do not create runtime state. | Make this explicit in docs/tests and keep cross-process object registration out of the first IPC slice. |
 | Configuration controllers | `eventWithNameSupportsConfiguration:` and `listenerWithNameSupportsConfiguration:` can report support, but the corresponding controller factory methods return `nil`. | Implement Settings UI loading through `libactivatorsettings.dylib` or make support queries return `NO` until controller creation exists. |
@@ -54,7 +54,7 @@ They must not be mistaken for completed runtime behavior.
 | Localization safe stubs | ✅ | Safe stub first | `libactivator.dylib` | Public constant definitions | Localization methods return deterministic fallback strings before resources exist. |
 | Event data-source registration | ✅ | Must implement | `libactivator.dylib` | In-memory event registry | Register/unregister and metadata dispatch to `LAEventDataSource` work in process. |
 | Listener metadata dispatch | ✅ | Safe stub first | `libactivator.dylib` | In-memory listener registry | Optional `LAListener` metadata selectors are queried with `respondsToSelector:`. |
-| Event/listener delivery API stubs | ✅ | Runtime-backed | `libactivator.dylib` | Assignment model, listener registry | Public delivery selectors are non-crashing; real dispatch waits for IPC/runtime. |
+| Event dispatch engine | ✅ | Runtime-backed | `libactivator.dylib` | Assignment model, listener registry | SpringBoard-only event, abort, preview, and deactivate dispatch call registered listener objects with compatibility filtering and handled-state propagation. |
 | Public settings class shims | ✅ | Settings-backed | `libactivator.dylib` | Header modernization | Public settings classes resolve when a third-party app links only `libactivator.dylib`. |
 | Settings UI implementation | Not started | Settings-backed | `libactivatorsettings.dylib` | Public settings class shims | Real Settings UI behavior is implemented in the settings library, not in `libactivator.dylib`. |
 | `UIImageView (Activator)` storage | ✅ | Settings-backed | `libactivator.dylib` | Public settings class shims | Category properties store and retrieve values without image-loading behavior. |

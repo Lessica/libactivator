@@ -15,6 +15,7 @@ __attribute__((visibility("hidden")))
 - (BOOL)registerListener:(id<LAListener>)listener forName:(NSString *)name;
 - (BOOL)unregisterListenerWithName:(NSString *)name;
 - (NSArray *)availableListenerNames;
+- (NSArray *)registeredListeners;
 
 - (id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
 - (BOOL)registerEventDataSource:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName;

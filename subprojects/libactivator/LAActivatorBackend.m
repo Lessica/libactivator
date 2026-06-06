@@ -217,6 +217,18 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
     return listenerNames;
 }
 
+- (NSArray *)registeredListeners {
+    __block NSArray *listeners = nil;
+    dispatch_sync(self.stateQueue, ^{
+        NSHashTable *uniqueListeners = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
+        for (id listener in self.listeners.allValues) {
+            [uniqueListeners addObject:listener];
+        }
+        listeners = uniqueListeners.allObjects;
+    });
+    return listeners ?: @[];
+}
+
 #pragma mark - Event Registry
 
 - (id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName {
