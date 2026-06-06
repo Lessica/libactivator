@@ -88,6 +88,10 @@ NSString *const LAActivatorIPCMessageListenerSmallIconData = @"libactivator.requ
 NSString *const LAActivatorIPCMessageRequestListenerRemoval = @"libactivator.request.listener-request-removal";
 NSString *const LAActivatorIPCMessageRemoveEvent = @"libactivator.request.remove-event";
 
+#if LA_TESTING
+NSString *const LAActivatorIPCMessageTesting = @"libactivator.testing";
+#endif
+
 NSString *const LAActivatorIPCKeyOK = @"OK";
 NSString *const LAActivatorIPCKeyValue = @"Value";
 NSString *const LAActivatorIPCKeyEventName = @"EventName";
@@ -101,3 +105,14 @@ NSString *const LAActivatorIPCKeyBlacklisted = @"Blacklisted";
 NSString *const LAActivatorIPCKeyProfileName = @"ProfileName";
 NSString *const LAActivatorIPCKeyInfoDictionaryKey = @"InfoDictionaryKey";
 NSString *const LAActivatorIPCKeyScale = @"Scale";
+
+#if LA_TESTING
+NSString *const LAActivatorIPCKeyTestingCommand = @"TestingCommand";
+NSString *const LAActivatorIPCKeyTestingSuites = @"TestingSuites";
+NSString *const LAActivatorIPCKeyTestingFailures = @"TestingFailures";
+NSString *const LAActivatorIPCKeyTestingSkipped = @"TestingSkipped";
+NSString *const LAActivatorIPCKeyTestingCaseCount = @"TestingCaseCount";
+NSString *const LAActivatorIPCKeyTestingPassCount = @"TestingPassCount";
+NSString *const LAActivatorIPCKeyTestingFailureCount = @"TestingFailureCount";
+NSString *const LAActivatorIPCKeyTestingSkipCount = @"TestingSkipCount";
+#endif

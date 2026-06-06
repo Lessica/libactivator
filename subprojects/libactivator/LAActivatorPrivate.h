@@ -19,6 +19,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)la_noteScreenBlanked:(BOOL)blanked;
 - (void)la_noteRuntimeStateMayHaveChanged;
 - (void)la_noteSystemTouchEvent:(UIEvent *)event;
+#if LA_TESTING
+- (void)la_testingSetTouchActive:(BOOL)touchActive;
+#endif
 - (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
 - (BOOL)la_unassignEvent:(LAEvent *)event;
 - (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;

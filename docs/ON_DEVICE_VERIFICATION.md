@@ -4,6 +4,55 @@ This document tracks manual verification steps that require a jailbroken device.
 Do not mark runtime-backed slices as fully verified until the relevant checklist
 passes on device.
 
+## Automated Device Tests
+
+### Command
+
+- Source the matching jailbreak scheme first, for example `. scripts/roothide.sh`.
+- Run `scripts/run-tests.sh`.
+
+### Behavior
+
+- The script runs `gmake do LA_TESTING=1`.
+- The testing build uses
+  `jbroot(@"/var/mobile/Library/Preferences/libactivator.tests.plist")`.
+- The testing build exposes hidden SpringBoard testing IPC only while
+  `LA_TESTING` is defined.
+- The device runner is installed only in the testing package under
+  `/usr/libexec/libactivator/`.
+- The script runs the installed device runner over SSH.
+- The script records the SpringBoard pid before and after the runner, and fails
+  if SpringBoard restarts during tests.
+
+### Coverage
+
+- Core event model, persistence, registries, assignments, profiles, blacklist,
+  dispatch, no-touch deferral, unlock-to-send callback, state/config IPC, and
+  basic runtime mode automation.
+- Device automation currently uses SpringBoard-side testing IPC for lock,
+  unlock, reset home, open `com.apple.Preferences`, suspend, and frontmost-app
+  queries.
+- On iPhone XR iOS 15.0 Dopamine roothide, the current test result is 33
+  passed, 0 failed, and 0 skipped.
+
+### Diagnostics
+
+- Use `scripts/device-console.sh stream` to stream USB syslog for SpringBoard,
+  backboardd, and the test runner.
+- Use `scripts/device-crashlogs.sh list` to copy and list SpringBoard crash
+  reports without removing them from the device.
+- Use `scripts/device-crashlogs.sh clean` before a focused crash reproduction;
+  this moves existing SpringBoard crash reports into
+  `logs/device-crashlogs/cleared`.
+- Use `scripts/device-crashlogs.sh pull` to copy SpringBoard crash reports into
+  `logs/device-crashlogs` without removing them from the device.
+- Use SpringBoard pid changes as the first signal for SpringBoard restarts.
+  Crash reports are used for stack diagnosis after a restart is detected.
+- Run UIKit, SpringBoard, and FrontBoard private API probes on the SpringBoard
+  main queue.
+- Frida `-q` suppresses Frida noise. Do not treat missing script output alone
+  as proof that an SPI is unavailable or that a call did not execute.
+
 ## State/Config IPC
 
 ### Preconditions
@@ -36,6 +85,10 @@ passes on device.
 - `doesServerExist` returned true for `libactivator.springboard`.
 - A read-only request to
   `libactivator.request.available-profile-names` returned `Default`.
+- SpringBoard-internal app launch automation should use
+  `-[SpringBoard launchApplicationWithIdentifier:suspended:]` on the main
+  queue. `LSApplicationWorkspace` is not the verified SpringBoard-internal
+  foreground activation path for the testing harness.
 
 ### Client Round Trip
 

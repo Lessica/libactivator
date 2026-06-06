@@ -9,6 +9,9 @@
 #import "LAActivatorIPC.h"
 #import "LAActivatorPrivate.h"
 #import "LAActivatorResourceManager.h"
+#if LA_TESTING
+#import "LAActivatorTestSupport.h"
+#endif
 
 #import <AppSupport/CPDistributedMessagingCenter.h>
 #import <dispatch/dispatch.h>
@@ -106,6 +109,9 @@
         LAActivatorIPCMessageListenerSmallIconData,
         LAActivatorIPCMessageRequestListenerRemoval,
         LAActivatorIPCMessageRemoveEvent,
+#if LA_TESTING
+        LAActivatorIPCMessageTesting,
+#endif
     ];
     for (NSString *messageName in messageNames) {
         [_center registerForMessageName:messageName target:self selector:@selector(handleMessageNamed:withUserInfo:)];
@@ -118,6 +124,12 @@
     if (![messageName isKindOfClass:NSString.class] || ![userInfo isKindOfClass:NSDictionary.class]) {
         return [self replyWithOK:NO value:nil];
     }
+
+#if LA_TESTING
+    if ([messageName isEqualToString:LAActivatorIPCMessageTesting]) {
+        return [LAActivatorTestSupport handleCommandWithUserInfo:userInfo activator:_activator];
+    }
+#endif
 
     if ([messageName isEqualToString:LAActivatorIPCMessageAvailableEventNames]) {
         return [self replyWithOK:YES value:_activator.availableEventNames];

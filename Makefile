@@ -10,6 +10,10 @@ SUBPROJECTS += subprojects/tweak
 SUBPROJECTS += subprojects/preferences
 SUBPROJECTS += subprojects/app
 
+ifeq ($(LA_TESTING),1)
+SUBPROJECTS += subprojects/tests
+endif
+
 include $(THEOS_MAKE_PATH)/aggregate.mk
 
 export THEOS_STAGING_DIR

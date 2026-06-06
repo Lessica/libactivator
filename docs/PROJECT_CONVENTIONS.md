@@ -54,6 +54,8 @@ are stable enough to guide implementation.
 - Keep the public client library small and stable.
 - Keep SpringBoard-specific private API usage behind a SpringBoard runtime
   layer.
+- UIKit, SpringBoard, and FrontBoard private API calls inside SpringBoard must
+  run on the main queue unless a specific API is proven thread-safe.
 - The rewritten libactivator must not inject into user apps.
 - Injection into Apple apps is allowed only when the bundle identifier is
   explicitly known and starts with `com.apple.`.
@@ -170,6 +172,16 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Avoid implicit SDK-version assumptions in source. Gate private symbols and
   optional runtime features dynamically.
 - Do not introduce generated build artifacts into source control.
+- Device integration tests must be isolated behind `LA_TESTING`. Normal builds
+  must not compile test-only source files, test IPC messages, test device
+  automation, or test persistence paths.
+- `scripts/run-tests.sh` is the current device integration test entry point. It
+  expects the caller to source the desired jailbreak environment first, then it
+  runs `gmake do LA_TESTING=1` and executes the installed device runner over
+  SSH.
+- Device tests must compare the SpringBoard pid before and after the runner.
+  Treat a pid change as a SpringBoard restart even when the test runner exits
+  successfully.
 
 ## Jailbreak Layout Rules
 
@@ -225,6 +237,8 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Public notifications are process-local `NSNotification` names. Cross-process
   state changes should be propagated through IPC and then reposted locally by
   each client process.
+- Testing IPC is allowed only under `LA_TESTING`. It must not be present in
+  ordinary package builds or public headers.
 
 ## Data Rules
 
@@ -241,6 +255,10 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Runtime preferences must be stored at
   `jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")`. Rootless and
   roothide builds must not write to the real `/var/mobile` path.
+- Testing builds must use the isolated runtime preference path
+  `jbroot(@"/var/mobile/Library/Preferences/libactivator.tests.plist")` and must
+  never read, write, back up, or restore the user's real runtime preference
+  plist.
 - The v2 runtime preference plist uses schema version `1` with these top-level
   keys: `SchemaVersion`, `CurrentProfileName`, `Profiles`,
   `BlacklistedDisplayIdentifiers`, and `SeenListenerNames`.

@@ -27,6 +27,11 @@ libactivator_FILES += UIImageView+Activator.m
 libactivator_CFLAGS += -fobjc-arc
 libactivator_CFLAGS += -I../../include
 
+ifeq ($(LA_TESTING),1)
+libactivator_FILES += LAActivatorTestSupport.m
+libactivator_CFLAGS += -DLA_TESTING=1
+endif
+
 libactivator_FRAMEWORKS += Foundation
 libactivator_FRAMEWORKS += UIKit
 libactivator_FRAMEWORKS += CoreGraphics

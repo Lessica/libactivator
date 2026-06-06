@@ -86,4 +86,22 @@
     }
 }
 
+#if LA_TESTING
+- (void)la_testingSetTouchActive:(BOOL)touchActive {
+    NSMutableArray *blocksToRun = [NSMutableArray array];
+    dispatch_sync(_queue, ^{
+        if (touchActive) {
+            [self->_activeTouches addObject:[NSObject new]];
+            return;
+        }
+        [self->_activeTouches removeAllObjects];
+        [blocksToRun addObjectsFromArray:self->_pendingBlocks];
+        [self->_pendingBlocks removeAllObjects];
+    });
+    for (dispatch_block_t block in blocksToRun) {
+        dispatch_async(dispatch_get_main_queue(), block);
+    }
+}
+#endif
+
 @end

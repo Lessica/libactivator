@@ -76,6 +76,10 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCMessageListenerSmallIconData;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRequestListenerRemoval;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRemoveEvent;
 
+#if LA_TESTING
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageTesting;
+#endif
+
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyOK;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyValue;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyEventName;
@@ -89,6 +93,17 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCKeyBlacklisted;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyProfileName;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyInfoDictionaryKey;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyScale;
+
+#if LA_TESTING
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyTestingCommand;
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyTestingSuites;
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyTestingFailures;
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyTestingSkipped;
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyTestingCaseCount;
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyTestingPassCount;
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyTestingFailureCount;
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyTestingSkipCount;
+#endif
 
 #undef LA_IPC_EXTERN
 

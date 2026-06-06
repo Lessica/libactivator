@@ -139,6 +139,14 @@ LAActivator *LASharedActivator;
     }
 }
 
+#if LA_TESTING
+- (void)la_testingSetTouchActive:(BOOL)touchActive {
+    if (self.runningInsideSpringBoard) {
+        [self.touchActivityTracker la_testingSetTouchActive:touchActive];
+    }
+}
+#endif
+
 #pragma mark - Event Delivery
 
 - (id<LAListener>)listenerForEvent:(LAEvent *)event {

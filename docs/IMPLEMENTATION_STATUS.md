@@ -32,6 +32,7 @@ They must not be mistaken for completed runtime behavior.
 | Localization resources | Activator support bundle localization, event bundle localization, listener bundle localization, and stable fallback strings are implemented. | Add complete localization resources with Settings UI work. |
 | State/config IPC verification | SpringBoard server startup and non-SpringBoard `com.apple.Preferences` facade round trips were verified on iPhone XR iOS 15.0 roothide. Sandboxed `Activator.app` cannot see the server until its entitlements are defined. | Continue tracking event delivery and cross-process object registration separately. |
 | Runtime state verification | Local package build and Public API metadata checks pass for runtime state, no-touch dispatch, and unlock-to-send callback code. | Perform roothide on-device verification in SpringBoard. |
+| Automated device tests | `scripts/run-tests.sh`, testing package, hidden testing IPC, device runner, isolated test plist, and initial SpringBoard/core suites are being added. | Run on roothide device and stabilize any flaky device-action cases. |
 
 ## Tracker
 
@@ -73,4 +74,5 @@ They must not be mistaken for completed runtime behavior.
 | Built-in event capability assessments | Not started | Capability gated | Docs and runtime adapters | SpringBoard event runtime | Each event family has a documented modern iOS capability result before registration. |
 | Built-in listener/action assessments | Not started | Capability gated | Docs and runtime adapters | SpringBoard event runtime | Each built-in listener/action has a documented modern iOS capability result before registration. |
 | API compatibility test client | ✅ | Must implement | test/check scripts | Public constants, `LAEvent`, `LAActivator` skeleton | A compile/link/runtime metadata check imports all entry points and validates public symbols, selectors, properties, and protocols from the 1.9 headers. |
+| Device integration test harness | In progress | Runtime-backed | `subprojects/tests`, testing IPC | IPC server, runtime backend | `scripts/run-tests.sh` installs a testing build, runs the installed device-side runner through SSH, reports pass/fail/skip counts, and isolates test preferences. |
 | Package/import verification | ✅ | Must implement | Theos package | Foundation skeleton | rootful/rootless/roothide packages build; supported import styles compile. |

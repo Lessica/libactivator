@@ -1,0 +1,773 @@
+//
+//  LAActivatorTestSupport.m
+//  libactivator
+//
+//  Created by Lessica on 6/7/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
+#if LA_TESTING
+
+#import "LAActivatorTestSupport.h"
+
+#import "LAActivatorIPC.h"
+#import "LAActivatorPersistence.h"
+#import "LAActivatorPrivate.h"
+
+#import <Activator/Activator.h>
+#import <UIKit/UIKit.h>
+#import <roothide.h>
+
+@interface UIApplication (LAActivatorTesting)
+- (id)_accessibilityFrontMostApplication;
+@end
+
+@protocol LAActivatorTestingApplication <NSObject>
+@optional
+- (NSString *)bundleIdentifier;
+- (NSString *)displayIdentifier;
+@end
+
+@interface SpringBoard : UIApplication
++ (instancetype)sharedApplication;
+- (void)launchApplicationWithIdentifier:(NSString *)identifier suspended:(BOOL)suspended;
+- (void)suspend;
+@end
+
+@interface SBLockScreenManager : NSObject
++ (instancetype)sharedInstance;
+- (BOOL)isUILocked;
+- (void)remoteLock:(BOOL)lock;
+- (void)attemptUnlockWithPasscode:(NSString *)passcode;
+- (void)attemptUnlockWithPasscode:(NSString *)passcode finishUIUnlock:(BOOL)finishUIUnlock completion:(id)completion;
+@end
+
+@interface SBBacklightController : NSObject
++ (instancetype)sharedInstance;
+- (void)_startFadeOutAnimationFromLockSource:(long long)source;
+- (void)turnOnScreenFullyWithBacklightSource:(long long)source;
+@end
+
+@interface SBSTestAutomationService : NSObject
+- (void)resetToHomeScreenAnimated:(BOOL)animated;
+- (void)resetToHomeScreenAnimated:(BOOL)animated useSafeTransitions:(BOOL)useSafeTransitions;
+@end
+
+@interface LATestRecorder : NSObject
+@property(nonatomic, assign) NSInteger caseCount;
+@property(nonatomic, assign) NSInteger passCount;
+@property(nonatomic, assign) NSInteger failureCount;
+@property(nonatomic, assign) NSInteger skipCount;
+@property(nonatomic, copy) NSString *suiteName;
+@property(nonatomic, strong) NSMutableArray *suites;
+@property(nonatomic, strong) NSMutableArray *failures;
+@property(nonatomic, strong) NSMutableArray *skipped;
+- (void)beginSuite:(NSString *)suiteName;
+- (void)pass:(NSString *)caseName;
+- (void)fail:(NSString *)caseName reason:(NSString *)reason;
+- (void)skip:(NSString *)caseName reason:(NSString *)reason;
+- (void)expect:(BOOL)condition caseName:(NSString *)caseName reason:(NSString *)reason;
+- (NSDictionary *)resultDictionary;
+@end
+
+@implementation LATestRecorder
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _suites = [NSMutableArray array];
+        _failures = [NSMutableArray array];
+        _skipped = [NSMutableArray array];
+    }
+    return self;
+}
+
+- (void)beginSuite:(NSString *)suiteName {
+    self.suiteName = suiteName ?: @"Unknown";
+    [self.suites addObject:self.suiteName];
+}
+
+- (void)pass:(NSString *)caseName {
+    self.caseCount += 1;
+    self.passCount += 1;
+}
+
+- (void)fail:(NSString *)caseName reason:(NSString *)reason {
+    self.caseCount += 1;
+    self.failureCount += 1;
+    [self.failures addObject:[NSString stringWithFormat:@"%@/%@: %@", self.suiteName ?: @"Unknown", caseName ?: @"Unknown",
+                                                        reason ?: @"Failed"]];
+}
+
+- (void)skip:(NSString *)caseName reason:(NSString *)reason {
+    self.caseCount += 1;
+    self.skipCount += 1;
+    [self.skipped addObject:[NSString stringWithFormat:@"%@/%@: %@", self.suiteName ?: @"Unknown", caseName ?: @"Unknown",
+                                                       reason ?: @"Skipped"]];
+}
+
+- (void)expect:(BOOL)condition caseName:(NSString *)caseName reason:(NSString *)reason {
+    if (condition) {
+        [self pass:caseName];
+    } else {
+        [self fail:caseName reason:reason];
+    }
+}
+
+- (NSDictionary *)resultDictionary {
+    return @{
+        LAActivatorIPCKeyTestingSuites : self.suites,
+        LAActivatorIPCKeyTestingFailures : self.failures,
+        LAActivatorIPCKeyTestingSkipped : self.skipped,
+        LAActivatorIPCKeyTestingCaseCount : @(self.caseCount),
+        LAActivatorIPCKeyTestingPassCount : @(self.passCount),
+        LAActivatorIPCKeyTestingFailureCount : @(self.failureCount),
+        LAActivatorIPCKeyTestingSkipCount : @(self.skipCount),
+    };
+}
+
+@end
+
+@interface LATestEventDataSource : NSObject <LAEventDataSource>
+@property(nonatomic, assign) BOOL hidden;
+@property(nonatomic, assign) BOOL requiresAssignment;
+@property(nonatomic, assign) BOOL supportsUnlockingDeviceToSend;
+@property(nonatomic, copy) NSArray *compatibleModes;
+@end
+
+@implementation LATestEventDataSource
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _requiresAssignment = YES;
+        _compatibleModes = @[ LAEventModeSpringBoard, LAEventModeApplication, LAEventModeLockScreen ];
+    }
+    return self;
+}
+
+- (NSString *)localizedTitleForEventName:(NSString *)eventName {
+    return [NSString stringWithFormat:@"Title %@", eventName ?: @""];
+}
+
+- (NSString *)localizedGroupForEventName:(NSString *)eventName {
+    return @"Testing";
+}
+
+- (NSString *)localizedDescriptionForEventName:(NSString *)eventName {
+    return [NSString stringWithFormat:@"Description %@", eventName ?: @""];
+}
+
+- (BOOL)eventWithNameIsHidden:(NSString *)eventName {
+    return self.hidden;
+}
+
+- (BOOL)eventWithNameRequiresAssignment:(NSString *)eventName {
+    return self.requiresAssignment;
+}
+
+- (BOOL)eventWithName:(NSString *)eventName isCompatibleWithMode:(NSString *)eventMode {
+    return eventMode.length == 0 || [self.compatibleModes containsObject:eventMode];
+}
+
+- (BOOL)eventWithNameSupportsUnlockingDeviceToSend:(NSString *)eventName {
+    return self.supportsUnlockingDeviceToSend;
+}
+
+@end
+
+@interface LATestListener : NSObject <LAListener>
+@property(nonatomic, assign) NSInteger receiveCount;
+@property(nonatomic, assign) NSInteger abortCount;
+@property(nonatomic, assign) NSInteger previewCount;
+@property(nonatomic, assign) NSInteger deactivateCount;
+@property(nonatomic, assign) NSInteger otherHandledCount;
+@property(nonatomic, assign) NSInteger modeChangeCount;
+@property(nonatomic, assign) NSInteger unlockingCount;
+@property(nonatomic, assign) BOOL handlesReceivedEvents;
+@property(nonatomic, assign) BOOL requiresNoTouchEvents;
+@property(nonatomic, copy) NSArray *compatibleModes;
+@property(nonatomic, copy) NSArray *exclusiveGroups;
+@end
+
+@implementation LATestListener
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _compatibleModes = @[ LAEventModeSpringBoard, LAEventModeApplication, LAEventModeLockScreen ];
+        _exclusiveGroups = @[];
+    }
+    return self;
+}
+
+- (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
+    self.receiveCount += 1;
+    if (self.handlesReceivedEvents) {
+        event.handled = YES;
+    }
+}
+
+- (void)activator:(LAActivator *)activator abortEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
+    self.abortCount += 1;
+}
+
+- (void)activator:(LAActivator *)activator receivePreviewEventForListenerName:(NSString *)listenerName {
+    self.previewCount += 1;
+}
+
+- (void)activator:(LAActivator *)activator receiveDeactivateEvent:(LAEvent *)event {
+    self.deactivateCount += 1;
+    event.handled = YES;
+}
+
+- (void)activator:(LAActivator *)activator otherListenerDidHandleEvent:(LAEvent *)event {
+    self.otherHandledCount += 1;
+}
+
+- (void)activator:(LAActivator *)activator didChangeToEventMode:(NSString *)eventMode {
+    self.modeChangeCount += 1;
+}
+
+- (BOOL)activator:(LAActivator *)activator receiveUnlockingDeviceEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
+    self.unlockingCount += 1;
+    event.handled = YES;
+    return YES;
+}
+
+- (NSArray *)activator:(LAActivator *)activator requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName {
+    return self.compatibleModes;
+}
+
+- (NSArray *)activator:(LAActivator *)activator requiresExclusiveAssignmentGroupsForListenerName:(NSString *)listenerName {
+    return self.exclusiveGroups;
+}
+
+- (id)activator:(LAActivator *)activator
+    requiresInfoDictionaryValueOfKey:(NSString *)key
+                 forListenerWithName:(NSString *)listenerName {
+    if ([key isEqualToString:@"requires-no-touch-events"]) {
+        return @(self.requiresNoTouchEvents);
+    }
+    return nil;
+}
+
+@end
+
+@interface LATestSimpleAbortListener : NSObject <LAListener>
+@property(nonatomic, assign) NSInteger abortCount;
+@end
+
+@implementation LATestSimpleAbortListener
+- (void)activator:(LAActivator *)activator abortEvent:(LAEvent *)event {
+    self.abortCount += 1;
+}
+@end
+
+@interface LAActivatorTestSupport ()
++ (NSDictionary *)okReplyWithValue:(id)value;
++ (NSDictionary *)failureReply;
++ (void)removeTestPlist;
++ (NSDictionary *)runAllTestsWithActivator:(LAActivator *)activator;
++ (void)runEventTestsWithRecorder:(LATestRecorder *)recorder;
++ (void)runPersistenceTestsWithRecorder:(LATestRecorder *)recorder;
++ (void)runSpringBoardCoreTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
++ (void)runDispatchTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
++ (void)runRuntimeDeviceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
++ (void)cleanActivator:(LAActivator *)activator;
++ (BOOL)resetHomeScreen;
++ (BOOL)openApplicationWithBundleIdentifier:(NSString *)bundleIdentifier;
++ (BOOL)suspendApplication;
++ (BOOL)lockDevice;
++ (BOOL)unlockDeviceWithPasscode:(NSString *)passcode;
++ (BOOL)isDeviceLocked;
++ (NSString *)frontMostDisplayIdentifier;
++ (void)performOnMainThreadSynchronously:(dispatch_block_t)block;
++ (void)waitForMainQueue;
+@end
+
+@implementation LAActivatorTestSupport
+
++ (NSDictionary *)handleCommandWithUserInfo:(NSDictionary *)userInfo activator:(LAActivator *)activator {
+    NSString *command = [userInfo[LAActivatorIPCKeyTestingCommand] isKindOfClass:NSString.class]
+                            ? userInfo[LAActivatorIPCKeyTestingCommand]
+                            : nil;
+    if ([command isEqualToString:@"ping"]) {
+        return [self okReplyWithValue:@"ready"];
+    }
+    if ([command isEqualToString:@"cleanup"]) {
+        [self cleanActivator:activator];
+        [self removeTestPlist];
+        return [self okReplyWithValue:@"clean"];
+    }
+    if ([command isEqualToString:@"run"]) {
+        return [self okReplyWithValue:[self runAllTestsWithActivator:activator]];
+    }
+    return [self failureReply];
+}
+
+#pragma mark - Replies
+
++ (NSDictionary *)okReplyWithValue:(id)value {
+    if (value) {
+        return @{LAActivatorIPCKeyOK : @YES, LAActivatorIPCKeyValue : value};
+    }
+    return @{LAActivatorIPCKeyOK : @YES};
+}
+
++ (NSDictionary *)failureReply {
+    return @{LAActivatorIPCKeyOK : @NO};
+}
+
+#pragma mark - Test Suites
+
++ (NSDictionary *)runAllTestsWithActivator:(LAActivator *)activator {
+    LATestRecorder *recorder = [[LATestRecorder alloc] init];
+    [self cleanActivator:activator];
+    [self removeTestPlist];
+    [self runEventTestsWithRecorder:recorder];
+    [self runPersistenceTestsWithRecorder:recorder];
+    [self runSpringBoardCoreTestsWithRecorder:recorder activator:activator];
+    [self runDispatchTestsWithRecorder:recorder activator:activator];
+    [self runRuntimeDeviceTestsWithRecorder:recorder activator:activator];
+    [self cleanActivator:activator];
+    return [recorder resultDictionary];
+}
+
++ (void)runEventTestsWithRecorder:(LATestRecorder *)recorder {
+    [recorder beginSuite:@"LAEvent"];
+
+    LAEvent *event = [LAEvent eventWithName:@"libactivator.test.event" mode:nil];
+    event.handled = YES;
+    event.userInfo = @{@"Key" : @"Value"};
+    [recorder expect:[event.name isEqualToString:@"libactivator.test.event"] caseName:@"factory-name" reason:@"Name mismatch"];
+    [recorder expect:event.mode == nil caseName:@"nil-mode" reason:@"Nil mode was not preserved"];
+    [recorder expect:event.handled caseName:@"handled" reason:@"Handled flag mismatch"];
+    [recorder expect:[event.userInfo[@"Key"] isEqualToString:@"Value"] caseName:@"user-info" reason:@"User info mismatch"];
+
+    NSError *archiveError = nil;
+    NSData *data = [NSKeyedArchiver archivedDataWithRootObject:event requiringSecureCoding:NO error:&archiveError];
+    NSError *unarchiveError = nil;
+    NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingFromData:data error:&unarchiveError];
+    unarchiver.requiresSecureCoding = NO;
+    LAEvent *decoded = [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
+    [unarchiver finishDecoding];
+    [recorder expect:data.length > 0 && archiveError == nil && unarchiveError == nil && [decoded.name isEqualToString:event.name] &&
+                         decoded.handled
+                 caseName:@"nscoding"
+                   reason:@"NSCoding round-trip failed"];
+}
+
++ (void)runPersistenceTestsWithRecorder:(LATestRecorder *)recorder {
+    [recorder beginSuite:@"Persistence"];
+
+    NSString *path = jbroot(@"/var/mobile/Library/Preferences/libactivator.tests.plist");
+    [NSFileManager.defaultManager removeItemAtPath:path error:nil];
+    LAActivatorPersistence *persistence = [[LAActivatorPersistence alloc] initWithFilePath:path];
+    [recorder expect:[persistence loadDictionary] == nil caseName:@"default-empty" reason:@"Missing test plist should load nil"];
+
+    NSDictionary *dictionary = @{@"SchemaVersion" : @1, @"Value" : @"Testing"};
+    [recorder expect:[persistence saveDictionary:dictionary] caseName:@"save" reason:@"Could not save test plist"];
+    [recorder expect:[[persistence loadDictionary][@"Value"] isEqualToString:@"Testing"]
+             caseName:@"load"
+               reason:@"Saved value did not round-trip"];
+
+    [@"invalid" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    [recorder expect:[persistence loadDictionary] == nil caseName:@"invalid-ignored" reason:@"Invalid plist should be ignored"];
+    [NSFileManager.defaultManager removeItemAtPath:path error:nil];
+}
+
++ (void)runSpringBoardCoreTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"SpringBoardCore"];
+
+    NSString *eventName = @"libactivator.test.core";
+    NSString *listenerAName = @"libactivator.test.listener.a";
+    NSString *listenerBName = @"libactivator.test.listener.b";
+    LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+    LATestListener *listenerA = [[LATestListener alloc] init];
+    LATestListener *listenerB = [[LATestListener alloc] init];
+    listenerA.exclusiveGroups = @[ @"exclusive" ];
+    listenerB.exclusiveGroups = @[ @"exclusive" ];
+
+    [activator registerEventDataSource:dataSource forEventName:eventName];
+    [activator registerListener:listenerA forName:listenerAName];
+    [activator registerListener:listenerB forName:listenerBName];
+
+    [recorder expect:[activator hasEventWithName:eventName] caseName:@"event-registry" reason:@"Event was not registered"];
+    [recorder expect:[activator hasListenerWithName:listenerAName] caseName:@"listener-registry" reason:@"Listener was not registered"];
+    [recorder expect:[activator hasSeenListenerWithName:listenerAName] caseName:@"seen-listener" reason:@"Seen listener was not recorded"];
+    [recorder expect:![activator listenerNamesAreMutuallyCompatible:@[ listenerAName, listenerBName ]]
+             caseName:@"exclusive-groups"
+               reason:@"Exclusive listeners were reported compatible"];
+
+    LAEvent *springboardEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator assignEvent:springboardEvent toListenersWithNames:@[ listenerBName, listenerAName ]];
+    NSArray *assignedNames = [activator assignedListenerNamesForEvent:springboardEvent];
+    [recorder expect:[assignedNames isEqualToArray:@[ listenerAName, listenerBName ]]
+             caseName:@"assignment-normalization"
+               reason:@"Assignment names were not normalized"];
+    [recorder expect:[activator eventsAssignedToListenerWithName:listenerAName].count == 1
+             caseName:@"reverse-assignment"
+               reason:@"Reverse assignment lookup failed"];
+
+    [activator setCurrentProfileName:@"Testing"];
+    [recorder expect:[[activator availableProfileNames] containsObject:@"Testing"]
+             caseName:@"profile-create"
+               reason:@"Profile was not created"];
+    [recorder expect:[activator assignedListenerNamesForEvent:springboardEvent].count == 0
+             caseName:@"profile-isolation"
+               reason:@"Assignments leaked across profiles"];
+    [activator setCurrentProfileName:@"Default"];
+
+    [activator setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:YES];
+    [recorder expect:[activator applicationWithDisplayIdentifierIsBlacklisted:@"com.apple.Preferences"]
+             caseName:@"blacklist-set"
+               reason:@"Blacklist set failed"];
+    [activator setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:NO];
+    [recorder expect:![activator applicationWithDisplayIdentifierIsBlacklisted:@"com.apple.Preferences"]
+             caseName:@"blacklist-clear"
+               reason:@"Blacklist clear failed"];
+}
+
++ (void)runDispatchTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"Dispatch"];
+
+    NSString *eventName = @"libactivator.test.dispatch";
+    NSString *listenerAName = @"libactivator.test.dispatch.a";
+    NSString *listenerBName = @"libactivator.test.dispatch.b";
+    NSString *simpleAbortName = @"libactivator.test.dispatch.simple-abort";
+    LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+    LATestListener *listenerA = [[LATestListener alloc] init];
+    LATestListener *listenerB = [[LATestListener alloc] init];
+    LATestSimpleAbortListener *simpleAbort = [[LATestSimpleAbortListener alloc] init];
+    listenerA.handlesReceivedEvents = YES;
+
+    [activator registerEventDataSource:dataSource forEventName:eventName];
+    [activator registerListener:listenerA forName:listenerAName];
+    [activator registerListener:listenerB forName:listenerBName];
+    [activator registerListener:(id<LAListener>)simpleAbort forName:simpleAbortName];
+
+    LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator assignEvent:event toListenersWithNames:@[ listenerAName, listenerBName ]];
+    [activator sendEventToListener:event];
+    [recorder expect:event.handled && listenerA.receiveCount == 1 && listenerB.receiveCount == 1
+             caseName:@"assigned-dispatch"
+               reason:@"Assigned dispatch did not reach expected listeners"];
+    [recorder expect:listenerB.otherHandledCount == 1
+             caseName:@"other-listener-handled"
+               reason:@"Other listener was not notified"];
+
+    LAEvent *explicitEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:explicitEvent toListenersWithNames:@[ listenerBName ]];
+    [recorder expect:listenerB.receiveCount == 2 caseName:@"explicit-dispatch" reason:@"Explicit dispatch failed"];
+
+    [activator sendAbortEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
+          toListenersWithNames:@[ simpleAbortName ]];
+    [recorder expect:simpleAbort.abortCount == 1 caseName:@"abort-fallback" reason:@"Simple abort selector was not used"];
+
+    [activator sendPreviewEventToListenerWithName:listenerAName];
+    [recorder expect:listenerA.previewCount == 1 && listenerB.previewCount == 0
+             caseName:@"preview-target"
+               reason:@"Preview dispatch target mismatch"];
+
+    LAEvent *deactivateEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendDeactivateEventToListeners:deactivateEvent];
+    [recorder expect:deactivateEvent.handled && listenerA.deactivateCount == 1 && listenerB.deactivateCount == 1
+             caseName:@"deactivate-broadcast"
+               reason:@"Deactivate broadcast failed"];
+
+    listenerA.requiresNoTouchEvents = YES;
+    listenerA.receiveCount = 0;
+    listenerB.receiveCount = 0;
+    LAEvent *deferredEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator la_testingSetTouchActive:YES];
+    [activator sendEvent:deferredEvent toListenersWithNames:@[ listenerAName, listenerBName ]];
+    [recorder expect:deferredEvent.handled && listenerA.receiveCount == 0
+             caseName:@"deferred-no-touch-enqueue"
+               reason:@"Deferred event was not held while touch was active"];
+    [activator la_testingSetTouchActive:NO];
+    [self waitForMainQueue];
+    [recorder expect:listenerA.receiveCount == 1 && listenerB.receiveCount == 1
+             caseName:@"deferred-no-touch-drain"
+               reason:@"Deferred event did not dispatch after touch ended"];
+
+    LATestListener *unlockingListener = [[LATestListener alloc] init];
+    unlockingListener.compatibleModes = @[ LAEventModeSpringBoard ];
+    NSString *unlockingListenerName = @"libactivator.test.dispatch.unlock";
+    dataSource.supportsUnlockingDeviceToSend = YES;
+    [activator registerListener:unlockingListener forName:unlockingListenerName];
+    [activator la_noteHomeScreenVisible:YES];
+    [activator la_noteLockScreenVisible:YES];
+    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeLockScreen]
+    toListenersWithNames:@[ unlockingListenerName ]];
+    [recorder expect:unlockingListener.unlockingCount == 1
+             caseName:@"unlock-to-send-callback"
+               reason:@"Unlock-to-send callback did not run"];
+    [activator la_noteLockScreenVisible:NO];
+}
+
++ (void)runRuntimeDeviceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"RuntimeDevice"];
+
+    if ([self isDeviceLocked]) {
+        [self unlockDeviceWithPasscode:NSProcessInfo.processInfo.environment[@"LA_TEST_PASSCODE"] ?: @""];
+        [NSThread sleepForTimeInterval:1.0];
+        [activator la_noteLockScreenVisible:NO];
+        [activator la_noteScreenBlanked:NO];
+    }
+
+    if (![self resetHomeScreen]) {
+        [recorder skip:@"home-mode" reason:@"Home automation is unavailable"];
+    } else if ([self isDeviceLocked]) {
+        [recorder skip:@"home-mode" reason:@"Device is locked"];
+    } else {
+        [NSThread sleepForTimeInterval:1.0];
+        [activator la_noteHomeScreenVisible:YES];
+        [activator la_noteLockScreenVisible:NO];
+        [activator la_noteScreenBlanked:NO];
+        [activator la_noteRuntimeStateMayHaveChanged];
+        [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeSpringBoard]
+                 caseName:@"home-mode"
+                   reason:@"Home screen did not report springboard mode"];
+    }
+
+    if (![self openApplicationWithBundleIdentifier:@"com.apple.Preferences"]) {
+        [recorder skip:@"application-mode" reason:@"Application launch automation is unavailable"];
+    } else {
+        [NSThread sleepForTimeInterval:1.5];
+        [activator la_noteHomeScreenVisible:NO];
+        [activator la_noteRuntimeStateMayHaveChanged];
+        NSString *frontMost = [self frontMostDisplayIdentifier];
+        [recorder expect:[frontMost isEqualToString:@"com.apple.Preferences"] ||
+                             [activator.displayIdentifierForCurrentApplication isEqualToString:@"com.apple.Preferences"]
+                 caseName:@"application-frontmost"
+                   reason:@"Preferences did not become frontmost"];
+        [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeApplication]
+                 caseName:@"application-mode"
+                   reason:@"Foreground app did not report application mode"];
+    }
+
+    if (![self lockDevice]) {
+        [recorder skip:@"lockscreen-mode" reason:@"Lock automation is unavailable"];
+    } else {
+        [NSThread sleepForTimeInterval:1.0];
+        [activator la_noteRuntimeStateMayHaveChanged];
+        [recorder expect:[self isDeviceLocked] || [activator.currentEventMode isEqualToString:LAEventModeLockScreen]
+                 caseName:@"lockscreen-mode"
+                   reason:@"Lock screen did not report lockscreen mode"];
+    }
+
+    if (![self unlockDeviceWithPasscode:NSProcessInfo.processInfo.environment[@"LA_TEST_PASSCODE"] ?: @""]) {
+        [recorder skip:@"unlock-device" reason:@"Unlock automation is unavailable"];
+    } else {
+        [NSThread sleepForTimeInterval:1.0];
+        [activator la_noteLockScreenVisible:NO];
+        [activator la_noteRuntimeStateMayHaveChanged];
+        [recorder expect:![self isDeviceLocked] caseName:@"unlock-device" reason:@"Device is still locked"];
+    }
+
+    [self suspendApplication];
+}
+
+#pragma mark - Cleanup
+
++ (void)cleanActivator:(LAActivator *)activator {
+    NSArray *listenerNames = @[
+        @"libactivator.test.listener.a",
+        @"libactivator.test.listener.b",
+        @"libactivator.test.dispatch.a",
+        @"libactivator.test.dispatch.b",
+        @"libactivator.test.dispatch.simple-abort",
+        @"libactivator.test.dispatch.unlock",
+    ];
+    for (NSString *listenerName in listenerNames) {
+        [activator unregisterListenerWithName:listenerName];
+    }
+
+    NSArray *eventNames = @[ @"libactivator.test.core", @"libactivator.test.dispatch" ];
+    for (NSString *eventName in eventNames) {
+        [activator unregisterEventDataSourceWithEventName:eventName];
+        for (NSString *mode in activator.availableEventModes) {
+            [activator unassignEvent:[LAEvent eventWithName:eventName mode:mode]];
+        }
+    }
+    [activator setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:NO];
+    [activator setCurrentProfileName:@"Default"];
+    [activator la_noteHomeScreenVisible:YES];
+    [activator la_noteLockScreenVisible:NO];
+    [activator la_noteScreenBlanked:NO];
+    [activator la_testingSetTouchActive:NO];
+}
+
++ (void)removeTestPlist {
+    [NSFileManager.defaultManager removeItemAtPath:jbroot(@"/var/mobile/Library/Preferences/libactivator.tests.plist")
+                                             error:nil];
+}
+
+#pragma mark - Device Automation
+
++ (BOOL)resetHomeScreen {
+    __block BOOL attempted = NO;
+    [self performOnMainThreadSynchronously:^{
+        Class automationClass = NSClassFromString(@"SBSTestAutomationService");
+        id service = automationClass ? [[automationClass alloc] init] : nil;
+        if ([service respondsToSelector:@selector(resetToHomeScreenAnimated:useSafeTransitions:)]) {
+            [service resetToHomeScreenAnimated:NO useSafeTransitions:YES];
+            attempted = YES;
+        } else if ([service respondsToSelector:@selector(resetToHomeScreenAnimated:)]) {
+            [service resetToHomeScreenAnimated:NO];
+            attempted = YES;
+        } else {
+            Class springBoardClass = NSClassFromString(@"SpringBoard");
+            id springBoard = [springBoardClass respondsToSelector:@selector(sharedApplication)]
+                                 ? [springBoardClass sharedApplication]
+                                 : UIApplication.sharedApplication;
+            if ([springBoard respondsToSelector:@selector(suspend)]) {
+                [springBoard suspend];
+                attempted = YES;
+            }
+        }
+    }];
+    return attempted;
+}
+
++ (BOOL)openApplicationWithBundleIdentifier:(NSString *)bundleIdentifier {
+    if (bundleIdentifier.length == 0) {
+        return NO;
+    }
+
+    __block BOOL opened = NO;
+    [self performOnMainThreadSynchronously:^{
+        Class springBoardClass = NSClassFromString(@"SpringBoard");
+        id springBoard = [springBoardClass respondsToSelector:@selector(sharedApplication)]
+                             ? [springBoardClass sharedApplication]
+                             : UIApplication.sharedApplication;
+        if ([springBoard respondsToSelector:@selector(launchApplicationWithIdentifier:suspended:)]) {
+            [springBoard launchApplicationWithIdentifier:bundleIdentifier suspended:NO];
+            opened = YES;
+        }
+    }];
+    return opened;
+}
+
++ (BOOL)suspendApplication {
+    __block BOOL attempted = NO;
+    [self performOnMainThreadSynchronously:^{
+        Class springBoardClass = NSClassFromString(@"SpringBoard");
+        id springBoard = [springBoardClass respondsToSelector:@selector(sharedApplication)] ? [springBoardClass sharedApplication]
+                                                                                           : UIApplication.sharedApplication;
+        if ([springBoard respondsToSelector:@selector(suspend)]) {
+            [springBoard suspend];
+            attempted = YES;
+        }
+    }];
+    return attempted;
+}
+
++ (BOOL)lockDevice {
+    __block BOOL attempted = NO;
+    [self performOnMainThreadSynchronously:^{
+        Class managerClass = NSClassFromString(@"SBLockScreenManager");
+        id manager = [managerClass respondsToSelector:@selector(sharedInstance)] ? [managerClass sharedInstance] : nil;
+        if ([manager respondsToSelector:@selector(remoteLock:)]) {
+            [manager remoteLock:YES];
+            attempted = YES;
+            Class backlightClass = NSClassFromString(@"SBBacklightController");
+            id backlight = [backlightClass respondsToSelector:@selector(sharedInstance)] ? [backlightClass sharedInstance] : nil;
+            if ([backlight respondsToSelector:@selector(_startFadeOutAnimationFromLockSource:)]) {
+                [backlight _startFadeOutAnimationFromLockSource:1];
+            }
+            return;
+        }
+    }];
+    return attempted;
+}
+
++ (BOOL)unlockDeviceWithPasscode:(NSString *)passcode {
+    __block BOOL attempted = NO;
+    [self performOnMainThreadSynchronously:^{
+        Class backlightClass = NSClassFromString(@"SBBacklightController");
+        id backlight = [backlightClass respondsToSelector:@selector(sharedInstance)] ? [backlightClass sharedInstance] : nil;
+        if ([backlight respondsToSelector:@selector(turnOnScreenFullyWithBacklightSource:)]) {
+            [backlight turnOnScreenFullyWithBacklightSource:1];
+        }
+
+        Class managerClass = NSClassFromString(@"SBLockScreenManager");
+        id manager = [managerClass respondsToSelector:@selector(sharedInstance)] ? [managerClass sharedInstance] : nil;
+        if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:finishUIUnlock:completion:)]) {
+            [manager attemptUnlockWithPasscode:passcode ?: @"" finishUIUnlock:YES completion:nil];
+            attempted = YES;
+        } else if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:)]) {
+            [manager attemptUnlockWithPasscode:passcode ?: @""];
+            attempted = YES;
+        } else {
+            attempted = [self resetHomeScreen];
+        }
+    }];
+    return attempted;
+}
+
++ (BOOL)isDeviceLocked {
+    __block BOOL locked = NO;
+    void (^readLockState)(void) = ^{
+        Class managerClass = NSClassFromString(@"SBLockScreenManager");
+        id manager = [managerClass respondsToSelector:@selector(sharedInstance)] ? [managerClass sharedInstance] : nil;
+        if ([manager respondsToSelector:@selector(isUILocked)]) {
+            locked = [manager isUILocked];
+        }
+    };
+    [self performOnMainThreadSynchronously:readLockState];
+    return locked;
+}
+
++ (NSString *)frontMostDisplayIdentifier {
+    __block NSString *displayIdentifier = nil;
+    void (^readFrontMostApplication)(void) = ^{
+        UIApplication *application = UIApplication.sharedApplication;
+        if (![application respondsToSelector:@selector(_accessibilityFrontMostApplication)]) {
+            return;
+        }
+
+        id<LAActivatorTestingApplication> frontMostApplication = [application _accessibilityFrontMostApplication];
+        if ([frontMostApplication respondsToSelector:@selector(bundleIdentifier)]) {
+            displayIdentifier = [frontMostApplication bundleIdentifier];
+        }
+        if (displayIdentifier.length == 0 && [frontMostApplication respondsToSelector:@selector(displayIdentifier)]) {
+            displayIdentifier = [frontMostApplication displayIdentifier];
+        }
+    };
+    [self performOnMainThreadSynchronously:readFrontMostApplication];
+    return displayIdentifier;
+}
+
++ (void)performOnMainThreadSynchronously:(dispatch_block_t)block {
+    if (!block) {
+        return;
+    }
+    if (NSThread.isMainThread) {
+        block();
+        return;
+    }
+    dispatch_sync(dispatch_get_main_queue(), block);
+}
+
++ (void)waitForMainQueue {
+    if (!NSThread.isMainThread) {
+        dispatch_sync(dispatch_get_main_queue(), ^{
+        });
+        return;
+    }
+
+    __block BOOL drained = NO;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        drained = YES;
+    });
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:1.0];
+    while (!drained && [deadline timeIntervalSinceNow] > 0) {
+        [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+    }
+}
+
+@end
+
+#endif
