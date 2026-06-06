@@ -5,7 +5,6 @@ include $(THEOS)/makefiles/common.mk
 
 LIBRARY_NAME := libactivator
 
-libactivator_FILES += ../common/LAPath.m
 libactivator_FILES += LAConstants.m
 libactivator_FILES += LAProtocols.m
 libactivator_FILES += LAEvent.m
@@ -14,7 +13,6 @@ libactivator_FILES += LASettingsShims.m
 libactivator_FILES += UIImageView+Activator.m
 
 libactivator_CFLAGS += -fobjc-arc
-libactivator_CFLAGS += -I../common
 libactivator_CFLAGS += -I../../include
 
 libactivator_FRAMEWORKS += Foundation

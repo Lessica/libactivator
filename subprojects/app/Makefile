@@ -6,7 +6,7 @@ include $(THEOS)/makefiles/common.mk
 APPLICATION_NAME := Activator
 
 Activator_FILES += main.m
-Activator_FILES += ActivatorAppDelegate.m
+Activator_FILES += LAAppDelegate.m
 
 Activator_CFLAGS += -fobjc-arc
 Activator_CFLAGS += -I../../include

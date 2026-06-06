@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 
-@interface ActivatorAppDelegate : UIResponder <UIApplicationDelegate>
+@interface LAAppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (nonatomic, strong) UIWindow *window;
 

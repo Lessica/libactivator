@@ -1,6 +1,6 @@
-#import "ActivatorAppDelegate.h"
+#import "LAAppDelegate.h"
 
-@implementation ActivatorAppDelegate
+@implementation LAAppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {

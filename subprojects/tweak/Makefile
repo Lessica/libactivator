@@ -3,14 +3,14 @@ ARCHS := arm64 arm64e
 
 include $(THEOS)/makefiles/common.mk
 
-TWEAK_NAME := ActivatorSpringBoard
+TWEAK_NAME := ActivatorTweak
 
-ActivatorSpringBoard_FILES += ActivatorSpringBoard.m
+ActivatorTweak_FILES += ActivatorTweak.m
 
-ActivatorSpringBoard_CFLAGS += -fobjc-arc
-ActivatorSpringBoard_CFLAGS += -I../../include
+ActivatorTweak_CFLAGS += -fobjc-arc
+ActivatorTweak_CFLAGS += -I../../include
 
-ActivatorSpringBoard_FRAMEWORKS += Foundation
-ActivatorSpringBoard_FRAMEWORKS += UIKit
+ActivatorTweak_FRAMEWORKS += Foundation
+ActivatorTweak_FRAMEWORKS += UIKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk

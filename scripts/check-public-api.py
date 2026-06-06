@@ -299,14 +299,11 @@ void LAModuleImportCheck(void) {
     )
 
     for source in (flat_import, framework_import, module_import):
-        log(f"Compile check: {source.name}")
         run([clang, *common_flags, "-fsyntax-only", str(source)], cwd=project_root)
 
     object_file = tmp_dir / "framework-import.o"
-    log("Object compile check: framework-import.m")
     run([clang, *common_flags, "-c", str(framework_import), "-o", str(object_file)], cwd=project_root)
 
-    log("Link check: libactivator-public-api-check.dylib")
     run(
         [
             clang,
@@ -440,7 +437,7 @@ def check(condition: bool, message: str) -> None:
         raise SystemExit(message)
 
 
-def validate_api(api: HeaderAPI, dylib: Path) -> None:
+def validate_api(api: HeaderAPI, dylib: Path) -> tuple[int, int, int]:
     all_symbols, exported_symbols = collect_symbols(dylib)
     metadata = objc_metadata(dylib)
     properties = property_lists(metadata)
@@ -509,12 +506,7 @@ def validate_api(api: HeaderAPI, dylib: Path) -> None:
             )
         checked_properties += 1
 
-    log(
-        "Mach-O validation: "
-        f"{checked_symbols} exported symbols, "
-        f"{checked_metadata} Objective-C metadata entries, "
-        f"{checked_properties} properties"
-    )
+    return checked_symbols, checked_metadata, checked_properties
 
 
 def main() -> int:
@@ -536,10 +528,6 @@ def main() -> int:
         for method in api.methods
     }
 
-    log(f"Project root: {project_root}")
-    log(f"Staging directory: {staging_dir}")
-    log(f"SDK: {sdk}")
-    log(f"Target dylib: {dylib}")
     log(
         "Header inventory: "
         f"{len(api.constants)} constants, "
@@ -552,12 +540,16 @@ def main() -> int:
     )
 
     with tempfile.TemporaryDirectory(prefix="libactivator-public-api-check.") as tmp:
-        log("Starting compile/link checks")
         compile_import_checks(project_root, staging_dir, sdk, Path(tmp))
-        log("Starting Mach-O and Objective-C metadata checks")
-        validate_api(api, dylib)
+        checked_symbols, checked_metadata, checked_properties = validate_api(api, dylib)
 
-    log("Public API compile/link/runtime metadata check passed.")
+    log(
+        "Binary validation: "
+        f"{checked_symbols} exported symbols, "
+        f"{checked_metadata} Objective-C metadata entries, "
+        f"{checked_properties} properties"
+    )
+    log("Compile/link/runtime metadata check passed.")
     return 0
 
 

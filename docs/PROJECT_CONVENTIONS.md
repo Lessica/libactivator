@@ -116,6 +116,11 @@ These phases describe engineering dependency order, not heavyweight milestones.
 ## Build Rules
 
 - Use modern Theos project structure, not the historical `framework` submodule.
+- Use concise component names for new code: `LAApp` for the standalone
+  Activator app, `LAS` or `LASettings` for Settings UI code, `LAP` or
+  `LAPreferences` for the Settings preference panel, `ActivatorTweak` only for
+  the primary tweak target and main entry file, and `LAT` or `LATweak` for
+  additional tweak-local classes, files, and private types.
 - Set deployment target to iOS 15.0.
 - Build all production binaries for `arm64 arm64e`.
 - Expose public headers with a flat compatibility entry point and a
@@ -237,6 +242,8 @@ These phases describe engineering dependency order, not heavyweight milestones.
   pattern for real Settings UI or future runtime code.
 - The PreferenceBundle, Activator.app, and third-party jailbreak apps are
   hosts for the Settings UI library.
+- Do not export a new Settings UI host integration API until that contract is
+  explicitly designed and approved.
 - Name framework-like dynamic libraries with the `libxxx.dylib` convention.
 - Use `libactivatorsettings.dylib` as the Settings UI dynamic library file name
   unless implementation details force a better name.

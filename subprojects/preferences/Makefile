@@ -3,17 +3,17 @@ ARCHS := arm64 arm64e
 
 include $(THEOS)/makefiles/common.mk
 
-BUNDLE_NAME := ActivatorPreferences
+BUNDLE_NAME := LAPreferences
 
-ActivatorPreferences_FILES += ActivatorPreferencesBundle.m
+LAPreferences_FILES += LAPreferencesBundle.m
 
-ActivatorPreferences_CFLAGS += -fobjc-arc
-ActivatorPreferences_CFLAGS += -I../../include
+LAPreferences_CFLAGS += -fobjc-arc
+LAPreferences_CFLAGS += -I../../include
 
-ActivatorPreferences_FRAMEWORKS += Foundation
-ActivatorPreferences_FRAMEWORKS += UIKit
-ActivatorPreferences_PRIVATE_FRAMEWORKS += Preferences
+LAPreferences_FRAMEWORKS += Foundation
+LAPreferences_FRAMEWORKS += UIKit
+LAPreferences_PRIVATE_FRAMEWORKS += Preferences
 
-ActivatorPreferences_INSTALL_PATH := /Library/PreferenceBundles
+LAPreferences_INSTALL_PATH := /Library/PreferenceBundles
 
 include $(THEOS_MAKE_PATH)/bundle.mk

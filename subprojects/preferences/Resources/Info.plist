@@ -5,13 +5,13 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>ActivatorPreferences</string>
+	<string>LAPreferences</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.libactivator.preferences</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>ActivatorPreferences</string>
+	<string>LAPreferences</string>
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
@@ -21,6 +21,6 @@
 	<key>MinimumOSVersion</key>
 	<string>15.0</string>
 	<key>NSPrincipalClass</key>
-	<string>ActivatorPreferencesBundle</string>
+	<string>LAPreferencesBundle</string>
 </dict>
 </plist>

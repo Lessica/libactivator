@@ -1,9 +1,9 @@
 # Public API Inventory
 
 This inventory records the public API surface inherited from Activator 1.9 and
-the additional wrapper entry points introduced by the rewrite foundation. It is
-not an implementation plan; it is the compatibility checklist for the next
-public API skeleton work.
+the compatibility import paths introduced by the rewrite foundation. It is not
+an implementation plan; it is the compatibility checklist for the next public
+API skeleton work.
 
 ## Baseline
 
@@ -18,8 +18,6 @@ public API skeleton work.
   - `include/Activator/Activator.h` is a new framework umbrella header.
   - `layout/usr/include/libactivator.h` is the flat compatibility umbrella and
     imports `<Activator/Activator.h>`.
-  - `include/ActivatorSettings/ActivatorSettings.h` is a new settings host
-    umbrella.
   - The copied 1.9 headers are otherwise API-equivalent, apart from removal of
     a trailing blank line.
 
@@ -49,7 +47,6 @@ public API skeleton work.
 | `LAEventDataSource.h` | `LAEventDataSource` protocol for event metadata, removal, configuration. | Must implement | Registration and metadata routing can be safe stubs first. |
 | `LASettingsViewController.h` | Settings controller class family and configuration controllers. | Settings-backed | Header remains part of the Activator public API. `libactivator` must keep class compatibility shims; real UI implementation lives in `libactivatorsettings.dylib`. |
 | `UIImageView+Activator.h` | Listener image category properties. | Settings-backed | Likely implemented with associated objects; loading behavior can be deferred. |
-| `ActivatorSettings/ActivatorSettings.h` | `LASCreateSettingsRootViewController`. | Settings-backed | Host-facing entry point for PreferenceBundle, Activator.app, and third-party hosts. |
 
 ## LAActivator Facade
 
@@ -211,7 +208,6 @@ The listener protocol has only optional methods. The implementation must check
 | `LAListenerConfigurationViewController` | Settings-backed | Listener configuration base class. Class identity must be available from `libactivator`; real behavior lives in `libactivatorsettings.dylib`. |
 | `LA_SETTINGS_CONTROLLER(superclass)` | Decision needed | Macro exists for old PreferenceLoader-style superclass substitution. Keep header compatibility; implementation should avoid depending on old host assumptions. |
 | `UIImageView (Activator)` | Settings-backed | Category storage can be implemented early; image loading behavior can wait. |
-| `LASCreateSettingsRootViewController` | Settings-backed | Host-facing function exported by `libactivatorsettings.dylib`. |
 
 ## Constants
 
