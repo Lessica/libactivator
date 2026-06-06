@@ -57,6 +57,25 @@ Run a temporary client process linked against `libactivator.dylib` and verify:
 - Setting `currentProfileName` changes state only when the requested profile is
   new or different from the current profile.
 
+### iPhone XR iOS 15.0 Dopamine roothide Client Notes
+
+- `Activator.app` currently has no entitlements. Do not use it as the successful
+  CPDistributedMessagingCenter client reference until its entitlements are
+  defined.
+- A sandboxed `Activator.app` process could not see
+  `libactivator.springboard`; `doesServerExist` returned false and direct
+  messages returned nil.
+- `com.apple.Preferences` was verified as a non-SpringBoard system client by
+  loading the installed `libactivator.dylib` with USB Frida.
+- In `com.apple.Preferences`, `availableProfileNames` returned `Default`.
+- In `com.apple.Preferences`, changing `currentProfileName` to
+  `CodexIPCVerification` returned that value through the facade, then restored
+  to `Default`.
+- In `com.apple.Preferences`, a temporary blacklist value was changed and
+  restored through the facade.
+- In `com.apple.Preferences`, a temporary assignment for
+  `libactivator.ipc-check.event` was changed and removed through the facade.
+
 ### Persistence Check
 
 - Restart SpringBoard after assignment, blacklist, and profile changes.

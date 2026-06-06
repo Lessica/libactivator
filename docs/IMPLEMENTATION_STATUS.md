@@ -30,7 +30,7 @@ They must not be mistaken for completed runtime behavior.
 | Listener removal | `requestRemovalForListenerWithName:` only calls the in-process listener object. | Decide whether removal requests are SpringBoard-only, Settings-backed, or IPC-routed. |
 | `hasSeenListenerWithName:` | Currently aliases `hasListenerWithName:`. | Decide whether historical seen-listener semantics are still useful or should be documented as deprecated compatibility behavior. |
 | Localization resources | Localization returns stable fallback strings and optional listener/data-source metadata only. | Add resource bundle lookup and Settings UI localization integration when resources exist. |
-| State/config IPC verification | SpringBoard server startup and a read-only `CPDistributedMessagingCenter` reply were verified on iPhone XR iOS 15.0 roothide. External client round-trip coverage is still pending. | Use `docs/ON_DEVICE_VERIFICATION.md` to validate installed package behavior on device. |
+| State/config IPC verification | SpringBoard server startup and non-SpringBoard `com.apple.Preferences` facade round trips were verified on iPhone XR iOS 15.0 roothide. Sandboxed `Activator.app` cannot see the server until its entitlements are defined. | Continue tracking event delivery and cross-process object registration separately. |
 
 ## Tracker
 
@@ -58,8 +58,8 @@ They must not be mistaken for completed runtime behavior.
 | Public settings class shims | ✅ | Settings-backed | `libactivator.dylib` | Header modernization | Public settings classes resolve when a third-party app links only `libactivator.dylib`. |
 | Settings UI implementation | Not started | Settings-backed | `libactivatorsettings.dylib` | Public settings class shims | Real Settings UI behavior is implemented in the settings library, not in `libactivator.dylib`. |
 | `UIImageView (Activator)` storage | ✅ | Settings-backed | `libactivator.dylib` | Public settings class shims | Category properties store and retrieve values without image-loading behavior. |
-| IPC client facade | In progress | Runtime-backed | `libactivator.dylib` | Safe stub APIs | State/config public calls route through `CPDistributedMessagingCenter` with defined request/reply dictionaries and safe defaults when SpringBoard is unavailable. Event delivery and object registration are not included yet. |
-| SpringBoard state/config IPC server | In progress | Runtime-backed | `libactivator.dylib`, `ActivatorTweak.dylib` | IPC schema, registry models | SpringBoard starts the `libactivator.springboard` messaging center and handles state/config requests against the authoritative backend without app injection. |
+| IPC client facade | ✅ | Runtime-backed | `libactivator.dylib` | Safe stub APIs | State/config public calls route through `CPDistributedMessagingCenter` with defined request/reply dictionaries and safe defaults when SpringBoard is unavailable. Event delivery and object registration are not included. |
+| SpringBoard state/config IPC server | ✅ | Runtime-backed | `libactivator.dylib`, `ActivatorTweak.dylib` | IPC schema, registry models | SpringBoard starts the `libactivator.springboard` messaging center and handles state/config requests against the authoritative backend without app injection. |
 | SpringBoard event runtime | Not started | Runtime-backed | `ActivatorTweak.dylib` | IPC state/config server | SpringBoard can acquire runtime events, register built-in capabilities, and dispatch listener callbacks without app injection. |
 | Built-in event capability assessments | Not started | Capability gated | Docs and runtime adapters | SpringBoard event runtime | Each event family has a documented modern iOS capability result before registration. |
 | Built-in listener/action assessments | Not started | Capability gated | Docs and runtime adapters | SpringBoard event runtime | Each built-in listener/action has a documented modern iOS capability result before registration. |
