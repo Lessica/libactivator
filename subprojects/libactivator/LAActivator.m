@@ -12,6 +12,10 @@
 @property(nonatomic, strong) LAActivatorIPCClient *ipcClient;
 @property(nonatomic, strong) LAActivatorIPCServer *ipcServer;
 - (void)startIPCServerIfNeeded;
+- (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (BOOL)la_unassignEvent:(LAEvent *)event;
+- (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
+- (BOOL)la_setCurrentProfileName:(NSString *)currentProfileName;
 @end
 
 static NSDictionary *LAActivatorIPCUserInfoForEvent(LAEvent *event) {
@@ -159,17 +163,18 @@ LAActivator *LASharedActivator;
 }
 
 - (void)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
+    if ([self la_assignEvent:event toListenersWithNames:listenerNames]) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
+    }
+}
+
+- (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
     if (!self.runningInsideSpringBoard) {
         NSMutableDictionary *userInfo = [LAActivatorIPCUserInfoForEvent(event) mutableCopy];
         userInfo[LAActivatorIPCKeyListenerNames] = [LAActivatorBackend normalizedStringArray:listenerNames];
-        if ([self.ipcClient sendMessageName:LAActivatorIPCMessageAssignEvent userInfo:userInfo]) {
-            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
-        }
-        return;
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageAssignEvent userInfo:userInfo defaultValue:NO];
     }
-    if ([self.backend assignEvent:event toListenersWithNames:listenerNames]) {
-        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
-    }
+    return [self.backend assignEvent:event toListenersWithNames:listenerNames];
 }
 
 - (void)addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event {
@@ -193,15 +198,18 @@ LAActivator *LASharedActivator;
 }
 
 - (void)unassignEvent:(LAEvent *)event {
-    if (!self.runningInsideSpringBoard) {
-        if ([self.ipcClient sendMessageName:LAActivatorIPCMessageUnassignEvent userInfo:LAActivatorIPCUserInfoForEvent(event)]) {
-            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
-        }
-        return;
-    }
-    if ([self.backend unassignEvent:event]) {
+    if ([self la_unassignEvent:event]) {
         [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
     }
+}
+
+- (BOOL)la_unassignEvent:(LAEvent *)event {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageUnassignEvent
+                                              userInfo:LAActivatorIPCUserInfoForEvent(event)
+                                          defaultValue:NO];
+    }
+    return [self.backend unassignEvent:event];
 }
 
 - (NSString *)assignedListenerNameForEvent:(LAEvent *)event {
@@ -588,15 +596,19 @@ LAActivator *LASharedActivator;
 }
 
 - (void)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted {
+    [self la_setApplicationWithDisplayIdentifier:displayIdentifier isBlacklisted:blacklisted];
+}
+
+- (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted {
     if (!self.runningInsideSpringBoard) {
-        [self.ipcClient sendMessageName:LAActivatorIPCMessageSetApplicationBlacklisted
-                               userInfo:@{
-                                   LAActivatorIPCKeyDisplayIdentifier : displayIdentifier ?: @"",
-                                   LAActivatorIPCKeyBlacklisted : @(blacklisted),
-                               }];
-        return;
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageSetApplicationBlacklisted
+                                              userInfo:@{
+                                                  LAActivatorIPCKeyDisplayIdentifier : displayIdentifier ?: @"",
+                                                  LAActivatorIPCKeyBlacklisted : @(blacklisted),
+                                              }
+                                          defaultValue:NO];
     }
-    [self.backend setApplicationWithDisplayIdentifier:displayIdentifier isBlacklisted:blacklisted];
+    return [self.backend setApplicationWithDisplayIdentifier:displayIdentifier isBlacklisted:blacklisted];
 }
 
 #pragma mark - Profiles
@@ -616,12 +628,16 @@ LAActivator *LASharedActivator;
 }
 
 - (void)setCurrentProfileName:(NSString *)currentProfileName {
+    [self la_setCurrentProfileName:currentProfileName];
+}
+
+- (BOOL)la_setCurrentProfileName:(NSString *)currentProfileName {
     if (!self.runningInsideSpringBoard) {
-        [self.ipcClient sendMessageName:LAActivatorIPCMessageSetCurrentProfileName
-                               userInfo:@{LAActivatorIPCKeyProfileName : currentProfileName ?: @""}];
-        return;
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageSetCurrentProfileName
+                                              userInfo:@{LAActivatorIPCKeyProfileName : currentProfileName ?: @""}
+                                          defaultValue:NO];
     }
-    self.backend.currentProfileName = currentProfileName;
+    return [self.backend setCurrentProfileNameIfChanged:currentProfileName];
 }
 
 #pragma mark - Localization

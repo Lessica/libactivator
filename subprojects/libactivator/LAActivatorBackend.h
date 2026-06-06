@@ -28,8 +28,9 @@ __attribute__((visibility("hidden")))
 - (NSArray *)eventsAssignedToListenerWithName:(NSString *)listenerName;
 
 - (BOOL)applicationWithDisplayIdentifierIsBlacklisted:(NSString *)displayIdentifier;
-- (void)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
+- (BOOL)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
 - (NSArray *)availableProfileNames;
+- (BOOL)setCurrentProfileNameIfChanged:(NSString *)currentProfileName;
 
 + (NSArray *)normalizedStringArray:(NSArray *)array;
 

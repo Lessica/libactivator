@@ -357,11 +357,17 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
     return blacklisted;
 }
 
-- (void)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted {
+- (BOOL)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted {
     if (!self.authoritative || displayIdentifier.length == 0) {
-        return;
+        return NO;
     }
+    __block BOOL changed = NO;
     dispatch_sync(self.stateQueue, ^{
+        BOOL currentlyBlacklisted = [self.blacklistedDisplayIdentifiers containsObject:displayIdentifier];
+        changed = currentlyBlacklisted != blacklisted;
+        if (!changed) {
+            return;
+        }
         if (blacklisted) {
             [self.blacklistedDisplayIdentifiers addObject:displayIdentifier];
         } else {
@@ -369,6 +375,7 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
         }
         [self savePersistentState];
     });
+    return changed;
 }
 
 #pragma mark - Profiles
@@ -390,16 +397,27 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
 }
 
 - (void)setCurrentProfileName:(NSString *)currentProfileName {
+    [self setCurrentProfileNameIfChanged:currentProfileName];
+}
+
+- (BOOL)setCurrentProfileNameIfChanged:(NSString *)currentProfileName {
     if (!self.authoritative) {
-        return;
+        return NO;
     }
 
     NSString *profileName = currentProfileName.length > 0 ? [currentProfileName copy] : LAActivatorDefaultProfileName;
+    __block BOOL changed = NO;
     dispatch_sync(self.stateQueue, ^{
+        BOOL profileExists = self.profiles[profileName] != nil;
+        changed = ![_currentProfileName isEqualToString:profileName] || !profileExists;
+        if (!changed) {
+            return;
+        }
         _currentProfileName = profileName;
         [self assignmentsForCurrentProfile];
         [self savePersistentState];
     });
+    return changed;
 }
 
 @end

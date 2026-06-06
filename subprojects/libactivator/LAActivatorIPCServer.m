@@ -3,6 +3,13 @@
 #import <Activator/Activator.h>
 #import <AppSupport/CPDistributedMessagingCenter.h>
 
+@interface LAActivator (IPCServer)
+- (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (BOOL)la_unassignEvent:(LAEvent *)event;
+- (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
+- (BOOL)la_setCurrentProfileName:(NSString *)currentProfileName;
+@end
+
 static NSDictionary *LAIPCReply(BOOL ok, id value) {
     if (value) {
         return @{LAActivatorIPCKeyOK : @(ok), LAActivatorIPCKeyValue : value};
@@ -181,25 +188,35 @@ static id LAIPCPropertyListValue(id value) {
         if (!event) {
             return LAIPCReply(NO, nil);
         }
-        [_activator assignEvent:event toListenersWithNames:LAIPCStringArray(userInfo, LAActivatorIPCKeyListenerNames)];
-        return LAIPCReply(YES, nil);
+        BOOL changed = [_activator la_assignEvent:event
+                             toListenersWithNames:LAIPCStringArray(userInfo, LAActivatorIPCKeyListenerNames)];
+        if (changed) {
+            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification
+                                                              object:_activator];
+        }
+        return LAIPCReply(YES, @(changed));
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageUnassignEvent]) {
         LAEvent *event = LAIPCEvent(userInfo);
         if (!event) {
             return LAIPCReply(NO, nil);
         }
-        [_activator unassignEvent:event];
-        return LAIPCReply(YES, nil);
+        BOOL changed = [_activator la_unassignEvent:event];
+        if (changed) {
+            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification
+                                                              object:_activator];
+        }
+        return LAIPCReply(YES, @(changed));
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageApplicationIsBlacklisted]) {
         return LAIPCReply(YES, @([_activator applicationWithDisplayIdentifierIsBlacklisted:
                                       LAIPCString(userInfo, LAActivatorIPCKeyDisplayIdentifier)]));
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageSetApplicationBlacklisted]) {
-        [_activator setApplicationWithDisplayIdentifier:LAIPCString(userInfo, LAActivatorIPCKeyDisplayIdentifier)
-                                          isBlacklisted:[userInfo[LAActivatorIPCKeyBlacklisted] boolValue]];
-        return LAIPCReply(YES, nil);
+        BOOL changed =
+            [_activator la_setApplicationWithDisplayIdentifier:LAIPCString(userInfo, LAActivatorIPCKeyDisplayIdentifier)
+                                                 isBlacklisted:[userInfo[LAActivatorIPCKeyBlacklisted] boolValue]];
+        return LAIPCReply(YES, @(changed));
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageAvailableProfileNames]) {
         return LAIPCReply(YES, _activator.availableProfileNames);
@@ -208,8 +225,8 @@ static id LAIPCPropertyListValue(id value) {
         return LAIPCReply(YES, _activator.currentProfileName ?: @"");
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageSetCurrentProfileName]) {
-        _activator.currentProfileName = LAIPCString(userInfo, LAActivatorIPCKeyProfileName);
-        return LAIPCReply(YES, nil);
+        BOOL changed = [_activator la_setCurrentProfileName:LAIPCString(userInfo, LAActivatorIPCKeyProfileName)];
+        return LAIPCReply(YES, @(changed));
     }
 
     NSString *eventName = LAIPCString(userInfo, LAActivatorIPCKeyEventName);
