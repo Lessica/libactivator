@@ -66,6 +66,10 @@
         LAActivatorIPCMessageAvailableProfileNames,
         LAActivatorIPCMessageCurrentProfileName,
         LAActivatorIPCMessageSetCurrentProfileName,
+        LAActivatorIPCMessageCurrentEventMode,
+        LAActivatorIPCMessageCurrentEventModeUnderneathLockScreen,
+        LAActivatorIPCMessageSupportsUnlockingDeviceToSendEvents,
+        LAActivatorIPCMessageCurrentApplicationDisplayIdentifier,
         LAActivatorIPCMessageEventIsHidden,
         LAActivatorIPCMessageEventRequiresAssignment,
         LAActivatorIPCMessageCompatibleModesForEvent,
@@ -195,6 +199,18 @@
         BOOL changed = [_activator la_setCurrentProfileName:[self stringInUserInfo:userInfo
                                                                             forKey:LAActivatorIPCKeyProfileName]];
         return [self replyWithOK:YES value:@(changed)];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageCurrentEventMode]) {
+        return [self replyWithOK:YES value:_activator.currentEventMode ?: @""];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageCurrentEventModeUnderneathLockScreen]) {
+        return [self replyWithOK:YES value:_activator.currentEventModeUnderneathLockScreen ?: @""];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageSupportsUnlockingDeviceToSendEvents]) {
+        return [self replyWithOK:YES value:@(_activator.supportsUnlockingDeviceToSendEvents)];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageCurrentApplicationDisplayIdentifier]) {
+        return [self replyWithOK:YES value:_activator.displayIdentifierForCurrentApplication ?: @""];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchAssignedEvent]) {
         LAEvent *event = [self eventWithUserInfo:userInfo];

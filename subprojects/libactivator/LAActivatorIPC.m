@@ -24,6 +24,13 @@ NSString *const LAActivatorIPCMessageSetApplicationBlacklisted = @"libactivator.
 NSString *const LAActivatorIPCMessageAvailableProfileNames = @"libactivator.request.available-profile-names";
 NSString *const LAActivatorIPCMessageCurrentProfileName = @"libactivator.request.current-profile-name";
 NSString *const LAActivatorIPCMessageSetCurrentProfileName = @"libactivator.request.set-current-profile-name";
+NSString *const LAActivatorIPCMessageCurrentEventMode = @"libactivator.request.current-event-mode";
+NSString *const LAActivatorIPCMessageCurrentEventModeUnderneathLockScreen =
+    @"libactivator.request.current-event-mode-underneath-lock-screen";
+NSString *const LAActivatorIPCMessageSupportsUnlockingDeviceToSendEvents =
+    @"libactivator.request.supports-unlocking-device-to-send-events";
+NSString *const LAActivatorIPCMessageCurrentApplicationDisplayIdentifier =
+    @"libactivator.request.current-application-display-identifier";
 
 NSString *const LAActivatorIPCMessageEventIsHidden = @"libactivator.request.event-is-hidden";
 NSString *const LAActivatorIPCMessageEventRequiresAssignment = @"libactivator.request.event-requires-assignment";

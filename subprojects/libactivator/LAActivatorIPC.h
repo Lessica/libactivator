@@ -31,6 +31,10 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCMessageSetApplicationBlacklisted;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageAvailableProfileNames;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageCurrentProfileName;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageSetCurrentProfileName;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageCurrentEventMode;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageCurrentEventModeUnderneathLockScreen;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageSupportsUnlockingDeviceToSendEvents;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageCurrentApplicationDisplayIdentifier;
 
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageEventIsHidden;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageEventRequiresAssignment;

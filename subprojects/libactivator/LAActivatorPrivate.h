@@ -10,8 +10,15 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class UIEvent;
+
 @interface LAActivator (Private)
 - (void)startIPCServerIfNeeded;
+- (void)la_noteHomeScreenVisible:(BOOL)visible;
+- (void)la_noteLockScreenVisible:(BOOL)visible;
+- (void)la_noteScreenBlanked:(BOOL)blanked;
+- (void)la_noteRuntimeStateMayHaveChanged;
+- (void)la_noteSystemTouchEvent:(UIEvent *)event;
 - (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
 - (BOOL)la_unassignEvent:(LAEvent *)event;
 - (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;

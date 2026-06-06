@@ -18,6 +18,7 @@
 #import "LAApplicationIconProvider.h"
 #import "LADefaultEventDataSource.h"
 #import "LARemoteListener.h"
+#import "LATouchActivityTracker.h"
 
 #pragma mark - Class Extension
 
@@ -26,11 +27,15 @@
 @property(nonatomic, strong) LAActivatorIPCClient *ipcClient;
 @property(nonatomic, strong) LAActivatorIPCServer *ipcServer;
 @property(nonatomic, strong) LAActivatorRuntimeStateProvider *runtimeStateProvider;
+@property(nonatomic, strong) LATouchActivityTracker *touchActivityTracker;
 - (BOOL)la_assignEventWithExplicitMode:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
 - (BOOL)la_unassignEventWithExplicitMode:(LAEvent *)event;
 - (NSArray *)la_dispatchableListenerNames:(NSArray *)listenerNames forEvent:(LAEvent *)event;
-- (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames;
+- (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames allowDeferral:(BOOL)allowDeferral;
+- (void)la_sendUnlockingEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames eventMode:(NSString *)eventMode;
+- (BOOL)la_listenerWithNameRequiresNoTouchEvents:(NSString *)listenerName;
 - (void)la_sendAbortEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames;
+- (void)la_notifyEventModeChanged:(NSString *)eventMode;
 - (void)la_notifyListenersThatListener:(id<LAListener>)handlingListener handledEvent:(LAEvent *)event;
 - (id)la_ipcPropertyListValue:(id)value;
 - (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event;
@@ -67,6 +72,11 @@ LAActivator *LASharedActivator;
         _runtimeStateProvider =
             [[LAActivatorRuntimeStateProvider alloc] initWithSpringBoardRole:self.runningInsideSpringBoard];
         if (self.runningInsideSpringBoard) {
+            _touchActivityTracker = [[LATouchActivityTracker alloc] init];
+            __weak typeof(self) weakSelf = self;
+            [_runtimeStateProvider setEventModeChangeHandler:^(NSString *eventMode) {
+              [weakSelf la_notifyEventModeChanged:eventMode];
+            }];
             [LADefaultEventDataSource.sharedDataSource registerAvailableEventsWithActivator:self];
         } else {
             _ipcClient = [[LAActivatorIPCClient alloc] init];
@@ -99,6 +109,36 @@ LAActivator *LASharedActivator;
     [self.ipcServer start];
 }
 
+- (void)la_noteHomeScreenVisible:(BOOL)visible {
+    if (self.runningInsideSpringBoard) {
+        [self.runtimeStateProvider noteHomeScreenVisible:visible];
+    }
+}
+
+- (void)la_noteLockScreenVisible:(BOOL)visible {
+    if (self.runningInsideSpringBoard) {
+        [self.runtimeStateProvider noteLockScreenVisible:visible];
+    }
+}
+
+- (void)la_noteScreenBlanked:(BOOL)blanked {
+    if (self.runningInsideSpringBoard) {
+        [self.runtimeStateProvider noteScreenBlanked:blanked];
+    }
+}
+
+- (void)la_noteRuntimeStateMayHaveChanged {
+    if (self.runningInsideSpringBoard) {
+        [self.runtimeStateProvider noteRuntimeStateMayHaveChanged];
+    }
+}
+
+- (void)la_noteSystemTouchEvent:(UIEvent *)event {
+    if (self.runningInsideSpringBoard) {
+        [self.touchActivityTracker noteTouchEvent:event];
+    }
+}
+
 #pragma mark - Event Delivery
 
 - (id<LAListener>)listenerForEvent:(LAEvent *)event {
@@ -119,7 +159,7 @@ LAActivator *LASharedActivator;
         });
         return;
     }
-    [self la_sendEvent:event toListenerNames:[self assignedListenerNamesForEvent:event]];
+    [self la_sendEvent:event toListenerNames:[self assignedListenerNamesForEvent:event] allowDeferral:YES];
 }
 
 - (void)sendEvent:(LAEvent *)event toListenerWithName:(NSString *)listenerName {
@@ -141,7 +181,7 @@ LAActivator *LASharedActivator;
         });
         return;
     }
-    [self la_sendEvent:event toListenerNames:listenerNames];
+    [self la_sendEvent:event toListenerNames:listenerNames allowDeferral:YES];
 }
 
 - (void)sendAbortToListener:(LAEvent *)event {
@@ -266,9 +306,14 @@ LAActivator *LASharedActivator;
     return [dispatchableNames copy];
 }
 
-- (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames {
+- (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames allowDeferral:(BOOL)allowDeferral {
     if (!self.runningInsideSpringBoard || !event) {
         return;
+    }
+
+    NSString *eventMode = event.mode ?: self.currentEventMode;
+    if ([eventMode isEqualToString:LAEventModeLockScreen]) {
+        [self la_sendUnlockingEvent:event toListenerNames:listenerNames eventMode:eventMode];
     }
 
     NSString *displayIdentifier = self.displayIdentifierForCurrentApplication;
@@ -276,7 +321,30 @@ LAActivator *LASharedActivator;
         return;
     }
 
-    for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
+    NSArray *dispatchableListenerNames = [self la_dispatchableListenerNames:listenerNames forEvent:event];
+    if (allowDeferral && self.touchActivityTracker.touchActive) {
+        NSString *deferredListenerName = nil;
+        for (NSString *listenerName in dispatchableListenerNames) {
+            if ([self la_listenerWithNameRequiresNoTouchEvents:listenerName]) {
+                deferredListenerName = listenerName;
+                break;
+            }
+        }
+        if (deferredListenerName.length > 0) {
+            LAEvent *deferredEvent = [LAEvent eventWithName:event.name mode:eventMode];
+            deferredEvent.userInfo = event.userInfo;
+            event.handled = YES;
+            [self la_notifyListenersThatListener:[self listenerForName:deferredListenerName] handledEvent:event];
+            __weak typeof(self) weakSelf = self;
+            [self.touchActivityTracker performWhenTouchesEnd:^{
+              __strong typeof(weakSelf) strongSelf = weakSelf;
+              [strongSelf la_sendEvent:deferredEvent toListenerNames:dispatchableListenerNames allowDeferral:NO];
+            }];
+            return;
+        }
+    }
+
+    for (NSString *listenerName in dispatchableListenerNames) {
         id<LAListener> listener = [self listenerForName:listenerName];
         BOOL wasHandled = event.handled;
         if ([listener respondsToSelector:@selector(activator:receiveEvent:forListenerName:)]) {
@@ -290,6 +358,54 @@ LAActivator *LASharedActivator;
     }
 }
 
+- (void)la_sendUnlockingEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames eventMode:(NSString *)eventMode {
+    if (![eventMode isEqualToString:LAEventModeLockScreen] || !self.supportsUnlockingDeviceToSendEvents ||
+        ![self eventWithNameSupportsUnlockingDeviceToSend:event.name]) {
+        return;
+    }
+
+    NSString *underneathMode = self.currentEventModeUnderneathLockScreen;
+    if (underneathMode.length == 0 || [underneathMode isEqualToString:LAEventModeLockScreen]) {
+        return;
+    }
+
+    NSMutableSet *seenNames = [NSMutableSet set];
+    for (id value in listenerNames) {
+        if (![value isKindOfClass:NSString.class] || [value length] == 0 || [seenNames containsObject:value]) {
+            continue;
+        }
+        NSString *listenerName = value;
+        [seenNames addObject:listenerName];
+
+        id<LAListener> listener = [self listenerForName:listenerName];
+        if (!listener || ![listener respondsToSelector:@selector(activator:receiveUnlockingDeviceEvent:forListenerName:)]) {
+            continue;
+        }
+        if ([self listenerWithName:listenerName isCompatibleWithMode:eventMode]) {
+            continue;
+        }
+        if (![self listenerWithName:listenerName isCompatibleWithMode:underneathMode]) {
+            continue;
+        }
+        if (![self listenerWithName:listenerName isCompatibleWithEventName:event.name]) {
+            continue;
+        }
+
+        BOOL wasHandled = event.handled;
+        BOOL handled = [listener activator:self receiveUnlockingDeviceEvent:event forListenerName:listenerName];
+        if (handled) {
+            event.handled = YES;
+        }
+        if (!wasHandled && event.handled) {
+            [self la_notifyListenersThatListener:listener handledEvent:event];
+        }
+    }
+}
+
+- (BOOL)la_listenerWithNameRequiresNoTouchEvents:(NSString *)listenerName {
+    return [[self infoDictionaryValueOfKey:@"requires-no-touch-events" forListenerWithName:listenerName] boolValue];
+}
+
 - (void)la_sendAbortEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames {
     if (!self.runningInsideSpringBoard || !event) {
         return;
@@ -301,6 +417,18 @@ LAActivator *LASharedActivator;
             [listener activator:self abortEvent:event forListenerName:listenerName];
         } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
             [listener activator:self abortEvent:event];
+        }
+    }
+}
+
+- (void)la_notifyEventModeChanged:(NSString *)eventMode {
+    if (!self.runningInsideSpringBoard || eventMode.length == 0) {
+        return;
+    }
+
+    for (id<LAListener> listener in [self.backend registeredListeners]) {
+        if ([listener respondsToSelector:@selector(activator:didChangeToEventMode:)]) {
+            [listener activator:self didChangeToEventMode:eventMode];
         }
     }
 }
@@ -947,20 +1075,40 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)currentEventMode {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageCurrentEventMode userInfo:nil] ?:
+                   [self.runtimeStateProvider currentEventMode];
+    }
     return [self.runtimeStateProvider currentEventMode];
 }
 
 - (NSString *)currentEventModeUnderneathLockScreen {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageCurrentEventModeUnderneathLockScreen
+                                                userInfo:nil] ?:
+                   [self.runtimeStateProvider currentEventModeUnderneathLockScreen];
+    }
     return [self.runtimeStateProvider currentEventModeUnderneathLockScreen];
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageSupportsUnlockingDeviceToSendEvents
+                                              userInfo:nil
+                                          defaultValue:NO];
+    }
     return [self.runtimeStateProvider supportsUnlockingDeviceToSendEvents];
 }
 
 #pragma mark - Blacklist
 
 - (NSString *)displayIdentifierForCurrentApplication {
+    if (!self.runningInsideSpringBoard) {
+        NSString *displayIdentifier =
+            [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageCurrentApplicationDisplayIdentifier
+                                             userInfo:nil];
+        return displayIdentifier.length > 0 ? displayIdentifier : nil;
+    }
     return [self.runtimeStateProvider displayIdentifierForCurrentApplication];
 }
 
