@@ -16,7 +16,7 @@ except ImportError as exc:
     raise SystemExit(
         "Missing Python dependency: lief. "
         "Create a virtual environment and run: "
-        "python -m pip install -r scripts/requirements-public-api.txt"
+        "python -m pip install -r scripts/requirements.txt"
     ) from exc
 
 
@@ -549,7 +549,7 @@ def main() -> int:
         f"{checked_metadata} Objective-C metadata entries, "
         f"{checked_properties} properties"
     )
-    log("Compile/link/runtime metadata check passed.")
+    log("Metadata check passed.")
     return 0
 
 

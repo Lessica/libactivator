@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-python="${PYTHON:-${project_root}/.venv/bin/python}"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export THEOS_STAGING_DIR="${THEOS_STAGING_DIR:-${PROJECT_ROOT}/.theos/_}"
 
-if [[ ! -x "${python}" ]]; then
-    python="${PYTHON:-python3}"
-fi
-
-exec "${python}" "${project_root}/scripts/check-public-api.py" "$@"
+exec "${PYTHON:-${PROJECT_ROOT}/.venv/bin/python}" "${PROJECT_ROOT}/scripts/_check-public-api.py" "$@"
