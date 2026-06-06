@@ -1,12 +1,12 @@
 #import <Activator/LASettingsViewController.h>
 
 @interface LAModeSettingsController ()
-@property (nonatomic, copy) NSString *mode;
+@property(nonatomic, copy) NSString *mode;
 @end
 
 @interface LAEventSettingsController ()
-@property (nonatomic, copy) NSArray *modes;
-@property (nonatomic, copy) NSString *eventName;
+@property(nonatomic, copy) NSArray *modes;
+@property(nonatomic, copy) NSString *eventName;
 @end
 
 @interface LAEventConfigurationViewController () {
@@ -21,13 +21,11 @@
 
 @implementation LASettingsViewController
 
-+ (id)controller
-{
++ (id)controller {
     return [[self alloc] init];
 }
 
-- (id)init
-{
+- (id)init {
     return [super init];
 }
 
@@ -38,8 +36,7 @@
 
 @implementation LAModeSettingsController
 
-- (id)initWithMode:(NSString *)mode
-{
+- (id)initWithMode:(NSString *)mode {
     self = [super init];
     if (self) {
         _mode = [mode copy];
@@ -51,8 +48,7 @@
 
 @implementation LAEventSettingsController
 
-- (id)initWithModes:(NSArray *)modes eventName:(NSString *)eventName
-{
+- (id)initWithModes:(NSArray *)modes eventName:(NSString *)eventName {
     self = [super init];
     if (self) {
         _modes = [modes copy];
@@ -70,8 +66,7 @@
 
 @synthesize eventName = _eventName;
 
-- (id)initWithEventName:(NSString *)eventName
-{
+- (id)initWithEventName:(NSString *)eventName {
     self = [super init];
     if (self) {
         _eventName = [eventName copy];
@@ -79,8 +74,7 @@
     return self;
 }
 
-- (BOOL)performSave
-{
+- (BOOL)performSave {
     return YES;
 }
 
@@ -90,8 +84,7 @@
 
 @synthesize listenerName = _listenerName;
 
-- (id)initWithListenerName:(NSString *)listenerName
-{
+- (id)initWithListenerName:(NSString *)listenerName {
     self = [super init];
     if (self) {
         _listenerName = [listenerName copy];
@@ -99,8 +92,7 @@
     return self;
 }
 
-- (BOOL)performSave
-{
+- (BOOL)performSave {
     return YES;
 }
 

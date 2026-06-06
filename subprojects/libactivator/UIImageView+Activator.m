@@ -7,23 +7,20 @@ static char LAActivatorListenerNameKey;
 
 @implementation UIImageView (Activator)
 
-- (void)setActivatorListenerImageIsThreaded:(BOOL)activatorListenerImageIsThreaded
-{
-    objc_setAssociatedObject(self, &LAActivatorListenerImageIsThreadedKey, @(activatorListenerImageIsThreaded), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+- (void)setActivatorListenerImageIsThreaded:(BOOL)activatorListenerImageIsThreaded {
+    objc_setAssociatedObject(self, &LAActivatorListenerImageIsThreadedKey, @(activatorListenerImageIsThreaded),
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-- (BOOL)activatorListenerImageIsThreaded
-{
+- (BOOL)activatorListenerImageIsThreaded {
     return [objc_getAssociatedObject(self, &LAActivatorListenerImageIsThreadedKey) boolValue];
 }
 
-- (void)setActivatorListenerName:(NSString *)activatorListenerName
-{
+- (void)setActivatorListenerName:(NSString *)activatorListenerName {
     objc_setAssociatedObject(self, &LAActivatorListenerNameKey, activatorListenerName, OBJC_ASSOCIATION_COPY_NONATOMIC);
 }
 
-- (NSString *)activatorListenerName
-{
+- (NSString *)activatorListenerName {
     return objc_getAssociatedObject(self, &LAActivatorListenerNameKey);
 }
 

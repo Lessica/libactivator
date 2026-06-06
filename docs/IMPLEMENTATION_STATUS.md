@@ -20,16 +20,16 @@ completed.
 | Header modernization | ✅ | Must implement | `include/Activator` | Version compatibility update | Obsolete `<libkern/OSAtomic.h>` import is removed and all supported imports still compile. |
 | `LAEvent` model | ✅ | Must implement | `libactivator.dylib` | Public constant definitions | Factories, initializers, properties, copy semantics, and `NSCoding` work without runtime services. |
 | `LAActivator` singleton and globals | ✅ | Must implement | `libactivator.dylib` | Public constant definitions | `+sharedInstance` and `LASharedActivator` are stable and identical. |
-| Empty event registry | ✅ | Safe stub first | `libactivator.dylib` | `LAActivator` singleton and globals | Event registry methods are non-crashing and return deterministic empty/default values. |
-| Empty listener registry | ✅ | Safe stub first | `libactivator.dylib` | `LAActivator` singleton and globals | Listener registry methods are non-crashing and return deterministic empty/default values. |
-| Assignment model | Not started | Must implement | `libactivator.dylib` | `LAEvent` model | Assign, unassign, multi-listener, and reverse lookup behavior works in memory. |
+| In-memory event registry | ✅ | Must implement | `libactivator.dylib` | `LAActivator` singleton and globals | Event data sources can register/unregister and drive metadata queries in process as the Step 2 model; SpringBoard becomes authoritative after IPC/runtime work. |
+| In-memory listener registry | ✅ | Must implement | `libactivator.dylib` | `LAActivator` singleton and globals | Listeners can register/unregister and drive metadata queries in process as the Step 2 model; SpringBoard becomes authoritative after IPC/runtime work. |
+| Assignment model | ✅ | Must implement | `libactivator.dylib` | `LAEvent` model | Assign, unassign, multi-listener, and reverse lookup behavior works in memory as the Step 2 model; persistence and IPC-backed authority are separate slices. |
 | Assignment persistence | Not started | Must implement | `libactivator.dylib` | Assignment model, path abstraction | Assignments persist atomically in the jailbreak layout. |
-| Listener compatibility model | Not started | Must implement | `libactivator.dylib` | Empty listener registry, assignment model | `listenerNamesAreMutuallyCompatible:` and exclusive group behavior are deterministic. |
-| Blacklist model | Not started | Must implement | `libactivator.dylib` | Path abstraction | Blacklist query/update works without SpringBoard runtime. |
-| Profile model | Not started | Must implement | `libactivator.dylib` | Assignment model | Default/current profile behavior is defined and deterministic. |
+| Listener compatibility model | ✅ | Must implement | `libactivator.dylib` | In-memory listener registry, assignment model | `listenerNamesAreMutuallyCompatible:` and exclusive group behavior are deterministic. |
+| Blacklist model | ✅ | Must implement | `libactivator.dylib` | None | Blacklist query/update works in memory for Step 2; final client-visible state must be SpringBoard/IPC-backed. |
+| Profile model | ✅ | Must implement | `libactivator.dylib` | Assignment model | Default/current profile behavior is defined and deterministic in memory for Step 2; final client-visible state must be SpringBoard/IPC-backed. |
 | Localization safe stubs | ✅ | Safe stub first | `libactivator.dylib` | Public constant definitions | Localization methods return deterministic fallback strings before resources exist. |
-| Event data-source registration | Not started | Must implement | `libactivator.dylib` | Empty event registry | Register/unregister and metadata dispatch to `LAEventDataSource` work in process. |
-| Listener metadata dispatch | Not started | Safe stub first | `libactivator.dylib` | Empty listener registry | Optional `LAListener` metadata selectors are queried with `respondsToSelector:`. |
+| Event data-source registration | ✅ | Must implement | `libactivator.dylib` | In-memory event registry | Register/unregister and metadata dispatch to `LAEventDataSource` work in process. |
+| Listener metadata dispatch | ✅ | Safe stub first | `libactivator.dylib` | In-memory listener registry | Optional `LAListener` metadata selectors are queried with `respondsToSelector:`. |
 | Event/listener delivery API stubs | ✅ | Runtime-backed | `libactivator.dylib` | Assignment model, listener registry | Public delivery selectors are non-crashing; real dispatch waits for IPC/runtime. |
 | Public settings class shims | ✅ | Settings-backed | `libactivator.dylib` | Header modernization | Public settings classes resolve when a third-party app links only `libactivator.dylib`. |
 | Settings UI implementation | Not started | Settings-backed | `libactivatorsettings.dylib` | Public settings class shims | Real Settings UI behavior is implemented in the settings library, not in `libactivator.dylib`. |

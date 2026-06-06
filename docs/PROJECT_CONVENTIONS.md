@@ -84,6 +84,19 @@ are stable enough to guide implementation.
 - Modern foreground-application lookup, lock-screen state, and home-screen state
   have known project-owner references. Ask for those references when
   implementing that runtime layer.
+- The SpringBoard runtime is the authoritative owner for activator runtime
+  state. Event registries, listener registries, assignments, profiles,
+  blacklist state, metadata dispatch, and event delivery must converge there
+  once IPC is implemented.
+- Non-SpringBoard clients should treat `LAActivator` as a public API facade.
+  Runtime-backed calls must either route to SpringBoard through IPC or use an
+  explicit non-crashing fallback.
+- In-process model behavior inside `libactivator.dylib` is acceptable during
+  the core model phase for pure logic validation. Do not treat per-process
+  local registries in clients as the final runtime design.
+- APIs that register Objective-C objects, such as listener and event data-source
+  registration, are SpringBoard-runtime concepts. Non-SpringBoard behavior must
+  be explicit and must not silently create an isolated client-only runtime.
 
 ## Development Phases
 
@@ -168,6 +181,9 @@ These phases describe engineering dependency order, not heavyweight milestones.
   default design.
 - Use `CPDistributedMessagingCenter` from the `AppSupport` framework as the IPC
   transport.
+- Treat the `CPDistributedMessagingCenter` implementation details as opaque.
+  Even if it uses lower-level Mach or XPC-related primitives internally, the
+  project contract is the `CPDistributedMessagingCenter` API, not direct XPC.
 - `CPDistributedMessagingCenter` does not bypass sandbox restrictions. If a
   sandboxed system service needs cross-process communication, add `libSandy`
   for that specific bridge.
