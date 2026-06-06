@@ -1,7 +1,6 @@
 #import "LAActivatorPersistence.h"
 
 #import <roothide.h>
-#import <unistd.h>
 
 @implementation LAActivatorPersistence
 
@@ -24,7 +23,6 @@
 
     NSData *data = [NSData dataWithContentsOfFile:self.filePath];
     if (data.length == 0) {
-        [self backupInvalidDictionary];
         return nil;
     }
 
@@ -34,7 +32,6 @@
                                                           format:nil
                                                            error:&error];
     if (![plist isKindOfClass:NSDictionary.class]) {
-        [self backupInvalidDictionary];
         return nil;
     }
     return plist;
@@ -65,16 +62,6 @@
 
     NSError *writeError = nil;
     return [data writeToFile:self.filePath options:NSDataWritingAtomic error:&writeError];
-}
-
-- (void)backupInvalidDictionary {
-    if (self.filePath.length == 0 || ![NSFileManager.defaultManager fileExistsAtPath:self.filePath]) {
-        return;
-    }
-
-    NSString *backupPath = [self.filePath stringByAppendingFormat:@".invalid-%lld-%d",
-                                                      (long long)[NSDate.date timeIntervalSince1970], getpid()];
-    [NSFileManager.defaultManager moveItemAtPath:self.filePath toPath:backupPath error:nil];
 }
 
 @end

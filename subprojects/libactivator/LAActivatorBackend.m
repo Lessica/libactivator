@@ -112,7 +112,6 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
     NSString *currentProfileName = dictionary[LAActivatorCurrentProfileNameKey];
     if (![schemaVersion isKindOfClass:NSNumber.class] || schemaVersion.integerValue != 1 ||
         ![profiles isKindOfClass:NSDictionary.class]) {
-        [self.persistence backupInvalidDictionary];
         [self resetRuntimeState];
         return;
     }

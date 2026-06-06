@@ -108,8 +108,8 @@ These phases describe engineering dependency order, not heavyweight milestones.
   facade behavior, event model, listener model, assignments, profiles, and
   blacklist logic.
 - Implement storage and metadata: validated schemas, atomic persistence,
-  recovery behavior, localization, icons, configuration hooks, removal hooks,
-  event metadata, and listener metadata.
+  serialization behavior, localization, icons, configuration hooks, removal
+  hooks, event metadata, and listener metadata.
 - Implement IPC with `CPDistributedMessagingCenter` request/response handling,
   error handling, notifications, and payload validation.
 - Implement the SpringBoard runtime: server bootstrap, runtime state,
@@ -122,8 +122,7 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Implement the Settings UI library and hosts: `libactivatorsettings.dylib`, the
   PreferenceBundle host, the Activator.app host, and third-party host loading.
 - Harden integration and packaging: on-device verification checklists, debug
-  traces, rootful/rootless/roothide package checks, recovery paths, and release
-  documentation.
+  traces, rootful/rootless/roothide package checks, and release documentation.
 
 ## Build Rules
 
@@ -206,8 +205,8 @@ These phases describe engineering dependency order, not heavyweight milestones.
   the core.
 - If legacy preference import becomes useful later, implement it as an explicit
   standalone import tool rather than core startup behavior.
-- New persistent data should be atomic to write, recoverable after corruption,
-  and explicit about ownership and permissions.
+- New persistent data should be atomic to write, schema-validated, and explicit
+  about ownership and permissions.
 - Prefer structured serialization over ad hoc string parsing.
 - Runtime preferences must be stored at
   `jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")`. Rootless and
@@ -221,9 +220,9 @@ These phases describe engineering dependency order, not heavyweight milestones.
   by an empty string.
 - Persisted listener-name arrays and blacklisted display identifier arrays must
   contain only non-empty strings, deduplicated and sorted.
-- Invalid or unreadable runtime preference plists should be moved aside with an
-  `.invalid-*` suffix, then the runtime should continue with default empty
-  state. Do not migrate or reuse the legacy cache plist path.
+- Invalid or unreadable runtime preference plists should be treated as absent.
+  Do not move, delete, immediately overwrite, migrate, or reuse the legacy cache
+  plist path.
 
 ## Runtime Rules
 

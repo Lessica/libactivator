@@ -9,6 +9,5 @@ __attribute__((visibility("hidden")))
 - (instancetype)initWithFilePath:(NSString *)filePath;
 - (NSDictionary *)loadDictionary;
 - (BOOL)saveDictionary:(NSDictionary *)dictionary;
-- (void)backupInvalidDictionary;
 
 @end
