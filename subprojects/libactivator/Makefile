@@ -7,6 +7,7 @@ LIBRARY_NAME := libactivator
 
 libactivator_FILES += ../common/LAPath.m
 libactivator_FILES += LAConstants.m
+libactivator_FILES += LAProtocols.m
 libactivator_FILES += LAEvent.m
 libactivator_FILES += LAActivator.m
 libactivator_FILES += LASettingsShims.m

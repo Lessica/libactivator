@@ -228,6 +228,10 @@ These phases describe engineering dependency order, not heavyweight milestones.
   classes from `LASettingsViewController.h`, because third-party jailbreak apps
   may dynamically link `libactivator.dylib` and use those classes to present
   Settings UI.
+- `LASettingsShims.m` is a narrow compatibility exception: it may contain
+  multiple placeholder settings classes only because this phase provides empty
+  shims for the legacy public API surface. Do not treat it as an implementation
+  pattern for real Settings UI or future runtime code.
 - The PreferenceBundle, Activator.app, and third-party jailbreak apps are
   hosts for the Settings UI library.
 - Name framework-like dynamic libraries with the `libxxx.dylib` convention.
@@ -248,6 +252,12 @@ These phases describe engineering dependency order, not heavyweight milestones.
   otherwise.
 - Keep manual memory management out of new code by default.
 - Use clear module names and small files with explicit ownership.
+- New implementation code should use one primary public class per source file.
+  Multiple classes in one implementation file are allowed only for explicitly
+  documented compatibility shims or tiny private helper types that are wholly
+  owned by that file.
+- Do not place multiple unrelated runtime, model, persistence, IPC, or UI
+  implementation classes in a single source file.
 - Avoid global mutable state except for compatibility globals required by the
   public API, such as `LASharedActivator`.
 - Keep comments sparse and useful: explain private API choices, compatibility

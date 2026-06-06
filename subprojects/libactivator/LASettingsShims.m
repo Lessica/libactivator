@@ -9,12 +9,14 @@
 @property (nonatomic, copy) NSString *eventName;
 @end
 
-@interface LAEventConfigurationViewController ()
-@property (nonatomic, copy, readwrite) NSString *eventName;
+@interface LAEventConfigurationViewController () {
+    NSString *_eventName;
+}
 @end
 
-@interface LAListenerConfigurationViewController ()
-@property (nonatomic, copy, readwrite) NSString *listenerName;
+@interface LAListenerConfigurationViewController () {
+    NSString *_listenerName;
+}
 @end
 
 @implementation LASettingsViewController
@@ -66,6 +68,8 @@
 
 @implementation LAEventConfigurationViewController
 
+@synthesize eventName = _eventName;
+
 - (id)initWithEventName:(NSString *)eventName
 {
     self = [super init];
@@ -83,6 +87,8 @@
 @end
 
 @implementation LAListenerConfigurationViewController
+
+@synthesize listenerName = _listenerName;
 
 - (id)initWithListenerName:(NSString *)listenerName
 {

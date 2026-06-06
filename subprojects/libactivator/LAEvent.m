@@ -1,11 +1,15 @@
 #import <Activator/Activator.h>
 
-@interface LAEvent ()
-@property (nonatomic, copy, readwrite) NSString *name;
-@property (nonatomic, copy, readwrite) NSString *mode;
+@interface LAEvent () {
+    NSString *_name;
+    NSString *_mode;
+}
 @end
 
 @implementation LAEvent
+
+@synthesize name = _name;
+@synthesize mode = _mode;
 
 + (id)eventWithName:(NSString *)name
 {
