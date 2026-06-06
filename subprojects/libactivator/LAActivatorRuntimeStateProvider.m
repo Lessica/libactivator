@@ -9,12 +9,21 @@
 #import "LAActivatorRuntimeStateProvider.h"
 #import "LAActivatorUnlockService.h"
 
-#import <objc/message.h>
 #import <UIKit/UIKit.h>
+
+@interface UIApplication (LAActivatorSpringBoard)
+- (id)_accessibilityFrontMostApplication;
+@end
+
+@protocol LAActivatorSpringBoardApplication <NSObject>
+@optional
+- (NSString *)bundleIdentifier;
+- (NSString *)displayIdentifier;
+@end
 
 @interface LAActivatorRuntimeStateProvider ()
 - (NSString *)foregroundDisplayIdentifierIgnoringLockState;
-- (NSString *)displayIdentifierForApplication:(id)application;
+- (NSString *)displayIdentifierForApplication:(id<LAActivatorSpringBoardApplication>)application;
 - (NSString *)eventModeWithHomeScreenVisible:(BOOL)homeScreenVisible
                            lockScreenVisible:(BOOL)lockScreenVisible
                                screenBlanked:(BOOL)screenBlanked;
@@ -39,7 +48,7 @@
     if (self) {
         _runningInsideSpringBoard = runningInsideSpringBoard;
         _homeScreenVisible = runningInsideSpringBoard;
-        _stateQueue = dispatch_queue_create("libactivator.runtime-state", DISPATCH_QUEUE_SERIAL);
+        _stateQueue = dispatch_queue_create("libactivator.runtime-state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _unlockService = [[LAActivatorUnlockService alloc] initWithSpringBoardRole:runningInsideSpringBoard];
         _lastEventMode = runningInsideSpringBoard ? LAEventModeSpringBoard : LAEventModeApplication;
     }
@@ -50,29 +59,30 @@
 
 - (void)noteHomeScreenVisible:(BOOL)visible {
     [self updateStateWithBlock:^{
-      self->_homeScreenVisible = visible;
+        self->_homeScreenVisible = visible;
     }];
 }
 
 - (void)noteLockScreenVisible:(BOOL)visible {
     [self updateStateWithBlock:^{
-      self->_lockScreenVisible = visible;
+        self->_lockScreenVisible = visible;
     }];
 }
 
 - (void)noteScreenBlanked:(BOOL)blanked {
     [self updateStateWithBlock:^{
-      self->_screenBlanked = blanked;
+        self->_screenBlanked = blanked;
     }];
 }
 
 - (void)noteRuntimeStateMayHaveChanged {
-    [self updateStateWithBlock:^{}];
+    [self updateStateWithBlock:^{
+    }];
 }
 
 - (void)setEventModeChangeHandler:(void (^)(NSString *eventMode))handler {
     dispatch_sync(_stateQueue, ^{
-      self->_eventModeChangeHandler = [handler copy];
+        self->_eventModeChangeHandler = [handler copy];
     });
 }
 
@@ -83,15 +93,15 @@
     __block BOOL lockScreenVisible = NO;
     __block BOOL screenBlanked = NO;
     dispatch_sync(_stateQueue, ^{
-      homeScreenVisible = self->_homeScreenVisible;
-      lockScreenVisible = self->_lockScreenVisible;
-      screenBlanked = self->_screenBlanked;
+        homeScreenVisible = self->_homeScreenVisible;
+        lockScreenVisible = self->_lockScreenVisible;
+        screenBlanked = self->_screenBlanked;
     });
     NSString *eventMode = [self eventModeWithHomeScreenVisible:homeScreenVisible
                                              lockScreenVisible:lockScreenVisible
                                                  screenBlanked:screenBlanked];
     dispatch_sync(_stateQueue, ^{
-      self->_lastEventMode = eventMode;
+        self->_lastEventMode = eventMode;
     });
     return eventMode;
 }
@@ -103,12 +113,13 @@
 
     __block BOOL homeScreenVisible = NO;
     dispatch_sync(_stateQueue, ^{
-      homeScreenVisible = self->_homeScreenVisible;
+        homeScreenVisible = self->_homeScreenVisible;
     });
     if (homeScreenVisible) {
         return LAEventModeSpringBoard;
     }
-    return [self foregroundDisplayIdentifierIgnoringLockState].length > 0 ? LAEventModeApplication : LAEventModeSpringBoard;
+    return [self foregroundDisplayIdentifierIgnoringLockState].length > 0 ? LAEventModeApplication
+                                                                          : LAEventModeSpringBoard;
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {
@@ -135,14 +146,13 @@
 
     __block NSString *displayIdentifier = nil;
     dispatch_block_t block = ^{
-      UIApplication *application = [UIApplication sharedApplication];
-      if (![application respondsToSelector:@selector(_accessibilityFrontMostApplication)]) {
-          return;
-      }
+        UIApplication *application = [UIApplication sharedApplication];
+        if (![application respondsToSelector:@selector(_accessibilityFrontMostApplication)]) {
+            return;
+        }
 
-      id frontMostApplication =
-          ((id (*)(id, SEL))objc_msgSend)(application, @selector(_accessibilityFrontMostApplication));
-      displayIdentifier = [self displayIdentifierForApplication:frontMostApplication];
+        id<LAActivatorSpringBoardApplication> frontMostApplication = [application _accessibilityFrontMostApplication];
+        displayIdentifier = [self displayIdentifierForApplication:frontMostApplication];
     };
 
     if ([NSThread isMainThread]) {
@@ -157,15 +167,15 @@
     return displayIdentifier;
 }
 
-- (NSString *)displayIdentifierForApplication:(id)application {
+- (NSString *)displayIdentifierForApplication:(id<LAActivatorSpringBoardApplication>)application {
     if ([application respondsToSelector:@selector(bundleIdentifier)]) {
-        NSString *bundleIdentifier = ((id (*)(id, SEL))objc_msgSend)(application, @selector(bundleIdentifier));
+        NSString *bundleIdentifier = [application bundleIdentifier];
         if ([bundleIdentifier isKindOfClass:NSString.class] && bundleIdentifier.length > 0) {
             return bundleIdentifier;
         }
     }
     if ([application respondsToSelector:@selector(displayIdentifier)]) {
-        NSString *displayIdentifier = ((id (*)(id, SEL))objc_msgSend)(application, @selector(displayIdentifier));
+        NSString *displayIdentifier = [application displayIdentifier];
         if ([displayIdentifier isKindOfClass:NSString.class] && displayIdentifier.length > 0) {
             return displayIdentifier;
         }
@@ -187,25 +197,26 @@
     if (homeScreenVisible) {
         return LAEventModeSpringBoard;
     }
-    return [self foregroundDisplayIdentifierIgnoringLockState].length > 0 ? LAEventModeApplication : LAEventModeSpringBoard;
+    return [self foregroundDisplayIdentifierIgnoringLockState].length > 0 ? LAEventModeApplication
+                                                                          : LAEventModeSpringBoard;
 }
 
 - (void)updateStateWithBlock:(void (^)(void))block {
     NSString *previousMode = self.currentEventMode;
     dispatch_sync(_stateQueue, ^{
-      block();
+        block();
     });
 
     NSString *eventMode = self.currentEventMode;
     __block void (^handler)(NSString *eventMode) = nil;
     dispatch_sync(_stateQueue, ^{
-      handler = [self->_eventModeChangeHandler copy];
+        handler = [self->_eventModeChangeHandler copy];
     });
     if (eventMode.length == 0 || [eventMode isEqualToString:previousMode] || !handler) {
         return;
     }
     dispatch_async(dispatch_get_main_queue(), ^{
-      handler(eventMode);
+        handler(eventMode);
     });
 }
 

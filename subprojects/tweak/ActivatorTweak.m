@@ -8,10 +8,10 @@
 
 #import "LAActivatorPrivate.h"
 
+#import <UIKit/UIKit.h>
+#import <notify.h>
 #import <objc/runtime.h>
 #import <substrate.h>
-#import <notify.h>
-#import <UIKit/UIKit.h>
 
 static void (*LATOrigUIViewControllerViewWillAppear)(id, SEL, BOOL);
 static void (*LATOrigUIViewControllerViewDidDisappear)(id, SEL, BOOL);
@@ -101,49 +101,46 @@ static void LATRegisterDarwinNotifications(void) {
     static int blankedScreenToken = 0;
     notify_register_dispatch("com.apple.springboard.lockstate", &lockStateToken, dispatch_get_main_queue(),
                              ^(int token) {
-                               LATNoteRuntimeStateMayHaveChanged();
+                                 LATNoteRuntimeStateMayHaveChanged();
                              });
     notify_register_dispatch("com.apple.springboard.hasBlankedScreen", &blankedScreenToken, dispatch_get_main_queue(),
                              ^(int token) {
-                               uint64_t state = 0;
-                               notify_get_state(token, &state);
-                               [[LAActivator sharedInstance] la_noteScreenBlanked:state != 0];
+                                 uint64_t state = 0;
+                                 notify_get_state(token, &state);
+                                 [[LAActivator sharedInstance] la_noteScreenBlanked:state != 0];
                              });
 }
 
 static void LATInstallHooks(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-      LATHookInstanceMethod(UIViewController.class, @selector(viewWillAppear:), (IMP)LATUIViewControllerViewWillAppear,
-                            (IMP *)&LATOrigUIViewControllerViewWillAppear);
-      LATHookInstanceMethod(UIViewController.class, @selector(viewDidDisappear:),
-                            (IMP)LATUIViewControllerViewDidDisappear,
-                            (IMP *)&LATOrigUIViewControllerViewDidDisappear);
-      LATHookInstanceMethod(NSClassFromString(@"SBBacklightController"),
-                            @selector(turnOnScreenFullyWithBacklightSource:),
-                            (IMP)LATSBBacklightControllerTurnOnScreenFully,
-                            (IMP *)&LATOrigSBBacklightControllerTurnOnScreenFully);
-      LATHookInstanceMethod(NSClassFromString(@"SBBacklightController"),
-                            @selector(_notifyObserversDidAnimateToFactor:source:),
-                            (IMP)LATSBBacklightControllerNotifyDidAnimate,
-                            (IMP *)&LATOrigSBBacklightControllerNotifyDidAnimate);
-      LATHookInstanceMethod(NSClassFromString(@"SBCoverSheetPrimarySlidingViewController"),
-                            @selector(_endTransitionToAppeared:),
-                            (IMP)LATSBCoverSheetPrimarySlidingViewControllerEndTransition,
-                            (IMP *)&LATOrigSBCoverSheetPrimarySlidingViewControllerEndTransition);
-      LATHookInstanceMethod(NSClassFromString(@"SBHIconManager"), @selector(rootFolderControllerViewWillAppear:),
-                            (IMP)LATSBHIconManagerRootFolderWillAppear,
-                            (IMP *)&LATOrigSBHIconManagerRootFolderWillAppear);
-      LATHookInstanceMethod(NSClassFromString(@"SBHIconManager"), @selector(rootFolderControllerViewDidDisappear:),
-                            (IMP)LATSBHIconManagerRootFolderDidDisappear,
-                            (IMP *)&LATOrigSBHIconManagerRootFolderDidDisappear);
-      LATHookInstanceMethod(NSClassFromString(@"_UISystemGestureWindow"), @selector(sendEvent:),
-                            (IMP)LATUISystemGestureWindowSendEvent,
-                            (IMP *)&LATOrigUISystemGestureWindowSendEvent);
-      LATHookInstanceMethod(NSClassFromString(@"SpringBoard"), @selector(applicationDidFinishLaunching:),
-                            (IMP)LATSpringBoardApplicationDidFinishLaunching,
-                            (IMP *)&LATOrigSpringBoardApplicationDidFinishLaunching);
-      LATRegisterDarwinNotifications();
+        LATHookInstanceMethod(UIViewController.class, @selector(viewWillAppear:),
+                              (IMP)LATUIViewControllerViewWillAppear, (IMP *)&LATOrigUIViewControllerViewWillAppear);
+        LATHookInstanceMethod(UIViewController.class, @selector(viewDidDisappear:),
+                              (IMP)LATUIViewControllerViewDidDisappear,
+                              (IMP *)&LATOrigUIViewControllerViewDidDisappear);
+        LATHookInstanceMethod(
+            NSClassFromString(@"SBBacklightController"), @selector(turnOnScreenFullyWithBacklightSource:),
+            (IMP)LATSBBacklightControllerTurnOnScreenFully, (IMP *)&LATOrigSBBacklightControllerTurnOnScreenFully);
+        LATHookInstanceMethod(
+            NSClassFromString(@"SBBacklightController"), @selector(_notifyObserversDidAnimateToFactor:source:),
+            (IMP)LATSBBacklightControllerNotifyDidAnimate, (IMP *)&LATOrigSBBacklightControllerNotifyDidAnimate);
+        LATHookInstanceMethod(NSClassFromString(@"SBCoverSheetPrimarySlidingViewController"),
+                              @selector(_endTransitionToAppeared:),
+                              (IMP)LATSBCoverSheetPrimarySlidingViewControllerEndTransition,
+                              (IMP *)&LATOrigSBCoverSheetPrimarySlidingViewControllerEndTransition);
+        LATHookInstanceMethod(NSClassFromString(@"SBHIconManager"), @selector(rootFolderControllerViewWillAppear:),
+                              (IMP)LATSBHIconManagerRootFolderWillAppear,
+                              (IMP *)&LATOrigSBHIconManagerRootFolderWillAppear);
+        LATHookInstanceMethod(NSClassFromString(@"SBHIconManager"), @selector(rootFolderControllerViewDidDisappear:),
+                              (IMP)LATSBHIconManagerRootFolderDidDisappear,
+                              (IMP *)&LATOrigSBHIconManagerRootFolderDidDisappear);
+        LATHookInstanceMethod(NSClassFromString(@"_UISystemGestureWindow"), @selector(sendEvent:),
+                              (IMP)LATUISystemGestureWindowSendEvent, (IMP *)&LATOrigUISystemGestureWindowSendEvent);
+        LATHookInstanceMethod(NSClassFromString(@"SpringBoard"), @selector(applicationDidFinishLaunching:),
+                              (IMP)LATSpringBoardApplicationDidFinishLaunching,
+                              (IMP *)&LATOrigSpringBoardApplicationDidFinishLaunching);
+        LATRegisterDarwinNotifications();
     });
 }
 

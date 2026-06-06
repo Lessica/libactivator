@@ -75,7 +75,7 @@ LAActivator *LASharedActivator;
             _touchActivityTracker = [[LATouchActivityTracker alloc] init];
             __weak typeof(self) weakSelf = self;
             [_runtimeStateProvider setEventModeChangeHandler:^(NSString *eventMode) {
-              [weakSelf la_notifyEventModeChanged:eventMode];
+                [weakSelf la_notifyEventModeChanged:eventMode];
             }];
             [LADefaultEventDataSource.sharedDataSource registerAvailableEventsWithActivator:self];
         } else {
@@ -337,8 +337,8 @@ LAActivator *LASharedActivator;
             [self la_notifyListenersThatListener:[self listenerForName:deferredListenerName] handledEvent:event];
             __weak typeof(self) weakSelf = self;
             [self.touchActivityTracker performWhenTouchesEnd:^{
-              __strong typeof(weakSelf) strongSelf = weakSelf;
-              [strongSelf la_sendEvent:deferredEvent toListenerNames:dispatchableListenerNames allowDeferral:NO];
+                __strong typeof(weakSelf) strongSelf = weakSelf;
+                [strongSelf la_sendEvent:deferredEvent toListenerNames:dispatchableListenerNames allowDeferral:NO];
             }];
             return;
         }
@@ -358,7 +358,9 @@ LAActivator *LASharedActivator;
     }
 }
 
-- (void)la_sendUnlockingEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames eventMode:(NSString *)eventMode {
+- (void)la_sendUnlockingEvent:(LAEvent *)event
+              toListenerNames:(NSArray *)listenerNames
+                    eventMode:(NSString *)eventMode {
     if (![eventMode isEqualToString:LAEventModeLockScreen] || !self.supportsUnlockingDeviceToSendEvents ||
         ![self eventWithNameSupportsUnlockingDeviceToSend:event.name]) {
         return;
@@ -378,7 +380,8 @@ LAActivator *LASharedActivator;
         [seenNames addObject:listenerName];
 
         id<LAListener> listener = [self listenerForName:listenerName];
-        if (!listener || ![listener respondsToSelector:@selector(activator:receiveUnlockingDeviceEvent:forListenerName:)]) {
+        if (!listener || ![listener respondsToSelector:@selector(activator:
+                                                           receiveUnlockingDeviceEvent:forListenerName:)]) {
             continue;
         }
         if ([self listenerWithName:listenerName isCompatibleWithMode:eventMode]) {
@@ -1021,8 +1024,8 @@ LAActivator *LASharedActivator;
             return [UIImage imageWithData:data scale:1.0f];
         }
     }
-    UIImage *applicationIcon =
-        [LAApplicationIconProvider.sharedProvider smallIconForDisplayIdentifier:listenerName scale:scale];
+    UIImage *applicationIcon = [LAApplicationIconProvider.sharedProvider smallIconForDisplayIdentifier:listenerName
+                                                                                                 scale:scale];
     if (applicationIcon) {
         return applicationIcon;
     }
@@ -1076,8 +1079,8 @@ LAActivator *LASharedActivator;
 
 - (NSString *)currentEventMode {
     if (!self.runningInsideSpringBoard) {
-        return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageCurrentEventMode userInfo:nil] ?:
-                   [self.runtimeStateProvider currentEventMode];
+        return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageCurrentEventMode userInfo:nil]
+                   ?: [self.runtimeStateProvider currentEventMode];
     }
     return [self.runtimeStateProvider currentEventMode];
 }
@@ -1085,8 +1088,8 @@ LAActivator *LASharedActivator;
 - (NSString *)currentEventModeUnderneathLockScreen {
     if (!self.runningInsideSpringBoard) {
         return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageCurrentEventModeUnderneathLockScreen
-                                                userInfo:nil] ?:
-                   [self.runtimeStateProvider currentEventModeUnderneathLockScreen];
+                                                userInfo:nil]
+                   ?: [self.runtimeStateProvider currentEventModeUnderneathLockScreen];
     }
     return [self.runtimeStateProvider currentEventModeUnderneathLockScreen];
 }

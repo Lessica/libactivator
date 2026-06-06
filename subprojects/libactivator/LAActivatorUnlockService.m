@@ -8,10 +8,19 @@
 
 #import "LAActivatorUnlockService.h"
 
-#import <objc/message.h>
+@protocol LAActivatorLockScreenManagerClass <NSObject>
++ (id)sharedInstance;
+@end
+
+@protocol LAActivatorLockScreenManager <NSObject>
+@optional
+- (BOOL)isUILocked;
+- (void)attemptUnlockWithPasscode:(NSString *)passcode;
+- (void)attemptUnlockWithPasscode:(NSString *)passcode finishUIUnlock:(BOOL)finishUIUnlock completion:(id)completion;
+@end
 
 @interface LAActivatorUnlockService ()
-- (id)lockScreenManager;
+- (id<LAActivatorLockScreenManager>)lockScreenManager;
 @end
 
 @implementation LAActivatorUnlockService {
@@ -31,15 +40,15 @@
 #pragma mark - State
 
 - (BOOL)isUILocked {
-    id manager = [self lockScreenManager];
+    id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
     if ([manager respondsToSelector:@selector(isUILocked)]) {
-        return ((BOOL (*)(id, SEL))objc_msgSend)(manager, @selector(isUILocked));
+        return [manager isUILocked];
     }
     return NO;
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {
-    id manager = [self lockScreenManager];
+    id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
     if (![manager respondsToSelector:@selector(isUILocked)]) {
         return NO;
     }
@@ -49,16 +58,16 @@
 
 #pragma mark - Private
 
-- (id)lockScreenManager {
+- (id<LAActivatorLockScreenManager>)lockScreenManager {
     if (!_runningInsideSpringBoard) {
         return nil;
     }
 
-    Class managerClass = NSClassFromString(@"SBLockScreenManager");
+    id<LAActivatorLockScreenManagerClass> managerClass = (id)NSClassFromString(@"SBLockScreenManager");
     if (![managerClass respondsToSelector:@selector(sharedInstance)]) {
         return nil;
     }
-    return ((id (*)(Class, SEL))objc_msgSend)(managerClass, @selector(sharedInstance));
+    return [managerClass sharedInstance];
 }
 
 @end

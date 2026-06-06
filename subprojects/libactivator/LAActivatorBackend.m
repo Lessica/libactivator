@@ -47,7 +47,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
         _profiles = [[NSMutableDictionary alloc] init];
         _blacklistedDisplayIdentifiers = [[NSMutableSet alloc] init];
         _seenListenerNames = [[NSMutableSet alloc] init];
-        _stateQueue = dispatch_queue_create("libactivator.state", DISPATCH_QUEUE_SERIAL);
+        _stateQueue = dispatch_queue_create("libactivator.state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         [self resetRuntimeState];
         if (authoritative) {
             [self loadPersistentState];
