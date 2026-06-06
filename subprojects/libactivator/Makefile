@@ -10,6 +10,8 @@ libactivator_FILES += LAProtocols.m
 libactivator_FILES += LAEvent.m
 libactivator_FILES += LAActivatorPersistence.m
 libactivator_FILES += LAActivatorBackend.m
+libactivator_FILES += LAActivatorIPCClient.m
+libactivator_FILES += LAActivatorIPCServer.m
 libactivator_FILES += LAActivator.m
 libactivator_FILES += LASettingsShims.m
 libactivator_FILES += UIImageView+Activator.m
@@ -20,6 +22,8 @@ libactivator_CFLAGS += -I../../include
 libactivator_FRAMEWORKS += Foundation
 libactivator_FRAMEWORKS += UIKit
 libactivator_FRAMEWORKS += CoreGraphics
+
+libactivator_PRIVATE_FRAMEWORKS += AppSupport
 
 libactivator_INSTALL_PATH := /usr/lib
 

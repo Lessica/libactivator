@@ -189,6 +189,20 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Do not add custom timeout handling or version negotiation on top of
   `CPDistributedMessagingCenter`. The client and SpringBoard server ship
   together, and installation requires a SpringBoard restart.
+- The first IPC slice uses `libactivator.springboard` as the
+  `CPDistributedMessagingCenter` name and only covers state/config requests.
+  Non-SpringBoard `LAActivator` clients may query event, listener, assignment,
+  profile, blacklist, metadata, and localization state through this channel.
+- State/config IPC payloads must be property-list-safe dictionaries. Events are
+  represented by `EventName` and `EventMode`; listener names, profile names, and
+  display identifiers are plain strings or string arrays.
+- State/config IPC replies use an `OK` boolean and optional `Value`. When the
+  server is unavailable or a payload is invalid, clients return the existing
+  safe default for that public selector and must not write local persistent
+  runtime state.
+- Listener object registration, event data-source object registration, and
+  event delivery are not part of the first IPC slice. They remain
+  SpringBoard-runtime work.
 - IPC payloads must be validated before use.
 - Public API calls that cross process boundaries should have predictable main
   thread behavior.

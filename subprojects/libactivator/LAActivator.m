@@ -2,13 +2,29 @@
 #import <dispatch/dispatch.h>
 
 #import "LAActivatorBackend.h"
+#import "LAActivatorIPC.h"
 #import "LAActivatorPersistence.h"
 
 #pragma mark - Class Extension
 
 @interface LAActivator ()
 @property(nonatomic, strong) LAActivatorBackend *backend;
+@property(nonatomic, strong) LAActivatorIPCClient *ipcClient;
+@property(nonatomic, strong) LAActivatorIPCServer *ipcServer;
+- (void)startIPCServerIfNeeded;
 @end
+
+static NSDictionary *LAActivatorIPCUserInfoForEvent(LAEvent *event) {
+    if (event.name.length == 0) {
+        return @{};
+    }
+
+    NSMutableDictionary *userInfo = [@{LAActivatorIPCKeyEventName : event.name} mutableCopy];
+    if (event.mode.length > 0) {
+        userInfo[LAActivatorIPCKeyEventMode] = event.mode;
+    }
+    return [userInfo copy];
+}
 
 @implementation LAActivator
 
@@ -37,6 +53,9 @@ LAActivator *LASharedActivator;
     if (self) {
         _backend = [[LAActivatorBackend alloc] initWithAuthoritativeRole:self.runningInsideSpringBoard
                                                               persistence:[LAActivatorPersistence defaultPersistence]];
+        if (!self.runningInsideSpringBoard) {
+            _ipcClient = [[LAActivatorIPCClient alloc] init];
+        }
     }
     return self;
 }
@@ -53,6 +72,16 @@ LAActivator *LASharedActivator;
 
 - (BOOL)isDangerousToSendEvents {
     return NO;
+}
+
+- (void)startIPCServerIfNeeded {
+    if (!self.runningInsideSpringBoard) {
+        return;
+    }
+    if (!self.ipcServer) {
+        self.ipcServer = [[LAActivatorIPCServer alloc] initWithActivator:self];
+    }
+    [self.ipcServer start];
 }
 
 #pragma mark - Event Delivery
@@ -93,6 +122,11 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)hasListenerWithName:(NSString *)name {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageHasListener
+                                              userInfo:@{LAActivatorIPCKeyListenerName : name ?: @""}
+                                          defaultValue:NO];
+    }
     return [self.backend hasListenerWithName:name];
 }
 
@@ -125,6 +159,14 @@ LAActivator *LASharedActivator;
 }
 
 - (void)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
+    if (!self.runningInsideSpringBoard) {
+        NSMutableDictionary *userInfo = [LAActivatorIPCUserInfoForEvent(event) mutableCopy];
+        userInfo[LAActivatorIPCKeyListenerNames] = [LAActivatorBackend normalizedStringArray:listenerNames];
+        if ([self.ipcClient sendMessageName:LAActivatorIPCMessageAssignEvent userInfo:userInfo]) {
+            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
+        }
+        return;
+    }
     if ([self.backend assignEvent:event toListenersWithNames:listenerNames]) {
         [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
     }
@@ -151,6 +193,12 @@ LAActivator *LASharedActivator;
 }
 
 - (void)unassignEvent:(LAEvent *)event {
+    if (!self.runningInsideSpringBoard) {
+        if ([self.ipcClient sendMessageName:LAActivatorIPCMessageUnassignEvent userInfo:LAActivatorIPCUserInfoForEvent(event)]) {
+            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
+        }
+        return;
+    }
     if ([self.backend unassignEvent:event]) {
         [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
     }
@@ -161,20 +209,36 @@ LAActivator *LASharedActivator;
 }
 
 - (NSArray *)assignedListenerNamesForEvent:(LAEvent *)event {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageAssignedListenerNames
+                                               userInfo:LAActivatorIPCUserInfoForEvent(event)];
+    }
     return [self.backend assignedListenerNamesForEvent:event];
 }
 
 - (NSArray *)eventsAssignedToListenerWithName:(NSString *)listenerName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient eventsValueForMessageName:LAActivatorIPCMessageEventsAssignedToListener
+                                                userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+    }
     return [self.backend eventsAssignedToListenerWithName:listenerName];
 }
 
 #pragma mark - Event Registry
 
 - (NSArray *)availableEventNames {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageAvailableEventNames userInfo:nil];
+    }
     return [self.backend availableEventNames];
 }
 
 - (BOOL)hasEventWithName:(NSString *)name {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageHasEvent
+                                              userInfo:@{LAActivatorIPCKeyEventName : name ?: @""}
+                                          defaultValue:NO];
+    }
     return [self.backend hasEventWithName:name];
 }
 
@@ -183,6 +247,11 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)eventWithNameIsHidden:(NSString *)name {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageEventIsHidden
+                                              userInfo:@{LAActivatorIPCKeyEventName : name ?: @""}
+                                          defaultValue:NO];
+    }
     id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:name];
     if (dataSource && [dataSource respondsToSelector:@selector(eventWithNameIsHidden:)]) {
         return [dataSource eventWithNameIsHidden:name];
@@ -191,6 +260,11 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)eventWithNameRequiresAssignment:(NSString *)name {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageEventRequiresAssignment
+                                              userInfo:@{LAActivatorIPCKeyEventName : name ?: @""}
+                                          defaultValue:YES];
+    }
     id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:name];
     if (dataSource && [dataSource respondsToSelector:@selector(eventWithNameRequiresAssignment:)]) {
         return [dataSource eventWithNameRequiresAssignment:name];
@@ -199,6 +273,10 @@ LAActivator *LASharedActivator;
 }
 
 - (NSArray *)compatibleModesForEventWithName:(NSString *)name {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageCompatibleModesForEvent
+                                               userInfo:@{LAActivatorIPCKeyEventName : name ?: @""}];
+    }
     id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:name];
     if (!dataSource) {
         return @[];
@@ -217,6 +295,14 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)eventWithName:(NSString *)eventName isCompatibleWithMode:(NSString *)eventMode {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageEventIsCompatibleWithMode
+                                              userInfo:@{
+                                                  LAActivatorIPCKeyEventName : eventName ?: @"",
+                                                  LAActivatorIPCKeyEventMode : eventMode ?: @"",
+                                              }
+                                          defaultValue:NO];
+    }
     if (eventName.length == 0 || eventMode.length == 0) {
         return NO;
     }
@@ -224,6 +310,11 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)eventWithNameSupportsUnlockingDeviceToSend:(NSString *)eventName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageEventSupportsUnlockingDeviceToSend
+                                              userInfo:@{LAActivatorIPCKeyEventName : eventName ?: @""}
+                                          defaultValue:NO];
+    }
     id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
     if (dataSource && [dataSource respondsToSelector:@selector(eventWithNameSupportsUnlockingDeviceToSend:)]) {
         return [dataSource eventWithNameSupportsUnlockingDeviceToSend:eventName];
@@ -232,6 +323,11 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)eventWithNameSupportsRemoval:(NSString *)eventName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageEventSupportsRemoval
+                                              userInfo:@{LAActivatorIPCKeyEventName : eventName ?: @""}
+                                          defaultValue:NO];
+    }
     id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
     if (dataSource && [dataSource respondsToSelector:@selector(eventWithNameSupportsRemoval:)]) {
         return [dataSource eventWithNameSupportsRemoval:eventName];
@@ -260,6 +356,11 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)eventWithNameSupportsConfiguration:(NSString *)eventName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageEventSupportsConfiguration
+                                              userInfo:@{LAActivatorIPCKeyEventName : eventName ?: @""}
+                                          defaultValue:NO];
+    }
     id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
     return dataSource &&
            [dataSource respondsToSelector:@selector(configurationViewControllerClassNameForEventWithName:bundle:)];
@@ -272,10 +373,20 @@ LAActivator *LASharedActivator;
 #pragma mark - Listener Metadata
 
 - (NSArray *)availableListenerNames {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageAvailableListenerNames userInfo:nil];
+    }
     return [self.backend availableListenerNames];
 }
 
 - (id)infoDictionaryValueOfKey:(NSString *)key forListenerWithName:(NSString *)name {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient propertyListValueForMessageName:LAActivatorIPCMessageListenerInfoDictionaryValue
+                                                      userInfo:@{
+                                                          LAActivatorIPCKeyInfoDictionaryKey : key ?: @"",
+                                                          LAActivatorIPCKeyListenerName : name ?: @"",
+                                                      }];
+    }
     id<LAListener> listener = [self listenerForName:name];
     if (listener && [listener respondsToSelector:@selector(activator:
                                                      requiresInfoDictionaryValueOfKey:forListenerWithName:)]) {
@@ -285,6 +396,11 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)listenerWithNameRequiresAssignment:(NSString *)name {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerRequiresAssignment
+                                              userInfo:@{LAActivatorIPCKeyListenerName : name ?: @""}
+                                          defaultValue:YES];
+    }
     id<LAListener> listener = [self listenerForName:name];
     if (listener && [listener respondsToSelector:@selector(activator:requiresRequiresAssignmentForListenerName:)]) {
         return [[listener activator:self requiresRequiresAssignmentForListenerName:name] boolValue];
@@ -293,6 +409,10 @@ LAActivator *LASharedActivator;
 }
 
 - (NSArray *)compatibleEventModesForListenerWithName:(NSString *)name {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageCompatibleModesForListener
+                                               userInfo:@{LAActivatorIPCKeyListenerName : name ?: @""}];
+    }
     id<LAListener> listener = [self listenerForName:name];
     if (listener && [listener respondsToSelector:@selector(activator:
                                                      requiresCompatibleEventModesForListenerWithName:)]) {
@@ -303,6 +423,14 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)listenerWithName:(NSString *)listenerName isCompatibleWithMode:(NSString *)eventMode {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerIsCompatibleWithMode
+                                              userInfo:@{
+                                                  LAActivatorIPCKeyListenerName : listenerName ?: @"",
+                                                  LAActivatorIPCKeyEventMode : eventMode ?: @"",
+                                              }
+                                          defaultValue:NO];
+    }
     if (listenerName.length == 0 || eventMode.length == 0) {
         return NO;
     }
@@ -310,6 +438,14 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)listenerWithName:(NSString *)listenerName isCompatibleWithEventName:(NSString *)eventName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerIsCompatibleWithEvent
+                                              userInfo:@{
+                                                  LAActivatorIPCKeyListenerName : listenerName ?: @"",
+                                                  LAActivatorIPCKeyEventName : eventName ?: @"",
+                                              }
+                                          defaultValue:NO];
+    }
     id<LAListener> listener = [self listenerForName:listenerName];
     if (!listener || eventName.length == 0) {
         return NO;
@@ -322,6 +458,11 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)listenerWithNameNeedsPoweredDisplay:(NSString *)listenerName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerNeedsPoweredDisplay
+                                              userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}
+                                          defaultValue:NO];
+    }
     id<LAListener> listener = [self listenerForName:listenerName];
     if (listener && [listener respondsToSelector:@selector(activator:requiresNeedsPoweredDisplayForListenerName:)]) {
         return [listener activator:self requiresNeedsPoweredDisplayForListenerName:listenerName];
@@ -330,6 +471,10 @@ LAActivator *LASharedActivator;
 }
 
 - (NSArray *)exclusiveAssignmentGroupsForListenerName:(NSString *)listenerName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageExclusiveAssignmentGroupsForListener
+                                               userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+    }
     id<LAListener> listener = [self listenerForName:listenerName];
     if (listener && [listener respondsToSelector:@selector(activator:
                                                      requiresExclusiveAssignmentGroupsForListenerName:)]) {
@@ -340,6 +485,12 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)listenerNamesAreMutuallyCompatible:(NSArray *)listenerNames {
+    if (!self.runningInsideSpringBoard) {
+        NSArray *normalizedNames = [LAActivatorBackend normalizedStringArray:listenerNames];
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerNamesAreMutuallyCompatible
+                                              userInfo:@{LAActivatorIPCKeyListenerNames : normalizedNames}
+                                          defaultValue:YES];
+    }
     NSArray *normalizedNames = [LAActivatorBackend normalizedStringArray:listenerNames];
     NSMutableDictionary *groupOwners = [NSMutableDictionary dictionary];
     for (NSString *listenerName in normalizedNames) {
@@ -367,6 +518,11 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)listenerWithNameSupportsRemoval:(NSString *)listenerName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerSupportsRemoval
+                                              userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}
+                                          defaultValue:NO];
+    }
     id<LAListener> listener = [self listenerForName:listenerName];
     if (listener && [listener respondsToSelector:@selector(activator:requiresSupportsRemovalForListenerWithName:)]) {
         return [listener activator:self requiresSupportsRemovalForListenerWithName:listenerName];
@@ -382,6 +538,11 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)listenerWithNameSupportsConfiguration:(NSString *)listenerName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerSupportsConfiguration
+                                              userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}
+                                          defaultValue:NO];
+    }
     id<LAListener> listener = [self listenerForName:listenerName];
     return (listener && [listener respondsToSelector:@selector(activator:
                                                           requiresConfigurationViewControllerClassNameForListenerWithName:
@@ -418,24 +579,48 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)applicationWithDisplayIdentifierIsBlacklisted:(NSString *)displayIdentifier {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageApplicationIsBlacklisted
+                                              userInfo:@{LAActivatorIPCKeyDisplayIdentifier : displayIdentifier ?: @""}
+                                          defaultValue:NO];
+    }
     return [self.backend applicationWithDisplayIdentifierIsBlacklisted:displayIdentifier];
 }
 
 - (void)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted {
+    if (!self.runningInsideSpringBoard) {
+        [self.ipcClient sendMessageName:LAActivatorIPCMessageSetApplicationBlacklisted
+                               userInfo:@{
+                                   LAActivatorIPCKeyDisplayIdentifier : displayIdentifier ?: @"",
+                                   LAActivatorIPCKeyBlacklisted : @(blacklisted),
+                               }];
+        return;
+    }
     [self.backend setApplicationWithDisplayIdentifier:displayIdentifier isBlacklisted:blacklisted];
 }
 
 #pragma mark - Profiles
 
 - (NSArray *)availableProfileNames {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageAvailableProfileNames userInfo:nil];
+    }
     return [self.backend availableProfileNames];
 }
 
 - (NSString *)currentProfileName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageCurrentProfileName userInfo:nil] ?: @"Default";
+    }
     return self.backend.currentProfileName;
 }
 
 - (void)setCurrentProfileName:(NSString *)currentProfileName {
+    if (!self.runningInsideSpringBoard) {
+        [self.ipcClient sendMessageName:LAActivatorIPCMessageSetCurrentProfileName
+                               userInfo:@{LAActivatorIPCKeyProfileName : currentProfileName ?: @""}];
+        return;
+    }
     self.backend.currentProfileName = currentProfileName;
 }
 
@@ -456,6 +641,11 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedTitleForEventName:(NSString *)eventName {
+    if (!self.runningInsideSpringBoard) {
+        NSString *title = [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedTitleForEventName
+                                                           userInfo:@{LAActivatorIPCKeyEventName : eventName ?: @""}];
+        return title ?: [self localizedStringForKey:eventName value:eventName];
+    }
     id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
     if (dataSource) {
         return [self localizedStringForKey:eventName value:[dataSource localizedTitleForEventName:eventName]];
@@ -464,6 +654,11 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedTitleForListenerName:(NSString *)listenerName {
+    if (!self.runningInsideSpringBoard) {
+        NSString *title = [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedTitleForListenerName
+                                                           userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+        return title ?: [self localizedStringForKey:listenerName value:listenerName];
+    }
     id<LAListener> listener = [self listenerForName:listenerName];
     if (listener && [listener respondsToSelector:@selector(activator:requiresLocalizedTitleForListenerName:)]) {
         return [self localizedStringForKey:listenerName
@@ -474,6 +669,19 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedTitleForListenerNames:(NSArray *)listenerNames {
+    if (!self.runningInsideSpringBoard) {
+        NSMutableArray *names = [NSMutableArray arrayWithCapacity:listenerNames.count];
+        for (id listenerName in listenerNames) {
+            if ([listenerName isKindOfClass:NSString.class] && [listenerName length] > 0) {
+                [names addObject:listenerName];
+            }
+        }
+        NSString *title = [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedTitleForListenerNames
+                                                           userInfo:@{LAActivatorIPCKeyListenerNames : names}];
+        if (title) {
+            return title;
+        }
+    }
     NSMutableArray *localizedNames = [NSMutableArray arrayWithCapacity:listenerNames.count];
     for (NSString *listenerName in listenerNames) {
         [localizedNames addObject:[self localizedTitleForListenerName:listenerName]];
@@ -482,6 +690,10 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedGroupForEventName:(NSString *)eventName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedGroupForEventName
+                                                userInfo:@{LAActivatorIPCKeyEventName : eventName ?: @""}] ?: @"";
+    }
     id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
     if (dataSource) {
         return [self localizedStringForKey:eventName value:[dataSource localizedGroupForEventName:eventName]];
@@ -490,6 +702,10 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedGroupForListenerName:(NSString *)listenerName {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedGroupForListenerName
+                                                userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}] ?: @"";
+    }
     id<LAListener> listener = [self listenerForName:listenerName];
     if (listener && [listener respondsToSelector:@selector(activator:requiresLocalizedGroupForListenerName:)]) {
         return [self localizedStringForKey:listenerName
@@ -504,6 +720,12 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedDescriptionForEventName:(NSString *)eventName {
+    if (!self.runningInsideSpringBoard) {
+        NSString *description = [self.ipcClient stringValueForMessageName:
+                                                    LAActivatorIPCMessageLocalizedDescriptionForEventName
+                                                               userInfo:@{LAActivatorIPCKeyEventName : eventName ?: @""}];
+        return description ?: [self localizedTitleForEventName:eventName];
+    }
     id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
     if (dataSource) {
         return [self localizedStringForKey:eventName value:[dataSource localizedDescriptionForEventName:eventName]];
@@ -512,6 +734,12 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedDescriptionForListenerName:(NSString *)listenerName {
+    if (!self.runningInsideSpringBoard) {
+        NSString *description = [self.ipcClient stringValueForMessageName:
+                                                    LAActivatorIPCMessageLocalizedDescriptionForListenerName
+                                                               userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+        return description ?: [self localizedTitleForListenerName:listenerName];
+    }
     id<LAListener> listener = [self listenerForName:listenerName];
     if (listener && [listener respondsToSelector:@selector(activator:requiresLocalizedDescriptionForListenerName:)]) {
         return [self localizedStringForKey:listenerName

@@ -9,8 +9,11 @@ ActivatorTweak_FILES += ActivatorTweak.m
 
 ActivatorTweak_CFLAGS += -fobjc-arc
 ActivatorTweak_CFLAGS += -I../../include
+ActivatorTweak_CFLAGS += -I../libactivator
 
 ActivatorTweak_FRAMEWORKS += Foundation
 ActivatorTweak_FRAMEWORKS += UIKit
+
+ActivatorTweak_LIBRARIES += activator
 
 include $(THEOS_MAKE_PATH)/tweak.mk
