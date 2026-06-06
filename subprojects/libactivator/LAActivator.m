@@ -1,20 +1,16 @@
 #import <Activator/Activator.h>
 #import <dispatch/dispatch.h>
 
+#import "LAActivatorBackend.h"
+#import "LAActivatorPersistence.h"
+
 #pragma mark - Class Extension
 
 @interface LAActivator ()
-@property(nonatomic, strong) NSMutableDictionary *eventDataSources;
-@property(nonatomic, strong) NSMutableDictionary *listeners;
-@property(nonatomic, strong) NSMutableDictionary *assignments;
-@property(nonatomic, strong) NSMutableSet *blacklistedDisplayIdentifiers;
-@property(nonatomic, strong) NSMutableSet *profileNames;
-@property(nonatomic, strong) dispatch_queue_t stateQueue;
+@property(nonatomic, strong) LAActivatorBackend *backend;
 @end
 
 @implementation LAActivator
-
-@synthesize currentProfileName = _currentProfileName;
 
 #pragma mark - Lifecycle
 
@@ -39,27 +35,10 @@ LAActivator *LASharedActivator;
 - (instancetype)initPrivate {
     self = [super init];
     if (self) {
-        _eventDataSources = [[NSMutableDictionary alloc] init];
-        _listeners = [[NSMutableDictionary alloc] init];
-        _assignments = [[NSMutableDictionary alloc] init];
-        _blacklistedDisplayIdentifiers = [[NSMutableSet alloc] init];
-        _profileNames = [NSMutableSet setWithObject:@"Default"];
-        _stateQueue = dispatch_queue_create("libactivator.state", DISPATCH_QUEUE_SERIAL);
-        _currentProfileName = @"Default";
+        _backend = [[LAActivatorBackend alloc] initWithAuthoritativeRole:self.runningInsideSpringBoard
+                                                              persistence:[LAActivatorPersistence defaultPersistence]];
     }
     return self;
-}
-
-#pragma mark - Utilities
-
-+ (NSArray *)normalizedStringArray:(NSArray *)array {
-    NSMutableArray *strings = [NSMutableArray arrayWithCapacity:array.count];
-    for (id value in array) {
-        if ([value isKindOfClass:NSString.class] && [value length] > 0 && ![strings containsObject:value]) {
-            [strings addObject:value];
-        }
-    }
-    return [strings copy];
 }
 
 #pragma mark - Runtime State
@@ -110,40 +89,25 @@ LAActivator *LASharedActivator;
 #pragma mark - Listener Registry
 
 - (id<LAListener>)listenerForName:(NSString *)name {
-    if (name.length == 0) {
-        return nil;
-    }
-    __block id<LAListener> listener = nil;
-    dispatch_sync(self.stateQueue, ^{
-        listener = self.listeners[name];
-    });
-    return listener;
+    return [self.backend listenerForName:name];
 }
 
 - (BOOL)hasListenerWithName:(NSString *)name {
-    return [self listenerForName:name] != nil;
+    return [self.backend hasListenerWithName:name];
 }
 
 - (void)registerListener:(id<LAListener>)listener forName:(NSString *)name {
-    if (!listener || name.length == 0) {
-        return;
+    if ([self.backend registerListener:listener forName:name]) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableListenersChangedNotification
+                                                          object:self];
     }
-    dispatch_sync(self.stateQueue, ^{
-        self.listeners[name] = listener;
-    });
-    [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableListenersChangedNotification
-                                                      object:self];
 }
 
 - (void)unregisterListenerWithName:(NSString *)name {
-    if (name.length == 0) {
-        return;
+    if ([self.backend unregisterListenerWithName:name]) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableListenersChangedNotification
+                                                          object:self];
     }
-    dispatch_sync(self.stateQueue, ^{
-        [self.listeners removeObjectForKey:name];
-    });
-    [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableListenersChangedNotification
-                                                      object:self];
 }
 
 - (BOOL)hasSeenListenerWithName:(NSString *)name {
@@ -161,24 +125,9 @@ LAActivator *LASharedActivator;
 }
 
 - (void)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
-    if (event.name.length == 0) {
-        return;
+    if ([self.backend assignEvent:event toListenersWithNames:listenerNames]) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
     }
-    NSString *eventKey = [NSString stringWithFormat:@"%@\n%@", event.name, event.mode ?: @""];
-
-    NSArray *normalizedNames = [LAActivator normalizedStringArray:listenerNames];
-    dispatch_sync(self.stateQueue, ^{
-        if (normalizedNames.count > 0) {
-            self.assignments[eventKey] = @{
-                @"name" : event.name,
-                @"mode" : event.mode ?: @"",
-                @"listeners" : normalizedNames,
-            };
-        } else {
-            [self.assignments removeObjectForKey:eventKey];
-        }
-    });
-    [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
 }
 
 - (void)addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event {
@@ -202,14 +151,9 @@ LAActivator *LASharedActivator;
 }
 
 - (void)unassignEvent:(LAEvent *)event {
-    if (event.name.length == 0) {
-        return;
+    if ([self.backend unassignEvent:event]) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
     }
-    NSString *eventKey = [NSString stringWithFormat:@"%@\n%@", event.name, event.mode ?: @""];
-    dispatch_sync(self.stateQueue, ^{
-        [self.assignments removeObjectForKey:eventKey];
-    });
-    [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
 }
 
 - (NSString *)assignedListenerNameForEvent:(LAEvent *)event {
@@ -217,66 +161,25 @@ LAActivator *LASharedActivator;
 }
 
 - (NSArray *)assignedListenerNamesForEvent:(LAEvent *)event {
-    if (event.name.length == 0) {
-        return @[];
-    }
-    NSString *eventKey = [NSString stringWithFormat:@"%@\n%@", event.name, event.mode ?: @""];
-    __block NSArray *listenerNames = nil;
-    dispatch_sync(self.stateQueue, ^{
-        listenerNames = [self.assignments[eventKey][@"listeners"] copy];
-    });
-    return listenerNames ?: @[];
+    return [self.backend assignedListenerNamesForEvent:event];
 }
 
 - (NSArray *)eventsAssignedToListenerWithName:(NSString *)listenerName {
-    if (listenerName.length == 0) {
-        return @[];
-    }
-
-    NSMutableArray *events = [NSMutableArray array];
-    dispatch_sync(self.stateQueue, ^{
-        for (NSDictionary *assignment in self.assignments.allValues) {
-            if (![assignment[@"listeners"] containsObject:listenerName]) {
-                continue;
-            }
-            NSString *mode = assignment[@"mode"];
-            LAEvent *event = [LAEvent eventWithName:assignment[@"name"] mode:mode.length > 0 ? mode : nil];
-            [events addObject:event];
-        }
-    });
-    return [events copy];
+    return [self.backend eventsAssignedToListenerWithName:listenerName];
 }
 
 #pragma mark - Event Registry
 
 - (NSArray *)availableEventNames {
-    __block NSArray *eventNames = nil;
-    dispatch_sync(self.stateQueue, ^{
-        eventNames = [self.eventDataSources.allKeys sortedArrayUsingSelector:@selector(compare:)];
-    });
-    return eventNames;
+    return [self.backend availableEventNames];
 }
 
 - (BOOL)hasEventWithName:(NSString *)name {
-    if (name.length == 0) {
-        return NO;
-    }
-    __block BOOL hasEvent = NO;
-    dispatch_sync(self.stateQueue, ^{
-        hasEvent = self.eventDataSources[name] != nil;
-    });
-    return hasEvent;
+    return [self.backend hasEventWithName:name];
 }
 
 - (id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName {
-    if (eventName.length == 0) {
-        return nil;
-    }
-    __block id<LAEventDataSource> dataSource = nil;
-    dispatch_sync(self.stateQueue, ^{
-        dataSource = self.eventDataSources[eventName];
-    });
-    return dataSource;
+    return [self.backend eventDataSourceForEventName:eventName];
 }
 
 - (BOOL)eventWithNameIsHidden:(NSString *)name {
@@ -345,23 +248,15 @@ LAActivator *LASharedActivator;
 }
 
 - (void)registerEventDataSource:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName {
-    if (!dataSource || eventName.length == 0) {
-        return;
+    if ([self.backend registerEventDataSource:dataSource forEventName:eventName]) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableEventsChangedNotification object:self];
     }
-    dispatch_sync(self.stateQueue, ^{
-        self.eventDataSources[eventName] = dataSource;
-    });
-    [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableEventsChangedNotification object:self];
 }
 
 - (void)unregisterEventDataSourceWithEventName:(NSString *)eventName {
-    if (eventName.length == 0) {
-        return;
+    if ([self.backend unregisterEventDataSourceWithEventName:eventName]) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableEventsChangedNotification object:self];
     }
-    dispatch_sync(self.stateQueue, ^{
-        [self.eventDataSources removeObjectForKey:eventName];
-    });
-    [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableEventsChangedNotification object:self];
 }
 
 - (BOOL)eventWithNameSupportsConfiguration:(NSString *)eventName {
@@ -377,11 +272,7 @@ LAActivator *LASharedActivator;
 #pragma mark - Listener Metadata
 
 - (NSArray *)availableListenerNames {
-    __block NSArray *listenerNames = nil;
-    dispatch_sync(self.stateQueue, ^{
-        listenerNames = [self.listeners.allKeys sortedArrayUsingSelector:@selector(compare:)];
-    });
-    return listenerNames;
+    return [self.backend availableListenerNames];
 }
 
 - (id)infoDictionaryValueOfKey:(NSString *)key forListenerWithName:(NSString *)name {
@@ -405,8 +296,8 @@ LAActivator *LASharedActivator;
     id<LAListener> listener = [self listenerForName:name];
     if (listener && [listener respondsToSelector:@selector(activator:
                                                      requiresCompatibleEventModesForListenerWithName:)]) {
-        return [LAActivator normalizedStringArray:[listener activator:self
-                                                      requiresCompatibleEventModesForListenerWithName:name]];
+        return [LAActivatorBackend normalizedStringArray:[listener activator:self
+                                                            requiresCompatibleEventModesForListenerWithName:name]];
     }
     return [self hasListenerWithName:name] ? self.availableEventModes : @[];
 }
@@ -442,14 +333,14 @@ LAActivator *LASharedActivator;
     id<LAListener> listener = [self listenerForName:listenerName];
     if (listener && [listener respondsToSelector:@selector(activator:
                                                      requiresExclusiveAssignmentGroupsForListenerName:)]) {
-        return [LAActivator normalizedStringArray:[listener activator:self
-                                                      requiresExclusiveAssignmentGroupsForListenerName:listenerName]];
+        return [LAActivatorBackend normalizedStringArray:[listener activator:self
+                                                            requiresExclusiveAssignmentGroupsForListenerName:listenerName]];
     }
     return @[];
 }
 
 - (BOOL)listenerNamesAreMutuallyCompatible:(NSArray *)listenerNames {
-    NSArray *normalizedNames = [LAActivator normalizedStringArray:listenerNames];
+    NSArray *normalizedNames = [LAActivatorBackend normalizedStringArray:listenerNames];
     NSMutableDictionary *groupOwners = [NSMutableDictionary dictionary];
     for (NSString *listenerName in normalizedNames) {
         for (NSString *group in [self exclusiveAssignmentGroupsForListenerName:listenerName]) {
@@ -527,53 +418,25 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)applicationWithDisplayIdentifierIsBlacklisted:(NSString *)displayIdentifier {
-    if (displayIdentifier.length == 0) {
-        return NO;
-    }
-    __block BOOL blacklisted = NO;
-    dispatch_sync(self.stateQueue, ^{
-        blacklisted = [self.blacklistedDisplayIdentifiers containsObject:displayIdentifier];
-    });
-    return blacklisted;
+    return [self.backend applicationWithDisplayIdentifierIsBlacklisted:displayIdentifier];
 }
 
 - (void)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted {
-    if (displayIdentifier.length == 0) {
-        return;
-    }
-    dispatch_sync(self.stateQueue, ^{
-        if (blacklisted) {
-            [self.blacklistedDisplayIdentifiers addObject:displayIdentifier];
-        } else {
-            [self.blacklistedDisplayIdentifiers removeObject:displayIdentifier];
-        }
-    });
+    [self.backend setApplicationWithDisplayIdentifier:displayIdentifier isBlacklisted:blacklisted];
 }
 
 #pragma mark - Profiles
 
 - (NSArray *)availableProfileNames {
-    __block NSArray *profileNames = nil;
-    dispatch_sync(self.stateQueue, ^{
-        profileNames = [self.profileNames.allObjects sortedArrayUsingSelector:@selector(compare:)];
-    });
-    return profileNames;
+    return [self.backend availableProfileNames];
 }
 
 - (NSString *)currentProfileName {
-    __block NSString *profileName = nil;
-    dispatch_sync(self.stateQueue, ^{
-        profileName = _currentProfileName;
-    });
-    return profileName;
+    return self.backend.currentProfileName;
 }
 
 - (void)setCurrentProfileName:(NSString *)currentProfileName {
-    NSString *profileName = currentProfileName.length > 0 ? [currentProfileName copy] : @"Default";
-    dispatch_sync(self.stateQueue, ^{
-        _currentProfileName = profileName;
-        [self.profileNames addObject:profileName];
-    });
+    self.backend.currentProfileName = currentProfileName;
 }
 
 #pragma mark - Localization

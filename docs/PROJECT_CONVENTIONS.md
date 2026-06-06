@@ -209,11 +209,31 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - New persistent data should be atomic to write, recoverable after corruption,
   and explicit about ownership and permissions.
 - Prefer structured serialization over ad hoc string parsing.
+- Runtime preferences must be stored at
+  `jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")`. Rootless and
+  roothide builds must not write to the real `/var/mobile` path.
+- The v2 runtime preference plist uses schema version `1` with these top-level
+  keys: `SchemaVersion`, `CurrentProfileName`, `Profiles`, and
+  `BlacklistedDisplayIdentifiers`.
+- Each entry under `Profiles` is keyed by profile name and contains an
+  `Assignments` dictionary. Assignments are stored as
+  `eventName -> modeKey -> listenerNames`, where nil event mode is represented
+  by an empty string.
+- Persisted listener-name arrays and blacklisted display identifier arrays must
+  contain only non-empty strings, deduplicated and sorted.
+- Invalid or unreadable runtime preference plists should be moved aside with an
+  `.invalid-*` suffix, then the runtime should continue with default empty
+  state. Do not migrate or reuse the legacy cache plist path.
 
 ## Runtime Rules
 
 - Assume SpringBoard private APIs are unstable. Isolate every private selector
   or class lookup behind a small adapter.
+- `LAActivator` is the public API facade. Private runtime state should live in
+  backend/persistence types rather than directly in the facade.
+- Only the SpringBoard authoritative backend may load from or save to the
+  runtime preference plist. Non-SpringBoard clients must not create isolated
+  persistent state before IPC exists.
 - Prefer capability detection over hardcoded system-version branching.
 - All event delivery must make listener compatibility checks before invocation.
 - Listener callbacks should not block the event acquisition layer longer than
