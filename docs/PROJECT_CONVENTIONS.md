@@ -223,9 +223,13 @@ These phases describe engineering dependency order, not heavyweight milestones.
   patterns.
 - Settings UI should consume the same public API surface third-party callers
   use where practical.
-- Settings UI logic must live in an independent dynamic library.
-- The PreferenceBundle, Activator.app, and third-party jailbreak apps are only
-  hosts for that Settings UI library.
+- Real Settings UI logic must live in an independent dynamic library.
+- `libactivator.dylib` must keep compatibility shims for public settings
+  classes from `LASettingsViewController.h`, because third-party jailbreak apps
+  may dynamically link `libactivator.dylib` and use those classes to present
+  Settings UI.
+- The PreferenceBundle, Activator.app, and third-party jailbreak apps are
+  hosts for the Settings UI library.
 - Name framework-like dynamic libraries with the `libxxx.dylib` convention.
 - Use `libactivatorsettings.dylib` as the Settings UI dynamic library file name
   unless implementation details force a better name.

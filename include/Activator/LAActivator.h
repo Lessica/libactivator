@@ -1,5 +1,4 @@
 #import <UIKit/UIKit.h>
-#import <libkern/OSAtomic.h>
 
 #import "LAActivatorVersion.h"
 

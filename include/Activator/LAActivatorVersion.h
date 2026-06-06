@@ -24,6 +24,7 @@ typedef enum {
     LAActivatorVersion_1_8_1 = 1080100,
     LAActivatorVersion_1_8_2 = 1080200,
     LAActivatorVersion_1_9_0 = 1090000,
+    LAActivatorVersion_2_0 = 2000000,
 } LAActivatorVersion;
 
 #ifndef LA_PRIVATE_IVARS
