@@ -34,7 +34,7 @@ completed.
 | Public settings class shims | ✅ | Settings-backed | `libactivator.dylib` | Header modernization | Public settings classes resolve when a third-party app links only `libactivator.dylib`. |
 | Settings UI implementation | Not started | Settings-backed | `libactivatorsettings.dylib` | Public settings class shims | Real Settings UI behavior is implemented in the settings library, not in `libactivator.dylib`. |
 | `UIImageView (Activator)` storage | ✅ | Settings-backed | `libactivator.dylib` | Public settings class shims | Category properties store and retrieve values without image-loading behavior. |
-| IPC client facade | Not started | Runtime-backed | `libactivator.dylib` | Safe stub APIs | Public calls that require SpringBoard can route to IPC with timeouts and errors. |
+| IPC client facade | Not started | Runtime-backed | `libactivator.dylib` | Safe stub APIs | Public calls that require SpringBoard can route through `CPDistributedMessagingCenter` with defined request/response and failure behavior. |
 | SpringBoard server runtime | Not started | Runtime-backed | `ActivatorTweak.dylib` | IPC schema, registry models | SpringBoard can host registries and dispatch requests without app injection. |
 | Built-in event capability assessments | Not started | Capability gated | Docs and runtime adapters | SpringBoard server runtime | Each event family has a documented modern iOS capability result before registration. |
 | Built-in listener/action assessments | Not started | Capability gated | Docs and runtime adapters | SpringBoard server runtime | Each built-in listener/action has a documented modern iOS capability result before registration. |

@@ -110,9 +110,8 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Implement storage and metadata: validated schemas, atomic persistence,
   recovery behavior, localization, icons, configuration hooks, removal hooks,
   event metadata, and listener metadata.
-- Implement IPC: `CPDistributedMessagingCenter` transport, request/response
-  schema, error handling, timeouts, version negotiation, notifications, and
-  optional `libSandy` bridges where sandboxed system services require them.
+- Implement IPC with `CPDistributedMessagingCenter` request/response handling,
+  error handling, notifications, and payload validation.
 - Implement the SpringBoard runtime: server bootstrap, runtime state,
   foreground app state, lock/home state, listener registration, event delivery,
   diagnostics, and Frida-assisted validation workflows.
@@ -180,15 +179,17 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Treat the legacy `CFMessagePort` protocol as behavior reference, not as the
   default design.
 - Use `CPDistributedMessagingCenter` from the `AppSupport` framework as the IPC
-  transport.
-- Treat the `CPDistributedMessagingCenter` implementation details as opaque.
-  Even if it uses lower-level Mach or XPC-related primitives internally, the
-  project contract is the `CPDistributedMessagingCenter` API, not direct XPC.
+  layer. Treat it as the integrated XPC client/server boundary for this
+  project; do not build an additional direct-XPC layer around it.
 - `CPDistributedMessagingCenter` does not bypass sandbox restrictions. If a
-  sandboxed system service needs cross-process communication, add `libSandy`
-  for that specific bridge.
-- The new IPC layer must define request/response shape, notifications,
-  timeouts, version negotiation, and failure behavior.
+  sandboxed system service needs cross-process communication later, add
+  `libSandy` only for that specific bridge. Do not introduce `libSandy` during
+  phases that have no concrete sandbox-crossing requirement.
+- The new IPC layer must define request/response shape, notifications, failure
+  behavior, and payload validation.
+- Do not add custom timeout handling or version negotiation on top of
+  `CPDistributedMessagingCenter`. The client and SpringBoard server ship
+  together, and installation requires a SpringBoard restart.
 - IPC payloads must be validated before use.
 - Public API calls that cross process boundaries should have predictable main
   thread behavior.
