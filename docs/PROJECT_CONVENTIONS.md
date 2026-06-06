@@ -128,6 +128,9 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Keep each tweak filter plist in that tweak's subproject root so Theos can
   stage it through the normal `tweak.mk` flow. Do not place tweak filter plists
   in the repository root.
+- Do not use Logos syntax in this project. Tweak targets should use normal
+  Objective-C or Objective-C++ source files and should not use `.x` or `.xm`
+  source extensions.
 - Use a root aggregate Makefile to orchestrate binary subprojects. Do not mix
   unrelated target ownership into the root package/staging layer.
 - Do not define `$THEOS` in project Makefiles. Callers must provide it through
