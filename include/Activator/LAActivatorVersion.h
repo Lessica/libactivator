@@ -1,4 +1,14 @@
+//
+//  LAActivatorVersion.h
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 typedef enum {
     LAActivatorVersion_1_3 = 1030000,
@@ -30,3 +40,5 @@ typedef enum {
 #ifndef LA_PRIVATE_IVARS
 #define LA_PRIVATE_IVARS(class)
 #endif
+
+NS_ASSUME_NONNULL_END

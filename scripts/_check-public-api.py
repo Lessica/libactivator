@@ -99,6 +99,7 @@ def property_name(line: str) -> str | None:
     if not match:
         return None
     declaration = match.group(2).strip()
+    declaration = re.sub(r"\s+__attribute__\s*\(\(.*\)\)\s*$", "", declaration)
     declaration = declaration.replace("*", " ")
     parts = [part for part in declaration.split() if part]
     return parts[-1] if parts else None
@@ -127,6 +128,34 @@ def property_setter(name: str, attrs: tuple[str, ...]) -> str | None:
     return f"set{name[0].upper()}{name[1:]}:"
 
 
+def logical_header_lines(header: Path) -> list[str]:
+    lines: list[str] = []
+    pending: str | None = None
+
+    for raw_line in header.read_text(encoding="utf-8").splitlines():
+        line = strip_line_comment(raw_line)
+        if not line:
+            continue
+
+        if pending is not None:
+            pending = f"{pending} {line}"
+            if ";" in line:
+                lines.append(pending)
+                pending = None
+            continue
+
+        if line.startswith(("+", "-", "@property")) and ";" not in line:
+            pending = line
+            continue
+
+        lines.append(line)
+
+    if pending is not None:
+        lines.append(pending)
+
+    return lines
+
+
 def parse_headers(include_dir: Path) -> HeaderAPI:
     api = HeaderAPI()
     context_kind: str | None = None
@@ -134,17 +163,13 @@ def parse_headers(include_dir: Path) -> HeaderAPI:
     category_name: str | None = None
 
     for header in sorted(include_dir.glob("*.h")):
-        for raw_line in header.read_text(encoding="utf-8").splitlines():
-            line = strip_line_comment(raw_line)
-            if not line:
-                continue
-
-            constant_match = re.match(r"^extern NSString \* const ([A-Za-z0-9_]+);$", line)
+        for line in logical_header_lines(header):
+            constant_match = re.match(r"^extern\s+NSString\s*\*\s*const\s+([A-Za-z0-9_]+);$", line)
             if constant_match:
                 api.constants.add(constant_match.group(1))
                 continue
 
-            if re.match(r"^extern LAActivator \*LASharedActivator;$", line):
+            if re.match(r"^extern\s+LAActivator\s*\*\s*LASharedActivator;$", line):
                 api.globals.add("LASharedActivator")
                 continue
 

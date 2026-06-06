@@ -1,4 +1,14 @@
+//
+//  LAActivatorBackend.h
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import <Activator/Activator.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 @class LAActivatorPersistence;
 
@@ -8,9 +18,10 @@ __attribute__((visibility("hidden")))
 @property(nonatomic, assign, readonly, getter=isAuthoritative) BOOL authoritative;
 @property(nonatomic, copy) NSString *currentProfileName;
 
-- (instancetype)initWithAuthoritativeRole:(BOOL)authoritative persistence:(LAActivatorPersistence *)persistence;
+- (instancetype)initWithAuthoritativeRole:(BOOL)authoritative
+                              persistence:(nullable LAActivatorPersistence *)persistence;
 
-- (id<LAListener>)listenerForName:(NSString *)name;
+- (nullable id<LAListener>)listenerForName:(NSString *)name;
 - (BOOL)hasListenerWithName:(NSString *)name;
 - (BOOL)hasSeenListenerWithName:(NSString *)name;
 - (BOOL)registerListener:(id<LAListener>)listener forName:(NSString *)name;
@@ -18,7 +29,7 @@ __attribute__((visibility("hidden")))
 - (NSArray *)availableListenerNames;
 - (NSArray *)registeredListeners;
 
-- (id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
+- (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
 - (BOOL)registerEventDataSource:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName;
 - (BOOL)unregisterEventDataSourceWithEventName:(NSString *)eventName;
 - (NSArray *)availableEventNames;
@@ -32,8 +43,10 @@ __attribute__((visibility("hidden")))
 - (BOOL)applicationWithDisplayIdentifierIsBlacklisted:(NSString *)displayIdentifier;
 - (BOOL)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
 - (NSArray *)availableProfileNames;
-- (BOOL)setCurrentProfileNameIfChanged:(NSString *)currentProfileName;
+- (BOOL)setCurrentProfileNameIfChanged:(nullable NSString *)currentProfileName;
 
 + (NSArray *)normalizedStringArray:(NSArray *)array;
 
 @end
+
+NS_ASSUME_NONNULL_END

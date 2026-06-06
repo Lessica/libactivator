@@ -1,29 +1,33 @@
-#import <Activator/Activator.h>
+//
+//  LAEvent.m
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
 
-@interface LAEvent () {
-    NSString *_name;
-    NSString *_mode;
-}
-@end
+#import <Activator/Activator.h>
 
 @implementation LAEvent
 
 @synthesize name = _name;
 @synthesize mode = _mode;
+@synthesize handled = _handled;
+@synthesize userInfo = _userInfo;
 
-+ (id)eventWithName:(NSString *)name {
++ (instancetype)eventWithName:(NSString *)name {
     return [[self alloc] initWithName:name];
 }
 
-+ (id)eventWithName:(NSString *)name mode:(NSString *)mode {
++ (instancetype)eventWithName:(NSString *)name mode:(NSString *)mode {
     return [[self alloc] initWithName:name mode:mode];
 }
 
-- (id)initWithName:(NSString *)name {
+- (instancetype)initWithName:(NSString *)name {
     return [self initWithName:name mode:nil];
 }
 
-- (id)initWithName:(NSString *)name mode:(NSString *)mode {
+- (instancetype)initWithName:(NSString *)name mode:(NSString *)mode {
     self = [super init];
     if (self) {
         _name = [name copy];
@@ -32,7 +36,7 @@
     return self;
 }
 
-- (id)initWithCoder:(NSCoder *)coder {
+- (instancetype)initWithCoder:(NSCoder *)coder {
     self = [super init];
     if (self) {
         _name = [[coder decodeObjectForKey:@"name"] copy];
@@ -50,7 +54,7 @@
     [coder encodeObject:self.userInfo forKey:@"userInfo"];
 }
 
-- (id)copyWithZone:(NSZone *)zone {
+- (instancetype)copyWithZone:(NSZone *)zone {
     LAEvent *event = [[[self class] allocWithZone:zone] initWithName:self.name mode:self.mode];
     event.handled = self.handled;
     event.userInfo = self.userInfo;

@@ -1,3 +1,11 @@
+//
+//  LASettingsShims.m
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import <Activator/LASettingsViewController.h>
 
 @interface LAModeSettingsController ()
@@ -21,11 +29,11 @@
 
 @implementation LASettingsViewController
 
-+ (id)controller {
++ (instancetype)controller {
     return [[self alloc] init];
 }
 
-- (id)init {
+- (instancetype)init {
     return [super init];
 }
 
@@ -36,7 +44,7 @@
 
 @implementation LAModeSettingsController
 
-- (id)initWithMode:(NSString *)mode {
+- (instancetype)initWithMode:(NSString *)mode {
     self = [super init];
     if (self) {
         _mode = [mode copy];
@@ -48,7 +56,7 @@
 
 @implementation LAEventSettingsController
 
-- (id)initWithModes:(NSArray *)modes eventName:(NSString *)eventName {
+- (instancetype)initWithModes:(NSArray *)modes eventName:(NSString *)eventName {
     self = [super init];
     if (self) {
         _modes = [modes copy];
@@ -66,7 +74,7 @@
 
 @synthesize eventName = _eventName;
 
-- (id)initWithEventName:(NSString *)eventName {
+- (instancetype)initWithEventName:(NSString *)eventName {
     self = [super init];
     if (self) {
         _eventName = [eventName copy];
@@ -84,7 +92,7 @@
 
 @synthesize listenerName = _listenerName;
 
-- (id)initWithListenerName:(NSString *)listenerName {
+- (instancetype)initWithListenerName:(NSString *)listenerName {
     self = [super init];
     if (self) {
         _listenerName = [listenerName copy];

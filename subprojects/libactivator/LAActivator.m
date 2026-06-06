@@ -1,12 +1,20 @@
+//
+//  LAActivator.m
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import <Activator/Activator.h>
 #import <dispatch/dispatch.h>
 
 #import "LAActivatorBackend.h"
-#import "LAActivatorResourceManager.h"
-#import "LADefaultEventDataSource.h"
 #import "LAActivatorIPC.h"
 #import "LAActivatorPersistence.h"
 #import "LAActivatorPrivate.h"
+#import "LAActivatorResourceManager.h"
+#import "LADefaultEventDataSource.h"
 #import "LARemoteListener.h"
 
 #pragma mark - Class Extension
@@ -712,7 +720,8 @@ LAActivator *LASharedActivator;
             return [value boolValue];
         }
     }
-    id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"requires-event" forListenerName:name];
+    id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"requires-event"
+                                                                  forListenerName:name];
     return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
 }
 
@@ -724,16 +733,15 @@ LAActivator *LASharedActivator;
     id<LAListener> listener = [self listenerForName:name];
     if (listener && [listener respondsToSelector:@selector(activator:
                                                      requiresCompatibleEventModesForListenerWithName:)]) {
-        NSArray *modes = [LAActivatorBackend normalizedStringArray:[listener activator:self
-                                                               requiresCompatibleEventModesForListenerWithName:name]];
+        NSArray *modes = [LAActivatorBackend
+            normalizedStringArray:[listener activator:self requiresCompatibleEventModesForListenerWithName:name]];
         if (modes.count > 0) {
             return modes;
         }
     }
-    NSArray *resourceModes =
-        [LAActivatorBackend normalizedStringArray:[LAActivatorResourceManager.sharedManager
-                                                      infoDictionaryValueOfKey:@"compatible-modes"
-                                                               forListenerName:name]];
+    NSArray *resourceModes = [LAActivatorBackend
+        normalizedStringArray:[LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"compatible-modes"
+                                                                                 forListenerName:name]];
     if (resourceModes.count > 0) {
         return resourceModes;
     }
@@ -769,14 +777,16 @@ LAActivator *LASharedActivator;
         return NO;
     }
     if ([listener respondsToSelector:@selector(activator:requiresIsCompatibleWithEventName:listenerName:)]) {
-        NSNumber *value = [listener activator:self requiresIsCompatibleWithEventName:eventName
-                                                 listenerName:listenerName];
+        NSNumber *value = [listener activator:self
+            requiresIsCompatibleWithEventName:eventName
+                                 listenerName:listenerName];
         if (value) {
             return [value boolValue];
         }
     }
-    NSArray *incompatibleEvents = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"incompatible-events"
-                                                                                     forListenerName:listenerName];
+    NSArray *incompatibleEvents =
+        [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"incompatible-events"
+                                                           forListenerName:listenerName];
     if ([incompatibleEvents isKindOfClass:NSArray.class] && [incompatibleEvents containsObject:eventName]) {
         return NO;
     }
@@ -885,7 +895,8 @@ LAActivator *LASharedActivator;
     if (image) {
         return image;
     }
-    NSString *path = [templateBundle pathForResource:@"icon" ofType:@"png"] ?: [templateBundle pathForResource:@"Icon" ofType:@"png"];
+    NSString *path = [templateBundle pathForResource:@"icon" ofType:@"png"]
+                         ?: [templateBundle pathForResource:@"Icon" ofType:@"png"];
     return path ? [UIImage imageWithContentsOfFile:path] : nil;
 }
 
@@ -922,7 +933,8 @@ LAActivator *LASharedActivator;
                                       requiresConfigurationViewControllerClassNameForListenerWithName:bundle:)]) ||
            (listener && [listener respondsToSelector:@selector(activator:requestsConfigurationForListenerWithName:)]) ||
            [[LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"configuration"
-                                                               forListenerName:listenerName] isKindOfClass:NSString.class];
+                                                               forListenerName:listenerName]
+               isKindOfClass:NSString.class];
 }
 
 - (LAListenerConfigurationViewController *)configurationViewControllerForListenerWithName:(NSString *)listenerName {
@@ -1133,7 +1145,7 @@ LAActivator *LASharedActivator;
         return [dataSource localizedDescriptionForEventName:eventName] ?: [self localizedTitleForEventName:eventName];
     }
     return [LAActivatorResourceManager.sharedManager localizedDescriptionForEventName:eventName]
-        ?: [self localizedTitleForEventName:eventName];
+               ?: [self localizedTitleForEventName:eventName];
 }
 
 - (NSString *)localizedDescriptionForListenerName:(NSString *)listenerName {
@@ -1151,7 +1163,7 @@ LAActivator *LASharedActivator;
         }
     }
     return [LAActivatorResourceManager.sharedManager localizedDescriptionForListenerName:listenerName]
-        ?: [self localizedTitleForListenerName:listenerName];
+               ?: [self localizedTitleForListenerName:listenerName];
 }
 
 @end

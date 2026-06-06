@@ -1,3 +1,11 @@
+//
+//  LADefaultEventDataSource.m
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import "LADefaultEventDataSource.h"
 
 #import "LAActivatorResourceManager.h"
@@ -49,7 +57,8 @@
 }
 
 - (BOOL)eventWithName:(NSString *)eventName isCompatibleWithMode:(NSString *)eventMode {
-    NSArray *modes = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"compatible-modes"];
+    NSArray *modes =
+        [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"compatible-modes"];
     if ([modes isKindOfClass:NSArray.class] && eventMode.length > 0) {
         return [modes containsObject:eventMode];
     }
@@ -57,7 +66,8 @@
 }
 
 - (BOOL)eventWithNameSupportsRemoval:(NSString *)eventName {
-    return [[LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"supports-removal"] boolValue];
+    return [[LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"supports-removal"]
+        boolValue];
 }
 
 - (NSString *)configurationViewControllerClassNameForEventWithName:(NSString *)eventName bundle:(NSBundle **)bundle {

@@ -1,4 +1,14 @@
+//
+//  LAActivatorPersistence.h
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((visibility("hidden")))
 @interface LAActivatorPersistence : NSObject
@@ -7,7 +17,9 @@ __attribute__((visibility("hidden")))
 
 + (instancetype)defaultPersistence;
 - (instancetype)initWithFilePath:(NSString *)filePath;
-- (NSDictionary *)loadDictionary;
+- (nullable NSDictionary *)loadDictionary;
 - (BOOL)saveDictionary:(NSDictionary *)dictionary;
 
 @end
+
+NS_ASSUME_NONNULL_END

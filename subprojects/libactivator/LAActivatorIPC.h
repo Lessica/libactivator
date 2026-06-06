@@ -1,4 +1,14 @@
+//
+//  LAActivatorIPC.h
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 @class LAActivator;
 @class LAEvent;
@@ -80,16 +90,16 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCKeyScale;
 
 __attribute__((visibility("hidden")))
 @interface LAActivatorIPCClient : NSObject
-- (NSDictionary *)replyForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
-- (NSArray *)arrayValueForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
-- (NSString *)stringValueForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
-- (id)propertyListValueForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
+- (nullable NSDictionary *)replyForMessageName:(NSString *)messageName userInfo:(nullable NSDictionary *)userInfo;
+- (NSArray *)arrayValueForMessageName:(NSString *)messageName userInfo:(nullable NSDictionary *)userInfo;
+- (nullable NSString *)stringValueForMessageName:(NSString *)messageName userInfo:(nullable NSDictionary *)userInfo;
+- (nullable id)propertyListValueForMessageName:(NSString *)messageName userInfo:(nullable NSDictionary *)userInfo;
 - (BOOL)boolValueForMessageName:(NSString *)messageName
-                       userInfo:(NSDictionary *)userInfo
+                       userInfo:(nullable NSDictionary *)userInfo
                    defaultValue:(BOOL)defaultValue;
-- (NSArray *)eventsValueForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
-- (BOOL)sendEventMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo event:(LAEvent *)event;
-- (BOOL)sendMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
+- (NSArray *)eventsValueForMessageName:(NSString *)messageName userInfo:(nullable NSDictionary *)userInfo;
+- (BOOL)sendEventMessageName:(NSString *)messageName userInfo:(nullable NSDictionary *)userInfo event:(LAEvent *)event;
+- (BOOL)sendMessageName:(NSString *)messageName userInfo:(nullable NSDictionary *)userInfo;
 @end
 
 __attribute__((visibility("hidden")))
@@ -97,3 +107,5 @@ __attribute__((visibility("hidden")))
 - (instancetype)initWithActivator:(LAActivator *)activator;
 - (void)start;
 @end
+
+NS_ASSUME_NONNULL_END

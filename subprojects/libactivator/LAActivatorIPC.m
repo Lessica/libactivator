@@ -1,3 +1,11 @@
+//
+//  LAActivatorIPC.m
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import "LAActivatorIPC.h"
 
 NSString *const LAActivatorIPCServerName = @"libactivator.springboard";
@@ -66,10 +74,8 @@ NSString *const LAActivatorIPCMessageDispatchAbortEventToListeners =
     @"libactivator.request.dispatch-abort-event-to-listeners";
 NSString *const LAActivatorIPCMessageDispatchPreviewEvent = @"libactivator.request.dispatch-preview-event";
 NSString *const LAActivatorIPCMessageDispatchDeactivateEvent = @"libactivator.request.dispatch-deactivate-event";
-NSString *const LAActivatorIPCMessageRemoteListenerReceiveEvent =
-    @"libactivator.request.remote-listener-receive-event";
-NSString *const LAActivatorIPCMessageRemoteListenerAbortEvent =
-    @"libactivator.request.remote-listener-abort-event";
+NSString *const LAActivatorIPCMessageRemoteListenerReceiveEvent = @"libactivator.request.remote-listener-receive-event";
+NSString *const LAActivatorIPCMessageRemoteListenerAbortEvent = @"libactivator.request.remote-listener-abort-event";
 NSString *const LAActivatorIPCMessageListenerIconData = @"libactivator.request.listener-icon-data";
 NSString *const LAActivatorIPCMessageListenerSmallIconData = @"libactivator.request.listener-small-icon-data";
 NSString *const LAActivatorIPCMessageRequestListenerRemoval = @"libactivator.request.listener-request-removal";

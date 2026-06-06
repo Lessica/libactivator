@@ -1,3 +1,11 @@
+//
+//  LARemoteListener.m
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import "LARemoteListener.h"
 
 #import "LAActivatorIPC.h"
@@ -8,7 +16,9 @@
 @property(nonatomic, strong) LAActivatorIPCClient *ipcClient;
 - (NSDictionary *)userInfoForEvent:(LAEvent *)event listenerName:(NSString *)listenerName;
 - (CGFloat)scaleInReply:(NSDictionary *)reply defaultScale:(CGFloat)defaultScale;
-- (NSData *)dataValueForMessageName:(NSString *)messageName listenerName:(NSString *)listenerName scale:(CGFloat *)scale;
+- (NSData *)dataValueForMessageName:(NSString *)messageName
+                       listenerName:(NSString *)listenerName
+                              scale:(CGFloat *)scale;
 @end
 
 @implementation LARemoteListener
@@ -50,17 +60,17 @@
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName {
     return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedTitleForListenerName
-                                           userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+                                            userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedDescriptionForListenerName:(NSString *)listenerName {
     return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedDescriptionForListenerName
-                                           userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+                                            userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedGroupForListenerName:(NSString *)listenerName {
     return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedGroupForListenerName
-                                           userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+                                            userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
 }
 
 - (NSNumber *)activator:(LAActivator *)activator requiresRequiresAssignmentForListenerName:(NSString *)listenerName {
@@ -70,9 +80,10 @@
     return @(value);
 }
 
-- (NSArray *)activator:(LAActivator *)activator requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName {
+- (NSArray *)activator:(LAActivator *)activator
+    requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName {
     return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageCompatibleModesForListener
-                                          userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+                                           userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
 }
 
 - (NSNumber *)activator:(LAActivator *)activator
@@ -87,9 +98,10 @@
     return @(value);
 }
 
-- (NSArray *)activator:(LAActivator *)activator requiresExclusiveAssignmentGroupsForListenerName:(NSString *)listenerName {
+- (NSArray *)activator:(LAActivator *)activator
+    requiresExclusiveAssignmentGroupsForListenerName:(NSString *)listenerName {
     return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageExclusiveAssignmentGroupsForListener
-                                          userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+                                           userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
 }
 
 - (id)activator:(LAActivator *)activator
@@ -117,24 +129,36 @@
 
 - (NSData *)activator:(LAActivator *)activator requiresSmallIconDataForListenerName:(NSString *)listenerName {
     CGFloat scale = 1.0f;
-    return [self dataValueForMessageName:LAActivatorIPCMessageListenerSmallIconData listenerName:listenerName scale:&scale];
+    return [self dataValueForMessageName:LAActivatorIPCMessageListenerSmallIconData
+                            listenerName:listenerName
+                                   scale:&scale];
 }
 
-- (NSData *)activator:(LAActivator *)activator requiresIconDataForListenerName:(NSString *)listenerName scale:(CGFloat *)scale {
+- (NSData *)activator:(LAActivator *)activator
+    requiresIconDataForListenerName:(NSString *)listenerName
+                              scale:(CGFloat *)scale {
     return [self dataValueForMessageName:LAActivatorIPCMessageListenerIconData listenerName:listenerName scale:scale];
 }
 
-- (NSData *)activator:(LAActivator *)activator requiresSmallIconDataForListenerName:(NSString *)listenerName scale:(CGFloat *)scale {
-    return [self dataValueForMessageName:LAActivatorIPCMessageListenerSmallIconData listenerName:listenerName scale:scale];
+- (NSData *)activator:(LAActivator *)activator
+    requiresSmallIconDataForListenerName:(NSString *)listenerName
+                                   scale:(CGFloat *)scale {
+    return [self dataValueForMessageName:LAActivatorIPCMessageListenerSmallIconData
+                            listenerName:listenerName
+                                   scale:scale];
 }
 
-- (UIImage *)activator:(LAActivator *)activator requiresIconForListenerName:(NSString *)listenerName scale:(CGFloat)scale {
+- (UIImage *)activator:(LAActivator *)activator
+    requiresIconForListenerName:(NSString *)listenerName
+                          scale:(CGFloat)scale {
     CGFloat actualScale = scale;
     NSData *data = [self activator:activator requiresIconDataForListenerName:listenerName scale:&actualScale];
     return data.length > 0 ? [UIImage imageWithData:data scale:actualScale > 0.0f ? actualScale : 1.0f] : nil;
 }
 
-- (UIImage *)activator:(LAActivator *)activator requiresSmallIconForListenerName:(NSString *)listenerName scale:(CGFloat)scale {
+- (UIImage *)activator:(LAActivator *)activator
+    requiresSmallIconForListenerName:(NSString *)listenerName
+                               scale:(CGFloat)scale {
     CGFloat actualScale = scale;
     NSData *data = [self activator:activator requiresSmallIconDataForListenerName:listenerName scale:&actualScale];
     return data.length > 0 ? [UIImage imageWithData:data scale:actualScale > 0.0f ? actualScale : 1.0f] : nil;
@@ -180,7 +204,9 @@
     return [value isKindOfClass:NSNumber.class] ? [value doubleValue] : defaultScale;
 }
 
-- (NSData *)dataValueForMessageName:(NSString *)messageName listenerName:(NSString *)listenerName scale:(CGFloat *)scale {
+- (NSData *)dataValueForMessageName:(NSString *)messageName
+                       listenerName:(NSString *)listenerName
+                              scale:(CGFloat *)scale {
     CGFloat requestedScale = scale ? *scale : UIScreen.mainScreen.scale;
     NSDictionary *reply = [self.ipcClient replyForMessageName:messageName
                                                      userInfo:@{

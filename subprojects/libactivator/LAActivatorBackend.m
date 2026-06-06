@@ -1,3 +1,11 @@
+//
+//  LAActivatorBackend.m
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import "LAActivatorBackend.h"
 
 #import "LAActivatorPersistence.h"
@@ -99,7 +107,8 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
         LAActivatorProfilesKey : serializedProfiles,
         LAActivatorBlacklistedDisplayIdentifiersKey :
             [self.blacklistedDisplayIdentifiers.allObjects sortedArrayUsingSelector:@selector(compare:)],
-        LAActivatorSeenListenerNamesKey : [self.seenListenerNames.allObjects sortedArrayUsingSelector:@selector(compare:)],
+        LAActivatorSeenListenerNamesKey :
+            [self.seenListenerNames.allObjects sortedArrayUsingSelector:@selector(compare:)],
     };
     [self.persistence saveDictionary:dictionary];
 }

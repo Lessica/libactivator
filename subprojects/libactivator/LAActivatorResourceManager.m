@@ -1,3 +1,11 @@
+//
+//  LAActivatorResourceManager.m
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import "LAActivatorResourceManager.h"
 
 #import <dispatch/dispatch.h>
@@ -196,7 +204,8 @@
     }
 
     NSString *bundleGroup = [self localizedStringForKey:group value:group bundle:[self eventBundleForName:eventName]];
-    return [self localizedStringForKey:[@"EVENT_GROUP_TITLE_" stringByAppendingString:group] value:bundleGroup ?: group];
+    return [self localizedStringForKey:[@"EVENT_GROUP_TITLE_" stringByAppendingString:group]
+                                 value:bundleGroup ?: group];
 }
 
 - (NSString *)localizedDescriptionForEventName:(NSString *)eventName {
@@ -205,8 +214,8 @@
     NSString *overrideKey = [@"EVENT_DESCRIPTION_" stringByAppendingString:eventName ?: @""];
     if (description.length > 0) {
         NSString *bundleDescription = [self localizedStringForKey:description
-                                                           value:description
-                                                          bundle:[self eventBundleForName:eventName]];
+                                                            value:description
+                                                           bundle:[self eventBundleForName:eventName]];
         return [self localizedStringForKey:overrideKey value:bundleDescription];
     }
 
@@ -245,8 +254,8 @@
     NSString *overrideKey = [@"LISTENER_DESCRIPTION_" stringByAppendingString:listenerName ?: @""];
     if ([description isKindOfClass:NSString.class] && description.length > 0) {
         NSString *bundleDescription = [self localizedStringForKey:description
-                                                           value:description
-                                                          bundle:[self listenerBundleForName:listenerName]];
+                                                            value:description
+                                                           bundle:[self listenerBundleForName:listenerName]];
         return [self localizedStringForKey:overrideKey value:bundleDescription];
     }
 

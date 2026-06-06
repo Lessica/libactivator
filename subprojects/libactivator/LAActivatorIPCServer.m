@@ -1,3 +1,11 @@
+//
+//  LAActivatorIPCServer.m
+//  libactivator
+//
+//  Created by Lessica on 6/6/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
 #import "LAActivatorIPC.h"
 #import "LAActivatorPrivate.h"
 #import "LAActivatorResourceManager.h"
@@ -128,7 +136,7 @@
         return [self
             replyWithOK:YES
                   value:@([_activator hasSeenListenerWithName:[self stringInUserInfo:userInfo
-                                                                               forKey:LAActivatorIPCKeyListenerName]])];
+                                                                              forKey:LAActivatorIPCKeyListenerName]])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageAssignedListenerNames]) {
         return [self replyWithOK:YES
@@ -467,7 +475,8 @@
         if ([listener respondsToSelector:@selector(activator:requiresSmallIconDataForListenerName:scale:)]) {
             data = [listener activator:_activator requiresSmallIconDataForListenerName:listenerName scale:&actualScale];
         }
-        if (data.length == 0 && [listener respondsToSelector:@selector(activator:requiresSmallIconDataForListenerName:)]) {
+        if (data.length == 0 && [listener respondsToSelector:@selector(activator:
+                                                                 requiresSmallIconDataForListenerName:)]) {
             data = [listener activator:_activator requiresSmallIconDataForListenerName:listenerName];
             actualScale = 1.0f;
         }
@@ -481,7 +490,9 @@
         }
     }
     if (data.length == 0) {
-        data = [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName small:small scale:&actualScale];
+        data = [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName
+                                                                           small:small
+                                                                           scale:&actualScale];
     }
     if (data.length == 0) {
         return [self replyWithOK:NO value:nil];
