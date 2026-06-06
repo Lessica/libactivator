@@ -10,6 +10,7 @@ libactivator_FILES += LAProtocols.m
 libactivator_FILES += LAEvent.m
 libactivator_FILES += LAActivatorPersistence.m
 libactivator_FILES += LAActivatorBackend.m
+libactivator_FILES += LAActivatorIPC.m
 libactivator_FILES += LAActivatorIPCClient.m
 libactivator_FILES += LAActivatorIPCServer.m
 libactivator_FILES += LAActivator.m
