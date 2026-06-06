@@ -15,8 +15,20 @@
 #import "LAActivatorPrivate.h"
 
 #import <Activator/Activator.h>
+#import <IOKit/hid/IOHIDEvent.h>
+#import <IOKit/hid/IOHIDEventSystemClient.h>
 #import <UIKit/UIKit.h>
+#import <mach/mach_time.h>
 #import <roothide.h>
+
+extern IOHIDEventSystemClientRef IOHIDEventSystemClientCreate(CFAllocatorRef allocator);
+extern void IOHIDEventSystemClientDispatchEvent(IOHIDEventSystemClientRef client, IOHIDEventRef event);
+extern void IOHIDEventSetSenderID(IOHIDEventRef event, uint64_t senderID);
+
+static const IOHIDEventField LATestHIDEventFieldIsBuiltIn = IOHIDEventFieldBase(kIOHIDEventTypeNULL) + 4;
+static const IOHIDEventField LATestHIDEventFieldDigitizerIsDisplayIntegrated =
+    kIOHIDEventFieldDigitizerMajorRadius + 5;
+static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
 @interface UIApplication (LAActivatorTesting)
 - (id)_accessibilityFrontMostApplication;
@@ -275,6 +287,8 @@
 + (void)runDispatchTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runRuntimeDeviceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)cleanActivator:(LAActivator *)activator;
++ (void)sendSyntheticTouchWithTouching:(BOOL)touching;
++ (void)waitForSyntheticTouchDelivery;
 + (BOOL)resetHomeScreen;
 + (BOOL)openApplicationWithBundleIdentifier:(NSString *)bundleIdentifier;
 + (BOOL)suspendApplication;
@@ -292,15 +306,15 @@
     NSString *command = [userInfo[LAActivatorIPCKeyTestingCommand] isKindOfClass:NSString.class]
                             ? userInfo[LAActivatorIPCKeyTestingCommand]
                             : nil;
-    if ([command isEqualToString:@"ping"]) {
+    if ([command isEqualToString:LAActivatorIPCTestingCommandPing]) {
         return [self okReplyWithValue:@"ready"];
     }
-    if ([command isEqualToString:@"cleanup"]) {
+    if ([command isEqualToString:LAActivatorIPCTestingCommandCleanup]) {
         [self cleanActivator:activator];
         [self removeTestPlist];
         return [self okReplyWithValue:@"clean"];
     }
-    if ([command isEqualToString:@"run"]) {
+    if ([command isEqualToString:LAActivatorIPCTestingCommandRun]) {
         return [self okReplyWithValue:[self runAllTestsWithActivator:activator]];
     }
     return [self failureReply];
@@ -480,12 +494,14 @@
     listenerA.receiveCount = 0;
     listenerB.receiveCount = 0;
     LAEvent *deferredEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
-    [activator la_testingSetTouchActive:YES];
+    [self sendSyntheticTouchWithTouching:YES];
+    [self waitForSyntheticTouchDelivery];
     [activator sendEvent:deferredEvent toListenersWithNames:@[ listenerAName, listenerBName ]];
     [recorder expect:deferredEvent.handled && listenerA.receiveCount == 0
              caseName:@"deferred-no-touch-enqueue"
                reason:@"Deferred event was not held while touch was active"];
-    [activator la_testingSetTouchActive:NO];
+    [self sendSyntheticTouchWithTouching:NO];
+    [self waitForSyntheticTouchDelivery];
     [self waitForMainQueue];
     [recorder expect:listenerA.receiveCount == 1 && listenerB.receiveCount == 1
              caseName:@"deferred-no-touch-drain"
@@ -596,12 +612,72 @@
     [activator la_noteHomeScreenVisible:YES];
     [activator la_noteLockScreenVisible:NO];
     [activator la_noteScreenBlanked:NO];
-    [activator la_testingSetTouchActive:NO];
+    [self sendSyntheticTouchWithTouching:NO];
+    [self waitForSyntheticTouchDelivery];
 }
 
 + (void)removeTestPlist {
     [NSFileManager.defaultManager removeItemAtPath:jbroot(@"/var/mobile/Library/Preferences/libactivator.tests.plist")
                                              error:nil];
+}
+
+#pragma mark - Synthetic Touches
+
++ (void)sendSyntheticTouchWithTouching:(BOOL)touching {
+    uint64_t machTimeValue = mach_absolute_time();
+    AbsoluteTime machTime;
+#if TARGET_RT_BIG_ENDIAN
+    machTime.hi = (UInt32)(machTimeValue >> 32);
+    machTime.lo = (UInt32)machTimeValue;
+#else
+    machTime.lo = (UInt32)machTimeValue;
+    machTime.hi = (UInt32)(machTimeValue >> 32);
+#endif
+    uint32_t eventMask = kIOHIDDigitizerEventTouch | kIOHIDDigitizerEventRange | kIOHIDDigitizerEventIdentity;
+    IOHIDEventRef event = IOHIDEventCreateDigitizerEvent(kCFAllocatorDefault, machTime,
+                                                         kIOHIDDigitizerTransducerTypeHand, 0, 0, eventMask, 0, 0,
+                                                         0, 0, 0, 0, touching, touching, 0);
+    if (!event) {
+        return;
+    }
+
+    IOHIDEventSetIntegerValue(event, LATestHIDEventFieldIsBuiltIn, 1);
+    IOHIDEventSetIntegerValue(event, LATestHIDEventFieldDigitizerIsDisplayIntegrated, 1);
+
+    IOHIDEventRef finger =
+        IOHIDEventCreateDigitizerFingerEvent(kCFAllocatorDefault, machTime, 2, 2, eventMask, 0.5, 0.5, 0, 0, 90.0,
+                                             touching, touching, 0);
+    if (finger) {
+        IOHIDEventSetFloatValue(finger, kIOHIDEventFieldDigitizerMinorRadius, 5.0);
+        IOHIDEventSetFloatValue(finger, kIOHIDEventFieldDigitizerMajorRadius, 5.0);
+        IOHIDEventAppendEvent(event, finger);
+        CFRelease(finger);
+    }
+
+    static IOHIDEventSystemClientRef client = nil;
+    static dispatch_once_t clientOnceToken;
+    dispatch_once(&clientOnceToken, ^{
+        client = IOHIDEventSystemClientCreate(kCFAllocatorDefault);
+    });
+
+    static dispatch_queue_t queue = nil;
+    static dispatch_once_t queueOnceToken;
+    dispatch_once(&queueOnceToken, ^{
+        queue = dispatch_queue_create("libactivator.tests.hid-events", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+    });
+
+    IOHIDEventRef eventToDispatch = (IOHIDEventRef)CFRetain(event);
+    dispatch_async(queue, ^{
+        IOHIDEventSetSenderID(eventToDispatch, LATestHIDSenderID);
+        IOHIDEventSystemClientDispatchEvent(client, eventToDispatch);
+        CFRelease(eventToDispatch);
+    });
+    CFRelease(event);
+}
+
++ (void)waitForSyntheticTouchDelivery {
+    [NSThread sleepForTimeInterval:0.25];
+    [self waitForMainQueue];
 }
 
 #pragma mark - Device Automation

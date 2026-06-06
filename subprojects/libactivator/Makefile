@@ -30,6 +30,7 @@ libactivator_CFLAGS += -I../../include
 ifeq ($(LA_TESTING),1)
 libactivator_FILES += LAActivatorTestSupport.m
 libactivator_CFLAGS += -DLA_TESTING=1
+libactivator_PRIVATE_FRAMEWORKS += IOKit
 endif
 
 libactivator_FRAMEWORKS += Foundation

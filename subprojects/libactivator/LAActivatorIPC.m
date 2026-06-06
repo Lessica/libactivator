@@ -90,6 +90,9 @@ NSString *const LAActivatorIPCMessageRemoveEvent = @"libactivator.request.remove
 
 #if LA_TESTING
 NSString *const LAActivatorIPCMessageTesting = @"libactivator.testing";
+NSString *const LAActivatorIPCTestingCommandPing = @"ping";
+NSString *const LAActivatorIPCTestingCommandCleanup = @"cleanup";
+NSString *const LAActivatorIPCTestingCommandRun = @"run";
 #endif
 
 NSString *const LAActivatorIPCKeyOK = @"OK";

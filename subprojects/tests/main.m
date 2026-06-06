@@ -9,18 +9,7 @@
 #import <AppSupport/CPDistributedMessagingCenter.h>
 #import <Foundation/Foundation.h>
 
-static NSString *const LATestIPCServerName = @"libactivator.springboard";
-static NSString *const LATestIPCMessageTesting = @"libactivator.testing";
-static NSString *const LATestIPCKeyOK = @"OK";
-static NSString *const LATestIPCKeyValue = @"Value";
-static NSString *const LATestIPCKeyTestingCommand = @"TestingCommand";
-static NSString *const LATestIPCKeyTestingSuites = @"TestingSuites";
-static NSString *const LATestIPCKeyTestingFailures = @"TestingFailures";
-static NSString *const LATestIPCKeyTestingSkipped = @"TestingSkipped";
-static NSString *const LATestIPCKeyTestingCaseCount = @"TestingCaseCount";
-static NSString *const LATestIPCKeyTestingPassCount = @"TestingPassCount";
-static NSString *const LATestIPCKeyTestingFailureCount = @"TestingFailureCount";
-static NSString *const LATestIPCKeyTestingSkipCount = @"TestingSkipCount";
+#import "LAActivatorIPC.h"
 
 @interface LATestRunner : NSObject
 - (int)run;
@@ -33,7 +22,7 @@ static NSString *const LATestIPCKeyTestingSkipCount = @"TestingSkipCount";
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _center = [CPDistributedMessagingCenter centerNamed:LATestIPCServerName];
+        _center = [CPDistributedMessagingCenter centerNamed:LAActivatorIPCServerName];
     }
     return self;
 }
@@ -46,32 +35,33 @@ static NSString *const LATestIPCKeyTestingSkipCount = @"TestingSkipCount";
         return 2;
     }
 
-    [self sendCommand:@"cleanup"];
+    [self sendCommand:LAActivatorIPCTestingCommandCleanup];
     printf("[tests] Running SpringBoard test suites\n");
     fflush(stdout);
-    NSDictionary *reply = [self sendCommand:@"run"];
-    if (![reply[LATestIPCKeyOK] boolValue]) {
+    NSDictionary *reply = [self sendCommand:LAActivatorIPCTestingCommandRun];
+    if (![reply[LAActivatorIPCKeyOK] boolValue]) {
         fprintf(stderr, "[tests] Test command failed\n");
-        [self sendCommand:@"cleanup"];
+        [self sendCommand:LAActivatorIPCTestingCommandCleanup];
         return 3;
     }
-    NSDictionary *result = [reply[LATestIPCKeyValue] isKindOfClass:NSDictionary.class] ? reply[LATestIPCKeyValue] : nil;
+    NSDictionary *result =
+        [reply[LAActivatorIPCKeyValue] isKindOfClass:NSDictionary.class] ? reply[LAActivatorIPCKeyValue] : nil;
     if (!result) {
         fprintf(stderr, "[tests] Test command returned no result\n");
-        [self sendCommand:@"cleanup"];
+        [self sendCommand:LAActivatorIPCTestingCommandCleanup];
         return 3;
     }
     [self printResult:result];
-    [self sendCommand:@"cleanup"];
+    [self sendCommand:LAActivatorIPCTestingCommandCleanup];
 
-    NSInteger failures = [result[LATestIPCKeyTestingFailureCount] integerValue];
+    NSInteger failures = [result[LAActivatorIPCKeyTestingFailureCount] integerValue];
     return failures == 0 ? 0 : 1;
 }
 
 - (BOOL)waitForServer {
     for (NSInteger attempt = 0; attempt < 60; attempt++) {
-        NSDictionary *reply = [self sendCommand:@"ping"];
-        if ([reply[LATestIPCKeyOK] boolValue]) {
+        NSDictionary *reply = [self sendCommand:LAActivatorIPCTestingCommandPing];
+        if ([reply[LAActivatorIPCKeyOK] boolValue]) {
             printf("[tests] SpringBoard test server is ready\n");
             fflush(stdout);
             return YES;
@@ -86,32 +76,32 @@ static NSString *const LATestIPCKeyTestingSkipCount = @"TestingSkipCount";
 }
 
 - (NSDictionary *)sendCommand:(NSString *)command {
-    NSDictionary *reply = [_center sendMessageAndReceiveReplyName:LATestIPCMessageTesting
-                                                         userInfo:@{LATestIPCKeyTestingCommand : command ?: @""}];
+    NSDictionary *reply = [_center sendMessageAndReceiveReplyName:LAActivatorIPCMessageTesting
+                                                         userInfo:@{LAActivatorIPCKeyTestingCommand : command ?: @""}];
     return [reply isKindOfClass:NSDictionary.class] ? reply : @{};
 }
 
 - (void)printResult:(NSDictionary *)result {
-    NSInteger suiteCount = [result[LATestIPCKeyTestingSuites] count];
-    NSInteger caseCount = [result[LATestIPCKeyTestingCaseCount] integerValue];
-    NSInteger passCount = [result[LATestIPCKeyTestingPassCount] integerValue];
-    NSInteger failureCount = [result[LATestIPCKeyTestingFailureCount] integerValue];
-    NSInteger skipCount = [result[LATestIPCKeyTestingSkipCount] integerValue];
+    NSInteger suiteCount = [result[LAActivatorIPCKeyTestingSuites] count];
+    NSInteger caseCount = [result[LAActivatorIPCKeyTestingCaseCount] integerValue];
+    NSInteger passCount = [result[LAActivatorIPCKeyTestingPassCount] integerValue];
+    NSInteger failureCount = [result[LAActivatorIPCKeyTestingFailureCount] integerValue];
+    NSInteger skipCount = [result[LAActivatorIPCKeyTestingSkipCount] integerValue];
 
     printf("[tests] Suites: %ld, Cases: %ld, Passed: %ld, Failed: %ld, Skipped: %ld\n", (long)suiteCount,
            (long)caseCount, (long)passCount, (long)failureCount, (long)skipCount);
     fflush(stdout);
 
-    NSArray *failures = [result[LATestIPCKeyTestingFailures] isKindOfClass:NSArray.class]
-                            ? result[LATestIPCKeyTestingFailures]
+    NSArray *failures = [result[LAActivatorIPCKeyTestingFailures] isKindOfClass:NSArray.class]
+                            ? result[LAActivatorIPCKeyTestingFailures]
                             : @[];
     for (NSString *failure in failures) {
         printf("[tests] FAIL: %s\n", [failure UTF8String]);
         fflush(stdout);
     }
 
-    NSArray *skipped = [result[LATestIPCKeyTestingSkipped] isKindOfClass:NSArray.class]
-                           ? result[LATestIPCKeyTestingSkipped]
+    NSArray *skipped = [result[LAActivatorIPCKeyTestingSkipped] isKindOfClass:NSArray.class]
+                           ? result[LAActivatorIPCKeyTestingSkipped]
                            : @[];
     for (NSString *skip in skipped) {
         printf("[tests] SKIP: %s\n", [skip UTF8String]);

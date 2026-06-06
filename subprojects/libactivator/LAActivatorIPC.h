@@ -13,7 +13,11 @@ NS_ASSUME_NONNULL_BEGIN
 @class LAActivator;
 @class LAEvent;
 
+#if LA_TESTING
+#define LA_IPC_EXTERN extern __attribute__((visibility("default")))
+#else
 #define LA_IPC_EXTERN extern __attribute__((visibility("hidden")))
+#endif
 
 LA_IPC_EXTERN NSString *const LAActivatorIPCServerName;
 
@@ -78,6 +82,9 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRemoveEvent;
 
 #if LA_TESTING
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageTesting;
+LA_IPC_EXTERN NSString *const LAActivatorIPCTestingCommandPing;
+LA_IPC_EXTERN NSString *const LAActivatorIPCTestingCommandCleanup;
+LA_IPC_EXTERN NSString *const LAActivatorIPCTestingCommandRun;
 #endif
 
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyOK;

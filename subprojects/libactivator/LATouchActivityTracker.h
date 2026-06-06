@@ -17,9 +17,6 @@ __attribute__((visibility("hidden")))
 @property(nonatomic, readonly, getter=isTouchActive) BOOL touchActive;
 - (void)noteTouchEvent:(UIEvent *)event;
 - (void)performWhenTouchesEnd:(dispatch_block_t)block;
-#if LA_TESTING
-- (void)la_testingSetTouchActive:(BOOL)touchActive;
-#endif
 @end
 
 NS_ASSUME_NONNULL_END
