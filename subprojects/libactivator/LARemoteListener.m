@@ -9,6 +9,7 @@
 #import "LARemoteListener.h"
 
 #import "LAActivatorIPC.h"
+#import "LAActivatorResourceManager.h"
 
 #import <dispatch/dispatch.h>
 
@@ -208,6 +209,14 @@
                        listenerName:(NSString *)listenerName
                               scale:(CGFloat *)scale {
     CGFloat requestedScale = scale ? *scale : UIScreen.mainScreen.scale;
+    BOOL smallIcon = [messageName isEqualToString:LAActivatorIPCMessageListenerSmallIconData];
+    NSData *localData = [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName
+                                                                                    small:smallIcon
+                                                                                    scale:scale];
+    if (localData.length > 0) {
+        return localData;
+    }
+
     NSDictionary *reply = [self.ipcClient replyForMessageName:messageName
                                                      userInfo:@{
                                                          LAActivatorIPCKeyListenerName : listenerName ?: @"",
