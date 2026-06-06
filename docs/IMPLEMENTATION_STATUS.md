@@ -8,8 +8,29 @@ completed.
 
 - `Not started`: documented only.
 - `In progress`: implementation exists but is incomplete or not verified.
-- `Done`: implemented and covered by compile/link or package verification.
+- `Done`: implemented for the slice's stated acceptance criteria and covered by
+  compile/link or package verification. It does not imply that every runtime
+  behavior behind the same public selector family is complete.
 - `Blocked`: needs a project-owner decision or unavailable runtime knowledge.
+
+## Current `LAActivator` Runtime Gaps
+
+These gaps are intentionally tracked separately from ABI/source compatibility.
+They must not be mistaken for completed runtime behavior.
+
+| Area | Current state | Required follow-up |
+| --- | --- | --- |
+| Event delivery | `sendEvent*`, `sendAbort*`, `sendPreview*`, and `sendDeactivate*` are non-crashing stubs. | Implement SpringBoard runtime dispatch, listener compatibility checks, handled state, abort, preview, deactivate, and multi-listener delivery. |
+| Listener object lookup across processes | Non-SpringBoard clients can query assigned listener names through IPC, but `listenerForName:` still returns only local in-process objects. | Keep object registration SpringBoard-only and define which public object-returning selectors are local-only versus runtime-backed. |
+| Listener and event data-source registration | Registration works only in the authoritative in-process backend; non-SpringBoard calls do not create runtime state. | Make this explicit in docs/tests and keep cross-process object registration out of the first IPC slice. |
+| Configuration controllers | `eventWithNameSupportsConfiguration:` and `listenerWithNameSupportsConfiguration:` can report support, but the corresponding controller factory methods return `nil`. | Implement Settings UI loading through `libactivatorsettings.dylib` or make support queries return `NO` until controller creation exists. |
+| Listener images | `iconForListenerName:`, `smallIconForListenerName:`, and `imageForListenerName:usingTemplate:` return `nil`. | Implement resource lookup, bundle handling, and template image behavior. |
+| Runtime mode and foreground app state | `currentEventMode` is process-based, `currentEventModeUnderneathLockScreen` is a fixed fallback, and `displayIdentifierForCurrentApplication` returns the current process bundle identifier. | Implement SpringBoard runtime state for foreground application, lock screen, home screen, and effective event mode. |
+| Unlock support | `supportsUnlockingDeviceToSendEvents` returns `NO`. | Reassess modern iOS unlock/send behavior before enabling. |
+| Listener removal | `requestRemovalForListenerWithName:` only calls the in-process listener object. | Decide whether removal requests are SpringBoard-only, Settings-backed, or IPC-routed. |
+| `hasSeenListenerWithName:` | Currently aliases `hasListenerWithName:`. | Decide whether historical seen-listener semantics are still useful or should be documented as deprecated compatibility behavior. |
+| Localization resources | Localization returns stable fallback strings and optional listener/data-source metadata only. | Add resource bundle lookup and Settings UI localization integration when resources exist. |
+| State/config IPC verification | IPC client/server builds and routes selected calls, but on-device SpringBoard round-trip behavior is not verified yet. | Add a manual/Frida-assisted verification checklist and validate installed package behavior on device. |
 
 ## Tracker
 
