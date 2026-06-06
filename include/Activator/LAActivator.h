@@ -13,7 +13,8 @@
 
 @property (nonatomic, readonly) LAActivatorVersion version;
 @property (nonatomic, readonly, getter=isRunningInsideSpringBoard) BOOL runningInsideSpringBoard;
-@property (nonatomic, readonly, getter=isDangerousToSendEvents) BOOL dangerousToSendEvents;
+@property (nonatomic, readonly, getter=isDangerousToSendEvents) BOOL dangerousToSendEvents
+    __attribute__((deprecated("dangerousToSendEvents is obsolete and always returns NO in libactivator 2.x")));
 
 // Listeners
 

@@ -10,6 +10,7 @@ static NSString *const LAActivatorCurrentProfileNameKey = @"CurrentProfileName";
 static NSString *const LAActivatorProfilesKey = @"Profiles";
 static NSString *const LAActivatorAssignmentsKey = @"Assignments";
 static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"BlacklistedDisplayIdentifiers";
+static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 
 @interface LAActivatorBackend ()
 @property(nonatomic, assign, readwrite, getter=isAuthoritative) BOOL authoritative;
@@ -17,6 +18,7 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
 @property(nonatomic, strong) NSMutableDictionary *listeners;
 @property(nonatomic, strong) NSMutableDictionary *profiles;
 @property(nonatomic, strong) NSMutableSet *blacklistedDisplayIdentifiers;
+@property(nonatomic, strong) NSMutableSet *seenListenerNames;
 @property(nonatomic, strong) dispatch_queue_t stateQueue;
 @property(nonatomic, strong) LAActivatorPersistence *persistence;
 @end
@@ -36,6 +38,7 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
         _listeners = [[NSMutableDictionary alloc] init];
         _profiles = [[NSMutableDictionary alloc] init];
         _blacklistedDisplayIdentifiers = [[NSMutableSet alloc] init];
+        _seenListenerNames = [[NSMutableSet alloc] init];
         _stateQueue = dispatch_queue_create("libactivator.state", DISPATCH_QUEUE_SERIAL);
         [self resetRuntimeState];
         if (authoritative) {
@@ -96,6 +99,7 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
         LAActivatorProfilesKey : serializedProfiles,
         LAActivatorBlacklistedDisplayIdentifiersKey :
             [self.blacklistedDisplayIdentifiers.allObjects sortedArrayUsingSelector:@selector(compare:)],
+        LAActivatorSeenListenerNamesKey : [self.seenListenerNames.allObjects sortedArrayUsingSelector:@selector(compare:)],
     };
     [self.persistence saveDictionary:dictionary];
 }
@@ -169,8 +173,10 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
 
     NSArray *blacklistedDisplayIdentifiers =
         [LAActivatorBackend normalizedStringArray:dictionary[LAActivatorBlacklistedDisplayIdentifiersKey]];
+    NSArray *seenListenerNames = [LAActivatorBackend normalizedStringArray:dictionary[LAActivatorSeenListenerNamesKey]];
     self.profiles = loadedProfiles;
     self.blacklistedDisplayIdentifiers = [NSMutableSet setWithArray:blacklistedDisplayIdentifiers];
+    self.seenListenerNames = [NSMutableSet setWithArray:seenListenerNames];
     _currentProfileName = [currentProfileName copy];
 }
 
@@ -191,12 +197,27 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
     return [self listenerForName:name] != nil;
 }
 
+- (BOOL)hasSeenListenerWithName:(NSString *)name {
+    if (name.length == 0) {
+        return NO;
+    }
+    __block BOOL seen = NO;
+    dispatch_sync(self.stateQueue, ^{
+        seen = [self.seenListenerNames containsObject:name];
+    });
+    return seen;
+}
+
 - (BOOL)registerListener:(id<LAListener>)listener forName:(NSString *)name {
     if (!self.authoritative || !listener || name.length == 0) {
         return NO;
     }
     dispatch_sync(self.stateQueue, ^{
         self.listeners[name] = listener;
+        if (![self.seenListenerNames containsObject:name]) {
+            [self.seenListenerNames addObject:name];
+            [self savePersistentState];
+        }
     });
     return YES;
 }

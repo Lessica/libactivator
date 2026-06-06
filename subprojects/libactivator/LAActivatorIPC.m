@@ -6,6 +6,7 @@ NSString *const LAActivatorIPCMessageAvailableEventNames = @"libactivator.reques
 NSString *const LAActivatorIPCMessageHasEvent = @"libactivator.request.has-event";
 NSString *const LAActivatorIPCMessageAvailableListenerNames = @"libactivator.request.available-listener-names";
 NSString *const LAActivatorIPCMessageHasListener = @"libactivator.request.has-listener";
+NSString *const LAActivatorIPCMessageHasSeenListener = @"libactivator.request.has-seen-listener";
 NSString *const LAActivatorIPCMessageAssignedListenerNames = @"libactivator.request.assigned-listener-names";
 NSString *const LAActivatorIPCMessageEventsAssignedToListener = @"libactivator.request.events-assigned-to-listener";
 NSString *const LAActivatorIPCMessageAssignEvent = @"libactivator.request.assign-event";
@@ -58,13 +59,32 @@ NSString *const LAActivatorIPCMessageLocalizedDescriptionForEventName =
 NSString *const LAActivatorIPCMessageLocalizedDescriptionForListenerName =
     @"libactivator.request.localized-description-for-listener-name";
 
+NSString *const LAActivatorIPCMessageDispatchAssignedEvent = @"libactivator.request.dispatch-assigned-event";
+NSString *const LAActivatorIPCMessageDispatchEventToListeners = @"libactivator.request.dispatch-event-to-listeners";
+NSString *const LAActivatorIPCMessageDispatchAssignedAbortEvent = @"libactivator.request.dispatch-assigned-abort-event";
+NSString *const LAActivatorIPCMessageDispatchAbortEventToListeners =
+    @"libactivator.request.dispatch-abort-event-to-listeners";
+NSString *const LAActivatorIPCMessageDispatchPreviewEvent = @"libactivator.request.dispatch-preview-event";
+NSString *const LAActivatorIPCMessageDispatchDeactivateEvent = @"libactivator.request.dispatch-deactivate-event";
+NSString *const LAActivatorIPCMessageRemoteListenerReceiveEvent =
+    @"libactivator.request.remote-listener-receive-event";
+NSString *const LAActivatorIPCMessageRemoteListenerAbortEvent =
+    @"libactivator.request.remote-listener-abort-event";
+NSString *const LAActivatorIPCMessageListenerIconData = @"libactivator.request.listener-icon-data";
+NSString *const LAActivatorIPCMessageListenerSmallIconData = @"libactivator.request.listener-small-icon-data";
+NSString *const LAActivatorIPCMessageRequestListenerRemoval = @"libactivator.request.listener-request-removal";
+NSString *const LAActivatorIPCMessageRemoveEvent = @"libactivator.request.remove-event";
+
 NSString *const LAActivatorIPCKeyOK = @"OK";
 NSString *const LAActivatorIPCKeyValue = @"Value";
 NSString *const LAActivatorIPCKeyEventName = @"EventName";
 NSString *const LAActivatorIPCKeyEventMode = @"EventMode";
+NSString *const LAActivatorIPCKeyEventHandled = @"EventHandled";
+NSString *const LAActivatorIPCKeyEventUserInfo = @"UserInfo";
 NSString *const LAActivatorIPCKeyListenerName = @"ListenerName";
 NSString *const LAActivatorIPCKeyListenerNames = @"ListenerNames";
 NSString *const LAActivatorIPCKeyDisplayIdentifier = @"DisplayIdentifier";
 NSString *const LAActivatorIPCKeyBlacklisted = @"Blacklisted";
 NSString *const LAActivatorIPCKeyProfileName = @"ProfileName";
 NSString *const LAActivatorIPCKeyInfoDictionaryKey = @"InfoDictionaryKey";
+NSString *const LAActivatorIPCKeyScale = @"Scale";

@@ -58,7 +58,7 @@ API skeleton work.
 | `LASharedActivator` | Must implement | Global compatibility variable. |
 | `version` | Must implement | Should report `LAActivatorVersion_2_0` for the 2.0 rewrite. |
 | `runningInsideSpringBoard` | Runtime-backed | Can be detected locally; behavior gates SpringBoard-only methods. |
-| `dangerousToSendEvents` | Runtime-backed | Depends on current mode/state and dispatch safety rules. |
+| `dangerousToSendEvents` | Deprecated compatibility | Obsolete Cydia/installing guard; always returns `NO` in 2.x. |
 
 ### Listener Lookup And Delivery
 
@@ -75,9 +75,9 @@ API skeleton work.
 | `sendDeactivateEventToListeners:` | Runtime-backed | Needs modern menu/deactivate semantics. |
 | `listenerForName:` | Must implement | Registry lookup; safe stub can return `nil`. |
 | `hasListenerWithName:` | Must implement | Registry lookup; safe stub can return `NO`. |
-| `registerListener:forName:` | Runtime-backed | SpringBoard-only registration. Non-SpringBoard behavior must be explicit and non-crashing. |
-| `unregisterListenerWithName:` | Runtime-backed | SpringBoard-only unregistration. |
-| `hasSeenListenerWithName:` | Safe stub first | Requires persistent metadata for meaningful behavior. |
+| `registerListener:forName:` | Runtime-backed | SpringBoard-authoritative registration; legacy non-SpringBoard implementation rejected this call. |
+| `unregisterListenerWithName:` | Runtime-backed | SpringBoard-authoritative unregistration; legacy non-SpringBoard implementation rejected this call. |
+| `hasSeenListenerWithName:` | Must implement | Persisted SpringBoard listener-registration history. |
 
 ### Assignments
 
@@ -105,8 +105,8 @@ API skeleton work.
 | `eventWithNameSupportsUnlockingDeviceToSend:` | Runtime-backed | Lock-screen capability. |
 | `eventWithNameSupportsRemoval:` | Safe stub first | Data-source-backed metadata. |
 | `removeEventWithName:` | Runtime-backed | Calls data source or built-in removal path. |
-| `registerEventDataSource:forEventName:` | Must implement | Core event registry. |
-| `unregisterEventDataSourceWithEventName:` | Must implement | Core event registry. |
+| `registerEventDataSource:forEventName:` | Must implement | SpringBoard-authoritative event registry; legacy non-SpringBoard implementation rejected this call. |
+| `unregisterEventDataSourceWithEventName:` | Must implement | SpringBoard-authoritative event registry; legacy non-SpringBoard implementation rejected this call. |
 | `eventWithNameSupportsConfiguration:` | Settings-backed | Depends on configuration controller metadata. |
 | `configurationViewControllerForEventWithName:` | Settings-backed | Must resolve through the settings compatibility shim and load/coordinate with `libactivatorsettings.dylib`. |
 
@@ -144,16 +144,16 @@ API skeleton work.
 | `setApplicationWithDisplayIdentifier:isBlacklisted:` | Must implement | Core blacklist storage/update. |
 | `availableProfileNames` | Must implement | Empty/default profile behavior must be defined. |
 | `currentProfileName` | Must implement | Profile timing was deferred until core compatibility is stable. |
-| `localizedStringForKey:value:` | Safe stub first | Can return value/key before localization resources land. |
-| `localizedTitleForEventMode:` | Safe stub first | Data/resource-backed later. |
-| `localizedTitleForEventName:` | Safe stub first | Data-source/resource-backed later. |
-| `localizedTitleForListenerName:` | Safe stub first | Listener/resource-backed later. |
+| `localizedStringForKey:value:` | Must implement | Activator support bundle-backed with value/key fallback. |
+| `localizedTitleForEventMode:` | Must implement | Uses legacy mode localization keys and fallback strings. |
+| `localizedTitleForEventName:` | Must implement | Data-source and event resource-backed, IPC-routed outside SpringBoard. |
+| `localizedTitleForListenerName:` | Must implement | Listener object and resource-backed, IPC-routed outside SpringBoard. |
 | `localizedTitleForListenerNames:` | Safe stub first | Should join localized listener names deterministically. |
-| `localizedGroupForEventName:` | Safe stub first | Data-source/resource-backed later. |
-| `localizedGroupForListenerName:` | Safe stub first | Listener/resource-backed later. |
-| `localizedDescriptionForEventMode:` | Safe stub first | Data/resource-backed later. |
-| `localizedDescriptionForEventName:` | Safe stub first | Data-source/resource-backed later. |
-| `localizedDescriptionForListenerName:` | Safe stub first | Listener/resource-backed later. |
+| `localizedGroupForEventName:` | Must implement | Data-source and event resource-backed, IPC-routed outside SpringBoard. |
+| `localizedGroupForListenerName:` | Must implement | Listener object and resource-backed, IPC-routed outside SpringBoard. |
+| `localizedDescriptionForEventMode:` | Must implement | Uses legacy mode localization keys and fallback strings. |
+| `localizedDescriptionForEventName:` | Must implement | Data-source and event resource-backed, IPC-routed outside SpringBoard. |
+| `localizedDescriptionForListenerName:` | Must implement | Listener object and resource-backed, IPC-routed outside SpringBoard. |
 
 ## LAEvent Model
 
@@ -181,9 +181,9 @@ The listener protocol has only optional methods. The implementation must check
 | Mode change | `didChangeToEventMode:` | Runtime-backed |
 | Event delivery | `receiveEvent:forListenerName:`, `abortEvent:forListenerName:`, `receiveUnlockingDeviceEvent:forListenerName:`, `receiveDeactivateEvent:`, `otherListenerDidHandleEvent:`, `receivePreviewEventForListenerName:` | Runtime-backed |
 | Simple event delivery | `receiveEvent:`, `abortEvent:` | Runtime-backed |
-| Text metadata | localized title, description, group | Safe stub first |
-| Compatibility metadata | requires assignment, compatible modes, compatible event, exclusive groups, info dictionary, powered display | Safe stub first |
-| Icon metadata | icon PNG data, small icon PNG data, icon image, small icon image, glyph descriptor | Settings-backed |
+| Text metadata | localized title, description, group | Must implement |
+| Compatibility metadata | requires assignment, compatible modes, compatible event, exclusive groups, info dictionary, powered display | Must implement |
+| Icon metadata | icon PNG data, small icon PNG data, icon image, small icon image, glyph descriptor | Partially implemented |
 | Removal and configuration | supports removal, removal request, configuration controller class, configuration load/save | Runtime-backed and settings-backed |
 
 ### LAEventDataSource

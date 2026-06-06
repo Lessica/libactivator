@@ -97,6 +97,17 @@ are stable enough to guide implementation.
 - APIs that register Objective-C objects, such as listener and event data-source
   registration, are SpringBoard-runtime concepts. Non-SpringBoard behavior must
   be explicit and must not silently create an isolated client-only runtime.
+- Object-returning listener lookup uses a private remote proxy outside
+  SpringBoard when the authoritative SpringBoard registry reports that a
+  listener exists. This proxy is compatibility behavior, not cross-process
+  object registration and not a public API extension.
+- Localization is part of the core compatibility layer. Public localization
+  methods should query the Activator support bundle first, use event/listener
+  bundle metadata as fallbacks, and only then fall back to stable literal
+  strings.
+- Event and listener resource metadata live under the Activator support
+  directory and must be resolved through `jbroot(...)` at runtime. Do not use
+  raw `/Library/Activator` paths in implementation code.
 
 ## Development Phases
 
@@ -189,20 +200,25 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Do not add custom timeout handling or version negotiation on top of
   `CPDistributedMessagingCenter`. The client and SpringBoard server ship
   together, and installation requires a SpringBoard restart.
-- The first IPC slice uses `libactivator.springboard` as the
-  `CPDistributedMessagingCenter` name and only covers state/config requests.
-  Non-SpringBoard `LAActivator` clients may query event, listener, assignment,
-  profile, blacklist, metadata, and localization state through this channel.
+- IPC uses `libactivator.springboard` as the `CPDistributedMessagingCenter`
+  name. Non-SpringBoard `LAActivator` clients may query and mutate state/config
+  through this channel, and event dispatch calls may be forwarded to the
+  SpringBoard authoritative runtime.
 - State/config IPC payloads must be property-list-safe dictionaries. Events are
   represented by `EventName` and `EventMode`; listener names, profile names, and
   display identifiers are plain strings or string arrays.
-- State/config IPC replies use an `OK` boolean and optional `Value`. When the
-  server is unavailable or a payload is invalid, clients return the existing
-  safe default for that public selector and must not write local persistent
-  runtime state.
-- Listener object registration, event data-source object registration, and
-  event delivery are not part of the first IPC slice. They remain
-  SpringBoard-runtime work.
+- Event dispatch IPC payloads must remain property-list-safe. Events are
+  represented by `EventName`, `EventMode`, `EventHandled`, and optional
+  `UserInfo`; non-property-list-safe `UserInfo` values are not preserved across
+  process boundaries.
+- State/config IPC replies use an `OK` boolean and optional `Value`. Event
+  dispatch replies use `OK` and `EventHandled`. When the server is unavailable
+  or a payload is invalid, clients return the existing safe default for that
+  public selector and must not write local persistent runtime state.
+- Listener object registration and event data-source object registration remain
+  authoritative in SpringBoard. Cross-process object registration is not part of
+  the current IPC slice; if implemented later, it must proxy into SpringBoard
+  instead of creating isolated client-local runtime state.
 - IPC payloads must be validated before use.
 - Public API calls that cross process boundaries should have predictable main
   thread behavior.
@@ -226,8 +242,8 @@ These phases describe engineering dependency order, not heavyweight milestones.
   `jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")`. Rootless and
   roothide builds must not write to the real `/var/mobile` path.
 - The v2 runtime preference plist uses schema version `1` with these top-level
-  keys: `SchemaVersion`, `CurrentProfileName`, `Profiles`, and
-  `BlacklistedDisplayIdentifiers`.
+  keys: `SchemaVersion`, `CurrentProfileName`, `Profiles`,
+  `BlacklistedDisplayIdentifiers`, and `SeenListenerNames`.
 - Each entry under `Profiles` is keyed by profile name and contains an
   `Assignments` dictionary. Assignments are stored as
   `eventName -> modeKey -> listenerNames`, where nil event mode is represented

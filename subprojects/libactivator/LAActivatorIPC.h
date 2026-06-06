@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 
 @class LAActivator;
+@class LAEvent;
 
 #define LA_IPC_EXTERN extern __attribute__((visibility("hidden")))
 
@@ -10,6 +11,7 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCMessageAvailableEventNames;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageHasEvent;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageAvailableListenerNames;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageHasListener;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageHasSeenListener;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageAssignedListenerNames;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageEventsAssignedToListener;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageAssignEvent;
@@ -47,21 +49,38 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCMessageLocalizedGroupForListenerName
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageLocalizedDescriptionForEventName;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageLocalizedDescriptionForListenerName;
 
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageDispatchAssignedEvent;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageDispatchEventToListeners;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageDispatchAssignedAbortEvent;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageDispatchAbortEventToListeners;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageDispatchPreviewEvent;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageDispatchDeactivateEvent;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRemoteListenerReceiveEvent;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRemoteListenerAbortEvent;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageListenerIconData;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageListenerSmallIconData;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRequestListenerRemoval;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRemoveEvent;
+
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyOK;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyValue;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyEventName;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyEventMode;
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyEventHandled;
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyEventUserInfo;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyListenerName;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyListenerNames;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyDisplayIdentifier;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyBlacklisted;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyProfileName;
 LA_IPC_EXTERN NSString *const LAActivatorIPCKeyInfoDictionaryKey;
+LA_IPC_EXTERN NSString *const LAActivatorIPCKeyScale;
 
 #undef LA_IPC_EXTERN
 
 __attribute__((visibility("hidden")))
 @interface LAActivatorIPCClient : NSObject
+- (NSDictionary *)replyForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
 - (NSArray *)arrayValueForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
 - (NSString *)stringValueForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
 - (id)propertyListValueForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
@@ -69,6 +88,7 @@ __attribute__((visibility("hidden")))
                        userInfo:(NSDictionary *)userInfo
                    defaultValue:(BOOL)defaultValue;
 - (NSArray *)eventsValueForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
+- (BOOL)sendEventMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo event:(LAEvent *)event;
 - (BOOL)sendMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo;
 @end
 

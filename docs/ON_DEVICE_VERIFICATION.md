@@ -83,6 +83,14 @@ Run a temporary client process linked against `libactivator.dylib` and verify:
   Assigned dispatch, explicit dispatch, compatibility filtering, handled-state
   propagation, abort fallback, preview, deactivate broadcast, and blacklist
   filtering all behaved as expected.
+- Non-SpringBoard event dispatch IPC was verified from a fresh
+  `com.apple.Preferences` process loaded with the current roothide
+  `libactivator.dylib` path discovered from SpringBoard. Assigned dispatch,
+  explicit dispatch, abort dispatch, preview dispatch, deactivate broadcast,
+  handled-state replies, and property-list-safe `UserInfo` delivery all behaved
+  as expected.
+- Restart or respawn the client process after reinstalling `libactivator.dylib`;
+  an already-running client may still hold the previous dylib image.
 
 ### Persistence Check
 
