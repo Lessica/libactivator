@@ -13,7 +13,9 @@
 @property(nonatomic, strong) LAActivatorIPCServer *ipcServer;
 - (void)startIPCServerIfNeeded;
 - (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (BOOL)la_assignEventWithExplicitMode:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
 - (BOOL)la_unassignEvent:(LAEvent *)event;
+- (BOOL)la_unassignEventWithExplicitMode:(LAEvent *)event;
 - (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
 - (BOOL)la_setCurrentProfileName:(NSString *)currentProfileName;
 @end
@@ -169,6 +171,22 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
+    if (event.name.length == 0) {
+        return NO;
+    }
+    if (event.mode.length > 0) {
+        return [self la_assignEventWithExplicitMode:event toListenersWithNames:listenerNames];
+    }
+
+    BOOL changed = NO;
+    for (NSString *mode in [self compatibleModesForEventWithName:event.name]) {
+        LAEvent *modeEvent = [LAEvent eventWithName:event.name mode:mode];
+        changed = [self la_assignEventWithExplicitMode:modeEvent toListenersWithNames:listenerNames] || changed;
+    }
+    return changed;
+}
+
+- (BOOL)la_assignEventWithExplicitMode:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
     if (!self.runningInsideSpringBoard) {
         NSMutableDictionary *userInfo = [LAActivatorIPCUserInfoForEvent(event) mutableCopy];
         userInfo[LAActivatorIPCKeyListenerNames] = [LAActivatorBackend normalizedStringArray:listenerNames];
@@ -204,6 +222,22 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)la_unassignEvent:(LAEvent *)event {
+    if (event.name.length == 0) {
+        return NO;
+    }
+    if (event.mode.length > 0) {
+        return [self la_unassignEventWithExplicitMode:event];
+    }
+
+    BOOL changed = NO;
+    for (NSString *mode in self.availableEventModes) {
+        LAEvent *modeEvent = [LAEvent eventWithName:event.name mode:mode];
+        changed = [self la_unassignEventWithExplicitMode:modeEvent] || changed;
+    }
+    return changed;
+}
+
+- (BOOL)la_unassignEventWithExplicitMode:(LAEvent *)event {
     if (!self.runningInsideSpringBoard) {
         return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageUnassignEvent
                                               userInfo:LAActivatorIPCUserInfoForEvent(event)
@@ -217,6 +251,13 @@ LAActivator *LASharedActivator;
 }
 
 - (NSArray *)assignedListenerNamesForEvent:(LAEvent *)event {
+    if (event.name.length > 0 && event.mode.length == 0) {
+        NSString *eventMode = self.currentEventMode;
+        if (eventMode.length == 0) {
+            return @[];
+        }
+        event = [LAEvent eventWithName:event.name mode:eventMode];
+    }
     if (!self.runningInsideSpringBoard) {
         return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageAssignedListenerNames
                                                userInfo:LAActivatorIPCUserInfoForEvent(event)];

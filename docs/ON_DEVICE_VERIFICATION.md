@@ -75,6 +75,10 @@ Run a temporary client process linked against `libactivator.dylib` and verify:
   restored through the facade.
 - In `com.apple.Preferences`, a temporary assignment for
   `libactivator.ipc-check.event` was changed and removed through the facade.
+- Nil-mode assignment compatibility was verified with a temporary SpringBoard
+  event data source. Assigning an event without a mode wrote all compatible
+  modes, querying without a mode used the current event mode, and unassigning
+  without a mode removed all event modes.
 
 ### Persistence Check
 
