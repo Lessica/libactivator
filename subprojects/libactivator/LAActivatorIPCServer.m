@@ -155,7 +155,7 @@ static id LAIPCPropertyListValue(id value) {
     for (NSString *messageName in messageNames) {
         [_center registerForMessageName:messageName target:self selector:@selector(handleMessageNamed:withUserInfo:)];
     }
-    [_center runServer];
+    [_center runServerOnCurrentThread];
     _started = YES;
 }
 

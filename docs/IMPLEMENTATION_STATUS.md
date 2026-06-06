@@ -30,7 +30,7 @@ They must not be mistaken for completed runtime behavior.
 | Listener removal | `requestRemovalForListenerWithName:` only calls the in-process listener object. | Decide whether removal requests are SpringBoard-only, Settings-backed, or IPC-routed. |
 | `hasSeenListenerWithName:` | Currently aliases `hasListenerWithName:`. | Decide whether historical seen-listener semantics are still useful or should be documented as deprecated compatibility behavior. |
 | Localization resources | Localization returns stable fallback strings and optional listener/data-source metadata only. | Add resource bundle lookup and Settings UI localization integration when resources exist. |
-| State/config IPC verification | IPC client/server builds and routes selected calls, but on-device SpringBoard round-trip behavior is not verified yet. | Use `docs/ON_DEVICE_VERIFICATION.md` to validate installed package behavior on device. |
+| State/config IPC verification | SpringBoard server startup and a read-only `CPDistributedMessagingCenter` reply were verified on iPhone XR iOS 15.0 roothide. External client round-trip coverage is still pending. | Use `docs/ON_DEVICE_VERIFICATION.md` to validate installed package behavior on device. |
 
 ## Tracker
 

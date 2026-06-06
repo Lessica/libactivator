@@ -18,9 +18,24 @@ passes on device.
 - Attach to SpringBoard with `frida -U SpringBoard`.
 - Confirm `+[CPDistributedMessagingCenter centerNamed:]` is called with
   `libactivator.springboard`.
-- Confirm `-[CPDistributedMessagingCenter runServer]` is called once for the
-  Activator server.
+- Confirm `-[CPDistributedMessagingCenter runServerOnCurrentThread]` is called
+  once for the Activator server. On iOS 15.0, `-runServer` is not present.
 - Confirm `ActivatorTweak` does not inject through a `com.apple.UIKit` filter.
+
+### iPhone XR iOS 15.0 Dopamine roothide Notes
+
+- Use the project virtual environment for Frida commands. The tested device
+  uses Frida 16.1.4, so the host tooling must match that major/minor version.
+- Use USB Frida only. Do not use a remote Frida server or a forwarded Frida
+  port for this project.
+- Run roothide install verification with `. scripts/roothide.sh && gmake do`.
+- `ActivatorTweak.dylib` and `libactivator.dylib` loaded in SpringBoard after
+  package install and SpringBoard restart.
+- `CPDistributedMessagingCenter` exposes `-runServerOnCurrentThread`, not
+  `-runServer`, on the tested device.
+- `doesServerExist` returned true for `libactivator.springboard`.
+- A read-only request to
+  `libactivator.request.available-profile-names` returned `Default`.
 
 ### Client Round Trip
 
