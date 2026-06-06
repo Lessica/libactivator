@@ -1,0 +1,9 @@
+Package: libactivator
+Name: Activator
+Version: 2.0.0~alpha1
+Architecture: iphoneos-arm
+Description: Centralized gesture, button, and shortcut management for iOS
+Maintainer: libactivator maintainers <maintainers@libactivator.invalid>
+Author: libactivator maintainers <maintainers@libactivator.invalid>
+Section: System
+Depends: firmware (>= 15.0), mobilesubstrate | ellekit

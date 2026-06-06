@@ -1,0 +1,5 @@
+framework module Activator {
+    umbrella header "Activator.h"
+    export *
+    module * { export * }
+}

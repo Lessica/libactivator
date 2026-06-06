@@ -1,0 +1,5 @@
+framework module ActivatorSettings {
+    umbrella header "ActivatorSettings.h"
+    export *
+    module * { export * }
+}
