@@ -1,92 +1,70 @@
 #import "LAActivatorIPC.h"
 
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCServerName = @"libactivator.springboard";
+NSString *const LAActivatorIPCServerName = @"libactivator.springboard";
 
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageAvailableEventNames =
-    @"libactivator.request.available-event-names";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageHasEvent =
-    @"libactivator.request.has-event";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageAvailableListenerNames =
-    @"libactivator.request.available-listener-names";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageHasListener =
-    @"libactivator.request.has-listener";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageAssignedListenerNames =
-    @"libactivator.request.assigned-listener-names";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageEventsAssignedToListener =
-    @"libactivator.request.events-assigned-to-listener";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageAssignEvent =
-    @"libactivator.request.assign-event";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageUnassignEvent =
-    @"libactivator.request.unassign-event";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageApplicationIsBlacklisted =
-    @"libactivator.request.application-is-blacklisted";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageSetApplicationBlacklisted =
-    @"libactivator.request.set-application-blacklisted";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageAvailableProfileNames =
-    @"libactivator.request.available-profile-names";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageCurrentProfileName =
-    @"libactivator.request.current-profile-name";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageSetCurrentProfileName =
-    @"libactivator.request.set-current-profile-name";
+NSString *const LAActivatorIPCMessageAvailableEventNames = @"libactivator.request.available-event-names";
+NSString *const LAActivatorIPCMessageHasEvent = @"libactivator.request.has-event";
+NSString *const LAActivatorIPCMessageAvailableListenerNames = @"libactivator.request.available-listener-names";
+NSString *const LAActivatorIPCMessageHasListener = @"libactivator.request.has-listener";
+NSString *const LAActivatorIPCMessageAssignedListenerNames = @"libactivator.request.assigned-listener-names";
+NSString *const LAActivatorIPCMessageEventsAssignedToListener = @"libactivator.request.events-assigned-to-listener";
+NSString *const LAActivatorIPCMessageAssignEvent = @"libactivator.request.assign-event";
+NSString *const LAActivatorIPCMessageUnassignEvent = @"libactivator.request.unassign-event";
+NSString *const LAActivatorIPCMessageApplicationIsBlacklisted = @"libactivator.request.application-is-blacklisted";
+NSString *const LAActivatorIPCMessageSetApplicationBlacklisted = @"libactivator.request.set-application-blacklisted";
+NSString *const LAActivatorIPCMessageAvailableProfileNames = @"libactivator.request.available-profile-names";
+NSString *const LAActivatorIPCMessageCurrentProfileName = @"libactivator.request.current-profile-name";
+NSString *const LAActivatorIPCMessageSetCurrentProfileName = @"libactivator.request.set-current-profile-name";
 
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageEventIsHidden =
-    @"libactivator.request.event-is-hidden";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageEventRequiresAssignment =
-    @"libactivator.request.event-requires-assignment";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageCompatibleModesForEvent =
-    @"libactivator.request.compatible-modes-for-event";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageEventIsCompatibleWithMode =
-    @"libactivator.request.event-is-compatible-with-mode";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageEventSupportsUnlockingDeviceToSend =
+NSString *const LAActivatorIPCMessageEventIsHidden = @"libactivator.request.event-is-hidden";
+NSString *const LAActivatorIPCMessageEventRequiresAssignment = @"libactivator.request.event-requires-assignment";
+NSString *const LAActivatorIPCMessageCompatibleModesForEvent = @"libactivator.request.compatible-modes-for-event";
+NSString *const LAActivatorIPCMessageEventIsCompatibleWithMode = @"libactivator.request.event-is-compatible-with-mode";
+NSString *const LAActivatorIPCMessageEventSupportsUnlockingDeviceToSend =
     @"libactivator.request.event-supports-unlocking-device-to-send";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageEventSupportsRemoval =
-    @"libactivator.request.event-supports-removal";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageEventSupportsConfiguration =
-    @"libactivator.request.event-supports-configuration";
+NSString *const LAActivatorIPCMessageEventSupportsRemoval = @"libactivator.request.event-supports-removal";
+NSString *const LAActivatorIPCMessageEventSupportsConfiguration = @"libactivator.request.event-supports-configuration";
 
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageListenerInfoDictionaryValue =
+NSString *const LAActivatorIPCMessageListenerInfoDictionaryValue =
     @"libactivator.request.listener-info-dictionary-value";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageListenerRequiresAssignment =
-    @"libactivator.request.listener-requires-assignment";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageCompatibleModesForListener =
-    @"libactivator.request.compatible-modes-for-listener";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageListenerIsCompatibleWithMode =
+NSString *const LAActivatorIPCMessageListenerRequiresAssignment = @"libactivator.request.listener-requires-assignment";
+NSString *const LAActivatorIPCMessageCompatibleModesForListener = @"libactivator.request.compatible-modes-for-listener";
+NSString *const LAActivatorIPCMessageListenerIsCompatibleWithMode =
     @"libactivator.request.listener-is-compatible-with-mode";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageListenerIsCompatibleWithEvent =
+NSString *const LAActivatorIPCMessageListenerIsCompatibleWithEvent =
     @"libactivator.request.listener-is-compatible-with-event";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageListenerNeedsPoweredDisplay =
+NSString *const LAActivatorIPCMessageListenerNeedsPoweredDisplay =
     @"libactivator.request.listener-needs-powered-display";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageExclusiveAssignmentGroupsForListener =
+NSString *const LAActivatorIPCMessageExclusiveAssignmentGroupsForListener =
     @"libactivator.request.exclusive-assignment-groups-for-listener";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageListenerNamesAreMutuallyCompatible =
+NSString *const LAActivatorIPCMessageListenerNamesAreMutuallyCompatible =
     @"libactivator.request.listener-names-are-mutually-compatible";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageListenerSupportsRemoval =
-    @"libactivator.request.listener-supports-removal";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageListenerSupportsConfiguration =
+NSString *const LAActivatorIPCMessageListenerSupportsRemoval = @"libactivator.request.listener-supports-removal";
+NSString *const LAActivatorIPCMessageListenerSupportsConfiguration =
     @"libactivator.request.listener-supports-configuration";
 
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageLocalizedTitleForEventName =
+NSString *const LAActivatorIPCMessageLocalizedTitleForEventName =
     @"libactivator.request.localized-title-for-event-name";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageLocalizedTitleForListenerName =
+NSString *const LAActivatorIPCMessageLocalizedTitleForListenerName =
     @"libactivator.request.localized-title-for-listener-name";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageLocalizedTitleForListenerNames =
+NSString *const LAActivatorIPCMessageLocalizedTitleForListenerNames =
     @"libactivator.request.localized-title-for-listener-names";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageLocalizedGroupForEventName =
+NSString *const LAActivatorIPCMessageLocalizedGroupForEventName =
     @"libactivator.request.localized-group-for-event-name";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageLocalizedGroupForListenerName =
+NSString *const LAActivatorIPCMessageLocalizedGroupForListenerName =
     @"libactivator.request.localized-group-for-listener-name";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageLocalizedDescriptionForEventName =
+NSString *const LAActivatorIPCMessageLocalizedDescriptionForEventName =
     @"libactivator.request.localized-description-for-event-name";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCMessageLocalizedDescriptionForListenerName =
+NSString *const LAActivatorIPCMessageLocalizedDescriptionForListenerName =
     @"libactivator.request.localized-description-for-listener-name";
 
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCKeyOK = @"OK";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCKeyValue = @"Value";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCKeyEventName = @"EventName";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCKeyEventMode = @"EventMode";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCKeyListenerName = @"ListenerName";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCKeyListenerNames = @"ListenerNames";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCKeyDisplayIdentifier = @"DisplayIdentifier";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCKeyBlacklisted = @"Blacklisted";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCKeyProfileName = @"ProfileName";
-__attribute__((visibility("hidden"))) NSString *const LAActivatorIPCKeyInfoDictionaryKey = @"InfoDictionaryKey";
+NSString *const LAActivatorIPCKeyOK = @"OK";
+NSString *const LAActivatorIPCKeyValue = @"Value";
+NSString *const LAActivatorIPCKeyEventName = @"EventName";
+NSString *const LAActivatorIPCKeyEventMode = @"EventMode";
+NSString *const LAActivatorIPCKeyListenerName = @"ListenerName";
+NSString *const LAActivatorIPCKeyListenerNames = @"ListenerNames";
+NSString *const LAActivatorIPCKeyDisplayIdentifier = @"DisplayIdentifier";
+NSString *const LAActivatorIPCKeyBlacklisted = @"Blacklisted";
+NSString *const LAActivatorIPCKeyProfileName = @"ProfileName";
+NSString *const LAActivatorIPCKeyInfoDictionaryKey = @"InfoDictionaryKey";

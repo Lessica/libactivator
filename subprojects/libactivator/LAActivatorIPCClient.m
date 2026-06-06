@@ -72,7 +72,9 @@ static NSArray *LAIPCEvents(NSArray *eventDictionaries) {
     return [self replyForMessageName:messageName userInfo:userInfo][LAActivatorIPCKeyValue];
 }
 
-- (BOOL)boolValueForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo defaultValue:(BOOL)defaultValue {
+- (BOOL)boolValueForMessageName:(NSString *)messageName
+                       userInfo:(NSDictionary *)userInfo
+                   defaultValue:(BOOL)defaultValue {
     id value = [self replyForMessageName:messageName userInfo:userInfo][LAActivatorIPCKeyValue];
     return [value isKindOfClass:NSNumber.class] ? [value boolValue] : defaultValue;
 }

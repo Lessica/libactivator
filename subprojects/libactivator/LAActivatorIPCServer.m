@@ -86,7 +86,8 @@ static id LAIPCPropertyListValue(id value) {
     if (!value) {
         return nil;
     }
-    return [NSPropertyListSerialization propertyList:value isValidForFormat:NSPropertyListBinaryFormat_v1_0] ? value : nil;
+    return [NSPropertyListSerialization propertyList:value isValidForFormat:NSPropertyListBinaryFormat_v1_0] ? value
+                                                                                                             : nil;
 }
 
 @implementation LAActivatorIPCServer {
@@ -174,13 +175,15 @@ static id LAIPCPropertyListValue(id value) {
         return LAIPCReply(YES, _activator.availableListenerNames);
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageHasListener]) {
-        return LAIPCReply(YES, @([_activator hasListenerWithName:LAIPCString(userInfo, LAActivatorIPCKeyListenerName)]));
+        return LAIPCReply(YES,
+                          @([_activator hasListenerWithName:LAIPCString(userInfo, LAActivatorIPCKeyListenerName)]));
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageAssignedListenerNames]) {
         return LAIPCReply(YES, [_activator assignedListenerNamesForEvent:LAIPCEvent(userInfo)]);
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageEventsAssignedToListener]) {
-        NSArray *events = [_activator eventsAssignedToListenerWithName:LAIPCString(userInfo, LAActivatorIPCKeyListenerName)];
+        NSArray *events =
+            [_activator eventsAssignedToListenerWithName:LAIPCString(userInfo, LAActivatorIPCKeyListenerName)];
         return LAIPCReply(YES, LAIPCEventDictionaries(events));
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageAssignEvent]) {
@@ -209,8 +212,10 @@ static id LAIPCPropertyListValue(id value) {
         return LAIPCReply(YES, @(changed));
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageApplicationIsBlacklisted]) {
-        return LAIPCReply(YES, @([_activator applicationWithDisplayIdentifierIsBlacklisted:
-                                      LAIPCString(userInfo, LAActivatorIPCKeyDisplayIdentifier)]));
+        return LAIPCReply(
+            YES, @([_activator
+                     applicationWithDisplayIdentifierIsBlacklisted:LAIPCString(userInfo,
+                                                                               LAActivatorIPCKeyDisplayIdentifier)]));
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageSetApplicationBlacklisted]) {
         BOOL changed =
@@ -278,8 +283,9 @@ static id LAIPCPropertyListValue(id value) {
         return LAIPCReply(YES, [_activator exclusiveAssignmentGroupsForListenerName:listenerName]);
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerNamesAreMutuallyCompatible]) {
-        return LAIPCReply(YES, @([_activator listenerNamesAreMutuallyCompatible:
-                                      LAIPCStringArray(userInfo, LAActivatorIPCKeyListenerNames)]));
+        return LAIPCReply(
+            YES, @([_activator
+                     listenerNamesAreMutuallyCompatible:LAIPCStringArray(userInfo, LAActivatorIPCKeyListenerNames)]));
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerSupportsRemoval]) {
         return LAIPCReply(YES, @([_activator listenerWithNameSupportsRemoval:listenerName]));
@@ -294,8 +300,9 @@ static id LAIPCPropertyListValue(id value) {
         return LAIPCReply(YES, [_activator localizedTitleForListenerName:listenerName]);
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedTitleForListenerNames]) {
-        return LAIPCReply(YES, [_activator localizedTitleForListenerNames:
-                                    LAIPCOrderedStringArray(userInfo, LAActivatorIPCKeyListenerNames)]);
+        return LAIPCReply(
+            YES, [_activator
+                     localizedTitleForListenerNames:LAIPCOrderedStringArray(userInfo, LAActivatorIPCKeyListenerNames)]);
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedGroupForEventName]) {
         return LAIPCReply(YES, [_activator localizedGroupForEventName:eventName]);

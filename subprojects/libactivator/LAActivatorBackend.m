@@ -47,7 +47,8 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
 
 - (void)resetRuntimeState {
     _currentProfileName = LAActivatorDefaultProfileName;
-    self.profiles[LAActivatorDefaultProfileName] = [@{LAActivatorAssignmentsKey : [[NSMutableDictionary alloc] init]} mutableCopy];
+    self.profiles[LAActivatorDefaultProfileName] =
+        [@{LAActivatorAssignmentsKey : [[NSMutableDictionary alloc] init]} mutableCopy];
 }
 
 #pragma mark - Utilities
@@ -122,7 +123,8 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
             continue;
         }
         NSDictionary *profile = profiles[profileName];
-        NSDictionary *assignments = [profile isKindOfClass:NSDictionary.class] ? profile[LAActivatorAssignmentsKey] : nil;
+        NSDictionary *assignments =
+            [profile isKindOfClass:NSDictionary.class] ? profile[LAActivatorAssignmentsKey] : nil;
         NSMutableDictionary *loadedAssignments = [[NSMutableDictionary alloc] init];
         if ([assignments isKindOfClass:NSDictionary.class]) {
             for (id eventName in assignments) {
@@ -153,14 +155,16 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
     }
 
     if (loadedProfiles.count == 0) {
-        loadedProfiles[LAActivatorDefaultProfileName] = [@{LAActivatorAssignmentsKey : [[NSMutableDictionary alloc] init]} mutableCopy];
+        loadedProfiles[LAActivatorDefaultProfileName] =
+            [@{LAActivatorAssignmentsKey : [[NSMutableDictionary alloc] init]} mutableCopy];
     }
     if (![currentProfileName isKindOfClass:NSString.class] || currentProfileName.length == 0 ||
         !loadedProfiles[currentProfileName]) {
         currentProfileName = LAActivatorDefaultProfileName;
     }
     if (!loadedProfiles[currentProfileName]) {
-        loadedProfiles[currentProfileName] = [@{LAActivatorAssignmentsKey : [[NSMutableDictionary alloc] init]} mutableCopy];
+        loadedProfiles[currentProfileName] =
+            [@{LAActivatorAssignmentsKey : [[NSMutableDictionary alloc] init]} mutableCopy];
     }
 
     NSArray *blacklistedDisplayIdentifiers =
