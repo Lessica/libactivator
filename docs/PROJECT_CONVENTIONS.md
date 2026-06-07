@@ -99,6 +99,10 @@ are stable enough to guide implementation.
 - APIs that register Objective-C objects, such as listener and event data-source
   registration, are SpringBoard-runtime concepts. Non-SpringBoard behavior must
   be explicit and must not silently create an isolated client-only runtime.
+- Public object-registration calls made outside SpringBoard should be rejected
+  with detailed runtime logging. They must not present UI, create local client
+  registrations, and they must not be treated as missing cross-process object
+  registration.
 - Object-returning listener lookup uses a private remote proxy outside
   SpringBoard when the authoritative SpringBoard registry reports that a
   listener exists. This proxy is compatibility behavior, not cross-process

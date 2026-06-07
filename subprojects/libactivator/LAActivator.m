@@ -45,6 +45,7 @@
 - (void)la_notifyEventModeChanged:(NSString *)eventMode;
 - (void)la_notifyListenersThatListener:(id<LAListener>)handlingListener handledEvent:(LAEvent *)event;
 - (void)la_rejectSpringBoardOnlySelector:(SEL)selector;
+- (NSString *)la_invalidSpringBoardOperationCulpritName;
 - (id)la_ipcPropertyListValue:(id)value;
 - (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event;
 - (NSArray *)la_ipcOrderedStringArray:(NSArray *)array;
@@ -483,8 +484,29 @@ LAActivator *LASharedActivator;
 }
 
 - (void)la_rejectSpringBoardOnlySelector:(SEL)selector {
-    NSLog(@"libactivator: -[LAActivator %@] is only available inside SpringBoard. This call was ignored.",
-          NSStringFromSelector(selector));
+    NSString *selectorName = NSStringFromSelector(selector);
+    NSString *culprit = [self la_invalidSpringBoardOperationCulpritName];
+
+    NSLog(@"libactivator: Invalid SpringBoard operation: %@ called -[LAActivator %@] from outside SpringBoard. "
+          "This call was rejected and no client-local runtime state was created. Contact %@'s developer.",
+          culprit,
+          selectorName,
+          culprit);
+}
+
+- (NSString *)la_invalidSpringBoardOperationCulpritName {
+    NSBundle *mainBundle = NSBundle.mainBundle;
+    NSString *culprit = [mainBundle objectForInfoDictionaryKey:@"CFBundleDisplayName"];
+    if (culprit.length == 0) {
+        culprit = [mainBundle objectForInfoDictionaryKey:@"CFBundleName"];
+    }
+    if (culprit.length == 0) {
+        culprit = mainBundle.bundleIdentifier;
+    }
+    if (culprit.length == 0) {
+        culprit = NSProcessInfo.processInfo.processName;
+    }
+    return culprit.length > 0 ? culprit : @"This process";
 }
 
 #pragma mark - IPC Serialization
