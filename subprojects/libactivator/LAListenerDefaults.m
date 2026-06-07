@@ -1,5 +1,5 @@
 //
-//  LAProtocols.m
+//  LAListenerDefaults.m
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
@@ -23,7 +23,9 @@
     [self activator:activator abortEvent:event];
 }
 
-- (BOOL)activator:(LAActivator *)activator receiveUnlockingDeviceEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
+- (BOOL)activator:(LAActivator *)activator
+    receiveUnlockingDeviceEvent:(LAEvent *)event
+                forListenerName:(NSString *)listenerName {
     return NO;
 }
 
@@ -60,7 +62,8 @@
     return [value respondsToSelector:@selector(boolValue)] ? @([value boolValue]) : nil;
 }
 
-- (NSArray *)activator:(LAActivator *)activator requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName {
+- (NSArray *)activator:(LAActivator *)activator
+    requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName {
     id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"compatible-modes"
                                                                   forListenerName:listenerName];
     return [value isKindOfClass:NSArray.class] ? value : nil;
@@ -71,11 +74,11 @@
                          listenerName:(NSString *)listenerName {
     id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"incompatible-events"
                                                                   forListenerName:listenerName];
-    return [value isKindOfClass:NSArray.class] && eventName.length > 0 && [value containsObject:eventName] ? @NO
-                                                                                                           : @YES;
+    return [value isKindOfClass:NSArray.class] && eventName.length > 0 && [value containsObject:eventName] ? @NO : @YES;
 }
 
-- (NSArray *)activator:(LAActivator *)activator requiresExclusiveAssignmentGroupsForListenerName:(NSString *)listenerName {
+- (NSArray *)activator:(LAActivator *)activator
+    requiresExclusiveAssignmentGroupsForListenerName:(NSString *)listenerName {
     id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"exclusive-assignment-groups"
                                                                   forListenerName:listenerName];
     return [value isKindOfClass:NSArray.class] ? value : nil;
@@ -118,7 +121,9 @@
     return [self activator:activator requiresSmallIconDataForListenerName:listenerName scale:&scale];
 }
 
-- (NSData *)activator:(LAActivator *)activator requiresIconDataForListenerName:(NSString *)listenerName scale:(CGFloat *)scale {
+- (NSData *)activator:(LAActivator *)activator
+    requiresIconDataForListenerName:(NSString *)listenerName
+                              scale:(CGFloat *)scale {
     return [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName small:NO scale:scale];
 }
 
@@ -128,11 +133,15 @@
     return [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName small:YES scale:scale];
 }
 
-- (UIImage *)activator:(LAActivator *)activator requiresIconForListenerName:(NSString *)listenerName scale:(CGFloat)scale {
+- (UIImage *)activator:(LAActivator *)activator
+    requiresIconForListenerName:(NSString *)listenerName
+                          scale:(CGFloat)scale {
     return nil;
 }
 
-- (UIImage *)activator:(LAActivator *)activator requiresSmallIconForListenerName:(NSString *)listenerName scale:(CGFloat)scale {
+- (UIImage *)activator:(LAActivator *)activator
+    requiresSmallIconForListenerName:(NSString *)listenerName
+                               scale:(CGFloat)scale {
     return nil;
 }
 
@@ -152,8 +161,8 @@
 - (NSString *)activator:(LAActivator *)activator
     requiresConfigurationViewControllerClassNameForListenerWithName:(NSString *)listenerName
                                                              bundle:(NSBundle **)outBundle {
-    NSString *className =
-        [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"configuration" forListenerName:listenerName];
+    NSString *className = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"configuration"
+                                                                             forListenerName:listenerName];
     if (![className isKindOfClass:NSString.class] || className.length == 0) {
         return nil;
     }
@@ -170,59 +179,6 @@
 - (void)activator:(LAActivator *)activator
     didSaveNewConfiguration:(id)configuration
         forListenerWithName:(NSString *)listenerName {
-}
-
-@end
-
-@implementation NSObject (LAEventDataSource)
-
-- (BOOL)eventWithNameIsHidden:(NSString *)eventName {
-    id value = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"hidden"];
-    return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
-}
-
-- (BOOL)eventWithNameRequiresAssignment:(NSString *)eventName {
-    id value = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"requires-event"];
-    return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : YES;
-}
-
-- (BOOL)eventWithName:(NSString *)eventName isCompatibleWithMode:(NSString *)eventMode {
-    id value = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"compatible-modes"];
-    if ([value isKindOfClass:NSArray.class] && eventMode.length > 0) {
-        return [value containsObject:eventMode];
-    }
-    return YES;
-}
-
-- (BOOL)eventWithNameSupportsUnlockingDeviceToSend:(NSString *)eventName {
-    id value = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"supports-unlock-to-send"];
-    return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
-}
-
-- (BOOL)eventWithNameSupportsRemoval:(NSString *)eventName {
-    id value = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"supports-removal"];
-    return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
-}
-
-- (void)removeEventWithName:(NSString *)eventName {
-}
-
-- (NSString *)configurationViewControllerClassNameForEventWithName:(NSString *)eventName bundle:(NSBundle **)bundle {
-    NSString *className = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"configuration"];
-    if (![className isKindOfClass:NSString.class] || className.length == 0) {
-        return nil;
-    }
-    if (bundle) {
-        *bundle = [LAActivatorResourceManager.sharedManager eventBundleForName:eventName];
-    }
-    return className;
-}
-
-- (id)configurationForEventWithName:(NSString *)eventName {
-    return nil;
-}
-
-- (void)eventWithName:(NSString *)eventName didSaveNewConfiguration:(id)configuration {
 }
 
 @end

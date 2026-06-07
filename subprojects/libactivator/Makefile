@@ -6,8 +6,9 @@ include $(THEOS)/makefiles/common.mk
 LIBRARY_NAME := libactivator
 
 libactivator_FILES += LAConstants.m
-libactivator_FILES += LAProtocols.m
 libactivator_FILES += LAEvent.m
+libactivator_FILES += LAListenerDefaults.m
+libactivator_FILES += LAEventDataSourceDefaults.m
 libactivator_FILES += LAActivatorPersistence.m
 libactivator_FILES += LAActivatorBackend.m
 libactivator_FILES += LAActivatorResourceManager.m

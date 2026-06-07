@@ -60,64 +60,72 @@
 #pragma mark - Metadata
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName {
+    NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
     return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedTitleForListenerName
-                                            userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+                                            userInfo:userInfo];
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedDescriptionForListenerName:(NSString *)listenerName {
+    NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
     return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedDescriptionForListenerName
-                                            userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+                                            userInfo:userInfo];
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedGroupForListenerName:(NSString *)listenerName {
+    NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
     return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedGroupForListenerName
-                                            userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+                                            userInfo:userInfo];
 }
 
 - (NSNumber *)activator:(LAActivator *)activator requiresRequiresAssignmentForListenerName:(NSString *)listenerName {
+    NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
     BOOL value = [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerRequiresAssignment
-                                                userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}
+                                                userInfo:userInfo
                                             defaultValue:NO];
     return @(value);
 }
 
 - (NSArray *)activator:(LAActivator *)activator
     requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName {
-    return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageCompatibleModesForListener
-                                           userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+    NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
+    return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageCompatibleModesForListener userInfo:userInfo];
 }
 
 - (NSNumber *)activator:(LAActivator *)activator
     requiresIsCompatibleWithEventName:(NSString *)eventName
                          listenerName:(NSString *)listenerName {
+    NSDictionary *userInfo = @{
+        LAActivatorIPCKeyListenerName : listenerName ?: @"",
+        LAActivatorIPCKeyEventName : eventName ?: @"",
+    };
     BOOL value = [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerIsCompatibleWithEvent
-                                                userInfo:@{
-                                                    LAActivatorIPCKeyListenerName : listenerName ?: @"",
-                                                    LAActivatorIPCKeyEventName : eventName ?: @"",
-                                                }
+                                                userInfo:userInfo
                                             defaultValue:NO];
     return @(value);
 }
 
 - (NSArray *)activator:(LAActivator *)activator
     requiresExclusiveAssignmentGroupsForListenerName:(NSString *)listenerName {
+    NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
     return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageExclusiveAssignmentGroupsForListener
-                                           userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+                                           userInfo:userInfo];
 }
 
 - (id)activator:(LAActivator *)activator
     requiresInfoDictionaryValueOfKey:(NSString *)key
                  forListenerWithName:(NSString *)listenerName {
+    NSDictionary *userInfo = @{
+        LAActivatorIPCKeyInfoDictionaryKey : key ?: @"",
+        LAActivatorIPCKeyListenerName : listenerName ?: @"",
+    };
     return [self.ipcClient propertyListValueForMessageName:LAActivatorIPCMessageListenerInfoDictionaryValue
-                                                  userInfo:@{
-                                                      LAActivatorIPCKeyInfoDictionaryKey : key ?: @"",
-                                                      LAActivatorIPCKeyListenerName : listenerName ?: @"",
-                                                  }];
+                                                  userInfo:userInfo];
 }
 
 - (BOOL)activator:(LAActivator *)activator requiresNeedsPoweredDisplayForListenerName:(NSString *)listenerName {
+    NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
     return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerNeedsPoweredDisplay
-                                          userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}
+                                          userInfo:userInfo
                                       defaultValue:NO];
 }
 
@@ -168,14 +176,15 @@
 #pragma mark - Removal
 
 - (BOOL)activator:(LAActivator *)activator requiresSupportsRemovalForListenerWithName:(NSString *)listenerName {
+    NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
     return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageListenerSupportsRemoval
-                                          userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}
+                                          userInfo:userInfo
                                       defaultValue:NO];
 }
 
 - (void)activator:(LAActivator *)activator requestsRemovalForListenerWithName:(NSString *)listenerName {
-    [self.ipcClient sendMessageName:LAActivatorIPCMessageRequestListenerRemoval
-                           userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+    NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
+    [self.ipcClient sendMessageName:LAActivatorIPCMessageRequestListenerRemoval userInfo:userInfo];
 }
 
 #pragma mark - Serialization
@@ -217,11 +226,11 @@
         return localData;
     }
 
-    NSDictionary *reply = [self.ipcClient replyForMessageName:messageName
-                                                     userInfo:@{
-                                                         LAActivatorIPCKeyListenerName : listenerName ?: @"",
-                                                         LAActivatorIPCKeyScale : @(requestedScale),
-                                                     }];
+    NSDictionary *userInfo = @{
+        LAActivatorIPCKeyListenerName : listenerName ?: @"",
+        LAActivatorIPCKeyScale : @(requestedScale),
+    };
+    NSDictionary *reply = [self.ipcClient replyForMessageName:messageName userInfo:userInfo];
     id value = reply[LAActivatorIPCKeyValue];
     if (![value isKindOfClass:NSData.class]) {
         return nil;

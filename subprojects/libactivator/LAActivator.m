@@ -1078,9 +1078,7 @@ LAActivator *LASharedActivator;
     }
     if (listenerName.length > 0 &&
         [UIImage respondsToSelector:@selector(_applicationIconImageForBundleIdentifier:format:scale:)]) {
-        UIImage *applicationIcon = [UIImage _applicationIconImageForBundleIdentifier:listenerName
-                                                                              format:0
-                                                                               scale:scale];
+        UIImage *applicationIcon = [UIImage _applicationIconImageForBundleIdentifier:listenerName format:0 scale:scale];
         if (applicationIcon) {
             return applicationIcon;
         }
