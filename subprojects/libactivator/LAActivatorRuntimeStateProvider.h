@@ -23,6 +23,9 @@ __attribute__((visibility("hidden")))
 - (NSString *)currentEventModeUnderneathLockScreen;
 - (BOOL)supportsUnlockingDeviceToSendEvents;
 - (nullable NSString *)displayIdentifierForCurrentApplication;
+#if LA_TESTING
+- (NSDictionary *)testingDebugDictionary;
+#endif
 @end
 
 NS_ASSUME_NONNULL_END

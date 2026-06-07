@@ -116,7 +116,10 @@ LAActivator *LASharedActivator;
 }
 
 - (void)la_noteHomeScreenVisible:(BOOL)visible {
-    [self la_noteHomeScreenVisible:visible source:@"default"];
+    if (!self.runningInsideSpringBoard) {
+        return;
+    }
+    [self.runtimeStateProvider noteHomeScreenVisible:visible];
 }
 
 - (void)la_noteHomeScreenVisible:(BOOL)visible source:(NSString *)source {
@@ -127,7 +130,10 @@ LAActivator *LASharedActivator;
 }
 
 - (void)la_noteLockScreenVisible:(BOOL)visible {
-    [self la_noteLockScreenVisible:visible source:@"default"];
+    if (!self.runningInsideSpringBoard) {
+        return;
+    }
+    [self.runtimeStateProvider noteLockScreenVisible:visible];
 }
 
 - (void)la_noteLockScreenVisible:(BOOL)visible source:(NSString *)source {
@@ -157,6 +163,15 @@ LAActivator *LASharedActivator;
     }
     [self.touchActivityTracker noteTouchEvent:event];
 }
+
+#if LA_TESTING
+- (NSDictionary *)la_runtimeStateDebugDictionary {
+    if (!self.runningInsideSpringBoard) {
+        return @{};
+    }
+    return [self.runtimeStateProvider testingDebugDictionary] ?: @{};
+}
+#endif
 
 #pragma mark - Event Delivery
 

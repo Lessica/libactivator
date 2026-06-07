@@ -285,6 +285,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (void)runPersistenceTestsWithRecorder:(LATestRecorder *)recorder;
 + (void)runSpringBoardCoreTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runDispatchTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
++ (void)runRuntimeStateTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runRuntimeDeviceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)cleanActivator:(LAActivator *)activator;
 + (void)sendSyntheticTouchWithTouching:(BOOL)touching;
@@ -296,6 +297,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (BOOL)unlockDeviceWithPasscode:(NSString *)passcode;
 + (BOOL)isDeviceLocked;
 + (NSString *)frontMostDisplayIdentifier;
++ (NSString *)runtimeDebugReasonWithPrefix:(NSString *)prefix activator:(LAActivator *)activator;
 + (void)performOnMainThreadSynchronously:(dispatch_block_t)block;
 + (void)waitForMainQueue;
 @end
@@ -343,6 +345,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [self runPersistenceTestsWithRecorder:recorder];
     [self runSpringBoardCoreTestsWithRecorder:recorder activator:activator];
     [self runDispatchTestsWithRecorder:recorder activator:activator];
+    [self runRuntimeStateTestsWithRecorder:recorder activator:activator];
     [self runRuntimeDeviceTestsWithRecorder:recorder activator:activator];
     [self cleanActivator:activator];
     return [recorder resultDictionary];
@@ -522,6 +525,126 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [activator la_noteLockScreenVisible:NO];
 }
 
++ (void)runRuntimeStateTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"RuntimeState"];
+
+    [activator la_noteHomeScreenVisible:NO];
+    [activator la_noteLockScreenVisible:NO];
+    [activator la_noteScreenBlanked:NO];
+    [activator la_noteHomeScreenVisible:YES source:@"test.home.a"];
+    [activator la_noteHomeScreenVisible:YES source:@"test.home.b"];
+    NSDictionary *homeAddedState = [activator la_runtimeStateDebugDictionary];
+    NSArray *homeAddedSources = homeAddedState[@"HomeSources"];
+    [recorder expect:[homeAddedSources containsObject:@"test.home.a"] && [homeAddedSources containsObject:@"test.home.b"]
+             caseName:@"home-source-add"
+               reason:[self runtimeDebugReasonWithPrefix:@"Home sources were not tracked" activator:activator]];
+
+    [activator la_noteHomeScreenVisible:NO source:@"test.home.a"];
+    NSDictionary *homeRemovedState = [activator la_runtimeStateDebugDictionary];
+    NSArray *homeRemovedSources = homeRemovedState[@"HomeSources"];
+    [recorder expect:![homeRemovedSources containsObject:@"test.home.a"] &&
+                         [homeRemovedSources containsObject:@"test.home.b"]
+             caseName:@"home-source-remove"
+               reason:[self runtimeDebugReasonWithPrefix:@"Home source removal failed" activator:activator]];
+
+    [activator la_noteHomeScreenVisible:NO];
+    NSDictionary *homeClearedState = [activator la_runtimeStateDebugDictionary];
+    [recorder expect:[homeClearedState[@"HomeSources"] count] == 0
+             caseName:@"home-source-clear"
+               reason:[self runtimeDebugReasonWithPrefix:@"Home source clear failed" activator:activator]];
+
+    [activator la_noteLockScreenVisible:YES source:@"test.lock.a"];
+    [activator la_noteLockScreenVisible:YES source:@"test.lock.b"];
+    NSDictionary *lockAddedState = [activator la_runtimeStateDebugDictionary];
+    NSArray *lockAddedSources = lockAddedState[@"LockSources"];
+    [recorder expect:[lockAddedSources containsObject:@"test.lock.a"] && [lockAddedSources containsObject:@"test.lock.b"]
+             caseName:@"lock-source-add"
+               reason:[self runtimeDebugReasonWithPrefix:@"Lock sources were not tracked" activator:activator]];
+
+    [activator la_noteLockScreenVisible:NO source:@"test.lock.a"];
+    NSDictionary *lockRemovedState = [activator la_runtimeStateDebugDictionary];
+    NSArray *lockRemovedSources = lockRemovedState[@"LockSources"];
+    [recorder expect:![lockRemovedSources containsObject:@"test.lock.a"] &&
+                         [lockRemovedSources containsObject:@"test.lock.b"]
+             caseName:@"lock-source-remove"
+               reason:[self runtimeDebugReasonWithPrefix:@"Lock source removal failed" activator:activator]];
+
+    [activator la_noteLockScreenVisible:NO];
+    NSDictionary *lockClearedState = [activator la_runtimeStateDebugDictionary];
+    [recorder expect:[lockClearedState[@"LockSources"] count] == 0
+             caseName:@"lock-source-clear"
+               reason:[self runtimeDebugReasonWithPrefix:@"Lock source clear failed" activator:activator]];
+
+    [activator la_noteScreenBlanked:YES];
+    [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeLockScreen]
+             caseName:@"screen-blanked-mode"
+               reason:[self runtimeDebugReasonWithPrefix:@"Blank screen did not report lockscreen mode"
+                                               activator:activator]];
+    [activator la_noteScreenBlanked:NO];
+    [activator la_noteRuntimeStateMayHaveChanged];
+
+    if ([self isDeviceLocked]) {
+        [self unlockDeviceWithPasscode:NSProcessInfo.processInfo.environment[@"LA_TEST_PASSCODE"] ?: @""];
+        [NSThread sleepForTimeInterval:1.0];
+        [activator la_noteLockScreenVisible:NO];
+        [activator la_noteScreenBlanked:NO];
+        [activator la_noteRuntimeStateMayHaveChanged];
+    }
+
+    if (![self resetHomeScreen]) {
+        [recorder skip:@"hook-home-mode" reason:@"Home automation is unavailable"];
+    } else if ([self isDeviceLocked]) {
+        [recorder skip:@"hook-home-mode" reason:@"Device is locked"];
+    } else {
+        [NSThread sleepForTimeInterval:1.0];
+        [activator la_noteLockScreenVisible:NO];
+        [activator la_noteScreenBlanked:NO];
+        [activator la_noteRuntimeStateMayHaveChanged];
+        [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeSpringBoard]
+                 caseName:@"hook-home-mode"
+                   reason:[self runtimeDebugReasonWithPrefix:@"Home hooks did not report springboard mode"
+                                                   activator:activator]];
+    }
+
+    if (![self openApplicationWithBundleIdentifier:@"com.apple.Preferences"]) {
+        [recorder skip:@"hook-application-mode" reason:@"Application launch automation is unavailable"];
+    } else if ([self isDeviceLocked]) {
+        [recorder skip:@"hook-application-mode" reason:@"Device is locked"];
+    } else {
+        [NSThread sleepForTimeInterval:1.5];
+        [activator la_noteLockScreenVisible:NO];
+        [activator la_noteScreenBlanked:NO];
+        [activator la_noteRuntimeStateMayHaveChanged];
+        [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeApplication]
+                 caseName:@"hook-application-mode"
+                   reason:[self runtimeDebugReasonWithPrefix:@"Application hooks did not report application mode"
+                                                   activator:activator]];
+    }
+
+    if (![self lockDevice]) {
+        [recorder skip:@"hook-lockscreen-mode" reason:@"Lock automation is unavailable"];
+    } else {
+        [NSThread sleepForTimeInterval:1.0];
+        [activator la_noteRuntimeStateMayHaveChanged];
+        [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeLockScreen]
+                 caseName:@"hook-lockscreen-mode"
+                   reason:[self runtimeDebugReasonWithPrefix:@"Lock hooks did not report lockscreen mode"
+                                                   activator:activator]];
+    }
+
+    if (![self unlockDeviceWithPasscode:NSProcessInfo.processInfo.environment[@"LA_TEST_PASSCODE"] ?: @""]) {
+        [recorder skip:@"hook-unlock-mode" reason:@"Unlock automation is unavailable"];
+    } else {
+        [NSThread sleepForTimeInterval:1.0];
+        [activator la_noteLockScreenVisible:NO];
+        [activator la_noteScreenBlanked:NO];
+        [activator la_noteRuntimeStateMayHaveChanged];
+        [recorder expect:![activator.currentEventMode isEqualToString:LAEventModeLockScreen]
+                 caseName:@"hook-unlock-mode"
+                   reason:[self runtimeDebugReasonWithPrefix:@"Unlock did not leave lockscreen mode" activator:activator]];
+    }
+}
+
 + (void)runRuntimeDeviceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"RuntimeDevice"];
 
@@ -544,7 +667,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         [activator la_noteRuntimeStateMayHaveChanged];
         [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeSpringBoard]
                  caseName:@"home-mode"
-                   reason:@"Home screen did not report springboard mode"];
+                   reason:[self runtimeDebugReasonWithPrefix:@"Home screen did not report springboard mode"
+                                                   activator:activator]];
     }
 
     if (![self openApplicationWithBundleIdentifier:@"com.apple.Preferences"]) {
@@ -560,7 +684,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
                    reason:@"Preferences did not become frontmost"];
         [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeApplication]
                  caseName:@"application-mode"
-                   reason:@"Foreground app did not report application mode"];
+                   reason:[self runtimeDebugReasonWithPrefix:@"Foreground app did not report application mode"
+                                                   activator:activator]];
     }
 
     if (![self lockDevice]) {
@@ -814,6 +939,18 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     };
     [self performOnMainThreadSynchronously:readFrontMostApplication];
     return displayIdentifier;
+}
+
++ (NSString *)runtimeDebugReasonWithPrefix:(NSString *)prefix activator:(LAActivator *)activator {
+    NSDictionary *state = [activator la_runtimeStateDebugDictionary];
+    return [NSString stringWithFormat:@"%@; mode=%@; homeSources=%@; lockSources=%@; screenBlanked=%@; uiLocked=%@; frontMost=%@",
+                                      prefix ?: @"Runtime mode mismatch",
+                                      state[@"Mode"] ?: @"",
+                                      state[@"HomeSources"] ?: @[],
+                                      state[@"LockSources"] ?: @[],
+                                      state[@"ScreenBlanked"] ?: @NO,
+                                      state[@"UILocked"] ?: @NO,
+                                      state[@"FrontMost"] ?: @""];
 }
 
 + (void)performOnMainThreadSynchronously:(dispatch_block_t)block {

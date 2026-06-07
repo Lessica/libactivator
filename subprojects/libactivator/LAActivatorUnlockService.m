@@ -39,11 +39,14 @@
 #pragma mark - State
 
 - (BOOL)isUILocked {
-    id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
-    if ([manager respondsToSelector:@selector(isUILocked)]) {
-        return [manager isUILocked];
-    }
-    return NO;
+    __block BOOL locked = NO;
+    [self performOnMainThreadSynchronously:^{
+        id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
+        if ([manager respondsToSelector:@selector(isUILocked)]) {
+            locked = [manager isUILocked];
+        }
+    }];
+    return locked;
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {
@@ -51,12 +54,16 @@
 }
 
 - (BOOL)canRequestUnlock {
-    id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
-    if (![manager respondsToSelector:@selector(isUILocked)]) {
-        return NO;
-    }
-    return [manager respondsToSelector:@selector(attemptUnlockWithPasscode:finishUIUnlock:completion:)] ||
-           [manager respondsToSelector:@selector(attemptUnlockWithPasscode:)];
+    __block BOOL canRequest = NO;
+    [self performOnMainThreadSynchronously:^{
+        id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
+        if (![manager respondsToSelector:@selector(isUILocked)]) {
+            return;
+        }
+        canRequest = [manager respondsToSelector:@selector(attemptUnlockWithPasscode:finishUIUnlock:completion:)] ||
+                     [manager respondsToSelector:@selector(attemptUnlockWithPasscode:)];
+    }];
+    return canRequest;
 }
 
 - (BOOL)requestUnlockWithPasscode:(NSString *)passcode {

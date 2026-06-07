@@ -21,7 +21,7 @@ wait_for_springboard_pid() {
 }
 
 # shellcheck disable=SC1010
-gmake do LA_TESTING=1
+gmake clean do LA_TESTING=1
 
 springboard_pid_before="$(wait_for_springboard_pid)"
 echo "[tests] SpringBoard pid before runner: ${springboard_pid_before}"
