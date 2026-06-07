@@ -14,7 +14,6 @@ libactivator_FILES += LAActivatorResourceManager.m
 libactivator_FILES += LAActivatorUnlockService.m
 libactivator_FILES += LAActivatorRuntimeStateProvider.m
 libactivator_FILES += LATouchActivityTracker.m
-libactivator_FILES += LAApplicationIconProvider.m
 libactivator_FILES += LADefaultEventDataSource.m
 libactivator_FILES += LAActivatorIPC.m
 libactivator_FILES += LAActivatorIPCClient.m

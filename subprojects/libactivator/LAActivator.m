@@ -15,10 +15,17 @@
 #import "LAActivatorPrivate.h"
 #import "LAActivatorResourceManager.h"
 #import "LAActivatorRuntimeStateProvider.h"
-#import "LAApplicationIconProvider.h"
 #import "LADefaultEventDataSource.h"
 #import "LARemoteListener.h"
 #import "LATouchActivityTracker.h"
+
+#pragma mark - Private Interfaces
+
+@interface UIImage (LAActivatorApplicationIcon)
++ (instancetype)_applicationIconImageForBundleIdentifier:(NSString *)bundleIdentifier
+                                                  format:(int)format
+                                                   scale:(CGFloat)scale;
+@end
 
 #pragma mark - Class Extension
 
@@ -1069,10 +1076,14 @@ LAActivator *LASharedActivator;
             return [UIImage imageWithData:data scale:1.0f];
         }
     }
-    UIImage *applicationIcon = [LAApplicationIconProvider.sharedProvider smallIconForDisplayIdentifier:listenerName
-                                                                                                 scale:scale];
-    if (applicationIcon) {
-        return applicationIcon;
+    if (listenerName.length > 0 &&
+        [UIImage respondsToSelector:@selector(_applicationIconImageForBundleIdentifier:format:scale:)]) {
+        UIImage *applicationIcon = [UIImage _applicationIconImageForBundleIdentifier:listenerName
+                                                                              format:0
+                                                                               scale:scale];
+        if (applicationIcon) {
+            return applicationIcon;
+        }
     }
     return [LAActivatorResourceManager.sharedManager iconForListenerName:listenerName small:YES scale:scale];
 }
