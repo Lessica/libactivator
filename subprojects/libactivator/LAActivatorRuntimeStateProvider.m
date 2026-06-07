@@ -31,8 +31,8 @@
 @end
 
 @implementation LAActivatorRuntimeStateProvider {
-    BOOL _homeScreenVisible;
-    BOOL _lockScreenVisible;
+    NSMutableSet *_homeScreenVisibilitySources;
+    NSMutableSet *_lockScreenVisibilitySources;
     BOOL _screenBlanked;
     dispatch_queue_t _stateQueue;
     NSString *_lastEventMode;
@@ -45,7 +45,8 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _homeScreenVisible = YES;
+        _homeScreenVisibilitySources = [[NSMutableSet alloc] init];
+        _lockScreenVisibilitySources = [[NSMutableSet alloc] init];
         _stateQueue = dispatch_queue_create("libactivator.runtime-state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _unlockService = [[LAActivatorUnlockService alloc] init];
         _lastEventMode = LAEventModeSpringBoard;
@@ -56,14 +57,32 @@
 #pragma mark - Updates
 
 - (void)noteHomeScreenVisible:(BOOL)visible {
+    [self noteHomeScreenVisible:visible source:@"default"];
+}
+
+- (void)noteHomeScreenVisible:(BOOL)visible source:(NSString *)source {
+    NSString *visibilitySource = source.length > 0 ? source : @"default";
     [self updateStateWithBlock:^{
-        self->_homeScreenVisible = visible;
+        if (visible) {
+            [self->_homeScreenVisibilitySources addObject:visibilitySource];
+        } else {
+            [self->_homeScreenVisibilitySources removeObject:visibilitySource];
+        }
     }];
 }
 
 - (void)noteLockScreenVisible:(BOOL)visible {
+    [self noteLockScreenVisible:visible source:@"default"];
+}
+
+- (void)noteLockScreenVisible:(BOOL)visible source:(NSString *)source {
+    NSString *visibilitySource = source.length > 0 ? source : @"default";
     [self updateStateWithBlock:^{
-        self->_lockScreenVisible = visible;
+        if (visible) {
+            [self->_lockScreenVisibilitySources addObject:visibilitySource];
+        } else {
+            [self->_lockScreenVisibilitySources removeObject:visibilitySource];
+        }
     }];
 }
 
@@ -91,8 +110,8 @@
     __block BOOL lockScreenVisible = NO;
     __block BOOL screenBlanked = NO;
     dispatch_sync(_stateQueue, ^{
-        homeScreenVisible = self->_homeScreenVisible;
-        lockScreenVisible = self->_lockScreenVisible;
+        homeScreenVisible = self->_homeScreenVisibilitySources.count > 0;
+        lockScreenVisible = self->_lockScreenVisibilitySources.count > 0;
         screenBlanked = self->_screenBlanked;
     });
     NSString *eventMode = [self eventModeWithHomeScreenVisible:homeScreenVisible
@@ -107,7 +126,7 @@
 - (NSString *)currentEventModeUnderneathLockScreen {
     __block BOOL homeScreenVisible = NO;
     dispatch_sync(_stateQueue, ^{
-        homeScreenVisible = self->_homeScreenVisible;
+        homeScreenVisible = self->_homeScreenVisibilitySources.count > 0;
     });
     if (homeScreenVisible) {
         return LAEventModeSpringBoard;

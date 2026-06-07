@@ -13,6 +13,8 @@ NS_ASSUME_NONNULL_BEGIN
 __attribute__((visibility("hidden")))
 @interface LAActivatorUnlockService : NSObject
 - (BOOL)isUILocked;
+- (BOOL)canRequestUnlock;
+- (BOOL)requestUnlockWithPasscode:(nullable NSString *)passcode;
 - (BOOL)supportsUnlockingDeviceToSendEvents;
 @end
 

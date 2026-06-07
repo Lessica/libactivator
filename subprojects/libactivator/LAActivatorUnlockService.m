@@ -19,8 +19,19 @@
 - (void)attemptUnlockWithPasscode:(NSString *)passcode finishUIUnlock:(BOOL)finishUIUnlock completion:(id)completion;
 @end
 
+@protocol LAActivatorBacklightControllerClass <NSObject>
++ (id)sharedInstance;
+@end
+
+@protocol LAActivatorBacklightController <NSObject>
+@optional
+- (void)turnOnScreenFullyWithBacklightSource:(NSInteger)source;
+@end
+
 @interface LAActivatorUnlockService ()
+- (void)performOnMainThreadSynchronously:(dispatch_block_t)block;
 - (id<LAActivatorLockScreenManager>)lockScreenManager;
+- (id<LAActivatorBacklightController>)backlightController;
 @end
 
 @implementation LAActivatorUnlockService
@@ -36,6 +47,10 @@
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {
+    return [self canRequestUnlock];
+}
+
+- (BOOL)canRequestUnlock {
     id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
     if (![manager respondsToSelector:@selector(isUILocked)]) {
         return NO;
@@ -44,7 +59,38 @@
            [manager respondsToSelector:@selector(attemptUnlockWithPasscode:)];
 }
 
+- (BOOL)requestUnlockWithPasscode:(NSString *)passcode {
+    __block BOOL attempted = NO;
+    [self performOnMainThreadSynchronously:^{
+        id<LAActivatorBacklightController> backlightController = [self backlightController];
+        if ([backlightController respondsToSelector:@selector(turnOnScreenFullyWithBacklightSource:)]) {
+            [backlightController turnOnScreenFullyWithBacklightSource:1];
+        }
+
+        id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
+        if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:finishUIUnlock:completion:)]) {
+            [manager attemptUnlockWithPasscode:passcode ?: @"" finishUIUnlock:YES completion:nil];
+            attempted = YES;
+        } else if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:)]) {
+            [manager attemptUnlockWithPasscode:passcode ?: @""];
+            attempted = YES;
+        }
+    }];
+    return attempted;
+}
+
 #pragma mark - Private
+
+- (void)performOnMainThreadSynchronously:(dispatch_block_t)block {
+    if (!block) {
+        return;
+    }
+    if ([NSThread isMainThread]) {
+        block();
+        return;
+    }
+    dispatch_sync(dispatch_get_main_queue(), block);
+}
 
 - (id<LAActivatorLockScreenManager>)lockScreenManager {
     id<LAActivatorLockScreenManagerClass> managerClass = (id)NSClassFromString(@"SBLockScreenManager");
@@ -52,6 +98,14 @@
         return nil;
     }
     return [managerClass sharedInstance];
+}
+
+- (id<LAActivatorBacklightController>)backlightController {
+    id<LAActivatorBacklightControllerClass> controllerClass = (id)NSClassFromString(@"SBBacklightController");
+    if (![controllerClass respondsToSelector:@selector(sharedInstance)]) {
+        return nil;
+    }
+    return [controllerClass sharedInstance];
 }
 
 @end

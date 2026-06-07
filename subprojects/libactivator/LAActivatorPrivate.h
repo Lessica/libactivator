@@ -15,7 +15,9 @@ NS_ASSUME_NONNULL_BEGIN
 @interface LAActivator (Private)
 - (void)startIPCServerIfNeeded;
 - (void)la_noteHomeScreenVisible:(BOOL)visible;
+- (void)la_noteHomeScreenVisible:(BOOL)visible source:(NSString *)source;
 - (void)la_noteLockScreenVisible:(BOOL)visible;
+- (void)la_noteLockScreenVisible:(BOOL)visible source:(NSString *)source;
 - (void)la_noteScreenBlanked:(BOOL)blanked;
 - (void)la_noteRuntimeStateMayHaveChanged;
 - (void)la_noteSystemTouchEvent:(UIEvent *)event;

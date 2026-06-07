@@ -116,17 +116,25 @@ LAActivator *LASharedActivator;
 }
 
 - (void)la_noteHomeScreenVisible:(BOOL)visible {
+    [self la_noteHomeScreenVisible:visible source:@"default"];
+}
+
+- (void)la_noteHomeScreenVisible:(BOOL)visible source:(NSString *)source {
     if (!self.runningInsideSpringBoard) {
         return;
     }
-    [self.runtimeStateProvider noteHomeScreenVisible:visible];
+    [self.runtimeStateProvider noteHomeScreenVisible:visible source:source];
 }
 
 - (void)la_noteLockScreenVisible:(BOOL)visible {
+    [self la_noteLockScreenVisible:visible source:@"default"];
+}
+
+- (void)la_noteLockScreenVisible:(BOOL)visible source:(NSString *)source {
     if (!self.runningInsideSpringBoard) {
         return;
     }
-    [self.runtimeStateProvider noteLockScreenVisible:visible];
+    [self.runtimeStateProvider noteLockScreenVisible:visible source:source];
 }
 
 - (void)la_noteScreenBlanked:(BOOL)blanked {
@@ -332,31 +340,25 @@ LAActivator *LASharedActivator;
         return;
     }
 
-    NSArray *dispatchableListenerNames = [self la_dispatchableListenerNames:listenerNames forEvent:event];
-    if (allowDeferral && self.touchActivityTracker.touchActive) {
-        NSString *deferredListenerName = nil;
-        for (NSString *listenerName in dispatchableListenerNames) {
-            if ([self la_listenerWithNameRequiresNoTouchEvents:listenerName]) {
-                deferredListenerName = listenerName;
-                break;
-            }
-        }
-        if (deferredListenerName.length > 0) {
+    BOOL touchActive = allowDeferral && self.touchActivityTracker.touchActive;
+    for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
+        id<LAListener> listener = [self listenerForName:listenerName];
+        if (touchActive && [self la_listenerWithNameRequiresNoTouchEvents:listenerName]) {
             LAEvent *deferredEvent = [LAEvent eventWithName:event.name mode:eventMode];
             deferredEvent.userInfo = event.userInfo;
+            BOOL wasHandled = event.handled;
             event.handled = YES;
-            [self la_notifyListenersThatListener:[self listenerForName:deferredListenerName] handledEvent:event];
+            if (!wasHandled) {
+                [self la_notifyListenersThatListener:listener handledEvent:event];
+            }
             __weak typeof(self) weakSelf = self;
             [self.touchActivityTracker performWhenTouchesEnd:^{
                 __strong typeof(weakSelf) strongSelf = weakSelf;
-                [strongSelf la_sendEvent:deferredEvent toListenerNames:dispatchableListenerNames allowDeferral:NO];
+                [strongSelf la_sendEvent:deferredEvent toListenerNames:@[ listenerName ] allowDeferral:NO];
             }];
-            return;
+            continue;
         }
-    }
 
-    for (NSString *listenerName in dispatchableListenerNames) {
-        id<LAListener> listener = [self listenerForName:listenerName];
         BOOL wasHandled = event.handled;
         if ([listener respondsToSelector:@selector(activator:receiveEvent:forListenerName:)]) {
             [listener activator:self receiveEvent:event forListenerName:listenerName];
