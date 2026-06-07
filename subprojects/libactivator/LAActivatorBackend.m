@@ -21,7 +21,6 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
 static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 
 @interface LAActivatorBackend ()
-@property(nonatomic, assign, readwrite, getter=isAuthoritative) BOOL authoritative;
 @property(nonatomic, strong) NSMutableDictionary *eventDataSources;
 @property(nonatomic, strong) NSMutableDictionary *listeners;
 @property(nonatomic, strong) NSMutableDictionary *profiles;
@@ -37,10 +36,9 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 
 #pragma mark - Lifecycle
 
-- (instancetype)initWithAuthoritativeRole:(BOOL)authoritative persistence:(LAActivatorPersistence *)persistence {
+- (instancetype)initWithPersistence:(LAActivatorPersistence *)persistence {
     self = [super init];
     if (self) {
-        _authoritative = authoritative;
         _persistence = persistence;
         _eventDataSources = [[NSMutableDictionary alloc] init];
         _listeners = [[NSMutableDictionary alloc] init];
@@ -49,9 +47,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
         _seenListenerNames = [[NSMutableSet alloc] init];
         _stateQueue = dispatch_queue_create("libactivator.state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         [self resetRuntimeState];
-        if (authoritative) {
-            [self loadPersistentState];
-        }
+        [self loadPersistentState];
     }
     return self;
 }
@@ -90,7 +86,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 }
 
 - (void)savePersistentState {
-    if (!self.authoritative || !self.persistence) {
+    if (!self.persistence) {
         return;
     }
 
@@ -218,7 +214,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 }
 
 - (BOOL)registerListener:(id<LAListener>)listener forName:(NSString *)name {
-    if (!self.authoritative || !listener || name.length == 0) {
+    if (!listener || name.length == 0) {
         return NO;
     }
     dispatch_sync(self.stateQueue, ^{
@@ -232,7 +228,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 }
 
 - (BOOL)unregisterListenerWithName:(NSString *)name {
-    if (!self.authoritative || name.length == 0) {
+    if (name.length == 0) {
         return NO;
     }
     __block BOOL removed = NO;
@@ -277,7 +273,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 }
 
 - (BOOL)registerEventDataSource:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName {
-    if (!self.authoritative || !dataSource || eventName.length == 0) {
+    if (!dataSource || eventName.length == 0) {
         return NO;
     }
     dispatch_sync(self.stateQueue, ^{
@@ -287,7 +283,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 }
 
 - (BOOL)unregisterEventDataSourceWithEventName:(NSString *)eventName {
-    if (!self.authoritative || eventName.length == 0) {
+    if (eventName.length == 0) {
         return NO;
     }
     __block BOOL removed = NO;
@@ -320,7 +316,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 #pragma mark - Assignments
 
 - (BOOL)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
-    if (!self.authoritative || event.name.length == 0) {
+    if (event.name.length == 0) {
         return NO;
     }
 
@@ -404,7 +400,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 }
 
 - (BOOL)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted {
-    if (!self.authoritative || displayIdentifier.length == 0) {
+    if (displayIdentifier.length == 0) {
         return NO;
     }
     __block BOOL changed = NO;
@@ -447,10 +443,6 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 }
 
 - (BOOL)setCurrentProfileNameIfChanged:(NSString *)currentProfileName {
-    if (!self.authoritative) {
-        return NO;
-    }
-
     NSString *profileName = currentProfileName.length > 0 ? [currentProfileName copy] : LAActivatorDefaultProfileName;
     __block BOOL changed = NO;
     dispatch_sync(self.stateQueue, ^{

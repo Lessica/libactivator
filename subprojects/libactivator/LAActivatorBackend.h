@@ -15,11 +15,9 @@ NS_ASSUME_NONNULL_BEGIN
 __attribute__((visibility("hidden")))
 @interface LAActivatorBackend : NSObject
 
-@property(nonatomic, assign, readonly, getter=isAuthoritative) BOOL authoritative;
 @property(nonatomic, copy) NSString *currentProfileName;
 
-- (instancetype)initWithAuthoritativeRole:(BOOL)authoritative
-                              persistence:(nullable LAActivatorPersistence *)persistence;
+- (instancetype)initWithPersistence:(nullable LAActivatorPersistence *)persistence;
 
 - (nullable id<LAListener>)listenerForName:(NSString *)name;
 - (BOOL)hasListenerWithName:(NSString *)name;
