@@ -68,9 +68,8 @@ LAActivator *LASharedActivator;
 - (instancetype)initPrivate {
     self = [super init];
     if (self) {
-        _runtimeStateProvider =
-            [[LAActivatorRuntimeStateProvider alloc] initWithSpringBoardRole:self.runningInsideSpringBoard];
         if (self.runningInsideSpringBoard) {
+            _runtimeStateProvider = [[LAActivatorRuntimeStateProvider alloc] init];
             _backend = [[LAActivatorBackend alloc] initWithPersistence:[LAActivatorPersistence defaultPersistence]];
             _touchActivityTracker = [[LATouchActivityTracker alloc] init];
             __weak typeof(self) weakSelf = self;

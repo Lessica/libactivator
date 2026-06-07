@@ -12,7 +12,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((visibility("hidden")))
 @interface LAActivatorUnlockService : NSObject
-- (instancetype)initWithSpringBoardRole:(BOOL)runningInsideSpringBoard;
 - (BOOL)isUILocked;
 - (BOOL)supportsUnlockingDeviceToSendEvents;
 @end

@@ -31,7 +31,6 @@
 @end
 
 @implementation LAActivatorRuntimeStateProvider {
-    BOOL _runningInsideSpringBoard;
     BOOL _homeScreenVisible;
     BOOL _lockScreenVisible;
     BOOL _screenBlanked;
@@ -43,14 +42,13 @@
 
 #pragma mark - Lifecycle
 
-- (instancetype)initWithSpringBoardRole:(BOOL)runningInsideSpringBoard {
+- (instancetype)init {
     self = [super init];
     if (self) {
-        _runningInsideSpringBoard = runningInsideSpringBoard;
-        _homeScreenVisible = runningInsideSpringBoard;
+        _homeScreenVisible = YES;
         _stateQueue = dispatch_queue_create("libactivator.runtime-state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
-        _unlockService = [[LAActivatorUnlockService alloc] initWithSpringBoardRole:runningInsideSpringBoard];
-        _lastEventMode = runningInsideSpringBoard ? LAEventModeSpringBoard : LAEventModeApplication;
+        _unlockService = [[LAActivatorUnlockService alloc] init];
+        _lastEventMode = LAEventModeSpringBoard;
     }
     return self;
 }
@@ -107,10 +105,6 @@
 }
 
 - (NSString *)currentEventModeUnderneathLockScreen {
-    if (!_runningInsideSpringBoard) {
-        return LAEventModeApplication;
-    }
-
     __block BOOL homeScreenVisible = NO;
     dispatch_sync(_stateQueue, ^{
         homeScreenVisible = self->_homeScreenVisible;
@@ -127,10 +121,6 @@
 }
 
 - (NSString *)displayIdentifierForCurrentApplication {
-    if (!_runningInsideSpringBoard) {
-        return [[NSBundle mainBundle] bundleIdentifier];
-    }
-
     if ([[self currentEventMode] isEqualToString:LAEventModeLockScreen]) {
         return nil;
     }
@@ -140,10 +130,6 @@
 #pragma mark - Private
 
 - (NSString *)foregroundDisplayIdentifierIgnoringLockState {
-    if (!_runningInsideSpringBoard) {
-        return [[NSBundle mainBundle] bundleIdentifier];
-    }
-
     __block NSString *displayIdentifier = nil;
     dispatch_block_t block = ^{
         UIApplication *application = [UIApplication sharedApplication];
@@ -186,10 +172,6 @@
 - (NSString *)eventModeWithHomeScreenVisible:(BOOL)homeScreenVisible
                            lockScreenVisible:(BOOL)lockScreenVisible
                                screenBlanked:(BOOL)screenBlanked {
-    if (!_runningInsideSpringBoard) {
-        return LAEventModeApplication;
-    }
-
     BOOL lockScreenActive = lockScreenVisible || screenBlanked || [_unlockService isUILocked];
     if (lockScreenActive) {
         return LAEventModeLockScreen;

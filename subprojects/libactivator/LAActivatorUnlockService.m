@@ -23,19 +23,7 @@
 - (id<LAActivatorLockScreenManager>)lockScreenManager;
 @end
 
-@implementation LAActivatorUnlockService {
-    BOOL _runningInsideSpringBoard;
-}
-
-#pragma mark - Lifecycle
-
-- (instancetype)initWithSpringBoardRole:(BOOL)runningInsideSpringBoard {
-    self = [super init];
-    if (self) {
-        _runningInsideSpringBoard = runningInsideSpringBoard;
-    }
-    return self;
-}
+@implementation LAActivatorUnlockService
 
 #pragma mark - State
 
@@ -59,10 +47,6 @@
 #pragma mark - Private
 
 - (id<LAActivatorLockScreenManager>)lockScreenManager {
-    if (!_runningInsideSpringBoard) {
-        return nil;
-    }
-
     id<LAActivatorLockScreenManagerClass> managerClass = (id)NSClassFromString(@"SBLockScreenManager");
     if (![managerClass respondsToSelector:@selector(sharedInstance)]) {
         return nil;
