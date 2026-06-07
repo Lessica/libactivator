@@ -17,6 +17,15 @@
 #import <dispatch/dispatch.h>
 
 @interface LAActivatorIPCServer ()
+- (NSArray *)registeredMessageNames;
+- (nullable NSDictionary *)handleTestingMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
+- (nullable NSDictionary *)handleRegistryMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
+- (nullable NSDictionary *)handleAssignmentMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
+- (nullable NSDictionary *)handleRuntimeMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
+- (nullable NSDictionary *)handleDispatchMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
+- (nullable NSDictionary *)handleEventMetadataMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
+- (nullable NSDictionary *)handleListenerMetadataMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
+- (nullable NSDictionary *)handleLocalizationMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
 - (NSDictionary *)replyWithOK:(BOOL)ok value:(id)value;
 - (NSDictionary *)eventReplyWithEvent:(LAEvent *)event;
 - (NSString *)stringInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
@@ -54,7 +63,15 @@
         return;
     }
 
-    NSArray *messageNames = @[
+    for (NSString *messageName in [self registeredMessageNames]) {
+        [_center registerForMessageName:messageName target:self selector:@selector(handleMessageNamed:withUserInfo:)];
+    }
+    [_center runServerOnCurrentThread];
+    _started = YES;
+}
+
+- (NSArray *)registeredMessageNames {
+    return @[
         LAActivatorIPCMessageAvailableEventNames,
         LAActivatorIPCMessageHasEvent,
         LAActivatorIPCMessageAvailableListenerNames,
@@ -113,11 +130,6 @@
         LAActivatorIPCMessageTesting,
 #endif
     ];
-    for (NSString *messageName in messageNames) {
-        [_center registerForMessageName:messageName target:self selector:@selector(handleMessageNamed:withUserInfo:)];
-    }
-    [_center runServerOnCurrentThread];
-    _started = YES;
 }
 
 - (NSDictionary *)handleMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
@@ -125,12 +137,54 @@
         return [self replyWithOK:NO value:nil];
     }
 
+    NSDictionary *reply = [self handleTestingMessageNamed:messageName withUserInfo:userInfo];
+    if (reply) {
+        return reply;
+    }
+    reply = [self handleRegistryMessageNamed:messageName withUserInfo:userInfo];
+    if (reply) {
+        return reply;
+    }
+    reply = [self handleAssignmentMessageNamed:messageName withUserInfo:userInfo];
+    if (reply) {
+        return reply;
+    }
+    reply = [self handleRuntimeMessageNamed:messageName withUserInfo:userInfo];
+    if (reply) {
+        return reply;
+    }
+    reply = [self handleDispatchMessageNamed:messageName withUserInfo:userInfo];
+    if (reply) {
+        return reply;
+    }
+    reply = [self handleEventMetadataMessageNamed:messageName withUserInfo:userInfo];
+    if (reply) {
+        return reply;
+    }
+    reply = [self handleListenerMetadataMessageNamed:messageName withUserInfo:userInfo];
+    if (reply) {
+        return reply;
+    }
+    reply = [self handleLocalizationMessageNamed:messageName withUserInfo:userInfo];
+    if (reply) {
+        return reply;
+    }
+
+    return [self replyWithOK:NO value:nil];
+}
+
+#pragma mark - Message Handling
+
+- (NSDictionary *)handleTestingMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
 #if LA_TESTING
     if ([messageName isEqualToString:LAActivatorIPCMessageTesting]) {
         return [LAActivatorTestSupport handleCommandWithUserInfo:userInfo activator:_activator];
     }
 #endif
+    return nil;
+}
 
+- (NSDictionary *)handleRegistryMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAActivatorIPCMessageAvailableEventNames]) {
         return [self replyWithOK:YES value:_activator.availableEventNames];
     }
@@ -154,6 +208,21 @@
                   value:@([_activator hasSeenListenerWithName:[self stringInUserInfo:userInfo
                                                                               forKey:LAActivatorIPCKeyListenerName]])];
     }
+    if ([messageName isEqualToString:LAActivatorIPCMessageAvailableProfileNames]) {
+        return [self replyWithOK:YES value:_activator.availableProfileNames];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageCurrentProfileName]) {
+        return [self replyWithOK:YES value:_activator.currentProfileName ?: @""];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageSetCurrentProfileName]) {
+        BOOL changed = [_activator la_setCurrentProfileName:[self stringInUserInfo:userInfo
+                                                                            forKey:LAActivatorIPCKeyProfileName]];
+        return [self replyWithOK:YES value:@(changed)];
+    }
+    return nil;
+}
+
+- (NSDictionary *)handleAssignmentMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAActivatorIPCMessageAssignedListenerNames]) {
         return [self replyWithOK:YES
                            value:[_activator assignedListenerNamesForEvent:[self eventWithUserInfo:userInfo]]];
@@ -201,17 +270,10 @@
                                      isBlacklisted:[userInfo[LAActivatorIPCKeyBlacklisted] boolValue]];
         return [self replyWithOK:YES value:@(changed)];
     }
-    if ([messageName isEqualToString:LAActivatorIPCMessageAvailableProfileNames]) {
-        return [self replyWithOK:YES value:_activator.availableProfileNames];
-    }
-    if ([messageName isEqualToString:LAActivatorIPCMessageCurrentProfileName]) {
-        return [self replyWithOK:YES value:_activator.currentProfileName ?: @""];
-    }
-    if ([messageName isEqualToString:LAActivatorIPCMessageSetCurrentProfileName]) {
-        BOOL changed = [_activator la_setCurrentProfileName:[self stringInUserInfo:userInfo
-                                                                            forKey:LAActivatorIPCKeyProfileName]];
-        return [self replyWithOK:YES value:@(changed)];
-    }
+    return nil;
+}
+
+- (NSDictionary *)handleRuntimeMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAActivatorIPCMessageCurrentEventMode]) {
         return [self replyWithOK:YES value:_activator.currentEventMode ?: @""];
     }
@@ -224,6 +286,10 @@
     if ([messageName isEqualToString:LAActivatorIPCMessageCurrentApplicationDisplayIdentifier]) {
         return [self replyWithOK:YES value:_activator.displayIdentifierForCurrentApplication ?: @""];
     }
+    return nil;
+}
+
+- (NSDictionary *)handleDispatchMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchAssignedEvent]) {
         LAEvent *event = [self eventWithUserInfo:userInfo];
         if (!event) {
@@ -289,9 +355,11 @@
         [self sendEvent:event directlyToListenerName:targetListenerName abort:YES];
         return [self eventReplyWithEvent:event];
     }
+    return nil;
+}
 
+- (NSDictionary *)handleEventMetadataMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     NSString *eventName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
-    NSString *listenerName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
     NSString *eventMode = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventMode];
     if ([messageName isEqualToString:LAActivatorIPCMessageEventIsHidden]) {
         return [self replyWithOK:YES value:@([_activator eventWithNameIsHidden:eventName])];
@@ -318,6 +386,13 @@
         [_activator removeEventWithName:eventName];
         return [self replyWithOK:YES value:nil];
     }
+    return nil;
+}
+
+- (NSDictionary *)handleListenerMetadataMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
+    NSString *eventName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
+    NSString *listenerName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
+    NSString *eventMode = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventMode];
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerInfoDictionaryValue]) {
         id value = [_activator infoDictionaryValueOfKey:[self stringInUserInfo:userInfo
                                                                         forKey:LAActivatorIPCKeyInfoDictionaryKey]
@@ -369,6 +444,12 @@
         [_activator requestRemovalForListenerWithName:listenerName];
         return [self replyWithOK:YES value:nil];
     }
+    return nil;
+}
+
+- (NSDictionary *)handleLocalizationMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
+    NSString *eventName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
+    NSString *listenerName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedTitleForEventName]) {
         return [self replyWithOK:YES value:[_activator localizedTitleForEventName:eventName]];
     }
@@ -391,8 +472,7 @@
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedDescriptionForListenerName]) {
         return [self replyWithOK:YES value:[_activator localizedDescriptionForListenerName:listenerName]];
     }
-
-    return [self replyWithOK:NO value:nil];
+    return nil;
 }
 
 #pragma mark - Serialization

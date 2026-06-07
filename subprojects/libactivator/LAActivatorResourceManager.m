@@ -101,6 +101,9 @@
         return YES;
     }
 
+    if (range.count == 0 || range.count > 2) {
+        return NO;
+    }
     if (range.count > 0 && [range[0] respondsToSelector:@selector(doubleValue)] &&
         [range[0] doubleValue] > kCFCoreFoundationVersionNumber) {
         return NO;
@@ -109,7 +112,7 @@
         [range[1] doubleValue] <= kCFCoreFoundationVersionNumber) {
         return NO;
     }
-    return range.count <= 2;
+    return YES;
 }
 
 - (NSBundle *)listenerBundleForName:(NSString *)listenerName {
