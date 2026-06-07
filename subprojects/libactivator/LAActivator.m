@@ -129,6 +129,13 @@ LAActivator *LASharedActivator;
     [self.runtimeStateProvider noteHomeScreenVisible:visible source:source];
 }
 
+- (void)la_noteSpringBoardInterfaceVisible:(BOOL)visible source:(NSString *)source {
+    if (!self.runningInsideSpringBoard) {
+        return;
+    }
+    [self.runtimeStateProvider noteSpringBoardInterfaceVisible:visible source:source];
+}
+
 - (void)la_noteLockScreenVisible:(BOOL)visible {
     if (!self.runningInsideSpringBoard) {
         return;

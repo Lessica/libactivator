@@ -14,6 +14,7 @@ __attribute__((visibility("hidden")))
 @interface LAActivatorRuntimeStateProvider : NSObject
 - (void)noteHomeScreenVisible:(BOOL)visible;
 - (void)noteHomeScreenVisible:(BOOL)visible source:(NSString *)source;
+- (void)noteSpringBoardInterfaceVisible:(BOOL)visible source:(NSString *)source;
 - (void)noteLockScreenVisible:(BOOL)visible;
 - (void)noteLockScreenVisible:(BOOL)visible source:(NSString *)source;
 - (void)noteScreenBlanked:(BOOL)blanked;

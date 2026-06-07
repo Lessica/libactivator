@@ -16,6 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)startIPCServerIfNeeded;
 - (void)la_noteHomeScreenVisible:(BOOL)visible;
 - (void)la_noteHomeScreenVisible:(BOOL)visible source:(NSString *)source;
+- (void)la_noteSpringBoardInterfaceVisible:(BOOL)visible source:(NSString *)source;
 - (void)la_noteLockScreenVisible:(BOOL)visible;
 - (void)la_noteLockScreenVisible:(BOOL)visible source:(NSString *)source;
 - (void)la_noteScreenBlanked:(BOOL)blanked;

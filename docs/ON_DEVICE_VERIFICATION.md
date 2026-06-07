@@ -50,8 +50,13 @@ passes on device.
   Crash reports are used for stack diagnosis after a restart is detected.
 - Run UIKit, SpringBoard, and FrontBoard private API probes on the SpringBoard
   main queue.
-- Frida `-q` suppresses Frida noise. Do not treat missing script output alone
-  as proof that an SPI is unavailable or that a call did not execute.
+- Do not use Frida `-q` for interactive or long-running verification. In the
+  installed Frida CLI, `-q` means quiet mode with no prompt and exits after
+  `-l` or `-e`, so scripts that need to observe callbacks must be run without
+  `-q`.
+- Avoid registering long-lived Frida-created Objective-C objects into
+  SpringBoard registries. Prefer temporary method hooks for observation, or
+  explicitly unregister before ending the Frida session.
 
 ## State/Config IPC
 

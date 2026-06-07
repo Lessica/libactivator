@@ -18,12 +18,14 @@ CHDeclareClass(SpringBoard);
 CHDeclareClass(UIViewController);
 CHDeclareClass(SBBacklightController);
 CHDeclareClass(SBCoverSheetPrimarySlidingViewController);
+CHDeclareClass(SBMainSwitcherViewController);
 CHDeclareClass(SBHIconManager);
 CHDeclareClass(_UISystemGestureWindow);
 
 static NSString *const LATRuntimeStateSourceCoverSheetTransition = @"cover-sheet-transition";
 static NSString *const LATRuntimeStateSourceIconManagerRootFolder = @"icon-manager-root-folder";
-static LAActivator *LATActivator;
+static NSString *const LATRuntimeStateSourceMainSwitcher = @"main-switcher";
+
 static Class LATCoverSheetViewControllerClass;
 static Class LATPosterSwitcherViewControllerClass;
 static Class LATDashboardCameraPageViewControllerClass;
@@ -40,10 +42,24 @@ static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
          [viewController isKindOfClass:LATInCallTransientOverlayViewControllerClass]) ||
         (LATLockScreenEmergencyCallViewControllerClass &&
          [viewController isKindOfClass:LATLockScreenEmergencyCallViewControllerClass])) {
-        [LATActivator la_noteLockScreenVisible:visible source:NSStringFromClass([viewController class])];
+        [LASharedActivator la_noteLockScreenVisible:visible source:NSStringFromClass([viewController class])];
     } else if (LATIconControllerClass && [viewController isKindOfClass:LATIconControllerClass]) {
-        [LATActivator la_noteHomeScreenVisible:visible source:NSStringFromClass([viewController class])];
+        [LASharedActivator la_noteHomeScreenVisible:visible source:NSStringFromClass([viewController class])];
     }
+}
+
+@interface SBMainSwitcherViewController : UIViewController
+- (BOOL)isMainSwitcherVisible;
+@end
+
+static void LATUpdateMainSwitcherVisibility(SBMainSwitcherViewController *switcher) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (![switcher respondsToSelector:@selector(isMainSwitcherVisible)]) {
+            return;
+        }
+        [LASharedActivator la_noteSpringBoardInterfaceVisible:[switcher isMainSwitcherVisible]
+                                                       source:LATRuntimeStateSourceMainSwitcher];
+    });
 }
 
 #pragma mark - UIViewController
@@ -51,11 +67,6 @@ static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
 CHOptimizedMethod1(self, void, UIViewController, viewWillAppear, BOOL, animated) {
     CHSuper1(UIViewController, viewWillAppear, animated);
     LATNoteViewControllerVisibility(self, YES);
-}
-
-CHOptimizedMethod1(self, void, UIViewController, viewWillDisappear, BOOL, animated) {
-    CHSuper1(UIViewController, viewWillDisappear, animated);
-    LATNoteViewControllerVisibility(self, NO);
 }
 
 CHOptimizedMethod1(self, void, UIViewController, viewDidDisappear, BOOL, animated) {
@@ -67,62 +78,68 @@ CHOptimizedMethod1(self, void, UIViewController, viewDidDisappear, BOOL, animate
 
 CHOptimizedMethod1(self, void, SBBacklightController, turnOnScreenFullyWithBacklightSource, long long, source) {
     CHSuper1(SBBacklightController, turnOnScreenFullyWithBacklightSource, source);
-    [LATActivator la_noteScreenBlanked:NO];
-    [LATActivator la_noteRuntimeStateMayHaveChanged];
+    [LASharedActivator la_noteScreenBlanked:NO];
+    [LASharedActivator la_noteRuntimeStateMayHaveChanged];
 }
 
 CHOptimizedMethod2(self, void, SBBacklightController, _notifyObserversDidAnimateToFactor, float, factor, source,
                    long long, backlightSource) {
     CHSuper2(SBBacklightController, _notifyObserversDidAnimateToFactor, factor, source, backlightSource);
-    [LATActivator la_noteScreenBlanked:factor <= 1e-3];
+    [LASharedActivator la_noteScreenBlanked:factor <= 1e-3];
 }
 
 #pragma mark - SBCoverSheetPrimarySlidingViewController
 
 CHOptimizedMethod1(self, void, SBCoverSheetPrimarySlidingViewController, _beginTransitionFromAppeared, BOOL, appeared) {
     CHSuper1(SBCoverSheetPrimarySlidingViewController, _beginTransitionFromAppeared, appeared);
-    [LATActivator la_noteLockScreenVisible:YES source:LATRuntimeStateSourceCoverSheetTransition];
+    [LASharedActivator la_noteLockScreenVisible:YES source:LATRuntimeStateSourceCoverSheetTransition];
 }
 
 CHOptimizedMethod1(self, void, SBCoverSheetPrimarySlidingViewController, _endTransitionToAppeared, BOOL, appeared) {
     CHSuper1(SBCoverSheetPrimarySlidingViewController, _endTransitionToAppeared, appeared);
-    [LATActivator la_noteLockScreenVisible:NO source:LATRuntimeStateSourceCoverSheetTransition];
+    [LASharedActivator la_noteLockScreenVisible:NO source:LATRuntimeStateSourceCoverSheetTransition];
+}
+
+#pragma mark - SBMainSwitcherViewController
+
+CHOptimizedMethod2(self, void, SBMainSwitcherViewController, layoutStateTransitionCoordinator, id, coordinator,
+                   transitionDidBeginWithTransitionContext, id, context) {
+    CHSuper2(SBMainSwitcherViewController, layoutStateTransitionCoordinator, coordinator,
+             transitionDidBeginWithTransitionContext, context);
+    LATUpdateMainSwitcherVisibility(self);
+}
+
+CHOptimizedMethod2(self, void, SBMainSwitcherViewController, layoutStateTransitionCoordinator, id, coordinator,
+                   transitionDidEndWithTransitionContext, id, context) {
+    CHSuper2(SBMainSwitcherViewController, layoutStateTransitionCoordinator, coordinator,
+             transitionDidEndWithTransitionContext, context);
+    LATUpdateMainSwitcherVisibility(self);
 }
 
 #pragma mark - SBHIconManager
 
-CHOptimizedMethod0(self, void, SBHIconManager, rootFolderControllerViewWillAppear) {
-    CHSuper0(SBHIconManager, rootFolderControllerViewWillAppear);
-    [LATActivator la_noteHomeScreenVisible:YES source:LATRuntimeStateSourceIconManagerRootFolder];
-}
-
 CHOptimizedMethod1(self, void, SBHIconManager, rootFolderControllerViewWillAppear, id, controller) {
     CHSuper1(SBHIconManager, rootFolderControllerViewWillAppear, controller);
-    [LATActivator la_noteHomeScreenVisible:YES source:LATRuntimeStateSourceIconManagerRootFolder];
-}
-
-CHOptimizedMethod0(self, void, SBHIconManager, rootFolderControllerViewDidDisappear) {
-    CHSuper0(SBHIconManager, rootFolderControllerViewDidDisappear);
-    [LATActivator la_noteHomeScreenVisible:NO source:LATRuntimeStateSourceIconManagerRootFolder];
+    [LASharedActivator la_noteHomeScreenVisible:YES source:LATRuntimeStateSourceIconManagerRootFolder];
 }
 
 CHOptimizedMethod1(self, void, SBHIconManager, rootFolderControllerViewDidDisappear, id, controller) {
     CHSuper1(SBHIconManager, rootFolderControllerViewDidDisappear, controller);
-    [LATActivator la_noteHomeScreenVisible:NO source:LATRuntimeStateSourceIconManagerRootFolder];
+    [LASharedActivator la_noteHomeScreenVisible:NO source:LATRuntimeStateSourceIconManagerRootFolder];
 }
 
 #pragma mark - _UISystemGestureWindow
 
 CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, event) {
     CHSuper1(_UISystemGestureWindow, sendEvent, event);
-    [LATActivator la_noteSystemTouchEvent:event];
+    [LASharedActivator la_noteSystemTouchEvent:event];
 }
 
 #pragma mark - SpringBoard
 
 CHOptimizedMethod1(self, void, SpringBoard, applicationDidFinishLaunching, id, application) {
     CHSuper1(SpringBoard, applicationDidFinishLaunching, application);
-    [LATActivator la_noteRuntimeStateMayHaveChanged];
+    [LASharedActivator la_noteRuntimeStateMayHaveChanged];
 }
 
 #pragma mark - Darwin Notifications
@@ -132,13 +149,13 @@ static void LATRegisterDarwinNotifications(void) {
     static int blankedScreenToken = 0;
     notify_register_dispatch("com.apple.springboard.lockstate", &lockStateToken, dispatch_get_main_queue(),
                              ^(int token) {
-                                 [LATActivator la_noteRuntimeStateMayHaveChanged];
+                                 [LASharedActivator la_noteRuntimeStateMayHaveChanged];
                              });
     notify_register_dispatch("com.apple.springboard.hasBlankedScreen", &blankedScreenToken, dispatch_get_main_queue(),
                              ^(int token) {
                                  uint64_t state = 0;
                                  notify_get_state(token, &state);
-                                 [LATActivator la_noteScreenBlanked:state != 0];
+                                 [LASharedActivator la_noteScreenBlanked:state != 0];
                              });
 }
 
@@ -159,6 +176,7 @@ static void LATLoadSpringBoardClasses(void) {
     CHLoadClass_(&SBBacklightController$, NSClassFromString(@"SBBacklightController"));
     CHLoadClass_(&SBCoverSheetPrimarySlidingViewController$,
                  NSClassFromString(@"SBCoverSheetPrimarySlidingViewController"));
+    CHLoadClass_(&SBMainSwitcherViewController$, NSClassFromString(@"SBMainSwitcherViewController"));
     CHLoadClass_(&SBHIconManager$, NSClassFromString(@"SBHIconManager"));
     CHLoadClass_(&_UISystemGestureWindow$, NSClassFromString(@"_UISystemGestureWindow"));
 }
@@ -170,16 +188,18 @@ static void LATInstallHooks(void) {
         LATLoadSpringBoardClasses();
 
         CHHook1(UIViewController, viewWillAppear);
-        CHHook1(UIViewController, viewWillDisappear);
         CHHook1(UIViewController, viewDidDisappear);
         CHHook1(SBBacklightController, turnOnScreenFullyWithBacklightSource);
         CHHook2(SBBacklightController, _notifyObserversDidAnimateToFactor, source);
         CHHook1(SBCoverSheetPrimarySlidingViewController, _beginTransitionFromAppeared);
         CHHook1(SBCoverSheetPrimarySlidingViewController, _endTransitionToAppeared);
-        CHHook0(SBHIconManager, rootFolderControllerViewWillAppear);
-        CHHook1(SBHIconManager, rootFolderControllerViewWillAppear);
-        CHHook0(SBHIconManager, rootFolderControllerViewDidDisappear);
-        CHHook1(SBHIconManager, rootFolderControllerViewDidDisappear);
+        CHHook2(SBMainSwitcherViewController, layoutStateTransitionCoordinator,
+                transitionDidBeginWithTransitionContext);
+        CHHook2(SBMainSwitcherViewController, layoutStateTransitionCoordinator, transitionDidEndWithTransitionContext);
+        if (@available(iOS 17, *)) {
+            CHHook1(SBHIconManager, rootFolderControllerViewWillAppear);
+            CHHook1(SBHIconManager, rootFolderControllerViewDidDisappear);
+        }
         CHHook1(_UISystemGestureWindow, sendEvent);
         CHHook1(SpringBoard, applicationDidFinishLaunching);
 
@@ -188,7 +208,6 @@ static void LATInstallHooks(void) {
 }
 
 __attribute__((constructor)) static void LATweakInitialize(void) {
-    LATActivator = [LAActivator sharedInstance];
-    [LATActivator startIPCServerIfNeeded];
+    [[LAActivator sharedInstance] startIPCServerIfNeeded];
     LATInstallHooks();
 }
