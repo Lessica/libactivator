@@ -1,8 +1,6 @@
 # Capability Gaps
 
-This table tracks runtime capabilities that are not implemented yet, including
-whether a modern iOS reference exists. Do not fill missing behavior by guessing
-SPI behavior.
+This table tracks runtime capabilities that are not implemented yet, including whether a modern iOS reference exists. Do not fill missing behavior by guessing SPI behavior.
 
 | Capability | Current placeholder | Research status | Required follow-up |
 | --- | --- | --- | --- |

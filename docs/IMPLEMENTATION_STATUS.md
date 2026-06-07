@@ -1,22 +1,17 @@
 # Implementation Status
 
-This document is the active implementation tracker for the rewrite. Update it
-whenever an implementation slice starts, is verified, is blocked, or is
-completed.
+This document is the active implementation tracker for the rewrite. Update it whenever an implementation slice starts, is verified, is blocked, or is completed.
 
 ## Progress States
 
 - `Not started`: documented only.
 - `In progress`: implementation exists but is incomplete or not verified.
-- `Done`: implemented for the slice's stated acceptance criteria and covered by
-  compile/link or package verification. It does not imply that every runtime
-  behavior behind the same public selector family is complete.
+- `Done`: implemented for the slice's stated acceptance criteria and covered by compile/link or package verification. It does not imply that every runtime behavior behind the same public selector family is complete.
 - `Blocked`: needs a project-owner decision or unavailable runtime knowledge.
 
 ## Current `LAActivator` Runtime Gaps
 
-These gaps are intentionally tracked separately from ABI/source compatibility.
-They must not be mistaken for completed runtime behavior.
+These gaps are intentionally tracked separately from ABI/source compatibility. They must not be mistaken for completed runtime behavior.
 
 | Area | Current state | Required follow-up |
 | --- | --- | --- |

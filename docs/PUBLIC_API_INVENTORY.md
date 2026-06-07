@@ -1,38 +1,28 @@
 # Public API Inventory
 
-This inventory records the public API surface inherited from Activator 1.9 and
-the compatibility import paths introduced by the rewrite foundation. It is not
-an implementation plan; it is the compatibility checklist for the next public
-API skeleton work.
+This inventory records the public API surface inherited from Activator 1.9 and the compatibility import paths introduced by the rewrite foundation. It is not an implementation plan; it is the compatibility checklist for the next public API skeleton work.
 
 ## Baseline
 
 - Authoritative legacy API source: `references/headers`.
-- Current public header source: `include/Activator` and
-  `include/ActivatorSettings`.
+- Current public header source: `include/Activator` and `include/ActivatorSettings`.
 - Current compatibility entry points:
   - `#import <libactivator.h>`
   - `#import <Activator/Activator.h>`
   - `@import Activator`
 - Current header delta from `references/headers`:
   - `include/Activator/Activator.h` is a new framework umbrella header.
-  - `layout/usr/include/libactivator.h` is the flat compatibility umbrella and
-    imports `<Activator/Activator.h>`.
-  - The copied 1.9 headers are otherwise API-equivalent, apart from removal of
-    a trailing blank line.
+  - `layout/usr/include/libactivator.h` is the flat compatibility umbrella and imports `<Activator/Activator.h>`.
+  - The copied 1.9 headers are otherwise API-equivalent, apart from removal of a trailing blank line.
 
 ## Implementation Status Legend
 
 - `Must implement`: required for source or binary compatibility.
-- `Safe stub first`: may initially return conservative empty/default values,
-  but must have stable symbols and non-crashing behavior.
-- `Runtime-backed`: requires IPC, SpringBoard state, private adapters, or
-  device-only behavior before becoming meaningful.
+- `Safe stub first`: may initially return conservative empty/default values, but must have stable symbols and non-crashing behavior.
+- `Runtime-backed`: requires IPC, SpringBoard state, private adapters, or device-only behavior before becoming meaningful.
 - `Settings-backed`: belongs to the settings UI library and host loading work.
-- `Capability gated`: must be evaluated on modern iOS before registration or
-  behavior is enabled.
-- `Decision needed`: requires project-owner decision before changing the public
-  surface or legacy behavior.
+- `Capability gated`: must be evaluated on modern iOS before registration or behavior is enabled.
+- `Decision needed`: requires project-owner decision before changing the public surface or legacy behavior.
 
 ## Headers
 
@@ -173,8 +163,7 @@ API skeleton work.
 
 ### LAListener
 
-The listener protocol has only optional methods. The implementation must check
-`respondsToSelector:` before calling any listener callback.
+The listener protocol has only optional methods. The implementation must check `respondsToSelector:` before calling any listener callback.
 
 | Group | Methods | Status |
 | --- | --- | --- |
@@ -213,10 +202,7 @@ The listener protocol has only optional methods. The implementation must check
 
 ### Version Constants
 
-`LAActivatorVersion` preserves legacy version values from 1.3 through 1.9.0.
-Add `LAActivatorVersion_2_0 = 2000000`, and make `-[LAActivator version]`
-return it for the 2.0 rewrite while preserving older enum values as ABI/source
-constants.
+`LAActivatorVersion` preserves legacy version values from 1.3 through 1.9.0. Add `LAActivatorVersion_2_0 = 2000000`, and make `-[LAActivator version]` return it for the 2.0 rewrite while preserving older enum values as ABI/source constants.
 
 ### Event Mode Constants
 
@@ -224,8 +210,7 @@ constants.
 - `LAEventModeApplication`
 - `LAEventModeLockScreen`
 
-These constants are core compatibility symbols. Mode detection is
-runtime-backed, but the strings must exist in the public dylib immediately.
+These constants are core compatibility symbols. Mode detection is runtime-backed, but the strings must exist in the public dylib immediately.
 
 ### Notifications
 
@@ -233,14 +218,11 @@ runtime-backed, but the strings must exist in the public dylib immediately.
 - `LAActivatorAvailableEventsChangedNotification`
 - `LAActivatorAssignmentsChangedNotification`
 
-Notifications are public process-local names. Cross-process state propagation
-belongs to IPC, then each process can repost local notifications.
+Notifications are public process-local names. Cross-process state propagation belongs to IPC, then each process can repost local notifications.
 
 ### Built-In Event Name Constants
 
-The public API exposes legacy event names even when the corresponding modern
-iOS acquisition is not implemented yet. Constants must exist; registration and
-actual delivery are capability gated.
+The public API exposes legacy event names even when the corresponding modern iOS acquisition is not implemented yet. Constants must exist; registration and actual delivery are capability gated.
 
 | Event family | Constants |
 | --- | --- |
@@ -264,9 +246,7 @@ actual delivery are capability gated.
 | Network | `LAEventNameNetworkJoinedWiFi`, `LAEventNameNetworkLeftWiFi` |
 | Fingerprint sensor | `LAEventNameFingerprintSensorPressSingle` |
 
-`LAEventNameSlideInFromTop` is a macro alias for
-`LAEventNameStatusBarSwipeDown`, so there is no separate exported symbol for
-that alias.
+`LAEventNameSlideInFromTop` is a macro alias for `LAEventNameStatusBarSwipeDown`, so there is no separate exported symbol for that alias.
 
 ### Event User Info Constants
 
@@ -276,35 +256,18 @@ that alias.
 
 ## Compatibility Issues To Resolve Before Implementation
 
-1. `LAActivator.h` currently imports `<libkern/OSAtomic.h>`, but the public API
-   surface does not expose OSAtomic types. Remove this obsolete import from the
-   rewritten public header.
-2. `LASettingsViewController.h` is part of the Activator public header set, and
-   some third-party jailbreak apps dynamically link `libactivator.dylib` to
-   present Settings UI. `libactivator` must therefore keep compatibility shims
-   for the public settings classes, while real Settings UI implementation lives
-   in `libactivatorsettings.dylib`.
-3. `LAEvent` declares `NSCoding`, not `NSSecureCoding`. Implement `NSCoding`
-   for compatibility; additive secure coding support needs separate approval.
-4. `LA_SETTINGS_CONTROLLER(superclass)` encodes old settings host flexibility.
-   Keep the macro for source compatibility, but do not let it drive the modern
-   host architecture without an explicit need.
-5. Legacy built-in event constants do not imply immediate event registration.
-   Each event family still needs a modern iOS capability assessment before it
-   becomes available in `availableEventNames`.
+1. `LAActivator.h` currently imports `<libkern/OSAtomic.h>`, but the public API surface does not expose OSAtomic types. Remove this obsolete import from the rewritten public header.
+2. `LASettingsViewController.h` is part of the Activator public header set, and some third-party jailbreak apps dynamically link `libactivator.dylib` to present Settings UI. `libactivator` must therefore keep compatibility shims for the public settings classes, while real Settings UI implementation lives in `libactivatorsettings.dylib`.
+3. `LAEvent` declares `NSCoding`, not `NSSecureCoding`. Implement `NSCoding` for compatibility; additive secure coding support needs separate approval.
+4. `LA_SETTINGS_CONTROLLER(superclass)` encodes old settings host flexibility. Keep the macro for source compatibility, but do not let it drive the modern host architecture without an explicit need.
+5. Legacy built-in event constants do not imply immediate event registration. Each event family still needs a modern iOS capability assessment before it becomes available in `availableEventNames`.
 
 ## Recommended Next Implementation Slice
 
 1. Define all public constants and `LASharedActivator` in `libactivator`.
-2. Add `LAActivatorVersion_2_0 = 2000000` and remove the obsolete
-   `<libkern/OSAtomic.h>` import.
-3. Implement `LAEvent` with immutable `name`/`mode`, `handled`, `userInfo`, and
-   `NSCoding`.
-4. Implement `LAActivator` singleton with safe empty registries and no-crash
-   behavior for all public selectors.
-5. Add compatibility shims in `libactivator` for public settings classes, with
-   real Settings UI behavior delegated to `libactivatorsettings.dylib`.
-6. Add compile/link checks that reference every exported constant, instantiate
-   `LAEvent`, call representative `LAActivator` selectors, and import through
-   all supported entry points.
+2. Add `LAActivatorVersion_2_0 = 2000000` and remove the obsolete `<libkern/OSAtomic.h>` import.
+3. Implement `LAEvent` with immutable `name`/`mode`, `handled`, `userInfo`, and `NSCoding`.
+4. Implement `LAActivator` singleton with safe empty registries and no-crash behavior for all public selectors.
+5. Add compatibility shims in `libactivator` for public settings classes, with real Settings UI behavior delegated to `libactivatorsettings.dylib`.
+6. Add compile/link checks that reference every exported constant, instantiate `LAEvent`, call representative `LAActivator` selectors, and import through all supported entry points.
 7. Document every safe stub behavior before adding IPC or SpringBoard runtime.

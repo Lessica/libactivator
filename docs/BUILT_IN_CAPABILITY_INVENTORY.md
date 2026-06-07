@@ -1,23 +1,14 @@
 # Built-In Capability Inventory
 
-This document records the legacy `master` built-in capabilities as factual
-inventory. It is not an implementation plan and does not mark any built-in
-event, listener, or action as implemented in the rewrite.
+This document records the legacy `master` built-in capabilities as factual inventory. It is not an implementation plan and does not mark any built-in event, listener, or action as implemented in the rewrite.
 
 ## Evidence Summary
 
-- Event metadata resources: 61 `Info.plist` bundles under
-  `references/master/layout/Library/Activator/Events`.
-- Static listener/action metadata resources: 59 `Info.plist` bundles under
-  `references/master/layout/Library/Activator/Listeners`.
-- Staged listener/action metadata resources: 58 `Info.plist` bundles. The
-  legacy `libactivator.twitter.compose-tweet` resource is intentionally
-  excluded because the modern project will not implement that Twitter-specific
-  action.
-- Static listener/action registration: 59 `registerListener:` calls in
-  `references/master/LASimpleListener.x`.
-- Event metadata registration: `references/master/LADefaultEventDataSource.m`
-  scans `/Library/Activator/Events` and registers each bundle name.
+- Event metadata resources: 61 `Info.plist` bundles under `references/master/layout/Library/Activator/Events`.
+- Static listener/action metadata resources: 59 `Info.plist` bundles under `references/master/layout/Library/Activator/Listeners`.
+- Staged listener/action metadata resources: 58 `Info.plist` bundles. The legacy `libactivator.twitter.compose-tweet` resource is intentionally excluded because the modern project will not implement that Twitter-specific action.
+- Static listener/action registration: 59 `registerListener:` calls in `references/master/LASimpleListener.x`.
+- Event metadata registration: `references/master/LADefaultEventDataSource.m` scans `/Library/Activator/Events` and registers each bundle name.
 - Dynamic listener registration:
   - Applications: `references/master/LAApplicationListener.x`.
   - Menus: `references/master/LAMenuListener.m`.
@@ -26,23 +17,16 @@ event, listener, or action as implemented in the rewrite.
 Modern status values:
 
 - `resource-only`: metadata can be staged without implementing runtime behavior.
-- `implementable`: behavior appears feasible without an owner-supplied SPI
-  decision, but still needs implementation and validation.
-- `needs-owner-reference`: modern SPI or behavior is unclear; ask the project
-  owner before implementation.
-- `obsolete`: legacy capability has no direct modern equivalent or depends on
-  removed frameworks.
+- `implementable`: behavior appears feasible without an owner-supplied SPI decision, but still needs implementation and validation.
+- `needs-owner-reference`: modern SPI or behavior is unclear; ask the project owner before implementation.
+- `obsolete`: legacy capability has no direct modern equivalent or depends on removed frameworks.
 - `defer-to-settings-ui`: inventory belongs to Settings UI rather than runtime.
 
-When a row lists multiple legacy names, every field in that row applies to each
-listed name.
+When a row lists multiple legacy names, every field in that row applies to each listed name.
 
 ## Built-In Event Sources
 
-Every event below has a resource path of
-`references/master/layout/Library/Activator/Events/<legacy name>/Info.plist`.
-The resource itself is `resource-only`; acquisition status is tracked by the
-runtime dependency column.
+Every event below has a resource path of `references/master/layout/Library/Activator/Events/<legacy name>/Info.plist`. The resource itself is `resource-only`; acquisition status is tracked by the runtime dependency column.
 
 | Legacy names | Group | Modes / flags | Legacy source | Runtime dependency or SPI family | Modern status | First validation |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -60,10 +44,7 @@ runtime dependency column.
 
 ## Built-In Listeners And Actions
 
-Every static listener/action below has a resource path of
-`references/master/layout/Library/Activator/Listeners/<legacy name>/Info.plist`.
-The legacy selector or URL is read from that resource and dispatched by
-`LASimpleListener.x`.
+Every static listener/action below has a resource path of `references/master/layout/Library/Activator/Listeners/<legacy name>/Info.plist`. The legacy selector or URL is read from that resource and dispatched by `LASimpleListener.x`.
 
 | Legacy names | Group | Selector / behavior source | Modes / special metadata | Runtime dependency or SPI family | Modern status | First validation |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -90,33 +71,15 @@ The legacy selector or URL is read from that resource and dispatched by
 
 ## Resource Metadata Semantics
 
-- Event metadata keys observed in legacy resources: `title`, `description`,
-  `group`, `compatible-modes`, and `hidden`.
-- Listener metadata keys observed in legacy resources: `title`, `description`,
-  `group`, `selector`, `url`, `compatible-modes`, `incompatible-events`, and
-  `requires-no-touch-events`.
-- Legacy event metadata was loaded by `LADefaultEventDataSource` from
-  `/Library/Activator/Events/<event name>/Info.plist` after an optional
-  `CoreFoundationVersion` gate.
-- Legacy listener metadata was loaded from
-  `/Library/Activator/Listeners/<listener name>/Info.plist` or from
-  `Listeners/bundled.plist`.
-- Legacy localization was staged by the old Localization makefiles to
-  `/Library/Activator`, and `symlink_localizations.sh` linked those `.lproj`
-  directories into `Activator.app`. Runtime localization then used the
-  Activator support bundle first, followed by event/listener bundles.
-- The modern resource catalog stages `en.lproj/Localizable.strings` and
-  `zh-Hans.lproj/Localizable.strings` under `/Library/Activator`. Keys are
-  derived from staged metadata using the existing `EVENT_*`, `LISTENER_*`, and
-  `MODE_*` lookup scheme.
-- The checked-in legacy `layout/Library/Activator` resources contain metadata
-  plists only; app icons and launch images live under `Applications/Activator.app`.
-- Modern implementation should stage metadata through the existing
-  rootful/rootless/roothide layout rules and use `jbroot(...)` at runtime.
+- Event metadata keys observed in legacy resources: `title`, `description`, `group`, `compatible-modes`, and `hidden`.
+- Listener metadata keys observed in legacy resources: `title`, `description`, `group`, `selector`, `url`, `compatible-modes`, `incompatible-events`, and `requires-no-touch-events`.
+- Legacy event metadata was loaded by `LADefaultEventDataSource` from `/Library/Activator/Events/<event name>/Info.plist` after an optional `CoreFoundationVersion` gate.
+- Legacy listener metadata was loaded from `/Library/Activator/Listeners/<listener name>/Info.plist` or from `Listeners/bundled.plist`.
+- Legacy localization was staged by the old Localization makefiles to `/Library/Activator`, and `symlink_localizations.sh` linked those `.lproj` directories into `Activator.app`. Runtime localization then used the Activator support bundle first, followed by event/listener bundles.
+- The modern resource catalog stages `en.lproj/Localizable.strings` and `zh-Hans.lproj/Localizable.strings` under `/Library/Activator`. Keys are derived from staged metadata using the existing `EVENT_*`, `LISTENER_*`, and `MODE_*` lookup scheme.
+- The checked-in legacy `layout/Library/Activator` resources contain metadata plists only; app icons and launch images live under `Applications/Activator.app`.
+- Modern implementation should stage metadata through the existing rootful/rootless/roothide layout rules and use `jbroot(...)` at runtime.
 
 ## Settings UI Boundary
 
-Legacy Settings controllers in `references/master/*SettingsController*`,
-`Preferences.m`, `Activator.m`, and `LASettingsViewControllers.m` are not part
-of this built-in runtime inventory. They remain in the Settings UI direction and
-should be implemented through `libactivatorsettings.dylib`.
+Legacy Settings controllers in `references/master/*SettingsController*`, `Preferences.m`, `Activator.m`, and `LASettingsViewControllers.m` are not part of this built-in runtime inventory. They remain in the Settings UI direction and should be implemented through `libactivatorsettings.dylib`.
