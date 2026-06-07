@@ -6,6 +6,8 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME := ActivatorTweak
 
 ActivatorTweak_FILES += ActivatorTweak.m
+ActivatorTweak_FILES += LATBuiltInListenerRegistry.m
+ActivatorTweak_FILES += LATNothingListener.m
 
 ActivatorTweak_CFLAGS += -fobjc-arc
 ActivatorTweak_CFLAGS += -I../../include

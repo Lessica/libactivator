@@ -8,6 +8,7 @@
 
 #define CHUseSubstrate
 
+#import "LATBuiltInListenerRegistry.h"
 #import "LAActivatorPrivate.h"
 
 #import <CaptainHook/CaptainHook.h>
@@ -209,5 +210,6 @@ static void LATInstallHooks(void) {
 
 __attribute__((constructor)) static void LATweakInitialize(void) {
     [[LAActivator sharedInstance] startIPCServerIfNeeded];
+    [LATBuiltInListenerRegistry registerBuiltInListenersWithActivator:[LAActivator sharedInstance]];
     LATInstallHooks();
 }

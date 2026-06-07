@@ -1,1 +1,0 @@
-../libactivator/LAActivatorIPC.m

@@ -93,6 +93,8 @@ NSString *const LAActivatorIPCMessageTesting = @"libactivator.testing";
 NSString *const LAActivatorIPCTestingCommandPing = @"ping";
 NSString *const LAActivatorIPCTestingCommandCleanup = @"cleanup";
 NSString *const LAActivatorIPCTestingCommandRun = @"run";
+NSString *const LAActivatorIPCTestingCommandRunRuntimeInput = @"run-runtime-input";
+NSString *const LAActivatorIPCTestingCommandRunDeviceRuntime = @"run-device-runtime";
 NSString *const LAActivatorIPCTestingCommandRuntimeState = @"runtime-state";
 #endif
 

@@ -85,6 +85,8 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCMessageTesting;
 LA_IPC_EXTERN NSString *const LAActivatorIPCTestingCommandPing;
 LA_IPC_EXTERN NSString *const LAActivatorIPCTestingCommandCleanup;
 LA_IPC_EXTERN NSString *const LAActivatorIPCTestingCommandRun;
+LA_IPC_EXTERN NSString *const LAActivatorIPCTestingCommandRunRuntimeInput;
+LA_IPC_EXTERN NSString *const LAActivatorIPCTestingCommandRunDeviceRuntime;
 LA_IPC_EXTERN NSString *const LAActivatorIPCTestingCommandRuntimeState;
 #endif
 

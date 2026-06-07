@@ -26,7 +26,7 @@ gmake clean do LA_TESTING=1
 springboard_pid_before="$(wait_for_springboard_pid)"
 echo "[tests] SpringBoard pid before runner: ${springboard_pid_before}"
 
-echo "[tests] Running ${LA_TEST_RUNNER_PATH:-/usr/libexec/libactivator/libactivator-tests} on ${THEOS_DEVICE_IP}"
+echo "[tests] Running stable tests with ${LA_TEST_RUNNER_PATH:-/usr/libexec/libactivator/libactivator-tests} on ${THEOS_DEVICE_IP}"
 set +e
 ssh -p "${THEOS_DEVICE_PORT:-22}" "${THEOS_DEVICE_USER:-root}@${THEOS_DEVICE_IP}" \
     "${LA_TEST_RUNNER_PATH:-/usr/libexec/libactivator/libactivator-tests}"

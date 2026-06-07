@@ -67,7 +67,7 @@ The legacy selector or URL is read from that resource and dispatched by
 
 | Legacy names | Group | Selector / behavior source | Modes / special metadata | Runtime dependency or SPI family | Modern status | First validation |
 | --- | --- | --- | --- | --- | --- | --- |
-| `libactivator.system.nothing` | System Actions | `doNothing` | all modes; incompatible with lock/menu press events | none | `implementable` | Automated dispatch test. |
+| `libactivator.system.nothing` | System Actions | `doNothing` | all modes; incompatible with lock/menu press events | none | `implemented` | SpringBoard testing IPC dispatch test. |
 | `libactivator.system.homebutton`, `libactivator.system.sleepbutton` | System Actions | `homeButton`, `sleepButton` | all modes; home requires no-touch; both have incompatible hardware-button events | HID event generation or SpringBoard button simulation. | `needs-owner-reference` | Owner-assisted SPI probe, then roothide manual checklist. |
 | `libactivator.system.respring`, `libactivator.system.reboot`, `libactivator.system.powerdown` | System Actions | `respring`, `reboot`, `powerDown` | all modes | SpringBoard lifecycle / power SPI. | `needs-owner-reference` | Roothide manual checklist. |
 | `libactivator.system.safemode` | System Actions | `safeMode` resource selector, but the legacy method body is commented out in `LASimpleListener.x`. | all modes | Loader/safe-mode behavior decision. | `needs-owner-reference` | Owner decision before implementation. |

@@ -10,14 +10,15 @@ SUBPROJECTS += subprojects/tweak
 SUBPROJECTS += subprojects/preferences
 SUBPROJECTS += subprojects/app
 
-ifeq ($(LA_TESTING),1)
-SUBPROJECTS += subprojects/tests
-endif
-
 include $(THEOS_MAKE_PATH)/aggregate.mk
 
 export THEOS_STAGING_DIR
 internal-stage::
 	$(ECHO_NOTHING)scripts/stage-public-headers.sh$(ECHO_END)
+
+ifeq ($(LA_TESTING),1)
+after-stage::
+	$(ECHO_NOTHING)$(MAKE) -C subprojects/tests all stage LA_TESTING=1$(ECHO_END)
+endif
 
 include $(THEOS_MAKE_PATH)/package.mk

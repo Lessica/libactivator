@@ -283,14 +283,18 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (NSDictionary *)okReplyWithValue:(id)value;
 + (NSDictionary *)failureReply;
 + (void)removeTestPlist;
-+ (NSDictionary *)runAllTestsWithActivator:(LAActivator *)activator;
++ (NSDictionary *)runStableTestsWithActivator:(LAActivator *)activator;
++ (NSDictionary *)runRuntimeInputTestsWithActivator:(LAActivator *)activator;
++ (NSDictionary *)runDeviceRuntimeTestsWithActivator:(LAActivator *)activator;
 + (void)runEventTestsWithRecorder:(LATestRecorder *)recorder;
 + (void)runPersistenceTestsWithRecorder:(LATestRecorder *)recorder;
 + (void)runSpringBoardCoreTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runDispatchTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
-+ (void)runRuntimeStateTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
++ (void)runBuiltInActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
++ (void)runRuntimeInputTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runRuntimeDeviceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)cleanActivator:(LAActivator *)activator;
++ (void)cleanRuntimeInputStateWithActivator:(LAActivator *)activator;
 + (void)sendSyntheticTouchWithTouching:(BOOL)touching;
 + (void)waitForSyntheticTouchDelivery;
 + (BOOL)resetHomeScreen;
@@ -300,8 +304,10 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (BOOL)unlockDeviceWithPasscode:(NSString *)passcode;
 + (BOOL)isDeviceLocked;
 + (NSString *)frontMostDisplayIdentifier;
++ (BOOL)waitForFrontMostApplicationWithBundleIdentifier:(NSString *)bundleIdentifier timeout:(NSTimeInterval)timeout;
 + (NSString *)runtimeDebugReasonWithPrefix:(NSString *)prefix activator:(LAActivator *)activator;
 + (void)performOnMainThreadSynchronously:(dispatch_block_t)block;
++ (void)waitAllowingMainRunLoopForTimeInterval:(NSTimeInterval)timeInterval;
 + (void)waitForMainQueue;
 @end
 
@@ -320,7 +326,13 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         return [self okReplyWithValue:@"clean"];
     }
     if ([command isEqualToString:LAActivatorIPCTestingCommandRun]) {
-        return [self okReplyWithValue:[self runAllTestsWithActivator:activator]];
+        return [self okReplyWithValue:[self runStableTestsWithActivator:activator]];
+    }
+    if ([command isEqualToString:LAActivatorIPCTestingCommandRunRuntimeInput]) {
+        return [self okReplyWithValue:[self runRuntimeInputTestsWithActivator:activator]];
+    }
+    if ([command isEqualToString:LAActivatorIPCTestingCommandRunDeviceRuntime]) {
+        return [self okReplyWithValue:[self runDeviceRuntimeTestsWithActivator:activator]];
     }
     if ([command isEqualToString:LAActivatorIPCTestingCommandRuntimeState]) {
         return [self okReplyWithValue:[activator la_runtimeStateDebugDictionary]];
@@ -343,7 +355,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
 #pragma mark - Test Suites
 
-+ (NSDictionary *)runAllTestsWithActivator:(LAActivator *)activator {
++ (NSDictionary *)runStableTestsWithActivator:(LAActivator *)activator {
     LATestRecorder *recorder = [[LATestRecorder alloc] init];
     [self cleanActivator:activator];
     [self removeTestPlist];
@@ -351,7 +363,24 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [self runPersistenceTestsWithRecorder:recorder];
     [self runSpringBoardCoreTestsWithRecorder:recorder activator:activator];
     [self runDispatchTestsWithRecorder:recorder activator:activator];
-    [self runRuntimeStateTestsWithRecorder:recorder activator:activator];
+    [self runBuiltInActionTestsWithRecorder:recorder activator:activator];
+    [self cleanActivator:activator];
+    return [recorder resultDictionary];
+}
+
++ (NSDictionary *)runRuntimeInputTestsWithActivator:(LAActivator *)activator {
+    LATestRecorder *recorder = [[LATestRecorder alloc] init];
+    [self cleanActivator:activator];
+    [self cleanRuntimeInputStateWithActivator:activator];
+    [self runRuntimeInputTestsWithRecorder:recorder activator:activator];
+    [self cleanRuntimeInputStateWithActivator:activator];
+    [self cleanActivator:activator];
+    return [recorder resultDictionary];
+}
+
++ (NSDictionary *)runDeviceRuntimeTestsWithActivator:(LAActivator *)activator {
+    LATestRecorder *recorder = [[LATestRecorder alloc] init];
+    [self cleanActivator:activator];
     [self runRuntimeDeviceTestsWithRecorder:recorder activator:activator];
     [self cleanActivator:activator];
     return [recorder resultDictionary];
@@ -532,27 +561,40 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
             caseName:@"deferred-no-touch-drain"
               reason:@"Deferred event did not dispatch after touch ended"];
 
-    LATestListener *unlockingListener = [[LATestListener alloc] init];
-    unlockingListener.compatibleModes = @[ LAEventModeSpringBoard ];
-    NSString *unlockingListenerName = @"libactivator.test.dispatch.unlock";
-    dataSource.supportsUnlockingDeviceToSend = YES;
-    [activator registerListener:unlockingListener forName:unlockingListenerName];
-    [activator la_noteHomeScreenVisible:YES];
-    [activator la_noteLockScreenVisible:YES];
-    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeLockScreen]
-        toListenersWithNames:@[ unlockingListenerName ]];
-    [recorder expect:unlockingListener.unlockingCount == 1
-            caseName:@"unlock-to-send-callback"
-              reason:@"Unlock-to-send callback did not run"];
-    [activator la_noteLockScreenVisible:NO];
 }
 
-+ (void)runRuntimeStateTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
-    [recorder beginSuite:@"RuntimeState"];
++ (void)runBuiltInActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"BuiltInActions"];
 
-    [activator la_noteHomeScreenVisible:NO];
-    [activator la_noteLockScreenVisible:NO];
-    [activator la_noteScreenBlanked:NO];
+    NSString *eventName = @"libactivator.test.built-in.nothing";
+    NSString *nothingName = @"libactivator.system.nothing";
+    NSString *metadataOnlyName = @"libactivator.settings.wifi";
+    LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+
+    [activator registerEventDataSource:dataSource forEventName:eventName];
+
+    [recorder expect:[[activator availableListenerNames] containsObject:nothingName]
+            caseName:@"nothing-registered"
+              reason:@"Built-in nothing listener was not registered"];
+    [recorder expect:[activator hasSeenListenerWithName:nothingName]
+            caseName:@"nothing-seen"
+              reason:@"Built-in nothing listener was not recorded as seen"];
+    [recorder expect:![activator hasListenerWithName:metadataOnlyName]
+            caseName:@"metadata-only-not-registered"
+              reason:@"Staged metadata registered a listener without an implementation"];
+
+    LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator assignEvent:event toListenerWithName:nothingName];
+    [activator sendEventToListener:event];
+    [recorder expect:event.handled
+            caseName:@"nothing-handles-event"
+              reason:@"Built-in nothing listener did not mark the event handled"];
+}
+
++ (void)runRuntimeInputTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"RuntimeInput"];
+
+    [self cleanRuntimeInputStateWithActivator:activator];
     [activator la_noteHomeScreenVisible:YES source:@"test.home.a"];
     [activator la_noteHomeScreenVisible:YES source:@"test.home.b"];
     NSDictionary *homeAddedState = [activator la_runtimeStateDebugDictionary];
@@ -607,67 +649,23 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [activator la_noteScreenBlanked:NO];
     [activator la_noteRuntimeStateMayHaveChanged];
 
-    if ([self isDeviceLocked]) {
-        [self unlockDeviceWithPasscode:NSProcessInfo.processInfo.environment[@"LA_TEST_PASSCODE"] ?: @""];
-        [NSThread sleepForTimeInterval:1.0];
-        [activator la_noteLockScreenVisible:NO];
-        [activator la_noteScreenBlanked:NO];
-        [activator la_noteRuntimeStateMayHaveChanged];
-    }
+    NSString *eventName = @"libactivator.test.dispatch";
+    NSString *unlockingListenerName = @"libactivator.test.dispatch.unlock";
+    LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+    LATestListener *unlockingListener = [[LATestListener alloc] init];
+    unlockingListener.compatibleModes = @[ LAEventModeSpringBoard ];
+    dataSource.supportsUnlockingDeviceToSend = YES;
+    [activator registerEventDataSource:dataSource forEventName:eventName];
+    [activator registerListener:unlockingListener forName:unlockingListenerName];
+    [activator la_noteHomeScreenVisible:YES];
+    [activator la_noteLockScreenVisible:YES];
+    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeLockScreen]
+        toListenersWithNames:@[ unlockingListenerName ]];
+    [recorder expect:unlockingListener.unlockingCount == 1
+            caseName:@"unlock-to-send-callback"
+              reason:@"Unlock-to-send callback did not run"];
 
-    if (![self resetHomeScreen]) {
-        [recorder skip:@"hook-home-mode" reason:@"Home automation is unavailable"];
-    } else if ([self isDeviceLocked]) {
-        [recorder skip:@"hook-home-mode" reason:@"Device is locked"];
-    } else {
-        [NSThread sleepForTimeInterval:1.0];
-        [activator la_noteLockScreenVisible:NO];
-        [activator la_noteScreenBlanked:NO];
-        [activator la_noteRuntimeStateMayHaveChanged];
-        [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeSpringBoard]
-                caseName:@"hook-home-mode"
-                  reason:[self runtimeDebugReasonWithPrefix:@"Home hooks did not report springboard mode"
-                                                  activator:activator]];
-    }
-
-    if (![self openApplicationWithBundleIdentifier:@"com.apple.Preferences"]) {
-        [recorder skip:@"hook-application-mode" reason:@"Application launch automation is unavailable"];
-    } else if ([self isDeviceLocked]) {
-        [recorder skip:@"hook-application-mode" reason:@"Device is locked"];
-    } else {
-        [NSThread sleepForTimeInterval:1.5];
-        [activator la_noteLockScreenVisible:NO];
-        [activator la_noteScreenBlanked:NO];
-        [activator la_noteRuntimeStateMayHaveChanged];
-        [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeApplication]
-                caseName:@"hook-application-mode"
-                  reason:[self runtimeDebugReasonWithPrefix:@"Application hooks did not report application mode"
-                                                  activator:activator]];
-    }
-
-    if (![self lockDevice]) {
-        [recorder skip:@"hook-lockscreen-mode" reason:@"Lock automation is unavailable"];
-    } else {
-        [NSThread sleepForTimeInterval:1.0];
-        [activator la_noteRuntimeStateMayHaveChanged];
-        [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeLockScreen]
-                caseName:@"hook-lockscreen-mode"
-                  reason:[self runtimeDebugReasonWithPrefix:@"Lock hooks did not report lockscreen mode"
-                                                  activator:activator]];
-    }
-
-    if (![self unlockDeviceWithPasscode:NSProcessInfo.processInfo.environment[@"LA_TEST_PASSCODE"] ?: @""]) {
-        [recorder skip:@"hook-unlock-mode" reason:@"Unlock automation is unavailable"];
-    } else {
-        [NSThread sleepForTimeInterval:1.0];
-        [activator la_noteLockScreenVisible:NO];
-        [activator la_noteScreenBlanked:NO];
-        [activator la_noteRuntimeStateMayHaveChanged];
-        [recorder expect:![activator.currentEventMode isEqualToString:LAEventModeLockScreen]
-                caseName:@"hook-unlock-mode"
-                  reason:[self runtimeDebugReasonWithPrefix:@"Unlock did not leave lockscreen mode"
-                                                  activator:activator]];
-    }
+    [self cleanRuntimeInputStateWithActivator:activator];
 }
 
 + (void)runRuntimeDeviceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
@@ -675,9 +673,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
     if ([self isDeviceLocked]) {
         [self unlockDeviceWithPasscode:NSProcessInfo.processInfo.environment[@"LA_TEST_PASSCODE"] ?: @""];
-        [NSThread sleepForTimeInterval:1.0];
-        [activator la_noteLockScreenVisible:NO];
-        [activator la_noteScreenBlanked:NO];
+        [self waitAllowingMainRunLoopForTimeInterval:1.0];
     }
 
     if (![self resetHomeScreen]) {
@@ -685,11 +681,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     } else if ([self isDeviceLocked]) {
         [recorder skip:@"home-mode" reason:@"Device is locked"];
     } else {
-        [NSThread sleepForTimeInterval:1.0];
-        [activator la_noteHomeScreenVisible:YES];
-        [activator la_noteLockScreenVisible:NO];
-        [activator la_noteScreenBlanked:NO];
-        [activator la_noteRuntimeStateMayHaveChanged];
+        [self waitAllowingMainRunLoopForTimeInterval:1.5];
+        [self waitForMainQueue];
         [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeSpringBoard]
                 caseName:@"home-mode"
                   reason:[self runtimeDebugReasonWithPrefix:@"Home screen did not report springboard mode"
@@ -699,9 +692,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     if (![self openApplicationWithBundleIdentifier:@"com.apple.Preferences"]) {
         [recorder skip:@"application-mode" reason:@"Application launch automation is unavailable"];
     } else {
-        [NSThread sleepForTimeInterval:1.5];
-        [activator la_noteHomeScreenVisible:NO];
-        [activator la_noteRuntimeStateMayHaveChanged];
+        [self waitForFrontMostApplicationWithBundleIdentifier:@"com.apple.Preferences" timeout:5.0];
+        [self waitForMainQueue];
         NSString *frontMost = [self frontMostDisplayIdentifier];
         [recorder expect:[frontMost isEqualToString:@"com.apple.Preferences"] ||
                          [activator.displayIdentifierForCurrentApplication isEqualToString:@"com.apple.Preferences"]
@@ -716,8 +708,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     if (![self lockDevice]) {
         [recorder skip:@"lockscreen-mode" reason:@"Lock automation is unavailable"];
     } else {
-        [NSThread sleepForTimeInterval:1.0];
-        [activator la_noteRuntimeStateMayHaveChanged];
+        [self waitAllowingMainRunLoopForTimeInterval:1.0];
         [recorder expect:[self isDeviceLocked] || [activator.currentEventMode isEqualToString:LAEventModeLockScreen]
                 caseName:@"lockscreen-mode"
                   reason:@"Lock screen did not report lockscreen mode"];
@@ -726,9 +717,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     if (![self unlockDeviceWithPasscode:NSProcessInfo.processInfo.environment[@"LA_TEST_PASSCODE"] ?: @""]) {
         [recorder skip:@"unlock-device" reason:@"Unlock automation is unavailable"];
     } else {
-        [NSThread sleepForTimeInterval:1.0];
-        [activator la_noteLockScreenVisible:NO];
-        [activator la_noteRuntimeStateMayHaveChanged];
+        [self waitAllowingMainRunLoopForTimeInterval:1.0];
         [recorder expect:![self isDeviceLocked] caseName:@"unlock-device" reason:@"Device is still locked"];
     }
 
@@ -750,7 +739,11 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         [activator unregisterListenerWithName:listenerName];
     }
 
-    NSArray *eventNames = @[ @"libactivator.test.core", @"libactivator.test.dispatch" ];
+    NSArray *eventNames = @[
+        @"libactivator.test.core",
+        @"libactivator.test.dispatch",
+        @"libactivator.test.built-in.nothing",
+    ];
     for (NSString *eventName in eventNames) {
         [activator unregisterEventDataSourceWithEventName:eventName];
         for (NSString *mode in activator.availableEventModes) {
@@ -759,11 +752,15 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     }
     [activator setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:NO];
     [activator setCurrentProfileName:@"Default"];
-    [activator la_noteHomeScreenVisible:YES];
-    [activator la_noteLockScreenVisible:NO];
-    [activator la_noteScreenBlanked:NO];
     [self sendSyntheticTouchWithTouching:NO];
     [self waitForSyntheticTouchDelivery];
+}
+
++ (void)cleanRuntimeInputStateWithActivator:(LAActivator *)activator {
+    [activator la_noteHomeScreenVisible:NO];
+    [activator la_noteLockScreenVisible:NO];
+    [activator la_noteScreenBlanked:NO];
+    [activator la_noteRuntimeStateMayHaveChanged];
 }
 
 + (void)removeTestPlist {
@@ -825,7 +822,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 }
 
 + (void)waitForSyntheticTouchDelivery {
-    [NSThread sleepForTimeInterval:0.25];
+    [self waitAllowingMainRunLoopForTimeInterval:0.25];
     [self waitForMainQueue];
 }
 
@@ -968,6 +965,21 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     return displayIdentifier;
 }
 
++ (BOOL)waitForFrontMostApplicationWithBundleIdentifier:(NSString *)bundleIdentifier timeout:(NSTimeInterval)timeout {
+    if (bundleIdentifier.length == 0) {
+        return NO;
+    }
+
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:timeout];
+    while ([deadline timeIntervalSinceNow] > 0) {
+        if ([[self frontMostDisplayIdentifier] isEqualToString:bundleIdentifier]) {
+            return YES;
+        }
+        [self waitAllowingMainRunLoopForTimeInterval:0.1];
+    }
+    return [[self frontMostDisplayIdentifier] isEqualToString:bundleIdentifier];
+}
+
 + (NSString *)runtimeDebugReasonWithPrefix:(NSString *)prefix activator:(LAActivator *)activator {
     NSDictionary *state = [activator la_runtimeStateDebugDictionary];
     return [NSString stringWithFormat:@"%@; mode=%@; homeSources=%@; springBoardSources=%@; lockSources=%@; "
@@ -987,6 +999,21 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         return;
     }
     dispatch_sync(dispatch_get_main_queue(), block);
+}
+
++ (void)waitAllowingMainRunLoopForTimeInterval:(NSTimeInterval)timeInterval {
+    if (timeInterval <= 0) {
+        return;
+    }
+    if (!NSThread.isMainThread) {
+        [NSThread sleepForTimeInterval:timeInterval];
+        return;
+    }
+
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:timeInterval];
+    while ([deadline timeIntervalSinceNow] > 0) {
+        [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+    }
 }
 
 + (void)waitForMainQueue {
