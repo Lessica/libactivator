@@ -1275,7 +1275,9 @@ LAActivator *LASharedActivator;
     if (listener && [listener respondsToSelector:@selector(activator:requiresNeedsPoweredDisplayForListenerName:)]) {
         return [listener activator:self requiresNeedsPoweredDisplayForListenerName:listenerName];
     }
-    return NO;
+    id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"needs-powered-display"
+                                                               forListenerName:listenerName];
+    return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
 }
 
 - (NSArray *)exclusiveAssignmentGroupsForListenerName:(NSString *)listenerName {
@@ -1287,11 +1289,16 @@ LAActivator *LASharedActivator;
     id<LAListener> listener = [self listenerForName:listenerName];
     if (listener && [listener respondsToSelector:@selector(activator:
                                                      requiresExclusiveAssignmentGroupsForListenerName:)]) {
-        return [LAActivatorBackend
+        NSArray *groups = [LAActivatorBackend
             normalizedStringArray:[listener activator:self
                                       requiresExclusiveAssignmentGroupsForListenerName:listenerName]];
+        if (groups.count > 0) {
+            return groups;
+        }
     }
-    return @[];
+    return [LAActivatorBackend
+        normalizedStringArray:[LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"exclusive-assignment-groups"
+                                                                             forListenerName:listenerName]];
 }
 
 - (BOOL)listenerNamesAreMutuallyCompatible:(NSArray *)listenerNames {

@@ -530,6 +530,13 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:statusBarIsUnprotected
             caseName:@"bundled-event-unprotected-metadata"
               reason:@"1.9.13 unprotected event metadata was not exposed through the data source"];
+    [recorder expect:[activator listenerWithNameNeedsPoweredDisplay:@"libactivator.audio.launch-playing-app"]
+            caseName:@"bundled-listener-powered-display-metadata"
+              reason:@"1.9.13 listener needs-powered-display metadata was not used as fallback"];
+    [recorder expect:[[activator exclusiveAssignmentGroupsForListenerName:@"libactivator.audio.decrease-volume"]
+                         isEqualToArray:@[ @"volume-change" ]]
+            caseName:@"bundled-listener-exclusive-group-metadata"
+              reason:@"1.9.13 listener exclusive assignment group metadata was not used as fallback"];
     NSString *removableEventName = @"libactivator.test.removable-event";
     NSString *nonremovableEventName = @"libactivator.test.nonremovable-event";
     LATestEventDataSource *removableDataSource = [[LATestEventDataSource alloc] init];
