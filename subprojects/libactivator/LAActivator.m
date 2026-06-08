@@ -78,7 +78,13 @@ LAActivator *LASharedActivator;
     if (self) {
         if (self.runningInsideSpringBoard) {
             _runtimeStateProvider = [[LAActivatorRuntimeStateProvider alloc] init];
-            _backend = [[LAActivatorBackend alloc] initWithPersistence:[LAActivatorPersistence defaultPersistence]];
+            LAActivatorPersistence *persistence;
+#if LA_TESTING
+            persistence = [LAActivatorPersistence testPersistence];
+#else
+            persistence = [LAActivatorPersistence defaultPersistence];
+#endif
+            _backend = [[LAActivatorBackend alloc] initWithPersistence:persistence];
             _touchActivityTracker = [[LATouchActivityTracker alloc] init];
             __weak typeof(self) weakSelf = self;
             [_runtimeStateProvider setEventModeChangeHandler:^(NSString *eventMode) {
@@ -99,7 +105,12 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)isRunningInsideSpringBoard {
-    return [[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.apple.springboard"];
+    NSString *procName = [[NSProcessInfo processInfo] processName];
+    if (![procName isEqualToString:@"SpringBoard"]) {
+        return NO;
+    }
+    NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
+    return [bundleId isEqualToString:@"com.apple.springboard"];
 }
 
 - (BOOL)isDangerousToSendEvents {
@@ -488,10 +499,8 @@ LAActivator *LASharedActivator;
     NSString *culprit = [self la_invalidSpringBoardOperationCulpritName];
 
     NSLog(@"libactivator: Invalid SpringBoard operation: %@ called -[LAActivator %@] from outside SpringBoard. "
-          "This call was rejected and no client-local runtime state was created. Contact %@'s developer.",
-          culprit,
-          selectorName,
-          culprit);
+           "This call was rejected and no client-local runtime state was created. Contact %@'s developer.",
+          culprit, selectorName, culprit);
 }
 
 - (NSString *)la_invalidSpringBoardOperationCulpritName {

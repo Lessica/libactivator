@@ -13,12 +13,14 @@
 @implementation LAActivatorPersistence
 
 + (instancetype)defaultPersistence {
-#if LA_TESTING
-    return [[self alloc] initWithFilePath:jbroot(@"/var/mobile/Library/Preferences/libactivator.tests.plist")];
-#else
     return [[self alloc] initWithFilePath:jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")];
-#endif
 }
+
+#if LA_TESTING
++ (instancetype)testPersistence {
+    return [[self alloc] initWithFilePath:jbroot(@"/var/mobile/Library/Preferences/libactivator-tests.plist")];
+}
+#endif
 
 - (instancetype)initWithFilePath:(NSString *)filePath {
     self = [super init];

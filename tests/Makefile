@@ -10,8 +10,8 @@ libactivator-tests_FILES += LATestRunner.m
 libactivator-tests_FILES += LATestRunnerRecorder.m
 libactivator-tests_CFLAGS += -fobjc-arc
 libactivator-tests_CFLAGS += -DLA_TESTING=1
-libactivator-tests_CFLAGS += -I../../include
-libactivator-tests_CFLAGS += -I../libactivator
+libactivator-tests_CFLAGS += -I../include
+libactivator-tests_CFLAGS += -I../subprojects/libactivator
 libactivator-tests_FRAMEWORKS += Foundation
 libactivator-tests_FRAMEWORKS += UIKit
 libactivator-tests_PRIVATE_FRAMEWORKS += AppSupport

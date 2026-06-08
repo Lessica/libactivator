@@ -20,6 +20,10 @@ __attribute__((visibility("hidden")))
 - (nullable NSDictionary *)loadDictionary;
 - (BOOL)saveDictionary:(NSDictionary *)dictionary;
 
+#if LA_TESTING
++ (instancetype)testPersistence;
+#endif
+
 @end
 
 NS_ASSUME_NONNULL_END
