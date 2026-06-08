@@ -1,5 +1,0 @@
-{
-	title = "Double Tap Left";
-	group = "Status Bar";
-	description = "Double-tap on the left part of the statusbar";
-}

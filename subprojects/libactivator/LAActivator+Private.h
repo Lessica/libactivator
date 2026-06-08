@@ -27,6 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 #if LA_TESTING
 - (NSDictionary *)la_runtimeStateDebugDictionary;
 #endif
+- (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
 - (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
 - (BOOL)la_addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (BOOL)la_removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event;

@@ -1,8 +1,0 @@
-{
-	title = "Notes";
-	description = "Open Settings to Notes page";
-	group = "Settings";
-	"compatible-modes" = ("springboard", "application");
-	selector = "openURLWithActivator:event:listenerName:";
-	url = "prefs:root=NOTES";
-}

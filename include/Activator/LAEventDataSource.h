@@ -25,6 +25,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)eventWithNameRequiresAssignment:(NSString *)eventName;
 - (BOOL)eventWithName:(NSString *)eventName isCompatibleWithMode:(nullable NSString *)eventMode;
 - (BOOL)eventWithNameSupportsUnlockingDeviceToSend:(NSString *)eventName;
+- (nullable NSString *)assignmentWarningForEventWithName:(NSString *)eventName;
+- (BOOL)eventWithNameIsUnprotected:(NSString *)eventName;
 
 - (BOOL)eventWithNameSupportsRemoval:(NSString *)eventName;
 - (void)removeEventWithName:(NSString *)eventName;

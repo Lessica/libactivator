@@ -97,6 +97,8 @@
         LAActivatorIPCMessageCompatibleModesForEvent,
         LAActivatorIPCMessageEventIsCompatibleWithMode,
         LAActivatorIPCMessageEventSupportsUnlockingDeviceToSend,
+        LAActivatorIPCMessageAssignmentWarningForEvent,
+        LAActivatorIPCMessageEventIsUnprotected,
         LAActivatorIPCMessageEventSupportsRemoval,
         LAActivatorIPCMessageEventSupportsConfiguration,
         LAActivatorIPCMessageListenerInfoDictionaryValue,
@@ -403,6 +405,15 @@
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageEventSupportsUnlockingDeviceToSend]) {
         return [self replyWithOK:YES value:@([_activator eventWithNameSupportsUnlockingDeviceToSend:eventName])];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageAssignmentWarningForEvent]) {
+        return [self replyWithOK:YES value:[_activator assignmentWarningForEventWithName:eventName]];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageEventIsUnprotected]) {
+        id<LAEventDataSource> dataSource = [_activator eventDataSourceForEventName:eventName];
+        BOOL unprotected = dataSource && [dataSource respondsToSelector:@selector(eventWithNameIsUnprotected:)] &&
+                           [dataSource eventWithNameIsUnprotected:eventName];
+        return [self replyWithOK:YES value:@(unprotected)];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageEventSupportsRemoval]) {
         return [self replyWithOK:YES value:@([_activator eventWithNameSupportsRemoval:eventName])];

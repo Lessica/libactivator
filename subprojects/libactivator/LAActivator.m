@@ -61,6 +61,8 @@ static NSString *const LAActivatorDarwinAvailableEventsChangedNotification =
     @"libactivator.notification.available-events-changed";
 static NSString *const LAActivatorDarwinAssignmentsChangedNotification =
     @"libactivator.notification.assignments-changed";
+static NSString *const LAActivatorDarwinEventModeChangedNotification =
+    @"libactivator.notification.event-mode-changed";
 
 static NSString *LAActivatorPublicNotificationNameForDarwinName(NSString *darwinName) {
     if ([darwinName isEqualToString:LAActivatorDarwinAvailableListenersChangedNotification]) {
@@ -71,6 +73,9 @@ static NSString *LAActivatorPublicNotificationNameForDarwinName(NSString *darwin
     }
     if ([darwinName isEqualToString:LAActivatorDarwinAssignmentsChangedNotification]) {
         return LAActivatorAssignmentsChangedNotification;
+    }
+    if ([darwinName isEqualToString:LAActivatorDarwinEventModeChangedNotification]) {
+        return LAActivatorEventModeChangedNotification;
     }
     return nil;
 }
@@ -84,6 +89,9 @@ static NSString *LAActivatorDarwinNotificationNameForPublicName(NSString *public
     }
     if ([publicName isEqualToString:LAActivatorAssignmentsChangedNotification]) {
         return LAActivatorDarwinAssignmentsChangedNotification;
+    }
+    if ([publicName isEqualToString:LAActivatorEventModeChangedNotification]) {
+        return LAActivatorDarwinEventModeChangedNotification;
     }
     return nil;
 }
@@ -183,6 +191,7 @@ LAActivator *LASharedActivator;
         LAActivatorDarwinAvailableListenersChangedNotification,
         LAActivatorDarwinAvailableEventsChangedNotification,
         LAActivatorDarwinAssignmentsChangedNotification,
+        LAActivatorDarwinEventModeChangedNotification,
     ];
     for (NSString *notificationName in notificationNames) {
         CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self,
@@ -574,6 +583,7 @@ LAActivator *LASharedActivator;
             [listener activator:self didChangeToEventMode:eventMode];
         }
     }
+    [self la_postSystemNotificationName:LAActivatorEventModeChangedNotification];
 }
 
 - (void)la_notifyListenersThatListener:(id<LAListener>)handlingListener handledEvent:(LAEvent *)event {
@@ -1050,6 +1060,19 @@ LAActivator *LASharedActivator;
     return NO;
 }
 
+- (NSString *)assignmentWarningForEventWithName:(NSString *)eventName {
+    if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{LAActivatorIPCKeyEventName : eventName ?: @""};
+        return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageAssignmentWarningForEvent
+                                                userInfo:userInfo];
+    }
+    id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
+    if (dataSource && [dataSource respondsToSelector:@selector(assignmentWarningForEventWithName:)]) {
+        return [dataSource assignmentWarningForEventWithName:eventName];
+    }
+    return nil;
+}
+
 - (BOOL)eventWithNameSupportsRemoval:(NSString *)eventName {
     if (!self.runningInsideSpringBoard) {
         NSDictionary *userInfo = @{LAActivatorIPCKeyEventName : eventName ?: @""};
@@ -1484,6 +1507,15 @@ LAActivator *LASharedActivator;
                                           defaultValue:NO];
     }
     return [self.backend setCurrentProfileNameIfChanged:currentProfileName];
+}
+
+#pragma mark - Authorization
+
+- (LAAuthorizationStatus)authorizationStatus {
+    return LAAuthorizationStatusAuthorized;
+}
+
+- (void)requestAuthorization {
 }
 
 #pragma mark - Localization

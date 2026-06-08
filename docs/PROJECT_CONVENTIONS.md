@@ -4,7 +4,8 @@ This document is the working agreement for the libactivator rewrite. It is inten
 
 ## Reference Baseline
 
-- Public API baseline: `references/headers`, from `origin/headers` (`bfac8ee70e8ad6560305dc7f0fa586c1b5696ef1`, Public Release 1.9.0).
+- Public API and built-in resource baseline: `references/latest`, extracted from `libactivator_1.9.13~rc6_iphoneos-arm.deb`.
+- Historical 1.9.0 headers remain under `references/headers` for archaeology only; they are no longer authoritative for rewrite compatibility decisions.
 - Legacy implementation reference: `references/master`, from `origin/master` (`b245f923bb683a902e932c9307286bcaa9a26cd3`, Public Release 1.6.2-1).
 - The legacy implementation is behavior reference only. Do not copy old implementation patterns unless we explicitly re-approve them for iOS 15+.
 - Assume every iOS SPI used by the legacy implementation is no longer valid.
@@ -24,13 +25,14 @@ This document is the working agreement for the libactivator rewrite. It is inten
 
 ## Compatibility Rules
 
-- Public class names, protocol names, selectors, constants, and expected semantics from `references/headers` are compatibility contracts.
+- Public class names, protocol names, selectors, constants, and expected semantics from `references/latest/package/usr/include/libactivator` are compatibility contracts.
 - The final 1.9 public API design is authoritative. The legacy `master` implementation is only a light reference and must not override the public API contract.
 - API extensions must be additive unless we intentionally create a documented compatibility break.
 - The legacy public API overloads the words event and `LAEvent`. Keep the selectors source-compatible, but document the four distinct meanings wherever this matters: a dispatched runtime `LAEvent` instance; an assignment descriptor keyed by `LAEvent.name` and `LAEvent.mode`; an event definition key represented by an `NSString` event name; and the `LAEventDataSource` provider that owns definition metadata and capabilities.
 - Keep legacy-compatible models where they still make sense. When a legacy behavior is a bug, unsafe design, or obsolete burden, document it and mark the compatibility surface as deprecated instead of preserving the old behavior blindly.
 - New behavior should prefer graceful no-op or explicit error reporting over crashes when a listener, event, private API, or SpringBoard feature is absent.
 - Keep legacy event and listener names stable, even when the implementation is completely new.
+- The legacy 1.9.13 authorization mechanism is not implemented in the rewrite. Keep the public source/ABI symbols for compatibility, but treat `authorizationStatus` as always authorized and `requestAuthorization` as a no-op.
 
 ## Architecture Rules
 

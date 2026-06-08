@@ -1,8 +1,0 @@
-{
-	title = "Twitter";
-	description = "Open Settings to Twitter page";
-	group = "Settings";
-	"compatible-modes" = ("springboard", "application");
-	selector = "openURLWithActivator:event:listenerName:";
-	url = "prefs:root=TWITTER";
-}

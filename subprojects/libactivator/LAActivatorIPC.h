@@ -47,6 +47,8 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCMessageEventRequiresAssignment;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageCompatibleModesForEvent;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageEventIsCompatibleWithMode;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageEventSupportsUnlockingDeviceToSend;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageAssignmentWarningForEvent;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageEventIsUnprotected;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageEventSupportsRemoval;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageEventSupportsConfiguration;
 

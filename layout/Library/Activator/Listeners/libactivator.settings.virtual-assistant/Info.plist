@@ -1,8 +1,0 @@
-{
-	title = "Virtual Assistant";
-	description = "Open Settings to Virtual Assistant page";
-	group = "Settings";
-	"compatible-modes" = ("springboard", "application");
-	selector = "openURLWithActivator:event:listenerName:";
-	url = "prefs:root=General&path=Assistant";
-}

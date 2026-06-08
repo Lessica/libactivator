@@ -76,6 +76,7 @@ LA_PRIVATE_IVARS(LAActivator)
 - (NSArray *)compatibleModesForEventWithName:(NSString *)name;
 - (BOOL)eventWithName:(NSString *)eventName isCompatibleWithMode:(nullable NSString *)eventMode;
 - (BOOL)eventWithNameSupportsUnlockingDeviceToSend:(NSString *)eventName;
+- (nullable NSString *)assignmentWarningForEventWithName:(NSString *)eventName;
 
 - (BOOL)eventWithNameSupportsRemoval:(NSString *)eventName;
 - (void)removeEventWithName:(NSString *)eventName;
@@ -125,6 +126,11 @@ LA_PRIVATE_IVARS(LAActivator)
 @property(nonatomic, readonly) NSArray *availableProfileNames;
 @property(nonatomic, copy) NSString *currentProfileName;
 
+// Authorization
+
+@property(nonatomic, readonly) LAAuthorizationStatus authorizationStatus;
+- (void)requestAuthorization;
+
 @end
 
 extern LAActivator *LASharedActivator;
@@ -152,5 +158,7 @@ extern NSString *const LAEventModeLockScreen;
 extern NSString *const LAActivatorAvailableListenersChangedNotification;
 extern NSString *const LAActivatorAvailableEventsChangedNotification;
 extern NSString *const LAActivatorAssignmentsChangedNotification;
+extern NSString *const LAActivatorEventModeChangedNotification;
+extern NSString *const LAActivatorAuthorizationChangedNotification;
 
 NS_ASSUME_NONNULL_END

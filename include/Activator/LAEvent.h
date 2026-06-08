@@ -60,11 +60,15 @@ extern NSString *const LAEventNameVolumeDownUp;
 extern NSString *const LAEventNameVolumeUpDown;
 extern NSString *const LAEventNameVolumeDisplayTap;
 extern NSString *const LAEventNameVolumeToggleMuteTwice;
+extern NSString *const LAEventNameVolumeMuteOn;
+extern NSString *const LAEventNameVolumeMuteOff;
 extern NSString *const LAEventNameVolumeDownHoldShort;
 extern NSString *const LAEventNameVolumeUpHoldShort;
 extern NSString *const LAEventNameVolumeDownPress;
 extern NSString *const LAEventNameVolumeUpPress;
 extern NSString *const LAEventNameVolumeBothPress;
+extern NSString *const LAEventNameVolumeDownPressWithMenu;
+extern NSString *const LAEventNameVolumeUpPressWithMenu;
 
 extern NSString *const LAEventNameSlideInFromBottom;
 extern NSString *const LAEventNameSlideInFromBottomLeft;
@@ -141,6 +145,11 @@ extern NSString *const LAEventNameNetworkJoinedWiFi;
 extern NSString *const LAEventNameNetworkLeftWiFi;
 
 extern NSString *const LAEventNameFingerprintSensorPressSingle;
+extern NSString *const LAEventNameFingerprintSensorPressTwice;
+extern NSString *const LAEventNameFingerprintSensorHold;
+extern NSString *const LAEventNameFingerprintSensorHoldLong;
+extern NSString *const LAEventNameFingerprintSensorPressSingleAndSlideIn;
+extern NSString *const LAEventNameFingerprintSensorPressSingleAndHold;
 
 // Icon Gestures
 extern NSString *const LAEventUserInfoDisplayIdentifier;

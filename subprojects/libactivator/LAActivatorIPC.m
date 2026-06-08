@@ -40,6 +40,9 @@ NSString *const LAActivatorIPCMessageCompatibleModesForEvent = @"libactivator.re
 NSString *const LAActivatorIPCMessageEventIsCompatibleWithMode = @"libactivator.request.event-is-compatible-with-mode";
 NSString *const LAActivatorIPCMessageEventSupportsUnlockingDeviceToSend =
     @"libactivator.request.event-supports-unlocking-device-to-send";
+NSString *const LAActivatorIPCMessageAssignmentWarningForEvent =
+    @"libactivator.request.assignment-warning-for-event";
+NSString *const LAActivatorIPCMessageEventIsUnprotected = @"libactivator.request.event-is-unprotected";
 NSString *const LAActivatorIPCMessageEventSupportsRemoval = @"libactivator.request.event-supports-removal";
 NSString *const LAActivatorIPCMessageEventSupportsConfiguration = @"libactivator.request.event-supports-configuration";
 

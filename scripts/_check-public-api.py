@@ -280,6 +280,9 @@ void LAFlatImportCheck(void) {
     LAEvent *event = [LAEvent eventWithName:LAEventNameMenuPressSingle mode:LAEventModeSpringBoard];
     event.userInfo = @{ LAEventUserInfoDisplayIdentifier: @\"com.apple.springboard\" };
     (void)[[LAActivator sharedInstance] version];
+    (void)LAEventNameVolumeMuteOn;
+    (void)LAEventNameVolumeDownPressWithMenu;
+    (void)LAEventNameFingerprintSensorPressTwice;
 }
 """.lstrip(),
         encoding="utf-8",
@@ -295,6 +298,9 @@ void LAFrameworkImportCheck(void) {
     LAActivator *activator = [LAActivator sharedInstance];
     LAEvent *event = [[LAEvent alloc] initWithName:LAEventNameStatusBarTapSingle mode:LAEventModeApplication];
     [activator sendEvent:event toListenersWithNames:@[]];
+    (void)activator.authorizationStatus;
+    [activator requestAuthorization];
+    (void)[activator assignmentWarningForEventWithName:LAEventNameVolumeMuteOn];
     UIImageView *imageView = [UIImageView new];
     imageView.activatorListenerName = @\"example.listener\";
     imageView.activatorListenerImageIsThreaded = YES;
@@ -318,6 +324,9 @@ void LAModuleImportCheck(void) {
         __builtin_trap();
     }
     (void)LAActivatorAssignmentsChangedNotification;
+    (void)LAActivatorEventModeChangedNotification;
+    (void)LAActivatorAuthorizationChangedNotification;
+    (void)@protocol(LAEventDataSource);
 }
 """.lstrip(),
         encoding="utf-8",
@@ -534,6 +543,34 @@ def validate_api(api: HeaderAPI, dylib: Path) -> tuple[int, int, int]:
     return checked_symbols, checked_metadata, checked_properties
 
 
+def validate_resource_catalog(project_root: Path) -> None:
+    import plistlib
+
+    activator_dir = project_root / "layout/Library/Activator"
+    events_path = activator_dir / "Events/bundled.plist"
+    listeners_path = activator_dir / "Listeners/bundled.plist"
+    check(events_path.is_file(), f"Missing event resource catalog: {events_path}")
+    check(listeners_path.is_file(), f"Missing listener resource catalog: {listeners_path}")
+
+    with events_path.open("rb") as file:
+        events = plistlib.load(file)
+    with listeners_path.open("rb") as file:
+        listeners = plistlib.load(file)
+
+    check(isinstance(events, dict), "Event resource catalog is not a dictionary")
+    check(isinstance(listeners, dict), "Listener resource catalog is not a dictionary")
+    check(len(events) == 121, f"Unexpected event resource count: {len(events)}")
+    check(len(listeners) == 114, f"Unexpected listener resource count: {len(listeners)}")
+
+    excluded_listeners = {
+        "libactivator.twitter.compose-tweet",
+        "libactivator.facebook.compose-post",
+        "libactivator.weibo.compose-post",
+    }
+    present_excluded = sorted(excluded_listeners.intersection(listeners))
+    check(not present_excluded, f"Excluded social listeners are staged: {', '.join(present_excluded)}")
+
+
 def main() -> int:
     if not os.environ.get("THEOS"):
         raise SystemExit("THEOS is required.")
@@ -567,6 +604,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="libactivator-public-api-check.") as tmp:
         compile_import_checks(project_root, staging_dir, sdk, Path(tmp))
         checked_symbols, checked_metadata, checked_properties = validate_api(api, dylib)
+    validate_resource_catalog(project_root)
 
     log(
         "Binary validation: "
@@ -574,6 +612,7 @@ def main() -> int:
         f"{checked_metadata} Objective-C metadata entries, "
         f"{checked_properties} properties"
     )
+    log("Resource catalog validation: 121 events, 114 listeners.")
     log("Metadata check passed.")
     return 0
 

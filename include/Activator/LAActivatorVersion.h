@@ -34,8 +34,25 @@ typedef enum {
     LAActivatorVersion_1_8_1 = 1080100,
     LAActivatorVersion_1_8_2 = 1080200,
     LAActivatorVersion_1_9_0 = 1090000,
+    LAActivatorVersion_1_9_1 = 1090100,
+    LAActivatorVersion_1_9_2 = 1090200,
+    LAActivatorVersion_1_9_3 = 1090300,
+    LAActivatorVersion_1_9_4 = 1090400,
+    LAActivatorVersion_1_9_5 = 1090500,
+    LAActivatorVersion_1_9_6 = 1090600,
+    LAActivatorVersion_1_9_7 = 1090700,
+    LAActivatorVersion_1_9_8 = 1090800,
+    LAActivatorVersion_1_9_10 = 1091000,
+    LAActivatorVersion_1_9_11 = 1091100,
+    LAActivatorVersion_1_9_12 = 1091200,
     LAActivatorVersion_2_0 = 2000000,
 } LAActivatorVersion;
+
+typedef enum {
+    LAAuthorizationStatusNotDetermined = -1,
+    LAAuthorizationStatusDenied = 0,
+    LAAuthorizationStatusAuthorized = 1,
+} LAAuthorizationStatus;
 
 #ifndef LA_PRIVATE_IVARS
 #define LA_PRIVATE_IVARS(class)

@@ -1,6 +1,0 @@
-{
-	title = "Previous Track";
-	description = "Returns to previous song";
-	group = "Audio";
-	selector = "previousTrack";
-}

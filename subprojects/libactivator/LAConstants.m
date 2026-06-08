@@ -17,6 +17,8 @@ NSString *const LAEventModeLockScreen = @"lockscreen";
 NSString *const LAActivatorAvailableListenersChangedNotification = @"LAActivatorAvailableListenersChangedNotification";
 NSString *const LAActivatorAvailableEventsChangedNotification = @"LAActivatorAvailableEventsChangedNotification";
 NSString *const LAActivatorAssignmentsChangedNotification = @"LAActivatorAssignmentsChangedNotification";
+NSString *const LAActivatorEventModeChangedNotification = @"LAActivatorEventModeChangedNotification";
+NSString *const LAActivatorAuthorizationChangedNotification = @"LAActivatorAuthorizationChangedNotification";
 
 NSString *const LAEventNameMenuPressSingle = @"libactivator.menu.press.single";
 NSString *const LAEventNameMenuPressDouble = @"libactivator.menu.press.double";
@@ -48,11 +50,15 @@ NSString *const LAEventNameVolumeDownUp = @"libactivator.volume.down-up";
 NSString *const LAEventNameVolumeUpDown = @"libactivator.volume.up-down";
 NSString *const LAEventNameVolumeDisplayTap = @"libactivator.volume.display-tap";
 NSString *const LAEventNameVolumeToggleMuteTwice = @"libactivator.volume.toggle-mute-twice";
+NSString *const LAEventNameVolumeMuteOn = @"libactivator.volume.mute";
+NSString *const LAEventNameVolumeMuteOff = @"libactivator.volume.unmute";
 NSString *const LAEventNameVolumeDownHoldShort = @"libactivator.volume.down.hold.short";
 NSString *const LAEventNameVolumeUpHoldShort = @"libactivator.volume.up.hold.short";
 NSString *const LAEventNameVolumeDownPress = @"libactivator.volume.down.press";
 NSString *const LAEventNameVolumeUpPress = @"libactivator.volume.up.press";
 NSString *const LAEventNameVolumeBothPress = @"libactivator.volume.both.press";
+NSString *const LAEventNameVolumeDownPressWithMenu = @"libactivator.volume.down.press.with-menu";
+NSString *const LAEventNameVolumeUpPressWithMenu = @"libactivator.volume.up.press.with-menu";
 
 NSString *const LAEventNameSlideInFromBottom = @"libactivator.slide-in.bottom";
 NSString *const LAEventNameSlideInFromBottomLeft = @"libactivator.slide-in.bottom-left";
@@ -123,10 +129,17 @@ NSString *const LAEventNameSpringBoardIconFlickRight = @"libactivator.springboar
 NSString *const LAEventNameDeviceLocked = @"libactivator.device.locked";
 NSString *const LAEventNameDeviceUnlocked = @"libactivator.device.unlocked";
 
-NSString *const LAEventNameNetworkJoinedWiFi = @"libactivator.network.wifi.joined";
-NSString *const LAEventNameNetworkLeftWiFi = @"libactivator.network.wifi.left";
+NSString *const LAEventNameNetworkJoinedWiFi = @"libactivator.network.joined-wifi";
+NSString *const LAEventNameNetworkLeftWiFi = @"libactivator.network.left-wifi";
 
 NSString *const LAEventNameFingerprintSensorPressSingle = @"libactivator.fingerprint-sensor.press.single";
+NSString *const LAEventNameFingerprintSensorPressTwice = @"libactivator.fingerprint-sensor.press.twice";
+NSString *const LAEventNameFingerprintSensorHold = @"libactivator.fingerprint-sensor.hold";
+NSString *const LAEventNameFingerprintSensorHoldLong = @"libactivator.fingerprint-sensor.hold-long";
+NSString *const LAEventNameFingerprintSensorPressSingleAndSlideIn =
+    @"libactivator.fingerprint-sensor.press.single.with-slide-in";
+NSString *const LAEventNameFingerprintSensorPressSingleAndHold =
+    @"libactivator.fingerprint-sensor.press.single.with-hold";
 
 NSString *const LAEventUserInfoDisplayIdentifier = @"LAEventUserInfoDisplayIdentifier";
 NSString *const LAEventUserInfoIconView = @"LAEventUserInfoIconView";

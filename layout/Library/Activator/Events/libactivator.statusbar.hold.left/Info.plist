@@ -1,5 +1,0 @@
-{
-	title = "Hold Left";
-	group = "Status Bar";
-	description = "Tap and hold on the left part of statusbar";
-}

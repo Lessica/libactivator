@@ -1,19 +1,19 @@
 # Public API Inventory
 
-This inventory records the public API surface inherited from Activator 1.9 and the compatibility import paths introduced by the rewrite foundation. It is not an implementation plan; it is the compatibility checklist for the next public API skeleton work.
+This inventory records the public API surface inherited from Activator 1.9.13 and the compatibility import paths introduced by the rewrite foundation. It is not an implementation plan; it is the compatibility checklist for public API compatibility work.
 
 ## Baseline
 
-- Authoritative legacy API source: `references/headers`.
+- Authoritative legacy API source: `references/latest/package/usr/include/libactivator`, extracted from `libactivator_1.9.13~rc6_iphoneos-arm.deb`.
 - Current public header source: `include/Activator` and `include/ActivatorSettings`.
 - Current compatibility entry points:
   - `#import <libactivator.h>`
   - `#import <Activator/Activator.h>`
   - `@import Activator`
-- Current header delta from `references/headers`:
+- Current header delta from the 1.9.13 package headers:
   - `include/Activator/Activator.h` is a new framework umbrella header.
   - `layout/usr/include/libactivator.h` is the flat compatibility umbrella and imports `<Activator/Activator.h>`.
-  - The copied 1.9 headers are otherwise API-equivalent, apart from removal of a trailing blank line.
+  - Headers keep the rewrite's Xcode file headers, `NS_ASSUME_NONNULL` annotations, and explicit deprecation notes while preserving 1.9.13 source/ABI surface.
 
 ## Implementation Status Legend
 
@@ -30,7 +30,7 @@ This inventory records the public API surface inherited from Activator 1.9 and t
 | --- | --- | --- | --- |
 | `Activator/Activator.h` | Framework umbrella for the Activator module. | Must implement | Imports all 1.9 Activator public headers. |
 | `libactivator.h` | Flat legacy umbrella. | Must implement | Installed at `/usr/include/libactivator.h`; imports `<Activator/Activator.h>`. |
-| `LAActivatorVersion.h` | `LAActivatorVersion` enum and `LA_PRIVATE_IVARS`. | Must implement | Version values are compatibility constants. Add `LAActivatorVersion_2_0 = 2000000` and report it for the 2.0 rewrite. |
+| `LAActivatorVersion.h` | `LAActivatorVersion`, `LAAuthorizationStatus`, and `LA_PRIVATE_IVARS`. | Must implement | Version values are compatibility constants through 1.9.12. Add `LAActivatorVersion_2_0 = 2000000` and report it for the 2.0 rewrite. |
 | `LAActivator.h` | Main facade, assignments, metadata, modes, blacklist, profiles, localization, constants, notifications. | Must implement | API skeleton should land before IPC or SpringBoard runtime. |
 | `LAEvent.h` | `LAEvent` model and built-in event/userInfo constants. | Must implement | Event constants are compatibility symbols; actual event acquisition is capability gated. |
 | `LAListener.h` | `LAListener` protocol for event callbacks, metadata, icons, removal, configuration. | Must implement | Dispatch behavior is runtime-backed; metadata queries can be safe stubs first. |
@@ -93,6 +93,7 @@ This inventory records the public API surface inherited from Activator 1.9 and t
 | `compatibleModesForEventWithName:` | Safe stub first | May derive from data source; default should be conservative. |
 | `eventWithName:isCompatibleWithMode:` | Safe stub first | Compatibility query. |
 | `eventWithNameSupportsUnlockingDeviceToSend:` | Runtime-backed | Lock-screen capability. |
+| `assignmentWarningForEventWithName:` | Safe stub first | 1.9.13 data-source-backed warning string. |
 | `eventWithNameSupportsRemoval:` | Safe stub first | Data-source-backed metadata. |
 | `removeEventWithName:` | Runtime-backed | Calls data source or built-in removal path. |
 | `registerEventDataSource:forEventName:` | Must implement | SpringBoard-authoritative event registry; legacy non-SpringBoard implementation rejected this call. |
@@ -134,6 +135,8 @@ This inventory records the public API surface inherited from Activator 1.9 and t
 | `setApplicationWithDisplayIdentifier:isBlacklisted:` | Must implement | Core blacklist storage/update. |
 | `availableProfileNames` | Must implement | Empty/default profile behavior must be defined. |
 | `currentProfileName` | Must implement | Profile timing was deferred until core compatibility is stable. |
+| `authorizationStatus` | Compatibility no-op | 1.9.13 authorization symbol is preserved; legacy authorization is not implemented and status is always authorized. |
+| `requestAuthorization` | Compatibility no-op | Preserved for source/ABI compatibility only. |
 | `localizedStringForKey:value:` | Must implement | Activator support bundle-backed with value/key fallback. |
 | `localizedTitleForEventMode:` | Must implement | Uses legacy mode localization keys and fallback strings. |
 | `localizedTitleForEventName:` | Must implement | Data-source and event resource-backed, IPC-routed outside SpringBoard. |
@@ -180,7 +183,7 @@ The listener protocol has only optional methods. The implementation must check `
 | Group | Methods | Status |
 | --- | --- | --- |
 | Required metadata | localized title, group, description | Must implement dispatch to data source |
-| Visibility and assignment | hidden, requires assignment, compatible mode, unlock-to-send support | Safe stub first |
+| Visibility and assignment | hidden, requires assignment, compatible mode, unlock-to-send support, assignment warning, unprotected event marker | Safe stub first |
 | Removal | supports removal, remove event | Runtime-backed |
 | Configuration | configuration controller class, configuration load/save | Settings-backed |
 
@@ -202,7 +205,7 @@ The listener protocol has only optional methods. The implementation must check `
 
 ### Version Constants
 
-`LAActivatorVersion` preserves legacy version values from 1.3 through 1.9.0. Add `LAActivatorVersion_2_0 = 2000000`, and make `-[LAActivator version]` return it for the 2.0 rewrite while preserving older enum values as ABI/source constants.
+`LAActivatorVersion` preserves legacy version values from 1.3 through 1.9.12. Add `LAActivatorVersion_2_0 = 2000000`, and make `-[LAActivator version]` return it for the 2.0 rewrite while preserving older enum values as ABI/source constants. `LAAuthorizationStatus` is preserved for source compatibility, but the legacy authorization mechanism is intentionally not implemented.
 
 ### Event Mode Constants
 
@@ -217,8 +220,10 @@ These constants are core compatibility symbols. Mode detection is runtime-backed
 - `LAActivatorAvailableListenersChangedNotification`
 - `LAActivatorAvailableEventsChangedNotification`
 - `LAActivatorAssignmentsChangedNotification`
+- `LAActivatorEventModeChangedNotification`
+- `LAActivatorAuthorizationChangedNotification`
 
-Notifications are public process-local names. Cross-process state propagation belongs to IPC, then each process can repost local notifications.
+Notifications are public process-local names. Cross-process state propagation belongs to IPC or Darwin notification bridging, then each process can repost local notifications. The authorization changed notification is a compatibility symbol only while the legacy authorization mechanism remains unimplemented.
 
 ### Built-In Event Name Constants
 
@@ -230,7 +235,7 @@ The public API exposes legacy event names even when the corresponding modern iOS
 | Lock button | `LAEventNameLockHoldShort`, `LAEventNameLockHoldLong`, `LAEventNameLockPressDouble`, `LAEventNameLockPressWithMenu` |
 | SpringBoard gestures | `LAEventNameSpringBoardPinch`, `LAEventNameSpringBoardSpread` |
 | Status bar | `LAEventNameStatusBarSwipeRight`, `LAEventNameStatusBarSwipeLeft`, `LAEventNameStatusBarTapDouble`, `LAEventNameStatusBarTapDoubleLeft`, `LAEventNameStatusBarTapDoubleRight`, `LAEventNameStatusBarTapSingle`, `LAEventNameStatusBarTapSingleLeft`, `LAEventNameStatusBarTapSingleRight`, `LAEventNameStatusBarHold`, `LAEventNameStatusBarHoldLeft`, `LAEventNameStatusBarHoldRight` |
-| Volume | `LAEventNameVolumeDownUp`, `LAEventNameVolumeUpDown`, `LAEventNameVolumeDisplayTap`, `LAEventNameVolumeToggleMuteTwice`, `LAEventNameVolumeDownHoldShort`, `LAEventNameVolumeUpHoldShort`, `LAEventNameVolumeDownPress`, `LAEventNameVolumeUpPress`, `LAEventNameVolumeBothPress` |
+| Volume | `LAEventNameVolumeDownUp`, `LAEventNameVolumeUpDown`, `LAEventNameVolumeDisplayTap`, `LAEventNameVolumeToggleMuteTwice`, `LAEventNameVolumeMuteOn`, `LAEventNameVolumeMuteOff`, `LAEventNameVolumeDownHoldShort`, `LAEventNameVolumeUpHoldShort`, `LAEventNameVolumeDownPress`, `LAEventNameVolumeUpPress`, `LAEventNameVolumeBothPress`, `LAEventNameVolumeDownPressWithMenu`, `LAEventNameVolumeUpPressWithMenu` |
 | Edge slide | `LAEventNameSlideInFromBottom`, `LAEventNameSlideInFromBottomLeft`, `LAEventNameSlideInFromBottomRight`, `LAEventNameSlideInFromLeft`, `LAEventNameSlideInFromRight`, `LAEventNameStatusBarSwipeDown`, `LAEventNameSlideInFromTop`, `LAEventNameSlideInFromTopLeft`, `LAEventNameSlideInFromTopRight` |
 | Two-finger edge slide | `LAEventNameTwoFingerSlideInFromBottom`, `LAEventNameTwoFingerSlideInFromBottomLeft`, `LAEventNameTwoFingerSlideInFromBottomRight`, `LAEventNameTwoFingerSlideInFromLeft`, `LAEventNameTwoFingerSlideInFromRight`, `LAEventNameTwoFingerSlideInFromTop`, `LAEventNameTwoFingerSlideInFromTopLeft`, `LAEventNameTwoFingerSlideInFromTopRight` |
 | Drag off screen | `LAEventNameDragOffBottom`, `LAEventNameDragOffLeft`, `LAEventNameDragOffRight`, `LAEventNameDragOffTop` |
@@ -244,7 +249,7 @@ The public API exposes legacy event names even when the corresponding modern iOS
 | SpringBoard icon gestures | `LAEventNameSpringBoardIconFlickUp`, `LAEventNameSpringBoardIconFlickDown`, `LAEventNameSpringBoardIconFlickLeft`, `LAEventNameSpringBoardIconFlickRight` |
 | Device state | `LAEventNameDeviceLocked`, `LAEventNameDeviceUnlocked` |
 | Network | `LAEventNameNetworkJoinedWiFi`, `LAEventNameNetworkLeftWiFi` |
-| Fingerprint sensor | `LAEventNameFingerprintSensorPressSingle` |
+| Fingerprint sensor | `LAEventNameFingerprintSensorPressSingle`, `LAEventNameFingerprintSensorPressTwice`, `LAEventNameFingerprintSensorHold`, `LAEventNameFingerprintSensorHoldLong`, `LAEventNameFingerprintSensorPressSingleAndSlideIn`, `LAEventNameFingerprintSensorPressSingleAndHold` |
 
 `LAEventNameSlideInFromTop` is a macro alias for `LAEventNameStatusBarSwipeDown`, so there is no separate exported symbol for that alias.
 

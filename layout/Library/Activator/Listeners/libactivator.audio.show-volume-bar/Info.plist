@@ -1,7 +1,0 @@
-{
-	title = "Show Volume Bar";
-	description = "Show the volume slider";
-	group = "Audio";
-	"compatible-modes" = ("springboard", "application");
-	selector = "showVolumeBar";
-}

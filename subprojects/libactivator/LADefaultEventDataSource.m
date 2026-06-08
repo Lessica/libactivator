@@ -70,9 +70,27 @@
         boolValue];
 }
 
+- (BOOL)eventWithNameSupportsUnlockingDeviceToSend:(NSString *)eventName {
+    id value =
+        [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"supports-unlocking-device"];
+    return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
+}
+
+- (NSString *)assignmentWarningForEventWithName:(NSString *)eventName {
+    id value = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"assignment-warning"];
+    return [value isKindOfClass:NSString.class] ? value : nil;
+}
+
+- (BOOL)eventWithNameIsUnprotected:(NSString *)eventName {
+    id value = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"is-unprotected"];
+    return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
+}
+
 - (NSString *)configurationViewControllerClassNameForEventWithName:(NSString *)eventName bundle:(NSBundle **)bundle {
     NSDictionary *info = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName];
-    NSString *className = [info[@"configuration"] isKindOfClass:NSString.class] ? info[@"configuration"] : nil;
+    NSString *className =
+        [info[@"settings-view-controller-class"] isKindOfClass:NSString.class] ? info[@"settings-view-controller-class"]
+                                                                               : info[@"configuration"];
     if (className.length > 0 && bundle) {
         *bundle = [LAActivatorResourceManager.sharedManager eventBundleForName:eventName];
     }

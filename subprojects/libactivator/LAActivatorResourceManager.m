@@ -15,6 +15,7 @@
 @property(nonatomic, strong) NSBundle *cachedSupportBundle;
 @property(nonatomic, strong) NSMutableDictionary *eventBundles;
 @property(nonatomic, strong) NSMutableDictionary *listenerBundles;
+@property(nonatomic, strong) NSDictionary *bundledEventInfo;
 @property(nonatomic, strong) NSDictionary *bundledListenerInfo;
 @end
 
@@ -80,19 +81,33 @@
 }
 
 - (NSDictionary *)eventInfoDictionaryForName:(NSString *)eventName {
+    if (eventName.length == 0) {
+        return nil;
+    }
+
+    NSDictionary *dictionary = self.bundledEventInfo[eventName];
+    if ([dictionary isKindOfClass:NSDictionary.class]) {
+        return dictionary;
+    }
     return [[self eventBundleForName:eventName] infoDictionary];
 }
 
 - (NSArray *)availableEventNames {
     NSArray *contents = [NSFileManager.defaultManager contentsOfDirectoryAtPath:[self eventsDirectoryPath] error:nil];
-    NSMutableArray *eventNames = [NSMutableArray arrayWithCapacity:contents.count];
+    NSMutableSet *eventNames = [NSMutableSet setWithCapacity:contents.count + self.bundledEventInfo.count];
+    for (NSString *eventName in self.bundledEventInfo) {
+        if ([eventName isKindOfClass:NSString.class] && eventName.length > 0 &&
+            [self eventBundleIsCompatibleForName:eventName]) {
+            [eventNames addObject:eventName];
+        }
+    }
     for (NSString *fileName in contents) {
         if ([fileName isKindOfClass:NSString.class] && fileName.length > 0 && ![fileName hasPrefix:@"."] &&
             [self eventBundleIsCompatibleForName:fileName]) {
             [eventNames addObject:fileName];
         }
     }
-    return [eventNames sortedArrayUsingSelector:@selector(compare:)];
+    return [eventNames.allObjects sortedArrayUsingSelector:@selector(compare:)];
 }
 
 - (BOOL)eventBundleIsCompatibleForName:(NSString *)eventName {
@@ -113,6 +128,15 @@
         return NO;
     }
     return YES;
+}
+
+- (NSDictionary *)bundledEventInfo {
+    if (!_bundledEventInfo) {
+        NSString *path = [[self eventsDirectoryPath] stringByAppendingPathComponent:@"bundled.plist"];
+        NSDictionary *dictionary = [NSDictionary dictionaryWithContentsOfFile:path];
+        _bundledEventInfo = [dictionary isKindOfClass:NSDictionary.class] ? dictionary : @{};
+    }
+    return _bundledEventInfo;
 }
 
 - (NSBundle *)listenerBundleForName:(NSString *)listenerName {
