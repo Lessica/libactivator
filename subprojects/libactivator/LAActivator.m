@@ -1428,6 +1428,9 @@ LAActivator *LASharedActivator;
 }
 
 - (void)requestRemovalForListenerWithName:(NSString *)listenerName {
+    if (![self listenerWithNameSupportsRemoval:listenerName]) {
+        return;
+    }
     id<LAListener> listener = [self listenerForName:listenerName];
     if (listener && [listener respondsToSelector:@selector(activator:requestsRemovalForListenerWithName:)]) {
         [listener activator:self requestsRemovalForListenerWithName:listenerName];

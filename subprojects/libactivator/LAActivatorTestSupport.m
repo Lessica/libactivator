@@ -207,6 +207,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 @property(nonatomic, assign) NSInteger unlockingCount;
 @property(nonatomic, assign) BOOL handlesReceivedEvents;
 @property(nonatomic, assign) BOOL requiresNoTouchEvents;
+@property(nonatomic, assign) BOOL supportsRemoval;
+@property(nonatomic, assign) NSUInteger removalRequestCount;
 @property(nonatomic, assign) NSUInteger smallIconRequestCount;
 @property(nonatomic, copy) NSArray *compatibleModes;
 @property(nonatomic, copy) NSArray *exclusiveGroups;
@@ -281,6 +283,14 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         return @(self.requiresNoTouchEvents);
     }
     return nil;
+}
+
+- (BOOL)activator:(LAActivator *)activator requiresSupportsRemovalForListenerWithName:(NSString *)listenerName {
+    return self.supportsRemoval;
+}
+
+- (void)activator:(LAActivator *)activator requestsRemovalForListenerWithName:(NSString *)listenerName {
+    self.removalRequestCount += 1;
 }
 
 - (UIImage *)activator:(LAActivator *)activator
@@ -614,6 +624,15 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:[activator smallIconForListenerName:@"com.apple.Preferences"] == nil
             caseName:@"small-icon-no-global-application-fallback"
               reason:@"Core small icon lookup used a global application icon fallback"];
+    [activator requestRemovalForListenerWithName:listenerAName];
+    [recorder expect:listenerA.removalRequestCount == 0
+            caseName:@"listener-removal-request-requires-support"
+              reason:@"Listener removal request ignored supports-removal metadata"];
+    listenerA.supportsRemoval = YES;
+    [activator requestRemovalForListenerWithName:listenerAName];
+    [recorder expect:listenerA.removalRequestCount == 1
+            caseName:@"listener-removal-request-supported"
+              reason:@"Supported listener removal request was not delivered"];
     __block NSUInteger listenerNotificationCount = 0;
     id listenerObserver =
         [NSNotificationCenter.defaultCenter addObserverForName:LAActivatorAvailableListenersChangedNotification
