@@ -13,6 +13,7 @@
 #import "LAActivator+Private.h"
 #import "LAActivatorBackend.h"
 #import "LAActivatorIPC.h"
+#import "LAListenerMetadataCache.h"
 #import "LAActivatorPersistence.h"
 #import "LAActivatorResourceManager.h"
 #import "LAActivatorRuntimeStateProvider.h"
@@ -28,8 +29,7 @@
 @property(nonatomic, strong) LAActivatorIPCServer *ipcServer;
 @property(nonatomic, strong) LAActivatorRuntimeStateProvider *runtimeStateProvider;
 @property(nonatomic, strong) LATouchActivityTracker *touchActivityTracker;
-@property(nonatomic, strong) NSMutableDictionary *smallIconCache;
-@property(nonatomic, strong) dispatch_queue_t smallIconCacheQueue;
+@property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
 - (BOOL)la_assignEventWithExplicitMode:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
 - (BOOL)la_addListenerAssignmentWithExplicitMode:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (BOOL)la_removeListenerAssignmentWithExplicitMode:(NSString *)listenerName fromEvent:(LAEvent *)event;
@@ -44,10 +44,11 @@
 - (void)la_rejectSpringBoardOnlySelector:(SEL)selector;
 - (NSString *)la_invalidSpringBoardOperationCulpritName;
 - (void)la_registerSystemNotificationBridgeIfNeeded;
-- (void)la_clearSmallIconCache;
-- (UIImage *)la_cachedSmallIconForListenerName:(NSString *)listenerName found:(BOOL *)found;
-- (void)la_setCachedSmallIcon:(UIImage *)icon forListenerName:(NSString *)listenerName;
+- (void)la_clearListenerMetadataCaches;
 - (UIImage *)la_resolveSmallIconForListenerName:(NSString *)listenerName;
+- (NSString *)la_resolveLocalizedTitleForListenerName:(NSString *)listenerName;
+- (NSString *)la_resolveLocalizedGroupForListenerName:(NSString *)listenerName;
+- (NSString *)la_resolveLocalizedDescriptionForListenerName:(NSString *)listenerName;
 - (id)la_ipcPropertyListValue:(id)value;
 - (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event;
 - (NSArray *)la_ipcUniqueStringArrayPreservingOrder:(NSArray *)array;
@@ -100,7 +101,7 @@ static void LAActivatorSystemNotificationCallback(CFNotificationCenterRef center
     NSString *notificationName = LAActivatorPublicNotificationNameForDarwinName((__bridge NSString *)name);
     if (notificationName.length > 0) {
         if ([notificationName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
-            [activator la_clearSmallIconCache];
+            [activator la_clearListenerMetadataCaches];
         }
         [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:activator];
     }
@@ -131,8 +132,7 @@ LAActivator *LASharedActivator;
 - (instancetype)initPrivate {
     self = [super init];
     if (self) {
-        _smallIconCache = [[NSMutableDictionary alloc] init];
-        _smallIconCacheQueue = dispatch_queue_create("libactivator.small-icon-cache", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+        _listenerMetadataCache = [[LAListenerMetadataCache alloc] init];
         if (self.runningInsideSpringBoard) {
             _runtimeStateProvider = [[LAActivatorRuntimeStateProvider alloc] init];
             _backend = [[LAActivatorBackend alloc] initWithPersistence:[self defaultPersistence]];
@@ -212,7 +212,7 @@ LAActivator *LASharedActivator;
         return;
     }
     if ([notificationName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
-        [self la_clearSmallIconCache];
+        [self la_clearListenerMetadataCaches];
     }
     [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:self];
     notify_post(darwinName.UTF8String);
@@ -722,7 +722,7 @@ LAActivator *LASharedActivator;
     }
     BOOL changedAvailability = [self.backend registerListener:listener forName:name markSeen:YES];
     if (listener && name.length > 0) {
-        [self la_clearSmallIconCache];
+        [self la_clearListenerMetadataCaches];
     }
     if (changedAvailability) {
         [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
@@ -736,7 +736,7 @@ LAActivator *LASharedActivator;
     }
     BOOL changedAvailability = [self.backend registerListener:listener forName:name markSeen:!ignoreHasSeen];
     if (listener && name.length > 0) {
-        [self la_clearSmallIconCache];
+        [self la_clearListenerMetadataCaches];
     }
     if (changedAvailability) {
         [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
@@ -749,7 +749,7 @@ LAActivator *LASharedActivator;
         return;
     }
     if ([self.backend unregisterListenerWithName:name]) {
-        [self la_clearSmallIconCache];
+        [self la_clearListenerMetadataCaches];
         [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
     }
 }
@@ -1343,43 +1343,14 @@ LAActivator *LASharedActivator;
 }
 
 - (UIImage *)smallIconForListenerName:(NSString *)listenerName {
-    if (listenerName.length == 0) {
-        return nil;
-    }
-    BOOL cacheHit = NO;
-    UIImage *cachedIcon = [self la_cachedSmallIconForListenerName:listenerName found:&cacheHit];
-    if (cacheHit) {
-        return cachedIcon;
-    }
-    UIImage *icon = [self la_resolveSmallIconForListenerName:listenerName];
-    [self la_setCachedSmallIcon:icon forListenerName:listenerName];
-    return icon;
+    return [self.listenerMetadataCache smallIconForListenerName:listenerName
+                                                       resolver:^UIImage * {
+                                                           return [self la_resolveSmallIconForListenerName:listenerName];
+                                                       }];
 }
 
-- (UIImage *)la_cachedSmallIconForListenerName:(NSString *)listenerName found:(BOOL *)found {
-    __block id cachedIcon = nil;
-    dispatch_sync(self.smallIconCacheQueue, ^{
-        cachedIcon = self.smallIconCache[listenerName];
-    });
-    if (found) {
-        *found = cachedIcon != nil;
-    }
-    return cachedIcon == NSNull.null ? nil : cachedIcon;
-}
-
-- (void)la_setCachedSmallIcon:(UIImage *)icon forListenerName:(NSString *)listenerName {
-    if (listenerName.length == 0) {
-        return;
-    }
-    dispatch_sync(self.smallIconCacheQueue, ^{
-        self.smallIconCache[listenerName] = icon ?: NSNull.null;
-    });
-}
-
-- (void)la_clearSmallIconCache {
-    dispatch_sync(self.smallIconCacheQueue, ^{
-        [self.smallIconCache removeAllObjects];
-    });
+- (void)la_clearListenerMetadataCaches {
+    [self.listenerMetadataCache removeAllObjects];
 }
 
 - (UIImage *)la_resolveSmallIconForListenerName:(NSString *)listenerName {
@@ -1589,6 +1560,13 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedTitleForListenerName:(NSString *)listenerName {
+    return [self.listenerMetadataCache localizedTitleForListenerName:listenerName
+                                                            resolver:^NSString * {
+                                                                return [self la_resolveLocalizedTitleForListenerName:listenerName];
+                                                            }];
+}
+
+- (NSString *)la_resolveLocalizedTitleForListenerName:(NSString *)listenerName {
     if (!self.runningInsideSpringBoard) {
         NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
         NSString *title = [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageLocalizedTitleForListenerName
@@ -1642,6 +1620,13 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedGroupForListenerName:(NSString *)listenerName {
+    return [self.listenerMetadataCache localizedGroupForListenerName:listenerName
+                                                            resolver:^NSString * {
+                                                                return [self la_resolveLocalizedGroupForListenerName:listenerName];
+                                                            }];
+}
+
+- (NSString *)la_resolveLocalizedGroupForListenerName:(NSString *)listenerName {
     if (!self.runningInsideSpringBoard) {
         NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
         NSString *groupName =
@@ -1690,6 +1675,14 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedDescriptionForListenerName:(NSString *)listenerName {
+    return [self.listenerMetadataCache localizedDescriptionForListenerName:listenerName
+                                                                  resolver:^NSString * {
+                                                                      return [self la_resolveLocalizedDescriptionForListenerName:
+                                                                                       listenerName];
+                                                                  }];
+}
+
+- (NSString *)la_resolveLocalizedDescriptionForListenerName:(NSString *)listenerName {
     if (!self.runningInsideSpringBoard) {
         NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
         NSString *description =

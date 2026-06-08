@@ -12,6 +12,7 @@ libactivator_FILES += LAEventDataSourceDefaults.m
 libactivator_FILES += LAActivatorPersistence.m
 libactivator_FILES += LAActivatorBackend.m
 libactivator_FILES += LAActivatorResourceManager.m
+libactivator_FILES += LAListenerMetadataCache.m
 libactivator_FILES += LAActivatorUnlockService.m
 libactivator_FILES += LAActivatorRuntimeStateProvider.m
 libactivator_FILES += LATouchActivityTracker.m

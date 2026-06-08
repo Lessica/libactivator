@@ -210,8 +210,14 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 @property(nonatomic, assign) BOOL supportsRemoval;
 @property(nonatomic, assign) NSUInteger removalRequestCount;
 @property(nonatomic, assign) NSUInteger smallIconRequestCount;
+@property(nonatomic, assign) NSUInteger localizedTitleRequestCount;
+@property(nonatomic, assign) NSUInteger localizedGroupRequestCount;
+@property(nonatomic, assign) NSUInteger localizedDescriptionRequestCount;
 @property(nonatomic, copy) NSArray *compatibleModes;
 @property(nonatomic, copy) NSArray *exclusiveGroups;
+@property(nonatomic, copy) NSString *localizedTitle;
+@property(nonatomic, copy) NSString *localizedGroup;
+@property(nonatomic, copy) NSString *localizedDescription;
 @property(nonatomic, copy) NSString *lastReceivedEventMode;
 @property(nonatomic, copy) NSDictionary *lastReceivedUserInfo;
 @property(nonatomic, strong) UIImage *smallIconImage;
@@ -291,6 +297,21 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
 - (void)activator:(LAActivator *)activator requestsRemovalForListenerWithName:(NSString *)listenerName {
     self.removalRequestCount += 1;
+}
+
+- (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName {
+    self.localizedTitleRequestCount += 1;
+    return self.localizedTitle;
+}
+
+- (NSString *)activator:(LAActivator *)activator requiresLocalizedGroupForListenerName:(NSString *)listenerName {
+    self.localizedGroupRequestCount += 1;
+    return self.localizedGroup;
+}
+
+- (NSString *)activator:(LAActivator *)activator requiresLocalizedDescriptionForListenerName:(NSString *)listenerName {
+    self.localizedDescriptionRequestCount += 1;
+    return self.localizedDescription;
 }
 
 - (UIImage *)activator:(LAActivator *)activator
@@ -603,6 +624,39 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
                      ![activator hasSeenListenerWithName:unseenListenerName]
             caseName:@"unseen-listener-registration"
               reason:@"ignoreHasSeen listener registration was not preserved"];
+    NSString *localizationListenerName = @"libactivator.test.listener.localization";
+    LATestListener *localizationListener = [[LATestListener alloc] init];
+    localizationListener.localizedTitle = @"Cached Title";
+    localizationListener.localizedGroup = @"Cached Group";
+    localizationListener.localizedDescription = @"Cached Description";
+    [activator registerListener:localizationListener forName:localizationListenerName];
+    NSString *firstLocalizedTitle = [activator localizedTitleForListenerName:localizationListenerName];
+    NSString *firstLocalizedGroup = [activator localizedGroupForListenerName:localizationListenerName];
+    NSString *firstLocalizedDescription = [activator localizedDescriptionForListenerName:localizationListenerName];
+    localizationListener.localizedTitle = @"Changed Title";
+    localizationListener.localizedGroup = @"Changed Group";
+    localizationListener.localizedDescription = @"Changed Description";
+    NSString *secondLocalizedTitle = [activator localizedTitleForListenerName:localizationListenerName];
+    NSString *secondLocalizedGroup = [activator localizedGroupForListenerName:localizationListenerName];
+    NSString *secondLocalizedDescription = [activator localizedDescriptionForListenerName:localizationListenerName];
+    [recorder expect:[firstLocalizedTitle isEqualToString:@"Cached Title"] &&
+                     [secondLocalizedTitle isEqualToString:firstLocalizedTitle] &&
+                     [firstLocalizedGroup isEqualToString:@"Cached Group"] &&
+                     [secondLocalizedGroup isEqualToString:firstLocalizedGroup] &&
+                     [firstLocalizedDescription isEqualToString:@"Cached Description"] &&
+                     [secondLocalizedDescription isEqualToString:firstLocalizedDescription] &&
+                     localizationListener.localizedTitleRequestCount == 1 &&
+                     localizationListener.localizedGroupRequestCount == 1 &&
+                     localizationListener.localizedDescriptionRequestCount == 1
+            caseName:@"listener-localization-cache"
+              reason:@"Listener localization lookup did not use the metadata cache"];
+    LATestListener *replacementLocalizationListener = [[LATestListener alloc] init];
+    replacementLocalizationListener.localizedTitle = @"Replacement Title";
+    [activator registerListener:replacementLocalizationListener forName:localizationListenerName];
+    [recorder expect:[[activator localizedTitleForListenerName:localizationListenerName] isEqualToString:@"Replacement Title"] &&
+                     replacementLocalizationListener.localizedTitleRequestCount == 1
+            caseName:@"listener-localization-cache-invalidated-by-registration"
+              reason:@"Listener localization cache was not invalidated by listener registration"];
     NSString *iconListenerName = @"libactivator.test.listener.icon";
     LATestListener *iconListener = [[LATestListener alloc] init];
     iconListener.smallIconImage = [[UIImage alloc] init];
@@ -1007,6 +1061,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.listener.c",
         @"libactivator.test.listener.unseen",
         @"libactivator.test.listener.new",
+        @"libactivator.test.listener.localization",
         @"libactivator.test.listener.icon",
         @"libactivator.test.dispatch.a",
         @"libactivator.test.dispatch.b",
