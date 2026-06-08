@@ -301,6 +301,9 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (void)waitForSyntheticTouchDelivery;
 + (BOOL)resetHomeScreen;
 + (BOOL)openApplicationWithBundleIdentifier:(NSString *)bundleIdentifier;
++ (BOOL)prepareApplicationModeWithBundleIdentifier:(NSString *)bundleIdentifier
+                                         activator:(LAActivator *)activator
+                                          attempts:(NSUInteger)attempts;
 + (BOOL)suspendApplication;
 + (BOOL)lockDevice;
 + (BOOL)unlockDeviceWithPasscode:(NSString *)passcode;
@@ -548,6 +551,13 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
             caseName:@"nil-mode-immediate-dispatch"
               reason:@"Immediate dispatch rewrote nil event mode"];
 
+    listenerB.receiveCount = 0;
+    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
+        toListenersWithNames:@[ listenerBName, listenerBName ]];
+    [recorder expect:listenerB.receiveCount == 1
+            caseName:@"explicit-dispatch-deduplicates-listeners"
+              reason:@"Explicit dispatch delivered to a repeated listener name"];
+
     [activator sendAbortEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
          toListenersWithNames:@[ simpleAbortName ]];
     [recorder expect:simpleAbort.abortCount == 1
@@ -728,10 +738,9 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
                                                   activator:activator]];
     }
 
-    if (![self openApplicationWithBundleIdentifier:@"com.apple.Preferences"]) {
+    if (![self prepareApplicationModeWithBundleIdentifier:@"com.apple.Preferences" activator:activator attempts:3]) {
         [recorder skip:@"application-mode" reason:@"Application launch automation is unavailable"];
     } else {
-        [self waitForFrontMostApplicationWithBundleIdentifier:@"com.apple.Preferences" timeout:5.0];
         [self waitForMainQueue];
         NSString *frontMost = [self frontMostDisplayIdentifier];
         [recorder expect:[frontMost isEqualToString:@"com.apple.Preferences"] ||
@@ -742,6 +751,20 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
                 caseName:@"application-mode"
                   reason:[self runtimeDebugReasonWithPrefix:@"Foreground app did not report application mode"
                                                   activator:activator]];
+
+        NSString *eventName = @"libactivator.test.dispatch";
+        NSString *listenerName = @"libactivator.test.dispatch.a";
+        LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+        LATestListener *listener = [[LATestListener alloc] init];
+        [activator registerEventDataSource:dataSource forEventName:eventName];
+        [activator registerListener:listener forName:listenerName];
+        [activator setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:YES];
+        [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeApplication]
+            toListenersWithNames:@[ listenerName ]];
+        [recorder expect:listener.receiveCount == 0
+                caseName:@"explicit-dispatch-respects-blacklist"
+                  reason:@"Explicit dispatch ignored the foreground application blacklist"];
+        [activator setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:NO];
     }
 
     if (![self lockDevice]) {
@@ -910,6 +933,31 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         }
     }];
     return opened;
+}
+
++ (BOOL)prepareApplicationModeWithBundleIdentifier:(NSString *)bundleIdentifier
+                                         activator:(LAActivator *)activator
+                                          attempts:(NSUInteger)attempts {
+    BOOL openedAtLeastOnce = NO;
+    NSUInteger effectiveAttempts = attempts > 0 ? attempts : 1;
+    for (NSUInteger attempt = 0; attempt < effectiveAttempts; attempt++) {
+        if (![self openApplicationWithBundleIdentifier:bundleIdentifier]) {
+            continue;
+        }
+        openedAtLeastOnce = YES;
+        [self waitForFrontMostApplicationWithBundleIdentifier:bundleIdentifier timeout:5.0];
+        [self waitAllowingMainRunLoopForTimeInterval:0.75];
+        [self waitForMainQueue];
+        if ([activator.currentEventMode isEqualToString:LAEventModeApplication] &&
+            [activator.displayIdentifierForCurrentApplication isEqualToString:bundleIdentifier]) {
+            return YES;
+        }
+        if (attempt + 1 < effectiveAttempts && [self resetHomeScreen]) {
+            [self waitAllowingMainRunLoopForTimeInterval:1.0];
+            [self waitForMainQueue];
+        }
+    }
+    return openedAtLeastOnce;
 }
 
 + (BOOL)suspendApplication {

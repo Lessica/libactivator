@@ -30,7 +30,7 @@
 - (NSDictionary *)eventReplyWithEvent:(LAEvent *)event;
 - (NSString *)stringInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
 - (NSArray *)stringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
-- (NSArray *)orderedStringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
+- (NSArray *)uniqueOrderedStringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
 - (LAEvent *)eventWithUserInfo:(NSDictionary *)userInfo;
 - (NSDictionary *)userInfoWithEvent:(LAEvent *)event;
 - (NSArray *)eventDictionariesWithEvents:(NSArray *)events;
@@ -304,7 +304,8 @@
             return [self replyWithOK:NO value:nil];
         }
         [_activator sendEvent:event
-            toListenersWithNames:[self orderedStringArrayInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerNames]];
+            toListenersWithNames:[self uniqueOrderedStringArrayInUserInfo:userInfo
+                                                                    forKey:LAActivatorIPCKeyListenerNames]];
         return [self eventReplyWithEvent:event];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchAssignedAbortEvent]) {
@@ -321,7 +322,8 @@
             return [self replyWithOK:NO value:nil];
         }
         [_activator sendAbortEvent:event
-              toListenersWithNames:[self orderedStringArrayInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerNames]];
+              toListenersWithNames:[self uniqueOrderedStringArrayInUserInfo:userInfo
+                                                                      forKey:LAActivatorIPCKeyListenerNames]];
         return [self eventReplyWithEvent:event];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchPreviewEvent]) {
@@ -457,7 +459,8 @@
         return [self replyWithOK:YES value:[_activator localizedTitleForListenerName:listenerName]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedTitleForListenerNames]) {
-        NSArray *listenerNames = [self orderedStringArrayInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerNames];
+        NSArray *listenerNames = [self uniqueOrderedStringArrayInUserInfo:userInfo
+                                                                   forKey:LAActivatorIPCKeyListenerNames];
         return [self replyWithOK:YES value:[_activator localizedTitleForListenerNames:listenerNames]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedGroupForEventName]) {
@@ -508,15 +511,17 @@
     return [[strings sortedArrayUsingSelector:@selector(compare:)] copy];
 }
 
-- (NSArray *)orderedStringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key {
+- (NSArray *)uniqueOrderedStringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key {
     id value = userInfo[key];
     if (![value isKindOfClass:NSArray.class]) {
         return @[];
     }
 
     NSMutableArray *strings = [NSMutableArray arrayWithCapacity:[value count]];
+    NSMutableSet *seenStrings = [NSMutableSet set];
     for (id item in value) {
-        if ([item isKindOfClass:NSString.class] && [item length] > 0) {
+        if ([item isKindOfClass:NSString.class] && [item length] > 0 && ![seenStrings containsObject:item]) {
+            [seenStrings addObject:item];
             [strings addObject:item];
         }
     }

@@ -48,7 +48,7 @@
 - (NSString *)la_invalidSpringBoardOperationCulpritName;
 - (id)la_ipcPropertyListValue:(id)value;
 - (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event;
-- (NSArray *)la_ipcStringArrayPreservingOrder:(NSArray *)array;
+- (NSArray *)la_ipcUniqueStringArrayPreservingOrder:(NSArray *)array;
 @end
 
 @implementation LAActivator
@@ -226,7 +226,7 @@ LAActivator *LASharedActivator;
 - (void)sendEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
     if (!self.runningInsideSpringBoard) {
         NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAActivatorIPCKeyListenerNames] = [self la_ipcStringArrayPreservingOrder:listenerNames];
+        userInfo[LAActivatorIPCKeyListenerNames] = [self la_ipcUniqueStringArrayPreservingOrder:listenerNames];
         [self.ipcClient sendEventMessageName:LAActivatorIPCMessageDispatchEventToListeners
                                     userInfo:userInfo
                                        event:event];
@@ -264,7 +264,7 @@ LAActivator *LASharedActivator;
 - (void)sendAbortEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
     if (!self.runningInsideSpringBoard) {
         NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAActivatorIPCKeyListenerNames] = [self la_ipcStringArrayPreservingOrder:listenerNames];
+        userInfo[LAActivatorIPCKeyListenerNames] = [self la_ipcUniqueStringArrayPreservingOrder:listenerNames];
         [self.ipcClient sendEventMessageName:LAActivatorIPCMessageDispatchAbortEventToListeners
                                     userInfo:userInfo
                                        event:event];
@@ -558,10 +558,12 @@ LAActivator *LASharedActivator;
     return [userInfo copy];
 }
 
-- (NSArray *)la_ipcStringArrayPreservingOrder:(NSArray *)array {
+- (NSArray *)la_ipcUniqueStringArrayPreservingOrder:(NSArray *)array {
     NSMutableArray *strings = [NSMutableArray arrayWithCapacity:array.count];
+    NSMutableSet *seenStrings = [NSMutableSet set];
     for (id value in array) {
-        if ([value isKindOfClass:NSString.class] && [value length] > 0) {
+        if ([value isKindOfClass:NSString.class] && [value length] > 0 && ![seenStrings containsObject:value]) {
+            [seenStrings addObject:value];
             [strings addObject:value];
         }
     }
