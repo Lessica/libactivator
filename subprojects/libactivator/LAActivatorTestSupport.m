@@ -142,7 +142,9 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 @interface LATestEventDataSource : NSObject <LAEventDataSource>
 @property(nonatomic, assign) BOOL hidden;
 @property(nonatomic, assign) BOOL requiresAssignment;
+@property(nonatomic, assign) BOOL supportsRemoval;
 @property(nonatomic, assign) BOOL supportsUnlockingDeviceToSend;
+@property(nonatomic, assign) NSUInteger removalCount;
 @property(nonatomic, copy) NSArray *compatibleModes;
 @end
 
@@ -183,6 +185,14 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
 - (BOOL)eventWithNameSupportsUnlockingDeviceToSend:(NSString *)eventName {
     return self.supportsUnlockingDeviceToSend;
+}
+
+- (BOOL)eventWithNameSupportsRemoval:(NSString *)eventName {
+    return self.supportsRemoval;
+}
+
+- (void)removeEventWithName:(NSString *)eventName {
+    self.removalCount += 1;
 }
 
 @end
@@ -520,6 +530,23 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:statusBarIsUnprotected
             caseName:@"bundled-event-unprotected-metadata"
               reason:@"1.9.13 unprotected event metadata was not exposed through the data source"];
+    NSString *removableEventName = @"libactivator.test.removable-event";
+    NSString *nonremovableEventName = @"libactivator.test.nonremovable-event";
+    LATestEventDataSource *removableDataSource = [[LATestEventDataSource alloc] init];
+    LATestEventDataSource *nonremovableDataSource = [[LATestEventDataSource alloc] init];
+    removableDataSource.supportsRemoval = YES;
+    [activator registerEventDataSource:removableDataSource forEventName:removableEventName];
+    [activator registerEventDataSource:nonremovableDataSource forEventName:nonremovableEventName];
+    [activator removeEventWithName:nonremovableEventName];
+    [recorder expect:nonremovableDataSource.removalCount == 0 &&
+                     [activator eventDataSourceForEventName:nonremovableEventName] == nonremovableDataSource
+            caseName:@"event-removal-requires-support"
+              reason:@"Event removal ignored supports-removal metadata"];
+    [activator removeEventWithName:removableEventName];
+    [recorder expect:removableDataSource.removalCount == 1 && ![activator hasEventWithName:removableEventName]
+            caseName:@"event-removal-supported"
+              reason:@"Supported event removal did not remove the event data source"];
+    [activator unregisterEventDataSourceWithEventName:nonremovableEventName];
     [recorder expect:[activator hasListenerWithName:listenerAName]
             caseName:@"listener-registry"
               reason:@"Listener was not registered"];

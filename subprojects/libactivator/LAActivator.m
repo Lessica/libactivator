@@ -1093,6 +1093,9 @@ LAActivator *LASharedActivator;
         [self.ipcClient sendMessageName:LAActivatorIPCMessageRemoveEvent userInfo:userInfo];
         return;
     }
+    if (![self eventWithNameSupportsRemoval:eventName]) {
+        return;
+    }
     id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
     if (dataSource && [dataSource respondsToSelector:@selector(removeEventWithName:)]) {
         [dataSource removeEventWithName:eventName];
