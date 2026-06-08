@@ -132,11 +132,6 @@
 
 #pragma mark - Icons
 
-- (NSData *)activator:(LAActivator *)activator requiresIconDataForListenerName:(NSString *)listenerName {
-    CGFloat scale = 1.0f;
-    return [self dataValueForMessageName:LAActivatorIPCMessageListenerIconData listenerName:listenerName scale:&scale];
-}
-
 - (NSData *)activator:(LAActivator *)activator requiresSmallIconDataForListenerName:(NSString *)listenerName {
     CGFloat scale = 1.0f;
     return [self dataValueForMessageName:LAActivatorIPCMessageListenerSmallIconData
@@ -145,25 +140,11 @@
 }
 
 - (NSData *)activator:(LAActivator *)activator
-    requiresIconDataForListenerName:(NSString *)listenerName
-                              scale:(CGFloat *)scale {
-    return [self dataValueForMessageName:LAActivatorIPCMessageListenerIconData listenerName:listenerName scale:scale];
-}
-
-- (NSData *)activator:(LAActivator *)activator
     requiresSmallIconDataForListenerName:(NSString *)listenerName
                                    scale:(CGFloat *)scale {
     return [self dataValueForMessageName:LAActivatorIPCMessageListenerSmallIconData
                             listenerName:listenerName
                                    scale:scale];
-}
-
-- (UIImage *)activator:(LAActivator *)activator
-    requiresIconForListenerName:(NSString *)listenerName
-                          scale:(CGFloat)scale {
-    CGFloat actualScale = scale;
-    NSData *data = [self activator:activator requiresIconDataForListenerName:listenerName scale:&actualScale];
-    return data.length > 0 ? [UIImage imageWithData:data scale:actualScale > 0.0f ? actualScale : 1.0f] : nil;
 }
 
 - (UIImage *)activator:(LAActivator *)activator

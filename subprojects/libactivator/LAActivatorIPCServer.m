@@ -35,7 +35,7 @@
 - (NSDictionary *)userInfoWithEvent:(LAEvent *)event;
 - (NSArray *)eventDictionariesWithEvents:(NSArray *)events;
 - (id)propertyListValue:(id)value;
-- (NSDictionary *)iconDataReplyForListenerName:(NSString *)listenerName small:(BOOL)small scale:(CGFloat)scale;
+- (NSDictionary *)smallIconDataReplyForListenerName:(NSString *)listenerName scale:(CGFloat)scale;
 - (void)sendEvent:(LAEvent *)event directlyToListenerName:(NSString *)listenerName abort:(BOOL)abort;
 @end
 
@@ -126,7 +126,6 @@
         LAActivatorIPCMessageDispatchDeactivateEvent,
         LAActivatorIPCMessageRemoteListenerReceiveEvent,
         LAActivatorIPCMessageRemoteListenerAbortEvent,
-        LAActivatorIPCMessageListenerIconData,
         LAActivatorIPCMessageListenerSmallIconData,
         LAActivatorIPCMessageRequestListenerRemoval,
         LAActivatorIPCMessageRemoveEvent,
@@ -469,15 +468,8 @@
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerSupportsConfiguration]) {
         return [self replyWithOK:YES value:@([_activator listenerWithNameSupportsConfiguration:listenerName])];
     }
-    if ([messageName isEqualToString:LAActivatorIPCMessageListenerIconData]) {
-        return [self iconDataReplyForListenerName:listenerName
-                                            small:NO
-                                            scale:[userInfo[LAActivatorIPCKeyScale] doubleValue]];
-    }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerSmallIconData]) {
-        return [self iconDataReplyForListenerName:listenerName
-                                            small:YES
-                                            scale:[userInfo[LAActivatorIPCKeyScale] doubleValue]];
+        return [self smallIconDataReplyForListenerName:listenerName scale:[userInfo[LAActivatorIPCKeyScale] doubleValue]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageRequestListenerRemoval]) {
         [_activator requestRemovalForListenerWithName:listenerName];
@@ -612,7 +604,7 @@
                                                                                                              : nil;
 }
 
-- (NSDictionary *)iconDataReplyForListenerName:(NSString *)listenerName small:(BOOL)small scale:(CGFloat)scale {
+- (NSDictionary *)smallIconDataReplyForListenerName:(NSString *)listenerName scale:(CGFloat)scale {
     if (listenerName.length == 0) {
         return [self replyWithOK:NO value:nil];
     }
@@ -620,27 +612,17 @@
     CGFloat actualScale = scale > 0.0f ? scale : UIScreen.mainScreen.scale;
     NSData *data = nil;
     id<LAListener> listener = [_activator listenerForName:listenerName];
-    if (small) {
-        if ([listener respondsToSelector:@selector(activator:requiresSmallIconDataForListenerName:scale:)]) {
-            data = [listener activator:_activator requiresSmallIconDataForListenerName:listenerName scale:&actualScale];
-        }
-        if (data.length == 0 && [listener respondsToSelector:@selector(activator:
-                                                                 requiresSmallIconDataForListenerName:)]) {
-            data = [listener activator:_activator requiresSmallIconDataForListenerName:listenerName];
-            actualScale = 1.0f;
-        }
-    } else {
-        if ([listener respondsToSelector:@selector(activator:requiresIconDataForListenerName:scale:)]) {
-            data = [listener activator:_activator requiresIconDataForListenerName:listenerName scale:&actualScale];
-        }
-        if (data.length == 0 && [listener respondsToSelector:@selector(activator:requiresIconDataForListenerName:)]) {
-            data = [listener activator:_activator requiresIconDataForListenerName:listenerName];
-            actualScale = 1.0f;
-        }
+    if ([listener respondsToSelector:@selector(activator:requiresSmallIconDataForListenerName:scale:)]) {
+        data = [listener activator:_activator requiresSmallIconDataForListenerName:listenerName scale:&actualScale];
+    }
+    if (data.length == 0 && [listener respondsToSelector:@selector(activator:
+                                                             requiresSmallIconDataForListenerName:)]) {
+        data = [listener activator:_activator requiresSmallIconDataForListenerName:listenerName];
+        actualScale = 1.0f;
     }
     if (data.length == 0) {
         data = [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName
-                                                                           small:small
+                                                                           small:YES
                                                                            scale:&actualScale];
     }
     if (data.length == 0) {

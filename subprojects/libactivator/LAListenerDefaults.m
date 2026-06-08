@@ -111,32 +111,15 @@
     return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
 }
 
-- (NSData *)activator:(LAActivator *)activator requiresIconDataForListenerName:(NSString *)listenerName {
-    CGFloat scale = 1.0f;
-    return [self activator:activator requiresIconDataForListenerName:listenerName scale:&scale];
-}
-
 - (NSData *)activator:(LAActivator *)activator requiresSmallIconDataForListenerName:(NSString *)listenerName {
     CGFloat scale = 1.0f;
     return [self activator:activator requiresSmallIconDataForListenerName:listenerName scale:&scale];
 }
 
 - (NSData *)activator:(LAActivator *)activator
-    requiresIconDataForListenerName:(NSString *)listenerName
-                              scale:(CGFloat *)scale {
-    return [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName small:NO scale:scale];
-}
-
-- (NSData *)activator:(LAActivator *)activator
     requiresSmallIconDataForListenerName:(NSString *)listenerName
                                    scale:(CGFloat *)scale {
     return [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName small:YES scale:scale];
-}
-
-- (UIImage *)activator:(LAActivator *)activator
-    requiresIconForListenerName:(NSString *)listenerName
-                          scale:(CGFloat)scale {
-    return nil;
 }
 
 - (UIImage *)activator:(LAActivator *)activator

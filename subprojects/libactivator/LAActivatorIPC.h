@@ -79,7 +79,6 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCMessageDispatchPreviewEvent;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageDispatchDeactivateEvent;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRemoteListenerReceiveEvent;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRemoteListenerAbortEvent;
-LA_IPC_EXTERN NSString *const LAActivatorIPCMessageListenerIconData;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageListenerSmallIconData;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRequestListenerRemoval;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRemoveEvent;

@@ -71,19 +71,12 @@ NS_ASSUME_NONNULL_BEGIN
 // Icons
 // Fast path that supports scale
 - (nullable NSData *)activator:(LAActivator *)activator
-    requiresIconDataForListenerName:(NSString *)listenerName
-                              scale:(nullable CGFloat *)scale;
-- (nullable NSData *)activator:(LAActivator *)activator
     requiresSmallIconDataForListenerName:(NSString *)listenerName
                                    scale:(nullable CGFloat *)scale;
 // Legacy
-- (nullable NSData *)activator:(LAActivator *)activator requiresIconDataForListenerName:(NSString *)listenerName;
 - (nullable NSData *)activator:(LAActivator *)activator requiresSmallIconDataForListenerName:(NSString *)listenerName;
 
 // For cases where PNG data isn't available quickly
-- (nullable UIImage *)activator:(LAActivator *)activator
-    requiresIconForListenerName:(NSString *)listenerName
-                          scale:(CGFloat)scale;
 - (nullable UIImage *)activator:(LAActivator *)activator
     requiresSmallIconForListenerName:(NSString *)listenerName
                                scale:(CGFloat)scale;

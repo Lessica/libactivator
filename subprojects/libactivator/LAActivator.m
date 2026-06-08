@@ -1314,27 +1314,7 @@ LAActivator *LASharedActivator;
 }
 
 - (UIImage *)iconForListenerName:(NSString *)listenerName {
-    CGFloat scale = UIScreen.mainScreen.scale;
-    id<LAListener> listener = [self listenerForName:listenerName];
-    if ([listener respondsToSelector:@selector(activator:requiresIconForListenerName:scale:)]) {
-        UIImage *image = [listener activator:self requiresIconForListenerName:listenerName scale:scale];
-        if (image) {
-            return image;
-        }
-    }
-    if ([listener respondsToSelector:@selector(activator:requiresIconDataForListenerName:scale:)]) {
-        NSData *data = [listener activator:self requiresIconDataForListenerName:listenerName scale:&scale];
-        if (data.length > 0) {
-            return [UIImage imageWithData:data scale:scale > 0.0f ? scale : 1.0f];
-        }
-    }
-    if ([listener respondsToSelector:@selector(activator:requiresIconDataForListenerName:)]) {
-        NSData *data = [listener activator:self requiresIconDataForListenerName:listenerName];
-        if (data.length > 0) {
-            return [UIImage imageWithData:data scale:1.0f];
-        }
-    }
-    return [LAActivatorResourceManager.sharedManager iconForListenerName:listenerName small:NO scale:scale];
+    return nil;
 }
 
 - (UIImage *)smallIconForListenerName:(NSString *)listenerName {
@@ -1369,10 +1349,6 @@ LAActivator *LASharedActivator;
 }
 
 - (UIImage *)imageForListenerName:(NSString *)listenerName usingTemplate:(NSBundle *)templateBundle {
-    UIImage *image = [self iconForListenerName:listenerName];
-    if (image) {
-        return image;
-    }
     NSString *path = [templateBundle pathForResource:@"icon" ofType:@"png"]
                          ?: [templateBundle pathForResource:@"Icon" ofType:@"png"];
     return path ? [UIImage imageWithContentsOfFile:path] : nil;

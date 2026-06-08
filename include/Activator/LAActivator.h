@@ -98,7 +98,8 @@ LA_PRIVATE_IVARS(LAActivator)
 - (BOOL)listenerWithNameNeedsPoweredDisplay:(NSString *)listenerName;
 - (NSArray *)exclusiveAssignmentGroupsForListenerName:(NSString *)listenerName;
 - (BOOL)listenerNamesAreMutuallyCompatible:(NSArray *)listenerNames;
-- (nullable UIImage *)iconForListenerName:(NSString *)listenerName;
+- (nullable UIImage *)iconForListenerName:(NSString *)listenerName
+    __attribute__((deprecated("Large listener icons are not supported.")));
 - (nullable UIImage *)smallIconForListenerName:(NSString *)listenerName;
 - (nullable UIImage *)imageForListenerName:(NSString *)listenerName usingTemplate:(NSBundle *)templateBundle;
 - (BOOL)listenerWithNameSupportsRemoval:(NSString *)listenerName;

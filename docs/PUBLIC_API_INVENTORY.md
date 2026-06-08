@@ -114,9 +114,9 @@ This inventory records the public API surface inherited from Activator 1.9.13 an
 | `listenerWithNameNeedsPoweredDisplay:` | Safe stub first | Listener metadata query. |
 | `exclusiveAssignmentGroupsForListenerName:` | Safe stub first | Needed for multi-listener assignment compatibility. |
 | `listenerNamesAreMutuallyCompatible:` | Must implement | Core assignment compatibility logic. |
-| `iconForListenerName:` | Settings-backed | May ask listener metadata provider. |
+| `iconForListenerName:` | Deprecated no-op | 1.9.13 marks the large icon path as no-op, and `LAListener` no longer declares large-icon callbacks. |
 | `smallIconForListenerName:` | Settings-backed | May ask listener metadata provider. |
-| `imageForListenerName:usingTemplate:` | Settings-backed | Template-based legacy image behavior. |
+| `imageForListenerName:usingTemplate:` | Settings-backed fallback | Template-based legacy image behavior; it should not revive large listener icon callbacks. |
 | `listenerWithNameSupportsRemoval:` | Safe stub first | Listener metadata query. |
 | `requestRemovalForListenerWithName:` | Runtime-backed | Calls listener removal hook. |
 | `listenerWithNameSupportsConfiguration:` | Settings-backed | Listener configuration support query. |

@@ -88,7 +88,6 @@ NSString *const LAActivatorIPCMessageDispatchPreviewEvent = @"libactivator.reque
 NSString *const LAActivatorIPCMessageDispatchDeactivateEvent = @"libactivator.request.dispatch-deactivate-event";
 NSString *const LAActivatorIPCMessageRemoteListenerReceiveEvent = @"libactivator.request.remote-listener-receive-event";
 NSString *const LAActivatorIPCMessageRemoteListenerAbortEvent = @"libactivator.request.remote-listener-abort-event";
-NSString *const LAActivatorIPCMessageListenerIconData = @"libactivator.request.listener-icon-data";
 NSString *const LAActivatorIPCMessageListenerSmallIconData = @"libactivator.request.listener-small-icon-data";
 NSString *const LAActivatorIPCMessageRequestListenerRemoval = @"libactivator.request.listener-request-removal";
 NSString *const LAActivatorIPCMessageRemoveEvent = @"libactivator.request.remove-event";
