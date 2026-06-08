@@ -9,6 +9,7 @@
 #import "LAActivatorPersistence.h"
 
 #import <roothide.h>
+#import <sys/stat.h>
 
 @implementation LAActivatorPersistence
 
@@ -75,7 +76,19 @@
     }
 
     NSError *writeError = nil;
-    return [data writeToFile:self.filePath options:NSDataWritingAtomic error:&writeError];
+    if (![data writeToFile:self.filePath options:NSDataWritingAtomic error:&writeError]) {
+        return NO;
+    }
+
+    NSDictionary *attributes = @{
+        NSFilePosixPermissions : @(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH),
+        NSFileProtectionKey : NSFileProtectionNone,
+    };
+    NSError *attributesError = nil;
+    if (![NSFileManager.defaultManager setAttributes:attributes ofItemAtPath:self.filePath error:&attributesError]) {
+        NSLog(@"libactivator: Failed to update persistence file attributes: %@", attributesError);
+    }
+    return YES;
 }
 
 @end

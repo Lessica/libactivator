@@ -10,9 +10,10 @@
 
 #import "LAActivatorTestSupport.h"
 
+#import "LAActivator+Private.h"
+#import "LAActivatorBackend.h"
 #import "LAActivatorIPC.h"
 #import "LAActivatorPersistence.h"
-#import "LAActivator+Private.h"
 
 #import <Activator/Activator.h>
 #import <IOKit/hid/IOHIDEvent.h>
@@ -20,6 +21,7 @@
 #import <UIKit/UIKit.h>
 #import <mach/mach_time.h>
 #import <roothide.h>
+#import <sys/stat.h>
 
 extern IOHIDEventSystemClientRef IOHIDEventSystemClientCreate(CFAllocatorRef allocator);
 extern void IOHIDEventSystemClientDispatchEvent(IOHIDEventSystemClientRef client, IOHIDEventRef event);
@@ -79,6 +81,11 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 - (void)skip:(NSString *)caseName reason:(NSString *)reason;
 - (void)expect:(BOOL)condition caseName:(NSString *)caseName reason:(NSString *)reason;
 - (NSDictionary *)resultDictionary;
+@end
+
+@interface LATestCountingPersistence : LAActivatorPersistence
+@property(nonatomic, assign) NSInteger saveCount;
+@property(nonatomic, copy) NSDictionary *lastSavedDictionary;
 @end
 
 @implementation LATestRecorder
@@ -146,6 +153,16 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 @property(nonatomic, assign) BOOL supportsUnlockingDeviceToSend;
 @property(nonatomic, assign) NSUInteger removalCount;
 @property(nonatomic, copy) NSArray *compatibleModes;
+@end
+
+@implementation LATestCountingPersistence
+
+- (BOOL)saveDictionary:(NSDictionary *)dictionary {
+    self.saveCount += 1;
+    self.lastSavedDictionary = dictionary;
+    return YES;
+}
+
 @end
 
 @implementation LATestEventDataSource
@@ -519,10 +536,56 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
             caseName:@"load"
               reason:@"Saved value did not round-trip"];
 
+    NSDictionary *attributes = [NSFileManager.defaultManager attributesOfItemAtPath:path error:nil];
+    NSUInteger permissions = [attributes[NSFilePosixPermissions] unsignedIntegerValue] & 0777;
+    NSString *protection = attributes[NSFileProtectionKey];
+    [recorder expect:permissions == (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
+            caseName:@"permissions"
+              reason:@"Saved plist permissions were not 0666"];
+    [recorder expect:protection == nil || [protection isEqualToString:NSFileProtectionNone]
+            caseName:@"file-protection"
+              reason:@"Saved plist should not use protected file access"];
+
     [@"invalid" writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
     [recorder expect:[persistence loadDictionary] == nil
             caseName:@"invalid-ignored"
               reason:@"Invalid plist should be ignored"];
+
+    LATestCountingPersistence *countingPersistence =
+        [[LATestCountingPersistence alloc] initWithFilePath:@"libactivator-counting-tests.plist"];
+    LAActivatorBackend *backend = [[LAActivatorBackend alloc] initWithPersistence:countingPersistence];
+    LAEvent *event = [LAEvent eventWithName:@"libactivator.test.persistence" mode:LAEventModeSpringBoard];
+    [backend setCurrentProfileNameIfChanged:@"Testing"];
+    [backend assignEvent:event toListenersWithNames:@[ @"libactivator.test.listener.one" ]];
+    [backend setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:YES];
+    [recorder expect:[[backend assignedListenerNamesForEvent:event]
+                         isEqualToArray:@[ @"libactivator.test.listener.one" ]] &&
+                     [backend applicationWithDisplayIdentifierIsBlacklisted:@"com.apple.Preferences"] &&
+                     [backend.currentProfileName isEqualToString:@"Testing"]
+            caseName:@"coalesced-in-memory"
+              reason:@"Backend state was not updated before persistence flush"];
+    [recorder expect:countingPersistence.saveCount == 0
+            caseName:@"coalesced-not-immediate"
+              reason:@"Backend should not write immediately for every mutation"];
+    [recorder expect:[backend flushPendingPersistentState] && countingPersistence.saveCount == 1
+            caseName:@"coalesced-flush"
+              reason:@"Pending backend changes were not coalesced into one save"];
+    NSDictionary *savedProfiles = countingPersistence.lastSavedDictionary[@"Profiles"];
+    [recorder expect:[countingPersistence.lastSavedDictionary[@"CurrentProfileName"] isEqualToString:@"Testing"] &&
+                     [savedProfiles isKindOfClass:NSDictionary.class] &&
+                     [countingPersistence.lastSavedDictionary[@"BlacklistedDisplayIdentifiers"]
+                         containsObject:@"com.apple.Preferences"]
+            caseName:@"coalesced-snapshot"
+              reason:@"Coalesced save did not contain the latest backend state"];
+    [backend setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:NO];
+    [recorder expect:countingPersistence.saveCount == 1 &&
+                     ![backend applicationWithDisplayIdentifierIsBlacklisted:@"com.apple.Preferences"]
+            caseName:@"coalesced-next-dirty"
+              reason:@"Second mutation should update memory before the next flush"];
+    [recorder expect:[backend flushPendingPersistentState] && countingPersistence.saveCount == 2
+            caseName:@"coalesced-next-flush"
+              reason:@"Second dirty pass did not schedule a new save"];
+
     [NSFileManager.defaultManager removeItemAtPath:path error:nil];
 }
 
@@ -653,7 +716,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     LATestListener *replacementLocalizationListener = [[LATestListener alloc] init];
     replacementLocalizationListener.localizedTitle = @"Replacement Title";
     [activator registerListener:replacementLocalizationListener forName:localizationListenerName];
-    [recorder expect:[[activator localizedTitleForListenerName:localizationListenerName] isEqualToString:@"Replacement Title"] &&
+    [recorder expect:[[activator localizedTitleForListenerName:localizationListenerName]
+                         isEqualToString:@"Replacement Title"] &&
                      replacementLocalizationListener.localizedTitleRequestCount == 1
             caseName:@"listener-localization-cache-invalidated-by-registration"
               reason:@"Listener localization cache was not invalidated by listener registration"];
@@ -698,8 +762,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     LATestListener *replacementListener = [[LATestListener alloc] init];
     replacementListener.exclusiveGroups = @[ @"exclusive" ];
     [activator registerListener:replacementListener forName:listenerAName];
-    [recorder expect:[activator listenerForName:listenerAName] == replacementListener &&
-                     listenerNotificationCount == 0
+    [recorder expect:[activator listenerForName:listenerAName] == replacementListener && listenerNotificationCount == 0
             caseName:@"listener-overwrite-no-availability-notification"
               reason:@"Listener overwrite changed availability notification state"];
     [activator registerListener:replacementListener forName:@"libactivator.test.listener.new"];
@@ -726,9 +789,10 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:[activator assignedListenerNamesForEvent:applicationEvent].count == 0
             caseName:@"assignment-compatibility-filter"
               reason:@"Incompatible assignment was returned as active"];
-    [recorder expect:[activator eventsAssignedToListenerWithName:listenerCName].count == 1
-            caseName:@"reverse-assignment-keeps-incompatible"
-              reason:@"Reverse assignment should include available events assigned to currently incompatible listeners"];
+    [recorder
+          expect:[activator eventsAssignedToListenerWithName:listenerCName].count == 1
+        caseName:@"reverse-assignment-keeps-incompatible"
+          reason:@"Reverse assignment should include available events assigned to currently incompatible listeners"];
     [activator addListenerAssignment:listenerAName toEvent:applicationEvent];
     [activator removeListenerAssignment:listenerAName fromEvent:applicationEvent];
     [recorder expect:[activator assignedListenerNamesForEvent:applicationEvent].count == 0 &&
@@ -868,7 +932,6 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:listenerA.lastReceivedEventMode == nil
             caseName:@"nil-mode-deferred-dispatch"
               reason:@"Deferred dispatch rewrote nil event mode"];
-
 }
 
 + (void)runBuiltInActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {

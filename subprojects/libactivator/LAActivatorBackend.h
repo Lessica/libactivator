@@ -46,6 +46,8 @@ __attribute__((visibility("hidden")))
 - (NSArray *)availableProfileNames;
 - (BOOL)setCurrentProfileNameIfChanged:(nullable NSString *)currentProfileName;
 
+- (BOOL)flushPendingPersistentState;
+
 + (NSArray *)normalizedStringArray:(NSArray *)array;
 
 @end

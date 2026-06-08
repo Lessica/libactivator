@@ -12,6 +12,8 @@
 
 #import <dispatch/dispatch.h>
 
+static const void *LAActivatorBackendStateQueueKey = &LAActivatorBackendStateQueueKey;
+
 static NSString *const LAActivatorDefaultProfileName = @"Default";
 static NSString *const LAActivatorSchemaVersionKey = @"SchemaVersion";
 static NSString *const LAActivatorCurrentProfileNameKey = @"CurrentProfileName";
@@ -29,10 +31,13 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 @property(nonatomic, copy) NSArray *cachedListenerNames;
 @property(nonatomic, strong) dispatch_queue_t stateQueue;
 @property(nonatomic, strong) LAActivatorPersistence *persistence;
+@property(nonatomic, assign) BOOL persistentStateDirty;
+@property(nonatomic, assign) BOOL persistentSaveScheduled;
 @end
 
 @implementation LAActivatorBackend {
     NSString *_currentProfileName;
+    CFRunLoopObserverRef _persistentSaveObserver;
 }
 
 #pragma mark - Lifecycle
@@ -47,10 +52,20 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
         _blacklistedDisplayIdentifiers = [[NSMutableSet alloc] init];
         _seenListenerNames = [[NSMutableSet alloc] init];
         _stateQueue = dispatch_queue_create("libactivator.state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+        dispatch_queue_set_specific(_stateQueue, LAActivatorBackendStateQueueKey,
+                                    (void *)LAActivatorBackendStateQueueKey, NULL);
         [self resetRuntimeState];
         [self loadPersistentState];
     }
     return self;
+}
+
+- (void)dealloc {
+    if (_persistentSaveObserver) {
+        CFRunLoopObserverInvalidate(_persistentSaveObserver);
+        CFRelease(_persistentSaveObserver);
+        _persistentSaveObserver = NULL;
+    }
 }
 
 - (void)resetRuntimeState {
@@ -95,6 +110,55 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
         return;
     }
 
+    void (^markDirty)(void) = ^{
+        self.persistentStateDirty = YES;
+        if (self.persistentSaveScheduled) {
+            return;
+        }
+        self.persistentSaveScheduled = YES;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self installPersistentSaveObserverIfNeeded];
+        });
+    };
+
+    if ([self isRunningOnStateQueue]) {
+        markDirty();
+    } else {
+        dispatch_sync(self.stateQueue, markDirty);
+    }
+}
+
+- (BOOL)flushPendingPersistentState {
+    __block NSDictionary *dictionary = nil;
+
+    void (^copyPendingDictionary)(void) = ^{
+        if (!self.persistence || !self.persistentStateDirty) {
+            self.persistentSaveScheduled = NO;
+            return;
+        }
+        dictionary = [self persistentStateDictionary];
+        self.persistentStateDirty = NO;
+        self.persistentSaveScheduled = NO;
+    };
+
+    if ([self isRunningOnStateQueue]) {
+        copyPendingDictionary();
+    } else {
+        dispatch_sync(self.stateQueue, copyPendingDictionary);
+    }
+
+    if (!dictionary) {
+        return YES;
+    }
+
+    BOOL saved = [self.persistence saveDictionary:dictionary];
+    if (!saved) {
+        NSLog(@"libactivator: Failed to save persistent state");
+    }
+    return saved;
+}
+
+- (NSDictionary *)persistentStateDictionary {
     NSMutableDictionary *serializedProfiles = [[NSMutableDictionary alloc] init];
     for (NSString *profileName in self.profiles) {
         NSDictionary *profile = self.profiles[profileName];
@@ -111,7 +175,44 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
         LAActivatorSeenListenerNamesKey :
             [self.seenListenerNames.allObjects sortedArrayUsingSelector:@selector(compare:)],
     };
-    [self.persistence saveDictionary:dictionary];
+    return dictionary;
+}
+
+- (BOOL)isRunningOnStateQueue {
+    return dispatch_get_specific(LAActivatorBackendStateQueueKey) == LAActivatorBackendStateQueueKey;
+}
+
+- (void)installPersistentSaveObserverIfNeeded {
+    __block BOOL shouldInstall = NO;
+    dispatch_sync(self.stateQueue, ^{
+        shouldInstall = self.persistentStateDirty && self.persistentSaveScheduled && _persistentSaveObserver == NULL;
+    });
+    if (!shouldInstall) {
+        return;
+    }
+
+    __weak typeof(self) weakSelf = self;
+    CFRunLoopObserverRef observer =
+        CFRunLoopObserverCreateWithHandler(kCFAllocatorDefault, kCFRunLoopBeforeWaiting | kCFRunLoopExit, false, 0,
+                                           ^(CFRunLoopObserverRef observer, CFRunLoopActivity activity) {
+                                               __strong typeof(weakSelf) strongSelf = weakSelf;
+                                               if (!strongSelf) {
+                                                   return;
+                                               }
+                                               if (strongSelf->_persistentSaveObserver) {
+                                                   CFRunLoopObserverInvalidate(strongSelf->_persistentSaveObserver);
+                                                   CFRelease(strongSelf->_persistentSaveObserver);
+                                                   strongSelf->_persistentSaveObserver = NULL;
+                                               }
+                                               [strongSelf flushPendingPersistentState];
+                                           });
+    if (!observer) {
+        [self flushPendingPersistentState];
+        return;
+    }
+
+    _persistentSaveObserver = observer;
+    CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
 }
 
 #pragma mark - Persistence
