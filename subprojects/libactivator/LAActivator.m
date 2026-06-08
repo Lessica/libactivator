@@ -759,6 +759,13 @@ LAActivator *LASharedActivator;
     if (event.name.length == 0) {
         return NO;
     }
+    if (!self.runningInsideSpringBoard) {
+        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
+        userInfo[LAActivatorIPCKeyListenerNames] = [LAActivatorBackend normalizedStringArray:listenerNames];
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageAssignEvent
+                                              userInfo:userInfo
+                                          defaultValue:NO];
+    }
     if (event.mode.length > 0) {
         return [self la_assignEventWithExplicitMode:event toListenersWithNames:listenerNames];
     }
@@ -772,13 +779,6 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)la_assignEventWithExplicitMode:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
-    if (!self.runningInsideSpringBoard) {
-        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAActivatorIPCKeyListenerNames] = [LAActivatorBackend normalizedStringArray:listenerNames];
-        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageAssignEvent
-                                              userInfo:userInfo
-                                          defaultValue:NO];
-    }
     return [self.backend assignEvent:event toListenersWithNames:listenerNames];
 }
 
@@ -798,6 +798,13 @@ LAActivator *LASharedActivator;
     if (listenerName.length == 0 || event.name.length == 0) {
         return NO;
     }
+    if (!self.runningInsideSpringBoard) {
+        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
+        userInfo[LAActivatorIPCKeyListenerName] = listenerName ?: @"";
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageAddListenerAssignment
+                                              userInfo:userInfo
+                                          defaultValue:NO];
+    }
     if (event.mode.length > 0) {
         return [self la_addListenerAssignmentWithExplicitMode:listenerName toEvent:event];
     }
@@ -811,19 +818,19 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)la_addListenerAssignmentWithExplicitMode:(NSString *)listenerName toEvent:(LAEvent *)event {
-    if (!self.runningInsideSpringBoard) {
-        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAActivatorIPCKeyListenerName] = listenerName ?: @"";
-        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageAddListenerAssignment
-                                              userInfo:userInfo
-                                          defaultValue:NO];
-    }
     return [self.backend addListenerName:listenerName toEvent:event];
 }
 
 - (BOOL)la_removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event {
     if (listenerName.length == 0 || event.name.length == 0) {
         return NO;
+    }
+    if (!self.runningInsideSpringBoard) {
+        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
+        userInfo[LAActivatorIPCKeyListenerName] = listenerName ?: @"";
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageRemoveListenerAssignment
+                                              userInfo:userInfo
+                                          defaultValue:NO];
     }
     if (event.mode.length > 0) {
         return [self la_removeListenerAssignmentWithExplicitMode:listenerName fromEvent:event];
@@ -838,13 +845,6 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)la_removeListenerAssignmentWithExplicitMode:(NSString *)listenerName fromEvent:(LAEvent *)event {
-    if (!self.runningInsideSpringBoard) {
-        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAActivatorIPCKeyListenerName] = listenerName ?: @"";
-        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageRemoveListenerAssignment
-                                              userInfo:userInfo
-                                          defaultValue:NO];
-    }
     return [self.backend removeListenerName:listenerName fromEvent:event];
 }
 
@@ -857,6 +857,11 @@ LAActivator *LASharedActivator;
 - (BOOL)la_unassignEvent:(LAEvent *)event {
     if (event.name.length == 0) {
         return NO;
+    }
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageUnassignEvent
+                                              userInfo:[self la_ipcUserInfoForEvent:event]
+                                          defaultValue:NO];
     }
     if (event.mode.length > 0) {
         return [self la_unassignEventWithExplicitMode:event];
@@ -871,11 +876,6 @@ LAActivator *LASharedActivator;
 }
 
 - (BOOL)la_unassignEventWithExplicitMode:(LAEvent *)event {
-    if (!self.runningInsideSpringBoard) {
-        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageUnassignEvent
-                                              userInfo:[self la_ipcUserInfoForEvent:event]
-                                          defaultValue:NO];
-    }
     return [self.backend unassignEvent:event];
 }
 

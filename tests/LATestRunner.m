@@ -96,6 +96,7 @@
     NSString *eventName = LAEventNameVolumeDownPress;
     NSString *displayIdentifier = @"com.libactivator.tests.client";
     LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    LAEvent *allModesEvent = [LAEvent eventWithName:eventName];
 
     [recorder expect:activator.version == LAActivatorVersion_2_0
             caseName:@"version"
@@ -139,7 +140,11 @@
                             mode:LAEventModeSpringBoard]
             caseName:@"reverse-assignment"
               reason:@"Client reverse assignment lookup did not include the assigned event"];
-    [activator unassignEvent:event];
+    [activator unassignEvent:allModesEvent];
+    NSDate *notificationSettleDeadline = [NSDate dateWithTimeIntervalSinceNow:0.25];
+    while ([notificationSettleDeadline timeIntervalSinceNow] > 0.0) {
+        [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:notificationSettleDeadline];
+    }
     __block NSUInteger assignmentNotificationCount = 0;
     id assignmentObserver =
         [NSNotificationCenter.defaultCenter addObserverForName:LAActivatorAssignmentsChangedNotification
@@ -148,23 +153,27 @@
                                                     usingBlock:^(__unused NSNotification *notification) {
                                                         assignmentNotificationCount += 1;
                                                     }];
-    [activator addListenerAssignment:nothingName toEvent:event];
+    [activator addListenerAssignment:nothingName toEvent:allModesEvent];
     BOOL receivedAssignmentNotification =
         [self waitUntilTrue:^BOOL {
             return assignmentNotificationCount > 0;
         }
                       timeout:2.0];
+    [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.2]];
     [recorder expect:[[activator assignedListenerNamesForEvent:event] isEqualToArray:@[ nothingName ]]
             caseName:@"add-assignment-round-trip"
-              reason:@"Client add assignment did not round-trip through SpringBoard"];
+              reason:@"Client all-modes add assignment did not round-trip through SpringBoard"];
     [recorder expect:receivedAssignmentNotification
             caseName:@"assignment-system-notification"
               reason:@"Client did not receive bridged assignment notification"];
-    [activator removeListenerAssignment:nothingName fromEvent:event];
+    [recorder expect:assignmentNotificationCount == 1
+            caseName:@"all-modes-assignment-single-notification"
+              reason:@"Client all-modes assignment emitted more than one bridged notification"];
+    [NSNotificationCenter.defaultCenter removeObserver:assignmentObserver];
+    [activator removeListenerAssignment:nothingName fromEvent:allModesEvent];
     [recorder expect:[activator assignedListenerNamesForEvent:event].count == 0
             caseName:@"remove-assignment-round-trip"
-              reason:@"Client remove assignment did not round-trip through SpringBoard"];
-    [NSNotificationCenter.defaultCenter removeObserver:assignmentObserver];
+              reason:@"Client all-modes remove assignment did not round-trip through SpringBoard"];
     [activator addListenerAssignment:nothingName toEvent:event];
 
     [activator sendEventToListener:event];
