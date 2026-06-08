@@ -547,6 +547,26 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
             caseName:@"event-removal-supported"
               reason:@"Supported event removal did not remove the event data source"];
     [activator unregisterEventDataSourceWithEventName:nonremovableEventName];
+    __block NSUInteger eventNotificationCount = 0;
+    id eventObserver =
+        [NSNotificationCenter.defaultCenter addObserverForName:LAActivatorAvailableEventsChangedNotification
+                                                        object:activator
+                                                         queue:nil
+                                                    usingBlock:^(__unused NSNotification *notification) {
+                                                        eventNotificationCount += 1;
+                                                    }];
+    LATestEventDataSource *replacementDataSource = [[LATestEventDataSource alloc] init];
+    [activator registerEventDataSource:replacementDataSource forEventName:eventName];
+    [recorder expect:[activator eventDataSourceForEventName:eventName] == replacementDataSource &&
+                     eventNotificationCount == 0
+            caseName:@"event-data-source-overwrite-no-availability-notification"
+              reason:@"Event data source overwrite changed availability notification state"];
+    [activator registerEventDataSource:[[LATestEventDataSource alloc] init]
+                          forEventName:@"libactivator.test.new-event-data-source"];
+    [recorder expect:eventNotificationCount == 1
+            caseName:@"new-event-data-source-availability-notification"
+              reason:@"New event data source registration did not post availability notification"];
+    [NSNotificationCenter.defaultCenter removeObserver:eventObserver];
     [recorder expect:[activator hasListenerWithName:listenerAName]
             caseName:@"listener-registry"
               reason:@"Listener was not registered"];

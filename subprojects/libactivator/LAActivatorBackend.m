@@ -292,10 +292,12 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
     if (!dataSource || eventName.length == 0) {
         return NO;
     }
+    __block BOOL added = NO;
     dispatch_sync(self.stateQueue, ^{
+        added = self.eventDataSources[eventName] == nil;
         self.eventDataSources[eventName] = dataSource;
     });
-    return YES;
+    return added;
 }
 
 - (BOOL)unregisterEventDataSourceWithEventName:(NSString *)eventName {
