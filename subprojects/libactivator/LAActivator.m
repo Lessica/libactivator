@@ -631,7 +631,18 @@ LAActivator *LASharedActivator;
         [self la_rejectSpringBoardOnlySelector:_cmd];
         return;
     }
-    if ([self.backend registerListener:listener forName:name]) {
+    if ([self.backend registerListener:listener forName:name markSeen:YES]) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableListenersChangedNotification
+                                                          object:self];
+    }
+}
+
+- (void)registerListener:(id<LAListener>)listener forName:(NSString *)name ignoreHasSeen:(BOOL)ignoreHasSeen {
+    if (!self.runningInsideSpringBoard) {
+        [self la_rejectSpringBoardOnlySelector:_cmd];
+        return;
+    }
+    if ([self.backend registerListener:listener forName:name markSeen:!ignoreHasSeen]) {
         [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableListenersChangedNotification
                                                           object:self];
     }

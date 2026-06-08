@@ -483,10 +483,12 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     NSString *listenerAName = @"libactivator.test.listener.a";
     NSString *listenerBName = @"libactivator.test.listener.b";
     NSString *listenerCName = @"libactivator.test.listener.c";
+    NSString *unseenListenerName = @"libactivator.test.listener.unseen";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
     LATestListener *listenerA = [[LATestListener alloc] init];
     LATestListener *listenerB = [[LATestListener alloc] init];
     LATestListener *listenerC = [[LATestListener alloc] init];
+    LATestListener *unseenListener = [[LATestListener alloc] init];
     listenerA.exclusiveGroups = @[ @"exclusive" ];
     listenerB.exclusiveGroups = @[ @"exclusive" ];
     listenerC.compatibleModes = @[ LAEventModeSpringBoard ];
@@ -495,6 +497,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [activator registerListener:listenerA forName:listenerAName];
     [activator registerListener:listenerB forName:listenerBName];
     [activator registerListener:listenerC forName:listenerCName];
+    [activator registerListener:unseenListener forName:unseenListenerName ignoreHasSeen:YES];
 
     [recorder expect:[activator hasEventWithName:eventName]
             caseName:@"event-registry"
@@ -505,6 +508,10 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:[activator hasSeenListenerWithName:listenerAName]
             caseName:@"seen-listener"
               reason:@"Seen listener was not recorded"];
+    [recorder expect:[activator hasListenerWithName:unseenListenerName] &&
+                     ![activator hasSeenListenerWithName:unseenListenerName]
+            caseName:@"unseen-listener-registration"
+              reason:@"ignoreHasSeen listener registration was not preserved"];
     [recorder expect:![activator listenerNamesAreMutuallyCompatible:@[ listenerAName, listenerBName ]]
             caseName:@"exclusive-groups"
               reason:@"Exclusive listeners were reported compatible"];
@@ -826,6 +833,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     NSArray *listenerNames = @[
         @"libactivator.test.listener.a",
         @"libactivator.test.listener.b",
+        @"libactivator.test.listener.c",
+        @"libactivator.test.listener.unseen",
         @"libactivator.test.dispatch.a",
         @"libactivator.test.dispatch.b",
         @"libactivator.test.dispatch.simple-abort",

@@ -145,6 +145,7 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Assume SpringBoard private APIs are unstable. Isolate every private selector or class lookup behind a small adapter.
 - `LAActivator` is the public API facade. Private runtime state should live in backend/persistence types rather than directly in the facade.
 - Only the SpringBoard authoritative backend may load from or save to the runtime preference plist. Non-SpringBoard clients must not create isolated persistent state before IPC exists.
+- Public listener registration marks the listener name as seen. SpringBoard-owned dynamic listener families may use the private legacy `ignoreHasSeen:` registration path when registration should not count as user-visible listener discovery.
 - Prefer capability detection over hardcoded system-version branching.
 - All event delivery must make listener compatibility checks before invocation.
 - Listener callbacks should not block the event acquisition layer longer than necessary.

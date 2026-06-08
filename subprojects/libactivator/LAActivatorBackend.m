@@ -214,12 +214,16 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 }
 
 - (BOOL)registerListener:(id<LAListener>)listener forName:(NSString *)name {
+    return [self registerListener:listener forName:name markSeen:YES];
+}
+
+- (BOOL)registerListener:(id<LAListener>)listener forName:(NSString *)name markSeen:(BOOL)markSeen {
     if (!listener || name.length == 0) {
         return NO;
     }
     dispatch_sync(self.stateQueue, ^{
         self.listeners[name] = listener;
-        if (![self.seenListenerNames containsObject:name]) {
+        if (markSeen && ![self.seenListenerNames containsObject:name]) {
             [self.seenListenerNames addObject:name];
             [self savePersistentState];
         }

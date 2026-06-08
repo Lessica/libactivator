@@ -23,6 +23,7 @@ __attribute__((visibility("hidden")))
 - (BOOL)hasListenerWithName:(NSString *)name;
 - (BOOL)hasSeenListenerWithName:(NSString *)name;
 - (BOOL)registerListener:(id<LAListener>)listener forName:(NSString *)name;
+- (BOOL)registerListener:(id<LAListener>)listener forName:(NSString *)name markSeen:(BOOL)markSeen;
 - (BOOL)unregisterListenerWithName:(NSString *)name;
 - (NSArray *)availableListenerNames;
 - (NSArray *)registeredListeners;
