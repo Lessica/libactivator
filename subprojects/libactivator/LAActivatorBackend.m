@@ -26,6 +26,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 @property(nonatomic, strong) NSMutableDictionary *profiles;
 @property(nonatomic, strong) NSMutableSet *blacklistedDisplayIdentifiers;
 @property(nonatomic, strong) NSMutableSet *seenListenerNames;
+@property(nonatomic, copy) NSArray *cachedListenerNames;
 @property(nonatomic, strong) dispatch_queue_t stateQueue;
 @property(nonatomic, strong) LAActivatorPersistence *persistence;
 @end
@@ -221,14 +222,19 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
     if (!listener || name.length == 0) {
         return NO;
     }
+    __block BOOL added = NO;
     dispatch_sync(self.stateQueue, ^{
+        added = self.listeners[name] == nil;
         self.listeners[name] = listener;
+        if (added) {
+            self.cachedListenerNames = nil;
+        }
         if (markSeen && ![self.seenListenerNames containsObject:name]) {
             [self.seenListenerNames addObject:name];
             [self savePersistentState];
         }
     });
-    return YES;
+    return added;
 }
 
 - (BOOL)unregisterListenerWithName:(NSString *)name {
@@ -239,6 +245,9 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
     dispatch_sync(self.stateQueue, ^{
         removed = self.listeners[name] != nil;
         [self.listeners removeObjectForKey:name];
+        if (removed) {
+            self.cachedListenerNames = nil;
+        }
     });
     return removed;
 }
@@ -246,7 +255,10 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 - (NSArray *)availableListenerNames {
     __block NSArray *listenerNames = nil;
     dispatch_sync(self.stateQueue, ^{
-        listenerNames = [self.listeners.allKeys sortedArrayUsingSelector:@selector(compare:)];
+        if (!self.cachedListenerNames) {
+            self.cachedListenerNames = [self.listeners.allKeys sortedArrayUsingSelector:@selector(compare:)];
+        }
+        listenerNames = self.cachedListenerNames;
     });
     return listenerNames;
 }

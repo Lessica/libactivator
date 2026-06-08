@@ -512,6 +512,26 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
                      ![activator hasSeenListenerWithName:unseenListenerName]
             caseName:@"unseen-listener-registration"
               reason:@"ignoreHasSeen listener registration was not preserved"];
+    __block NSUInteger listenerNotificationCount = 0;
+    id listenerObserver =
+        [NSNotificationCenter.defaultCenter addObserverForName:LAActivatorAvailableListenersChangedNotification
+                                                        object:activator
+                                                         queue:nil
+                                                    usingBlock:^(__unused NSNotification *notification) {
+                                                        listenerNotificationCount += 1;
+                                                    }];
+    LATestListener *replacementListener = [[LATestListener alloc] init];
+    replacementListener.exclusiveGroups = @[ @"exclusive" ];
+    [activator registerListener:replacementListener forName:listenerAName];
+    [recorder expect:[activator listenerForName:listenerAName] == replacementListener &&
+                     listenerNotificationCount == 0
+            caseName:@"listener-overwrite-no-availability-notification"
+              reason:@"Listener overwrite changed availability notification state"];
+    [activator registerListener:replacementListener forName:@"libactivator.test.listener.new"];
+    [recorder expect:listenerNotificationCount == 1
+            caseName:@"new-listener-availability-notification"
+              reason:@"New listener registration did not post availability notification"];
+    [NSNotificationCenter.defaultCenter removeObserver:listenerObserver];
     [recorder expect:![activator listenerNamesAreMutuallyCompatible:@[ listenerAName, listenerBName ]]
             caseName:@"exclusive-groups"
               reason:@"Exclusive listeners were reported compatible"];
@@ -560,16 +580,21 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     NSString *eventName = @"libactivator.test.dispatch";
     NSString *listenerAName = @"libactivator.test.dispatch.a";
     NSString *listenerBName = @"libactivator.test.dispatch.b";
+    NSString *sharedListenerFirstName = @"libactivator.test.dispatch.shared.first";
+    NSString *sharedListenerSecondName = @"libactivator.test.dispatch.shared.second";
     NSString *simpleAbortName = @"libactivator.test.dispatch.simple-abort";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
     LATestListener *listenerA = [[LATestListener alloc] init];
     LATestListener *listenerB = [[LATestListener alloc] init];
+    LATestListener *sharedListener = [[LATestListener alloc] init];
     LATestSimpleAbortListener *simpleAbort = [[LATestSimpleAbortListener alloc] init];
     listenerA.handlesReceivedEvents = YES;
 
     [activator registerEventDataSource:dataSource forEventName:eventName];
     [activator registerListener:listenerA forName:listenerAName];
     [activator registerListener:listenerB forName:listenerBName];
+    [activator registerListener:sharedListener forName:sharedListenerFirstName];
+    [activator registerListener:sharedListener forName:sharedListenerSecondName];
     [activator registerListener:(id<LAListener>)simpleAbort forName:simpleAbortName];
 
     LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
@@ -581,6 +606,9 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:listenerB.otherHandledCount == 1
             caseName:@"other-listener-handled"
               reason:@"Other listener was not notified"];
+    [recorder expect:sharedListener.otherHandledCount == 1
+            caseName:@"shared-listener-other-handled-once"
+              reason:@"Shared listener instance received duplicate handled notifications"];
 
     LAEvent *explicitEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendEvent:explicitEvent toListenersWithNames:@[ listenerBName ]];
@@ -612,9 +640,20 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
     LAEvent *deactivateEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendDeactivateEventToListeners:deactivateEvent];
-    [recorder expect:deactivateEvent.handled && listenerA.deactivateCount == 1 && listenerB.deactivateCount == 1
+    [recorder expect:deactivateEvent.handled && listenerA.deactivateCount == 1 && listenerB.deactivateCount == 1 &&
+                     sharedListener.deactivateCount == 1
             caseName:@"deactivate-broadcast"
               reason:@"Deactivate broadcast failed"];
+    [activator unregisterListenerWithName:sharedListenerFirstName];
+    [activator sendDeactivateEventToListeners:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]];
+    [recorder expect:sharedListener.deactivateCount == 2
+            caseName:@"shared-listener-kept-after-one-name-removed"
+              reason:@"Shared listener instance was removed before its last name"];
+    [activator unregisterListenerWithName:sharedListenerSecondName];
+    [activator sendDeactivateEventToListeners:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]];
+    [recorder expect:sharedListener.deactivateCount == 2
+            caseName:@"shared-listener-removed-after-last-name"
+              reason:@"Shared listener instance remained after its last name was removed"];
 
     listenerA.requiresNoTouchEvents = YES;
     listenerA.receiveCount = 0;
@@ -835,8 +874,11 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.listener.b",
         @"libactivator.test.listener.c",
         @"libactivator.test.listener.unseen",
+        @"libactivator.test.listener.new",
         @"libactivator.test.dispatch.a",
         @"libactivator.test.dispatch.b",
+        @"libactivator.test.dispatch.shared.first",
+        @"libactivator.test.dispatch.shared.second",
         @"libactivator.test.dispatch.simple-abort",
         @"libactivator.test.dispatch.lock",
         @"libactivator.test.dispatch.unlock",
