@@ -53,6 +53,7 @@ This document is the working agreement for the libactivator rewrite. It is inten
   - Assignment, profile, and blacklist storage.
   - SpringBoard event acquisition adapters.
   - Built-in action/listener implementations.
+  - Command-line compatibility tool.
   - Settings UI.
   - Jailbreak path/layout abstraction.
 - Event semantics and event acquisition must not be the same module. A gesture name is stable; the hook or recognizer that detects it may change by iOS version or environment.
@@ -78,6 +79,7 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Implement the SpringBoard runtime: server bootstrap, runtime state, foreground app state, lock/home state, listener registration, event delivery, diagnostics, and Frida-assisted validation workflows.
 - Implement event acquisition incrementally by event family. Each event must have a modern iOS capability assessment before registration.
 - Implement built-in listeners/actions incrementally. Each listener/action must have a modern iOS capability assessment before registration.
+- Implement the 1.9.13 `activator` command-line compatibility tool as a separate production tool target. Do not mix it with the development test runner or testing IPC.
 - Implement the Settings UI library and hosts: `libactivatorsettings.dylib`, the PreferenceBundle host, the Activator.app host, and third-party host loading.
 - Harden integration and packaging: on-device verification checklists, debug traces, rootful/rootless/roothide package checks, and release documentation.
 
@@ -93,6 +95,7 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Keep each tweak filter plist in that tweak's subproject root so Theos can stage it through the normal `tweak.mk` flow. Do not place tweak filter plists in the repository root.
 - Do not use Logos syntax in this project. Tweak targets should use normal Objective-C or Objective-C++ source files and should not use `.x` or `.xm` source extensions.
 - Use a root aggregate Makefile to orchestrate binary subprojects. Do not mix unrelated target ownership into the root package/staging layer.
+- Keep the `activator` command-line tool as a production `tool.mk` subproject installed at `/usr/bin/activator`. It may call stable public API and production IPC only; it must not depend on `LA_TESTING`, hidden testing IPC, or the development test runner.
 - Do not define `$THEOS` in project Makefiles. Callers must provide it through the environment or command line.
 - Do not override Theos internal path variables or compiler cache paths in project Makefiles, including `THEOS_LIBRARY_PATH`, `THEOS_PACKAGE_DIR`, and `CLANG_MODULE_CACHE_PATH`.
 - Keep target-owned source files inside their owning subproject. Shared implementation files may live under `subprojects/common`.

@@ -5,6 +5,7 @@ INSTALL_TARGET_PROCESSES := SpringBoard
 include $(THEOS)/makefiles/common.mk
 
 SUBPROJECTS += subprojects/libactivator
+SUBPROJECTS += subprojects/cli
 SUBPROJECTS += subprojects/libactivatorsettings
 SUBPROJECTS += subprojects/tweak
 SUBPROJECTS += subprojects/preferences
