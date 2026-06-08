@@ -108,6 +108,17 @@
             caseName:@"remote-listener-proxy"
               reason:@"Client facade did not return a remote listener proxy"];
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    id largeIcon = [activator iconForListenerName:nothingName];
+#pragma clang diagnostic pop
+    [recorder expect:largeIcon == nil
+            caseName:@"large-icon-noop"
+              reason:@"Deprecated large listener icon API returned an image"];
+    [recorder expect:[activator assignmentWarningForEventWithName:LAEventNameVolumeMuteOn] == nil
+            caseName:@"assignment-warning-fallback"
+              reason:@"Client assignment warning fallback returned an unexpected value"];
+
     [activator setApplicationWithDisplayIdentifier:displayIdentifier isBlacklisted:YES];
     [recorder expect:[activator applicationWithDisplayIdentifierIsBlacklisted:displayIdentifier]
             caseName:@"blacklist-set"

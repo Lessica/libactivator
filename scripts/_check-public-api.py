@@ -48,6 +48,13 @@ class HeaderAPI:
     properties: list[PropertyDecl] = field(default_factory=list)
 
 
+FORBIDDEN_SELECTORS = {
+    "requiresIconDataForListenerName:scale:",
+    "requiresIconDataForListenerName:",
+    "requiresIconForListenerName:scale:",
+}
+
+
 def log(message: str) -> None:
     print(f"[public-api] {message}")
 
@@ -547,6 +554,22 @@ def validate_api(api: HeaderAPI, dylib: Path) -> tuple[int, int, int]:
     return checked_symbols, checked_metadata, checked_properties
 
 
+def validate_forbidden_api(api: HeaderAPI, dylib: Path) -> None:
+    metadata = objc_metadata(dylib)
+    declared_selectors = {method.selector for method in api.methods}
+    forbidden_declarations = sorted(FORBIDDEN_SELECTORS.intersection(declared_selectors))
+    forbidden_metadata = sorted(selector for selector in FORBIDDEN_SELECTORS if selector in metadata)
+
+    check(
+        not forbidden_declarations,
+        f"Forbidden legacy selector declared in public headers: {', '.join(forbidden_declarations)}",
+    )
+    check(
+        not forbidden_metadata,
+        f"Forbidden legacy selector present in Objective-C metadata: {', '.join(forbidden_metadata)}",
+    )
+
+
 def validate_resource_catalog(project_root: Path) -> None:
     import plistlib
 
@@ -608,6 +631,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="libactivator-public-api-check.") as tmp:
         compile_import_checks(project_root, staging_dir, sdk, Path(tmp))
         checked_symbols, checked_metadata, checked_properties = validate_api(api, dylib)
+    validate_forbidden_api(api, dylib)
     validate_resource_catalog(project_root)
 
     log(

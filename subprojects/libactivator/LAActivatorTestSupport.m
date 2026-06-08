@@ -502,6 +502,24 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:[activator hasEventWithName:eventName]
             caseName:@"event-registry"
               reason:@"Event was not registered"];
+    [recorder expect:[activator hasEventWithName:LAEventNameVolumeMuteOn] &&
+                     [activator hasEventWithName:LAEventNameVolumeDownPressWithMenu] &&
+                     [activator hasEventWithName:LAEventNameFingerprintSensorPressTwice]
+            caseName:@"bundled-event-registry"
+              reason:@"1.9.13 bundled event metadata was not registered"];
+    [recorder expect:[activator eventWithNameSupportsUnlockingDeviceToSend:LAEventNameFingerprintSensorHold] == NO
+            caseName:@"bundled-event-unlock-metadata"
+              reason:@"1.9.13 unlock-to-send metadata was not read from bundled events"];
+    [recorder expect:[activator assignmentWarningForEventWithName:LAEventNameVolumeMuteOn] == nil
+            caseName:@"bundled-event-assignment-warning-fallback"
+              reason:@"Missing assignment warning metadata should return nil"];
+    id<LAEventDataSource> statusBarDataSource = [activator eventDataSourceForEventName:LAEventNameStatusBarTapSingle];
+    BOOL statusBarIsUnprotected = statusBarDataSource &&
+                                  [statusBarDataSource respondsToSelector:@selector(eventWithNameIsUnprotected:)] &&
+                                  [statusBarDataSource eventWithNameIsUnprotected:LAEventNameStatusBarTapSingle];
+    [recorder expect:statusBarIsUnprotected
+            caseName:@"bundled-event-unprotected-metadata"
+              reason:@"1.9.13 unprotected event metadata was not exposed through the data source"];
     [recorder expect:[activator hasListenerWithName:listenerAName]
             caseName:@"listener-registry"
               reason:@"Listener was not registered"];
