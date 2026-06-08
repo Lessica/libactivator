@@ -36,6 +36,8 @@
 @property(nonatomic, strong) LAActivatorRuntimeStateProvider *runtimeStateProvider;
 @property(nonatomic, strong) LATouchActivityTracker *touchActivityTracker;
 - (BOOL)la_assignEventWithExplicitMode:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (BOOL)la_addListenerAssignmentWithExplicitMode:(NSString *)listenerName toEvent:(LAEvent *)event;
+- (BOOL)la_removeListenerAssignmentWithExplicitMode:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (BOOL)la_unassignEventWithExplicitMode:(LAEvent *)event;
 - (NSArray *)la_dispatchableListenerNames:(NSArray *)listenerNames forEvent:(LAEvent *)event;
 - (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames allowDeferral:(BOOL)allowDeferral;
@@ -713,23 +715,69 @@ LAActivator *LASharedActivator;
 }
 
 - (void)addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event {
-    if (listenerName.length == 0) {
-        return;
-    }
-    NSMutableArray *listenerNames = [[self assignedListenerNamesForEvent:event] mutableCopy];
-    if (![listenerNames containsObject:listenerName]) {
-        [listenerNames addObject:listenerName];
-        [self assignEvent:event toListenersWithNames:listenerNames];
+    if ([self la_addListenerAssignment:listenerName toEvent:event]) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
     }
 }
 
 - (void)removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event {
-    if (listenerName.length == 0) {
-        return;
+    if ([self la_removeListenerAssignment:listenerName fromEvent:event]) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
     }
-    NSMutableArray *listenerNames = [[self assignedListenerNamesForEvent:event] mutableCopy];
-    [listenerNames removeObject:listenerName];
-    [self assignEvent:event toListenersWithNames:listenerNames];
+}
+
+- (BOOL)la_addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event {
+    if (listenerName.length == 0 || event.name.length == 0) {
+        return NO;
+    }
+    if (event.mode.length > 0) {
+        return [self la_addListenerAssignmentWithExplicitMode:listenerName toEvent:event];
+    }
+
+    BOOL changed = NO;
+    for (NSString *mode in [self compatibleModesForEventWithName:event.name]) {
+        LAEvent *modeEvent = [LAEvent eventWithName:event.name mode:mode];
+        changed = [self la_addListenerAssignmentWithExplicitMode:listenerName toEvent:modeEvent] || changed;
+    }
+    return changed;
+}
+
+- (BOOL)la_addListenerAssignmentWithExplicitMode:(NSString *)listenerName toEvent:(LAEvent *)event {
+    if (!self.runningInsideSpringBoard) {
+        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
+        userInfo[LAActivatorIPCKeyListenerName] = listenerName ?: @"";
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageAddListenerAssignment
+                                              userInfo:userInfo
+                                          defaultValue:NO];
+    }
+    return [self.backend addListenerName:listenerName toEvent:event];
+}
+
+- (BOOL)la_removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event {
+    if (listenerName.length == 0 || event.name.length == 0) {
+        return NO;
+    }
+    if (event.mode.length > 0) {
+        return [self la_removeListenerAssignmentWithExplicitMode:listenerName fromEvent:event];
+    }
+
+    BOOL changed = NO;
+    for (NSString *mode in self.availableEventModes) {
+        LAEvent *modeEvent = [LAEvent eventWithName:event.name mode:mode];
+        changed = [self la_removeListenerAssignmentWithExplicitMode:listenerName fromEvent:modeEvent] || changed;
+    }
+    return changed;
+}
+
+- (BOOL)la_removeListenerAssignmentWithExplicitMode:(NSString *)listenerName fromEvent:(LAEvent *)event {
+    if (!self.runningInsideSpringBoard) {
+        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
+        userInfo[LAActivatorIPCKeyListenerName] = listenerName ?: @"";
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageRemoveListenerAssignment
+                                              userInfo:userInfo
+                                          defaultValue:NO];
+    }
+    return [self.backend removeListenerName:listenerName fromEvent:event];
 }
 
 - (void)unassignEvent:(LAEvent *)event {

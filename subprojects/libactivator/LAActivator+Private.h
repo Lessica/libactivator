@@ -27,6 +27,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSDictionary *)la_runtimeStateDebugDictionary;
 #endif
 - (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (BOOL)la_addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event;
+- (BOOL)la_removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (BOOL)la_unassignEvent:(LAEvent *)event;
 - (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
 - (BOOL)la_setCurrentProfileName:(nullable NSString *)currentProfileName;

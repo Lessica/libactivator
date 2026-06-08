@@ -35,6 +35,8 @@ __attribute__((visibility("hidden")))
 - (BOOL)hasEventWithName:(NSString *)name;
 
 - (BOOL)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (BOOL)addListenerName:(NSString *)listenerName toEvent:(LAEvent *)event;
+- (BOOL)removeListenerName:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (BOOL)unassignEvent:(LAEvent *)event;
 - (NSArray *)assignedListenerNamesForEvent:(LAEvent *)event;
 - (NSArray *)eventsAssignedToListenerWithName:(NSString *)listenerName;

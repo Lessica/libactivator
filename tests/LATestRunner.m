@@ -135,6 +135,16 @@
                             mode:LAEventModeSpringBoard]
             caseName:@"reverse-assignment"
               reason:@"Client reverse assignment lookup did not include the assigned event"];
+    [activator unassignEvent:event];
+    [activator addListenerAssignment:nothingName toEvent:event];
+    [recorder expect:[[activator assignedListenerNamesForEvent:event] isEqualToArray:@[ nothingName ]]
+            caseName:@"add-assignment-round-trip"
+              reason:@"Client add assignment did not round-trip through SpringBoard"];
+    [activator removeListenerAssignment:nothingName fromEvent:event];
+    [recorder expect:[activator assignedListenerNamesForEvent:event].count == 0
+            caseName:@"remove-assignment-round-trip"
+              reason:@"Client remove assignment did not round-trip through SpringBoard"];
+    [activator addListenerAssignment:nothingName toEvent:event];
 
     [activator sendEventToListener:event];
     [recorder expect:event.handled

@@ -368,6 +368,62 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
     return [self assignEvent:event toListenersWithNames:@[]];
 }
 
+- (BOOL)addListenerName:(NSString *)listenerName toEvent:(LAEvent *)event {
+    if (listenerName.length == 0 || event.name.length == 0) {
+        return NO;
+    }
+
+    NSString *mode = event.mode ?: @"";
+    __block BOOL changed = NO;
+    dispatch_sync(self.stateQueue, ^{
+        NSMutableDictionary *assignments = [self assignmentsForCurrentProfile];
+        NSMutableDictionary *eventAssignments = assignments[event.name];
+        if (!eventAssignments) {
+            eventAssignments = [[NSMutableDictionary alloc] init];
+            assignments[event.name] = eventAssignments;
+        }
+
+        NSMutableArray *listenerNames = [eventAssignments[mode] mutableCopy] ?: [[NSMutableArray alloc] init];
+        if (![listenerNames containsObject:listenerName]) {
+            [listenerNames addObject:listenerName];
+            eventAssignments[mode] = [LAActivatorBackend normalizedStringArray:listenerNames];
+            changed = YES;
+            [self savePersistentState];
+        }
+    });
+    return changed;
+}
+
+- (BOOL)removeListenerName:(NSString *)listenerName fromEvent:(LAEvent *)event {
+    if (listenerName.length == 0 || event.name.length == 0) {
+        return NO;
+    }
+
+    NSString *mode = event.mode ?: @"";
+    __block BOOL changed = NO;
+    dispatch_sync(self.stateQueue, ^{
+        NSMutableDictionary *assignments = [self assignmentsForCurrentProfile];
+        NSMutableDictionary *eventAssignments = assignments[event.name];
+        NSMutableArray *listenerNames = [eventAssignments[mode] mutableCopy];
+        if (![listenerNames containsObject:listenerName]) {
+            return;
+        }
+
+        [listenerNames removeObject:listenerName];
+        if (listenerNames.count > 0) {
+            eventAssignments[mode] = [LAActivatorBackend normalizedStringArray:listenerNames];
+        } else {
+            [eventAssignments removeObjectForKey:mode];
+            if (eventAssignments.count == 0) {
+                [assignments removeObjectForKey:event.name];
+            }
+        }
+        changed = YES;
+        [self savePersistentState];
+    });
+    return changed;
+}
+
 - (NSArray *)assignedListenerNamesForEvent:(LAEvent *)event {
     if (event.name.length == 0) {
         return @[];

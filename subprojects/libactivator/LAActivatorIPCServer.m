@@ -80,6 +80,8 @@
         LAActivatorIPCMessageAssignedListenerNames,
         LAActivatorIPCMessageEventsAssignedToListener,
         LAActivatorIPCMessageAssignEvent,
+        LAActivatorIPCMessageAddListenerAssignment,
+        LAActivatorIPCMessageRemoveListenerAssignment,
         LAActivatorIPCMessageUnassignEvent,
         LAActivatorIPCMessageApplicationIsBlacklisted,
         LAActivatorIPCMessageSetApplicationBlacklisted,
@@ -240,6 +242,34 @@
         BOOL changed = [_activator la_assignEvent:event
                              toListenersWithNames:[self stringArrayInUserInfo:userInfo
                                                                        forKey:LAActivatorIPCKeyListenerNames]];
+        if (changed) {
+            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification
+                                                              object:_activator];
+        }
+        return [self replyWithOK:YES value:@(changed)];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageAddListenerAssignment]) {
+        LAEvent *event = [self eventWithUserInfo:userInfo];
+        if (!event) {
+            return [self replyWithOK:NO value:nil];
+        }
+        BOOL changed =
+            [_activator la_addListenerAssignment:[self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName]
+                                         toEvent:event];
+        if (changed) {
+            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification
+                                                              object:_activator];
+        }
+        return [self replyWithOK:YES value:@(changed)];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageRemoveListenerAssignment]) {
+        LAEvent *event = [self eventWithUserInfo:userInfo];
+        if (!event) {
+            return [self replyWithOK:NO value:nil];
+        }
+        BOOL changed = [_activator
+            la_removeListenerAssignment:[self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName]
+                              fromEvent:event];
         if (changed) {
             [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification
                                                               object:_activator];

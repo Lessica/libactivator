@@ -29,6 +29,8 @@ LA_IPC_EXTERN NSString *const LAActivatorIPCMessageHasSeenListener;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageAssignedListenerNames;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageEventsAssignedToListener;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageAssignEvent;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageAddListenerAssignment;
+LA_IPC_EXTERN NSString *const LAActivatorIPCMessageRemoveListenerAssignment;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageUnassignEvent;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageApplicationIsBlacklisted;
 LA_IPC_EXTERN NSString *const LAActivatorIPCMessageSetApplicationBlacklisted;

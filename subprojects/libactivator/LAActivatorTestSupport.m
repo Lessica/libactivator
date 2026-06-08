@@ -554,6 +554,12 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:[activator eventsAssignedToListenerWithName:listenerCName].count == 1
             caseName:@"reverse-assignment-keeps-incompatible"
               reason:@"Reverse assignment should preserve stored incompatible assignments"];
+    [activator addListenerAssignment:listenerAName toEvent:applicationEvent];
+    [activator removeListenerAssignment:listenerAName fromEvent:applicationEvent];
+    [recorder expect:[activator assignedListenerNamesForEvent:applicationEvent].count == 0 &&
+                     [activator eventsAssignedToListenerWithName:listenerCName].count == 1
+            caseName:@"incremental-assignment-keeps-incompatible"
+              reason:@"Incremental assignment rewrite dropped an incompatible stored assignment"];
 
     [activator setCurrentProfileName:@"Testing"];
     [recorder expect:[[activator availableProfileNames] containsObject:@"Testing"]
