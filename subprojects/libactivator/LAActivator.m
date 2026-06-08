@@ -947,8 +947,9 @@ LAActivator *LASharedActivator;
 
 - (BOOL)hasEventWithName:(NSString *)name {
     if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{LAActivatorIPCKeyEventName : name ?: @""};
         return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageHasEvent
-                                              userInfo:@{LAActivatorIPCKeyEventName : name ?: @""}
+                                              userInfo:userInfo
                                           defaultValue:NO];
     }
     return [self.backend hasEventWithName:name];

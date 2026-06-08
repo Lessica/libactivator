@@ -27,6 +27,7 @@ This document is the working agreement for the libactivator rewrite. It is inten
 - Public class names, protocol names, selectors, constants, and expected semantics from `references/headers` are compatibility contracts.
 - The final 1.9 public API design is authoritative. The legacy `master` implementation is only a light reference and must not override the public API contract.
 - API extensions must be additive unless we intentionally create a documented compatibility break.
+- The legacy public API overloads the words event and `LAEvent`. Keep the selectors source-compatible, but document the four distinct meanings wherever this matters: a dispatched runtime `LAEvent` instance; an assignment descriptor keyed by `LAEvent.name` and `LAEvent.mode`; an event definition key represented by an `NSString` event name; and the `LAEventDataSource` provider that owns definition metadata and capabilities.
 - Keep legacy-compatible models where they still make sense. When a legacy behavior is a bug, unsafe design, or obsolete burden, document it and mark the compatibility surface as deprecated instead of preserving the old behavior blindly.
 - New behavior should prefer graceful no-op or explicit error reporting over crashes when a listener, event, private API, or SpringBoard feature is absent.
 - Keep legacy event and listener names stable, even when the implementation is completely new.

@@ -10,7 +10,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-// Events represent an assignable gesture that has or could occurred
+// LAEvent is a legacy public API type with multiple related roles.
+// During dispatch, it represents a concrete event instance and may carry handled state and userInfo.
+// In assignment APIs, it represents a binding descriptor keyed by name and mode.
+// The name alone identifies the registered event definition provided by an LAEventDataSource.
 
 @interface LAEvent : NSObject <NSCoding>
 LA_PRIVATE_IVARS(LAEvent)

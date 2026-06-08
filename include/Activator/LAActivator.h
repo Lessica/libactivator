@@ -52,6 +52,9 @@ LA_PRIVATE_IVARS(LAActivator)
 - (BOOL)hasSeenListenerWithName:(NSString *)name;
 
 // Assignments
+// In this section, the LAEvent parameter is used as an assignment key: event.name plus event.mode selects the binding
+// slot. When event.mode is nil, mutating APIs apply to all compatible modes, while query APIs resolve using the current
+// event mode where appropriate.
 
 - (void)assignEvent:(LAEvent *)event toListenerWithName:(NSString *)listenerName;
 - (void)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
@@ -63,6 +66,8 @@ LA_PRIVATE_IVARS(LAActivator)
 - (NSArray *)eventsAssignedToListenerWithName:(NSString *)listenerName;
 
 // Events
+// These APIs deal with event definitions, not dispatched LAEvent instances. An event definition is addressed by its
+// NSString event name and is backed in SpringBoard by an LAEventDataSource that supplies metadata and capabilities.
 
 @property(nonatomic, readonly) NSArray *availableEventNames;
 - (BOOL)hasEventWithName:(NSString *)name;
