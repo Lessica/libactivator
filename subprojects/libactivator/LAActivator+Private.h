@@ -1,5 +1,5 @@
 //
-//  LAActivatorPrivate.h
+//  LAActivator+Private.h
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.

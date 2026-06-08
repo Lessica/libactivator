@@ -12,7 +12,7 @@
 #import "LAActivatorBackend.h"
 #import "LAActivatorIPC.h"
 #import "LAActivatorPersistence.h"
-#import "LAActivatorPrivate.h"
+#import "LAActivator+Private.h"
 #import "LAActivatorResourceManager.h"
 #import "LAActivatorRuntimeStateProvider.h"
 #import "LADefaultEventDataSource.h"
@@ -48,7 +48,7 @@
 - (NSString *)la_invalidSpringBoardOperationCulpritName;
 - (id)la_ipcPropertyListValue:(id)value;
 - (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event;
-- (NSArray *)la_ipcOrderedStringArray:(NSArray *)array;
+- (NSArray *)la_ipcStringArrayPreservingOrder:(NSArray *)array;
 @end
 
 @implementation LAActivator
@@ -78,13 +78,7 @@ LAActivator *LASharedActivator;
     if (self) {
         if (self.runningInsideSpringBoard) {
             _runtimeStateProvider = [[LAActivatorRuntimeStateProvider alloc] init];
-            LAActivatorPersistence *persistence;
-#if LA_TESTING
-            persistence = [LAActivatorPersistence testPersistence];
-#else
-            persistence = [LAActivatorPersistence defaultPersistence];
-#endif
-            _backend = [[LAActivatorBackend alloc] initWithPersistence:persistence];
+            _backend = [[LAActivatorBackend alloc] initWithPersistence:[self defaultPersistence]];
             _touchActivityTracker = [[LATouchActivityTracker alloc] init];
             __weak typeof(self) weakSelf = self;
             [_runtimeStateProvider setEventModeChangeHandler:^(NSString *eventMode) {
@@ -98,6 +92,16 @@ LAActivator *LASharedActivator;
     return self;
 }
 
+- (LAActivatorPersistence *)defaultPersistence {
+    LAActivatorPersistence *persistence;
+#if LA_TESTING
+    persistence = [LAActivatorPersistence testingPersistence];
+#else
+    persistence = [LAActivatorPersistence defaultPersistence];
+#endif
+    return persistence;
+}
+
 #pragma mark - Runtime State
 
 - (LAActivatorVersion)version {
@@ -107,14 +111,14 @@ LAActivator *LASharedActivator;
 - (BOOL)isRunningInsideSpringBoard {
     NSString *procName = [[NSProcessInfo processInfo] processName];
     if (![procName isEqualToString:@"SpringBoard"]) {
-        return NO;
+        return NO; // Fast path for the common case
     }
     NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
     return [bundleId isEqualToString:@"com.apple.springboard"];
 }
 
 - (BOOL)isDangerousToSendEvents {
-    return NO;
+    return NO; // Deprecated
 }
 
 - (void)startIPCServerIfNeeded {
@@ -222,7 +226,7 @@ LAActivator *LASharedActivator;
 - (void)sendEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
     if (!self.runningInsideSpringBoard) {
         NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAActivatorIPCKeyListenerNames] = [self la_ipcOrderedStringArray:listenerNames];
+        userInfo[LAActivatorIPCKeyListenerNames] = [self la_ipcStringArrayPreservingOrder:listenerNames];
         [self.ipcClient sendEventMessageName:LAActivatorIPCMessageDispatchEventToListeners
                                     userInfo:userInfo
                                        event:event];
@@ -260,7 +264,7 @@ LAActivator *LASharedActivator;
 - (void)sendAbortEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
     if (!self.runningInsideSpringBoard) {
         NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAActivatorIPCKeyListenerNames] = [self la_ipcOrderedStringArray:listenerNames];
+        userInfo[LAActivatorIPCKeyListenerNames] = [self la_ipcStringArrayPreservingOrder:listenerNames];
         [self.ipcClient sendEventMessageName:LAActivatorIPCMessageDispatchAbortEventToListeners
                                     userInfo:userInfo
                                        event:event];
@@ -549,7 +553,7 @@ LAActivator *LASharedActivator;
     return [userInfo copy];
 }
 
-- (NSArray *)la_ipcOrderedStringArray:(NSArray *)array {
+- (NSArray *)la_ipcStringArrayPreservingOrder:(NSArray *)array {
     NSMutableArray *strings = [NSMutableArray arrayWithCapacity:array.count];
     for (id value in array) {
         if ([value isKindOfClass:NSString.class] && [value length] > 0) {

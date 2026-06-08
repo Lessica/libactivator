@@ -21,7 +21,7 @@ __attribute__((visibility("hidden")))
 - (BOOL)saveDictionary:(NSDictionary *)dictionary;
 
 #if LA_TESTING
-+ (instancetype)testPersistence;
++ (instancetype)testingPersistence;
 #endif
 
 @end

@@ -12,7 +12,7 @@
 
 #import "LAActivatorIPC.h"
 #import "LAActivatorPersistence.h"
-#import "LAActivatorPrivate.h"
+#import "LAActivator+Private.h"
 
 #import <Activator/Activator.h>
 #import <IOKit/hid/IOHIDEvent.h>

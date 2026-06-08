@@ -7,7 +7,7 @@
 //
 
 #import "LAActivatorIPC.h"
-#import "LAActivatorPrivate.h"
+#import "LAActivator+Private.h"
 #import "LAActivatorResourceManager.h"
 #if LA_TESTING
 #import "LAActivatorTestSupport.h"

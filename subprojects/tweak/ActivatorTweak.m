@@ -9,7 +9,7 @@
 #define CHUseSubstrate
 
 #import "LATBuiltInListenerRegistry.h"
-#import "LAActivatorPrivate.h"
+#import "LAActivator+Private.h"
 
 #import <CaptainHook/CaptainHook.h>
 #import <UIKit/UIKit.h>
