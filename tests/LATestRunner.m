@@ -119,6 +119,13 @@
               reason:@"Client profile change was not visible through the facade"];
     [activator setCurrentProfileName:@"Default"];
 
+    [self sendSelector:@selector(sendEventToListener:) toActivator:activator nilEventWithObject:nil];
+    [self sendSelector:@selector(sendEvent:toListenerWithName:) toActivator:activator nilEventWithObject:nothingName];
+    [self sendSelector:@selector(sendAbortToListener:) toActivator:activator nilEventWithObject:nil];
+    [self sendSelector:@selector(sendAbortEvent:toListenerWithName:) toActivator:activator nilEventWithObject:nothingName];
+    [self sendSelector:@selector(sendDeactivateEventToListeners:) toActivator:activator nilEventWithObject:nil];
+    [recorder expect:YES caseName:@"nil-event-dispatch-noop" reason:@"Nil event dispatch should not fail"];
+
     [activator assignEvent:event toListenerWithName:nothingName];
     [recorder expect:[[activator assignedListenerNamesForEvent:event] isEqualToArray:@[ nothingName ]]
             caseName:@"assignment-round-trip"
@@ -133,6 +140,43 @@
     [recorder expect:event.handled
             caseName:@"dispatch-handled-reply"
               reason:@"Client dispatch did not receive the handled state from SpringBoard"];
+
+    NSDictionary *probeReply = [self sendCommand:LAActivatorIPCTestingCommandPrepareUserInfoProbe];
+    NSDictionary *probeInfo = [probeReply[LAActivatorIPCKeyValue] isKindOfClass:NSDictionary.class]
+                                  ? probeReply[LAActivatorIPCKeyValue]
+                                  : nil;
+    NSString *probeEventName = [probeInfo[LAActivatorIPCKeyEventName] isKindOfClass:NSString.class]
+                                   ? probeInfo[LAActivatorIPCKeyEventName]
+                                   : @"";
+    NSString *probeListenerName = [probeInfo[LAActivatorIPCKeyListenerName] isKindOfClass:NSString.class]
+                                      ? probeInfo[LAActivatorIPCKeyListenerName]
+                                      : @"";
+    LAEvent *userInfoEvent = [LAEvent eventWithName:probeEventName mode:LAEventModeSpringBoard];
+    userInfoEvent.userInfo = @{
+        @"safe" : @"value",
+        @"unsafe" : [[NSObject alloc] init],
+        @"nested" : @{
+            @"safe" : @42,
+            @"unsafe" : [[NSObject alloc] init],
+        },
+        @"array" : @[ @"keep", [[NSObject alloc] init] ],
+    };
+    [activator sendEvent:userInfoEvent toListenerWithName:probeListenerName];
+    NSDictionary *probeResultReply = [self sendCommand:LAActivatorIPCTestingCommandUserInfoProbeResult];
+    NSDictionary *probeResult = [probeResultReply[LAActivatorIPCKeyValue] isKindOfClass:NSDictionary.class]
+                                    ? probeResultReply[LAActivatorIPCKeyValue]
+                                    : nil;
+    NSDictionary *receivedUserInfo = [probeResult[@"UserInfo"] isKindOfClass:NSDictionary.class]
+                                         ? probeResult[@"UserInfo"]
+                                         : nil;
+    [recorder expect:userInfoEvent.handled && [probeResult[@"ReceiveCount"] integerValue] == 1
+            caseName:@"dispatch-user-info-probe"
+              reason:@"Client dispatch userInfo probe did not reach SpringBoard"];
+    [recorder expect:[receivedUserInfo[@"safe"] isEqual:@"value"] && [receivedUserInfo[@"nested"][@"safe"] isEqual:@42] &&
+                     [receivedUserInfo[@"array"] isEqualToArray:@[ @"keep" ]] && receivedUserInfo[@"unsafe"] == nil &&
+                     receivedUserInfo[@"nested"][@"unsafe"] == nil
+            caseName:@"dispatch-user-info-plist-filter"
+              reason:@"Client dispatch did not filter non-property-list userInfo values"];
 
     [activator unassignEvent:event];
     [recorder expect:[activator assignedListenerNamesForEvent:event].count == 0
@@ -279,6 +323,23 @@
 }
 
 #pragma mark - Assertions
+
+- (void)sendSelector:(SEL)selector toActivator:(LAActivator *)activator nilEventWithObject:(id)object {
+    NSMethodSignature *signature = [activator methodSignatureForSelector:selector];
+    if (!signature) {
+        return;
+    }
+    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
+    invocation.target = activator;
+    invocation.selector = selector;
+    LAEvent *event = nil;
+    [invocation setArgument:&event atIndex:2];
+    if (signature.numberOfArguments > 3) {
+        id objectArgument = object;
+        [invocation setArgument:&objectArgument atIndex:3];
+    }
+    [invocation invoke];
+}
 
 - (BOOL)events:(NSArray *)events containEventName:(NSString *)eventName mode:(NSString *)mode {
     for (LAEvent *event in events) {

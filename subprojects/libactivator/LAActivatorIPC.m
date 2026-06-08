@@ -96,6 +96,8 @@ NSString *const LAActivatorIPCTestingCommandRun = @"run";
 NSString *const LAActivatorIPCTestingCommandRunRuntimeInput = @"run-runtime-input";
 NSString *const LAActivatorIPCTestingCommandRunDeviceRuntime = @"run-device-runtime";
 NSString *const LAActivatorIPCTestingCommandRuntimeState = @"runtime-state";
+NSString *const LAActivatorIPCTestingCommandPrepareUserInfoProbe = @"prepare-user-info-probe";
+NSString *const LAActivatorIPCTestingCommandUserInfoProbeResult = @"user-info-probe-result";
 #endif
 
 NSString *const LAActivatorIPCKeyOK = @"OK";

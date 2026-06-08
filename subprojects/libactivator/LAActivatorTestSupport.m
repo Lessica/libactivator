@@ -200,6 +200,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 @property(nonatomic, copy) NSArray *compatibleModes;
 @property(nonatomic, copy) NSArray *exclusiveGroups;
 @property(nonatomic, copy) NSString *lastReceivedEventMode;
+@property(nonatomic, copy) NSDictionary *lastReceivedUserInfo;
 @end
 
 @implementation LATestListener
@@ -216,6 +217,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
     self.receiveCount += 1;
     self.lastReceivedEventMode = event.mode;
+    self.lastReceivedUserInfo = event.userInfo;
     if (self.handlesReceivedEvents) {
         event.handled = YES;
     }
@@ -318,6 +320,14 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
 @implementation LAActivatorTestSupport
 
++ (NSString *)userInfoProbeEventName {
+    return @"libactivator.test.client-facade.user-info";
+}
+
++ (NSString *)userInfoProbeListenerName {
+    return @"libactivator.test.client-facade.user-info";
+}
+
 + (NSDictionary *)handleCommandWithUserInfo:(NSDictionary *)userInfo activator:(LAActivator *)activator {
     NSString *command = [userInfo[LAActivatorIPCKeyTestingCommand] isKindOfClass:NSString.class]
                             ? userInfo[LAActivatorIPCKeyTestingCommand]
@@ -341,6 +351,30 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     }
     if ([command isEqualToString:LAActivatorIPCTestingCommandRuntimeState]) {
         return [self okReplyWithValue:[activator la_runtimeStateDebugDictionary]];
+    }
+    if ([command isEqualToString:LAActivatorIPCTestingCommandPrepareUserInfoProbe]) {
+        NSString *eventName = [self userInfoProbeEventName];
+        NSString *listenerName = [self userInfoProbeListenerName];
+        LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+        LATestListener *listener = [[LATestListener alloc] init];
+        listener.handlesReceivedEvents = YES;
+        [activator registerEventDataSource:dataSource forEventName:eventName];
+        [activator registerListener:listener forName:listenerName];
+        return [self okReplyWithValue:@{
+            LAActivatorIPCKeyEventName : eventName,
+            LAActivatorIPCKeyListenerName : listenerName,
+        }];
+    }
+    if ([command isEqualToString:LAActivatorIPCTestingCommandUserInfoProbeResult]) {
+        id<LAListener> listener = [activator listenerForName:[self userInfoProbeListenerName]];
+        if (![listener isKindOfClass:LATestListener.class]) {
+            return [self failureReply];
+        }
+        LATestListener *testListener = (LATestListener *)listener;
+        return [self okReplyWithValue:@{
+            @"ReceiveCount" : @(testListener.receiveCount),
+            @"UserInfo" : testListener.lastReceivedUserInfo ?: @{},
+        }];
     }
     return [self failureReply];
 }
@@ -797,6 +831,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.dispatch.simple-abort",
         @"libactivator.test.dispatch.lock",
         @"libactivator.test.dispatch.unlock",
+        @"libactivator.test.client-facade.user-info",
     ];
     for (NSString *listenerName in listenerNames) {
         [activator unregisterListenerWithName:listenerName];
@@ -806,6 +841,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.core",
         @"libactivator.test.dispatch",
         @"libactivator.test.built-in.nothing",
+        @"libactivator.test.client-facade.user-info",
     ];
     for (NSString *eventName in eventNames) {
         [activator unregisterEventDataSourceWithEventName:eventName];

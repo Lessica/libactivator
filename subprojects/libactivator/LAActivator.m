@@ -204,6 +204,9 @@ LAActivator *LASharedActivator;
 }
 
 - (void)sendEventToListener:(LAEvent *)event {
+    if (!event) {
+        return;
+    }
     if (!self.runningInsideSpringBoard) {
         [self.ipcClient sendEventMessageName:LAActivatorIPCMessageDispatchAssignedEvent
                                     userInfo:[self la_ipcUserInfoForEvent:event]
@@ -224,6 +227,9 @@ LAActivator *LASharedActivator;
 }
 
 - (void)sendEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
+    if (!event) {
+        return;
+    }
     if (!self.runningInsideSpringBoard) {
         NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
         userInfo[LAActivatorIPCKeyListenerNames] = [self la_ipcUniqueStringArrayPreservingOrder:listenerNames];
@@ -242,6 +248,9 @@ LAActivator *LASharedActivator;
 }
 
 - (void)sendAbortToListener:(LAEvent *)event {
+    if (!event) {
+        return;
+    }
     if (!self.runningInsideSpringBoard) {
         [self.ipcClient sendEventMessageName:LAActivatorIPCMessageDispatchAssignedAbortEvent
                                     userInfo:[self la_ipcUserInfoForEvent:event]
@@ -262,6 +271,9 @@ LAActivator *LASharedActivator;
 }
 
 - (void)sendAbortEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
+    if (!event) {
+        return;
+    }
     if (!self.runningInsideSpringBoard) {
         NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
         userInfo[LAActivatorIPCKeyListenerNames] = [self la_ipcUniqueStringArrayPreservingOrder:listenerNames];
@@ -301,6 +313,9 @@ LAActivator *LASharedActivator;
 }
 
 - (void)sendDeactivateEventToListeners:(LAEvent *)event {
+    if (!event) {
+        return;
+    }
     if (!self.runningInsideSpringBoard) {
         [self.ipcClient sendEventMessageName:LAActivatorIPCMessageDispatchDeactivateEvent
                                     userInfo:[self la_ipcUserInfoForEvent:event]
@@ -313,10 +328,6 @@ LAActivator *LASharedActivator;
         });
         return;
     }
-    if (!event) {
-        return;
-    }
-
     BOOL handled = event.handled;
     event.handled = NO;
     for (id<LAListener> listener in [self.backend registeredListeners]) {
@@ -534,10 +545,36 @@ LAActivator *LASharedActivator;
         return nil;
     }
 
-    BOOL isValidValue = [NSPropertyListSerialization propertyList:value
-                                                 isValidForFormat:NSPropertyListBinaryFormat_v1_0];
+    if ([NSPropertyListSerialization propertyList:value isValidForFormat:NSPropertyListBinaryFormat_v1_0]) {
+        return value;
+    }
 
-    return (isValidValue ? value : nil);
+    if ([value isKindOfClass:NSDictionary.class]) {
+        NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:[value count]];
+        for (id key in value) {
+            if (![key isKindOfClass:NSString.class]) {
+                continue;
+            }
+            id sanitizedValue = [self la_ipcPropertyListValue:value[key]];
+            if (sanitizedValue) {
+                dictionary[key] = sanitizedValue;
+            }
+        }
+        return [dictionary copy];
+    }
+
+    if ([value isKindOfClass:NSArray.class]) {
+        NSMutableArray *array = [NSMutableArray arrayWithCapacity:[value count]];
+        for (id item in value) {
+            id sanitizedItem = [self la_ipcPropertyListValue:item];
+            if (sanitizedItem) {
+                [array addObject:sanitizedItem];
+            }
+        }
+        return [array copy];
+    }
+
+    return nil;
 }
 
 - (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event {
