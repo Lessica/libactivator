@@ -62,6 +62,10 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 #pragma mark - Utilities
 
 + (NSArray *)normalizedStringArray:(NSArray *)array {
+    if (![array isKindOfClass:NSArray.class]) {
+        return @[];
+    }
+
     NSMutableArray *strings = [NSMutableArray arrayWithCapacity:array.count];
     for (id value in array) {
         if ([value isKindOfClass:NSString.class] && [value length] > 0 && ![strings containsObject:value]) {
