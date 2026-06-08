@@ -93,7 +93,7 @@
 
     LAActivator *activator = [LAActivator sharedInstance];
     NSString *nothingName = @"libactivator.system.nothing";
-    NSString *eventName = @"libactivator.test.client-facade";
+    NSString *eventName = LAEventNameVolumeDownPress;
     NSString *displayIdentifier = @"com.libactivator.tests.client";
     LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
 

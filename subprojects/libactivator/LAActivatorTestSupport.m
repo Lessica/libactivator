@@ -553,13 +553,18 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
               reason:@"Incompatible assignment was returned as active"];
     [recorder expect:[activator eventsAssignedToListenerWithName:listenerCName].count == 1
             caseName:@"reverse-assignment-keeps-incompatible"
-              reason:@"Reverse assignment should preserve stored incompatible assignments"];
+              reason:@"Reverse assignment should include available events assigned to currently incompatible listeners"];
     [activator addListenerAssignment:listenerAName toEvent:applicationEvent];
     [activator removeListenerAssignment:listenerAName fromEvent:applicationEvent];
     [recorder expect:[activator assignedListenerNamesForEvent:applicationEvent].count == 0 &&
                      [activator eventsAssignedToListenerWithName:listenerCName].count == 1
             caseName:@"incremental-assignment-keeps-incompatible"
               reason:@"Incremental assignment rewrite dropped an incompatible stored assignment"];
+    [activator unregisterEventDataSourceWithEventName:eventName];
+    [recorder expect:[activator eventsAssignedToListenerWithName:listenerCName].count == 0
+            caseName:@"reverse-assignment-hides-unavailable-event"
+              reason:@"Reverse assignment exposed an unavailable event"];
+    [activator registerEventDataSource:dataSource forEventName:eventName];
 
     [activator setCurrentProfileName:@"Testing"];
     [recorder expect:[[activator availableProfileNames] containsObject:@"Testing"]

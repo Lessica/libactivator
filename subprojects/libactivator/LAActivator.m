@@ -930,7 +930,14 @@ LAActivator *LASharedActivator;
         return [self.ipcClient eventsValueForMessageName:LAActivatorIPCMessageEventsAssignedToListener
                                                 userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
     }
-    return [self.backend eventsAssignedToListenerWithName:listenerName];
+    NSSet *availableEventNames = [NSSet setWithArray:self.availableEventNames];
+    NSMutableArray *availableEvents = [[NSMutableArray alloc] init];
+    for (LAEvent *event in [self.backend eventsAssignedToListenerWithName:listenerName]) {
+        if ([availableEventNames containsObject:event.name]) {
+            [availableEvents addObject:event];
+        }
+    }
+    return [availableEvents copy];
 }
 
 #pragma mark - Event Registry
