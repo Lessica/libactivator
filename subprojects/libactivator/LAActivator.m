@@ -8,6 +8,7 @@
 
 #import <Activator/Activator.h>
 #import <dispatch/dispatch.h>
+#import <notify.h>
 
 #import "LAActivatorBackend.h"
 #import "LAActivatorIPC.h"
@@ -48,10 +49,56 @@
 - (void)la_notifyListenersThatListener:(id<LAListener>)handlingListener handledEvent:(LAEvent *)event;
 - (void)la_rejectSpringBoardOnlySelector:(SEL)selector;
 - (NSString *)la_invalidSpringBoardOperationCulpritName;
+- (void)la_registerSystemNotificationBridgeIfNeeded;
 - (id)la_ipcPropertyListValue:(id)value;
 - (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event;
 - (NSArray *)la_ipcUniqueStringArrayPreservingOrder:(NSArray *)array;
 @end
+
+static NSString *const LAActivatorDarwinAvailableListenersChangedNotification =
+    @"libactivator.notification.available-listeners-changed";
+static NSString *const LAActivatorDarwinAvailableEventsChangedNotification =
+    @"libactivator.notification.available-events-changed";
+static NSString *const LAActivatorDarwinAssignmentsChangedNotification =
+    @"libactivator.notification.assignments-changed";
+
+static NSString *LAActivatorPublicNotificationNameForDarwinName(NSString *darwinName) {
+    if ([darwinName isEqualToString:LAActivatorDarwinAvailableListenersChangedNotification]) {
+        return LAActivatorAvailableListenersChangedNotification;
+    }
+    if ([darwinName isEqualToString:LAActivatorDarwinAvailableEventsChangedNotification]) {
+        return LAActivatorAvailableEventsChangedNotification;
+    }
+    if ([darwinName isEqualToString:LAActivatorDarwinAssignmentsChangedNotification]) {
+        return LAActivatorAssignmentsChangedNotification;
+    }
+    return nil;
+}
+
+static NSString *LAActivatorDarwinNotificationNameForPublicName(NSString *publicName) {
+    if ([publicName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
+        return LAActivatorDarwinAvailableListenersChangedNotification;
+    }
+    if ([publicName isEqualToString:LAActivatorAvailableEventsChangedNotification]) {
+        return LAActivatorDarwinAvailableEventsChangedNotification;
+    }
+    if ([publicName isEqualToString:LAActivatorAssignmentsChangedNotification]) {
+        return LAActivatorDarwinAssignmentsChangedNotification;
+    }
+    return nil;
+}
+
+static void LAActivatorSystemNotificationCallback(CFNotificationCenterRef center,
+                                                  void *observer,
+                                                  CFStringRef name,
+                                                  const void *object,
+                                                  CFDictionaryRef userInfo) {
+    LAActivator *activator = (__bridge LAActivator *)observer;
+    NSString *notificationName = LAActivatorPublicNotificationNameForDarwinName((__bridge NSString *)name);
+    if (notificationName.length > 0) {
+        [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:activator];
+    }
+}
 
 @implementation LAActivator
 
@@ -89,6 +136,7 @@ LAActivator *LASharedActivator;
             [LADefaultEventDataSource.sharedDataSource registerAvailableEventsWithActivator:self];
         } else {
             _ipcClient = [[LAActivatorIPCClient alloc] init];
+            [self la_registerSystemNotificationBridgeIfNeeded];
         }
     }
     return self;
@@ -131,6 +179,34 @@ LAActivator *LASharedActivator;
         self.ipcServer = [[LAActivatorIPCServer alloc] initWithActivator:self];
     }
     [self.ipcServer start];
+}
+
+- (void)la_registerSystemNotificationBridgeIfNeeded {
+    NSArray *notificationNames = @[
+        LAActivatorDarwinAvailableListenersChangedNotification,
+        LAActivatorDarwinAvailableEventsChangedNotification,
+        LAActivatorDarwinAssignmentsChangedNotification,
+    ];
+    for (NSString *notificationName in notificationNames) {
+        CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+                                        (__bridge const void *)self,
+                                        LAActivatorSystemNotificationCallback,
+                                        (__bridge CFStringRef)notificationName,
+                                        NULL,
+                                        CFNotificationSuspensionBehaviorCoalesce);
+    }
+}
+
+- (void)la_postSystemNotificationName:(NSString *)notificationName {
+    if (!self.runningInsideSpringBoard) {
+        return;
+    }
+    NSString *darwinName = LAActivatorDarwinNotificationNameForPublicName(notificationName);
+    if (darwinName.length == 0) {
+        return;
+    }
+    [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:self];
+    notify_post(darwinName.UTF8String);
 }
 
 - (void)la_noteHomeScreenVisible:(BOOL)visible {
@@ -634,8 +710,7 @@ LAActivator *LASharedActivator;
         return;
     }
     if ([self.backend registerListener:listener forName:name markSeen:YES]) {
-        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableListenersChangedNotification
-                                                          object:self];
+        [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
     }
 }
 
@@ -645,8 +720,7 @@ LAActivator *LASharedActivator;
         return;
     }
     if ([self.backend registerListener:listener forName:name markSeen:!ignoreHasSeen]) {
-        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableListenersChangedNotification
-                                                          object:self];
+        [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
     }
 }
 
@@ -656,8 +730,7 @@ LAActivator *LASharedActivator;
         return;
     }
     if ([self.backend unregisterListenerWithName:name]) {
-        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableListenersChangedNotification
-                                                          object:self];
+        [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
     }
 }
 
@@ -683,7 +756,7 @@ LAActivator *LASharedActivator;
 
 - (void)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
     if ([self la_assignEvent:event toListenersWithNames:listenerNames]) {
-        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
+        [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
     }
 }
 
@@ -716,13 +789,13 @@ LAActivator *LASharedActivator;
 
 - (void)addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event {
     if ([self la_addListenerAssignment:listenerName toEvent:event]) {
-        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
+        [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
     }
 }
 
 - (void)removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event {
     if ([self la_removeListenerAssignment:listenerName fromEvent:event]) {
-        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
+        [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
     }
 }
 
@@ -782,7 +855,7 @@ LAActivator *LASharedActivator;
 
 - (void)unassignEvent:(LAEvent *)event {
     if ([self la_unassignEvent:event]) {
-        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification object:self];
+        [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
     }
 }
 
@@ -1006,8 +1079,7 @@ LAActivator *LASharedActivator;
         return;
     }
     if ([self.backend registerEventDataSource:dataSource forEventName:eventName]) {
-        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableEventsChangedNotification
-                                                          object:self];
+        [self la_postSystemNotificationName:LAActivatorAvailableEventsChangedNotification];
     }
 }
 
@@ -1017,8 +1089,7 @@ LAActivator *LASharedActivator;
         return;
     }
     if ([self.backend unregisterEventDataSourceWithEventName:eventName]) {
-        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAvailableEventsChangedNotification
-                                                          object:self];
+        [self la_postSystemNotificationName:LAActivatorAvailableEventsChangedNotification];
     }
 }
 

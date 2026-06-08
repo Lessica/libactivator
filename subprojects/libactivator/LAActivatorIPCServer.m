@@ -243,8 +243,7 @@
                              toListenersWithNames:[self stringArrayInUserInfo:userInfo
                                                                        forKey:LAActivatorIPCKeyListenerNames]];
         if (changed) {
-            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification
-                                                              object:_activator];
+            [_activator la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
         }
         return [self replyWithOK:YES value:@(changed)];
     }
@@ -257,8 +256,7 @@
             [_activator la_addListenerAssignment:[self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName]
                                          toEvent:event];
         if (changed) {
-            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification
-                                                              object:_activator];
+            [_activator la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
         }
         return [self replyWithOK:YES value:@(changed)];
     }
@@ -271,8 +269,7 @@
             la_removeListenerAssignment:[self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName]
                               fromEvent:event];
         if (changed) {
-            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification
-                                                              object:_activator];
+            [_activator la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
         }
         return [self replyWithOK:YES value:@(changed)];
     }
@@ -283,8 +280,7 @@
         }
         BOOL changed = [_activator la_unassignEvent:event];
         if (changed) {
-            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorAssignmentsChangedNotification
-                                                              object:_activator];
+            [_activator la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
         }
         return [self replyWithOK:YES value:@(changed)];
     }

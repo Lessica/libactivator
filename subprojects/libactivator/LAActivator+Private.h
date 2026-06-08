@@ -14,6 +14,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LAActivator (Private)
 - (void)startIPCServerIfNeeded;
+- (void)la_postSystemNotificationName:(NSString *)notificationName;
 - (void)registerListener:(id<LAListener>)listener forName:(NSString *)name ignoreHasSeen:(BOOL)ignoreHasSeen;
 - (void)la_noteHomeScreenVisible:(BOOL)visible;
 - (void)la_noteHomeScreenVisible:(BOOL)visible source:(NSString *)source;

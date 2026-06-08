@@ -14,6 +14,10 @@
 #import "LAActivatorIPC.h"
 #import "LATestRunnerRecorder.h"
 
+@interface LATestRunner ()
+- (BOOL)waitUntilTrue:(BOOL (^)(void))predicate timeout:(NSTimeInterval)timeout;
+@end
+
 @implementation LATestRunner {
     CPDistributedMessagingCenter *_center;
 }
@@ -136,14 +140,31 @@
             caseName:@"reverse-assignment"
               reason:@"Client reverse assignment lookup did not include the assigned event"];
     [activator unassignEvent:event];
+    __block NSUInteger assignmentNotificationCount = 0;
+    id assignmentObserver =
+        [NSNotificationCenter.defaultCenter addObserverForName:LAActivatorAssignmentsChangedNotification
+                                                        object:activator
+                                                         queue:nil
+                                                    usingBlock:^(__unused NSNotification *notification) {
+                                                        assignmentNotificationCount += 1;
+                                                    }];
     [activator addListenerAssignment:nothingName toEvent:event];
+    BOOL receivedAssignmentNotification =
+        [self waitUntilTrue:^BOOL {
+            return assignmentNotificationCount > 0;
+        }
+                      timeout:2.0];
     [recorder expect:[[activator assignedListenerNamesForEvent:event] isEqualToArray:@[ nothingName ]]
             caseName:@"add-assignment-round-trip"
               reason:@"Client add assignment did not round-trip through SpringBoard"];
+    [recorder expect:receivedAssignmentNotification
+            caseName:@"assignment-system-notification"
+              reason:@"Client did not receive bridged assignment notification"];
     [activator removeListenerAssignment:nothingName fromEvent:event];
     [recorder expect:[activator assignedListenerNamesForEvent:event].count == 0
             caseName:@"remove-assignment-round-trip"
               reason:@"Client remove assignment did not round-trip through SpringBoard"];
+    [NSNotificationCenter.defaultCenter removeObserver:assignmentObserver];
     [activator addListenerAssignment:nothingName toEvent:event];
 
     [activator sendEventToListener:event];
@@ -253,6 +274,17 @@
         [NSThread sleepForTimeInterval:1.0];
     }
     return NO;
+}
+
+- (BOOL)waitUntilTrue:(BOOL (^)(void))predicate timeout:(NSTimeInterval)timeout {
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:timeout];
+    while (!predicate()) {
+        if ([deadline timeIntervalSinceNow] <= 0.0) {
+            return NO;
+        }
+        [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+    }
+    return YES;
 }
 
 - (NSDictionary *)sendCommand:(NSString *)command {

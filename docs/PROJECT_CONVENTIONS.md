@@ -124,6 +124,7 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - IPC payloads must be validated before use.
 - Public API calls that cross process boundaries should have predictable main thread behavior.
 - Public notifications are process-local `NSNotification` names. Cross-process state changes should be propagated through IPC and then reposted locally by each client process.
+- Public change notifications must be delivered from SpringBoard as the authoritative state source. The public `NSNotification` names stay API-compatible, while the underlying Darwin notification names must use distinct private `libactivator.notification.*` strings to keep cross-process diagnostics unambiguous.
 - Testing IPC is allowed only under `LA_TESTING`. It must not be present in ordinary package builds or public headers.
 
 ## Data Rules
