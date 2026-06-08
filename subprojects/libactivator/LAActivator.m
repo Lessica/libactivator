@@ -382,7 +382,7 @@ LAActivator *LASharedActivator;
     for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
         id<LAListener> listener = [self listenerForName:listenerName];
         if (touchActive && [self la_listenerWithNameRequiresNoTouchEvents:listenerName]) {
-            LAEvent *deferredEvent = [LAEvent eventWithName:event.name mode:eventMode];
+            LAEvent *deferredEvent = [LAEvent eventWithName:event.name mode:event.mode];
             deferredEvent.userInfo = event.userInfo;
             BOOL wasHandled = event.handled;
             event.handled = YES;
@@ -712,6 +712,28 @@ LAActivator *LASharedActivator;
     return [[self assignedListenerNamesForEvent:event] firstObject];
 }
 
+- (NSArray *)la_compatibleAssignedListenerNames:(NSArray *)listenerNames forEvent:(LAEvent *)event {
+    NSString *eventMode = event.mode ?: self.currentEventMode;
+    if (event.name.length == 0 || eventMode.length == 0) {
+        return @[];
+    }
+
+    NSMutableArray *compatibleNames = [NSMutableArray arrayWithCapacity:listenerNames.count];
+    for (NSString *listenerName in listenerNames) {
+        if (![listenerName isKindOfClass:NSString.class] || listenerName.length == 0) {
+            continue;
+        }
+        if (![self listenerWithName:listenerName isCompatibleWithMode:eventMode]) {
+            continue;
+        }
+        if (![self listenerWithName:listenerName isCompatibleWithEventName:event.name]) {
+            continue;
+        }
+        [compatibleNames addObject:listenerName];
+    }
+    return [compatibleNames copy];
+}
+
 - (NSArray *)assignedListenerNamesForEvent:(LAEvent *)event {
     if (event.name.length > 0 && event.mode.length == 0) {
         NSString *eventMode = self.currentEventMode;
@@ -724,7 +746,7 @@ LAActivator *LASharedActivator;
         return [self.ipcClient arrayValueForMessageName:LAActivatorIPCMessageAssignedListenerNames
                                                userInfo:[self la_ipcUserInfoForEvent:event]];
     }
-    return [self.backend assignedListenerNamesForEvent:event];
+    return [self la_compatibleAssignedListenerNames:[self.backend assignedListenerNamesForEvent:event] forEvent:event];
 }
 
 - (NSArray *)eventsAssignedToListenerWithName:(NSString *)listenerName {

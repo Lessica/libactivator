@@ -199,6 +199,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 @property(nonatomic, assign) BOOL requiresNoTouchEvents;
 @property(nonatomic, copy) NSArray *compatibleModes;
 @property(nonatomic, copy) NSArray *exclusiveGroups;
+@property(nonatomic, copy) NSString *lastReceivedEventMode;
 @end
 
 @implementation LATestListener
@@ -214,6 +215,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
     self.receiveCount += 1;
+    self.lastReceivedEventMode = event.mode;
     if (self.handlesReceivedEvents) {
         event.handled = YES;
     }
@@ -443,15 +445,19 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     NSString *eventName = @"libactivator.test.core";
     NSString *listenerAName = @"libactivator.test.listener.a";
     NSString *listenerBName = @"libactivator.test.listener.b";
+    NSString *listenerCName = @"libactivator.test.listener.c";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
     LATestListener *listenerA = [[LATestListener alloc] init];
     LATestListener *listenerB = [[LATestListener alloc] init];
+    LATestListener *listenerC = [[LATestListener alloc] init];
     listenerA.exclusiveGroups = @[ @"exclusive" ];
     listenerB.exclusiveGroups = @[ @"exclusive" ];
+    listenerC.compatibleModes = @[ LAEventModeSpringBoard ];
 
     [activator registerEventDataSource:dataSource forEventName:eventName];
     [activator registerListener:listenerA forName:listenerAName];
     [activator registerListener:listenerB forName:listenerBName];
+    [activator registerListener:listenerC forName:listenerCName];
 
     [recorder expect:[activator hasEventWithName:eventName]
             caseName:@"event-registry"
@@ -475,6 +481,15 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:[activator eventsAssignedToListenerWithName:listenerAName].count == 1
             caseName:@"reverse-assignment"
               reason:@"Reverse assignment lookup failed"];
+
+    LAEvent *applicationEvent = [LAEvent eventWithName:eventName mode:LAEventModeApplication];
+    [activator assignEvent:applicationEvent toListenerWithName:listenerCName];
+    [recorder expect:[activator assignedListenerNamesForEvent:applicationEvent].count == 0
+            caseName:@"assignment-compatibility-filter"
+              reason:@"Incompatible assignment was returned as active"];
+    [recorder expect:[activator eventsAssignedToListenerWithName:listenerCName].count == 1
+            caseName:@"reverse-assignment-keeps-incompatible"
+              reason:@"Reverse assignment should preserve stored incompatible assignments"];
 
     [activator setCurrentProfileName:@"Testing"];
     [recorder expect:[[activator availableProfileNames] containsObject:@"Testing"]
@@ -527,6 +542,12 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [activator sendEvent:explicitEvent toListenersWithNames:@[ listenerBName ]];
     [recorder expect:listenerB.receiveCount == 2 caseName:@"explicit-dispatch" reason:@"Explicit dispatch failed"];
 
+    listenerB.lastReceivedEventMode = LAEventModeSpringBoard;
+    [activator sendEvent:[LAEvent eventWithName:eventName] toListenersWithNames:@[ listenerBName ]];
+    [recorder expect:listenerB.lastReceivedEventMode == nil
+            caseName:@"nil-mode-immediate-dispatch"
+              reason:@"Immediate dispatch rewrote nil event mode"];
+
     [activator sendAbortEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
          toListenersWithNames:@[ simpleAbortName ]];
     [recorder expect:simpleAbort.abortCount == 1
@@ -547,7 +568,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     listenerA.requiresNoTouchEvents = YES;
     listenerA.receiveCount = 0;
     listenerB.receiveCount = 0;
-    LAEvent *deferredEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    listenerA.lastReceivedEventMode = LAEventModeSpringBoard;
+    LAEvent *deferredEvent = [LAEvent eventWithName:eventName];
     [self sendSyntheticTouchWithTouching:YES];
     [self waitForSyntheticTouchDelivery];
     [activator sendEvent:deferredEvent toListenersWithNames:@[ listenerAName, listenerBName ]];
@@ -560,6 +582,9 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:listenerA.receiveCount == 1 && listenerB.receiveCount == 1
             caseName:@"deferred-no-touch-drain"
               reason:@"Deferred event did not dispatch after touch ended"];
+    [recorder expect:listenerA.lastReceivedEventMode == nil
+            caseName:@"nil-mode-deferred-dispatch"
+              reason:@"Deferred dispatch rewrote nil event mode"];
 
 }
 
