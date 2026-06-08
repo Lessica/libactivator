@@ -207,10 +207,12 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 @property(nonatomic, assign) NSInteger unlockingCount;
 @property(nonatomic, assign) BOOL handlesReceivedEvents;
 @property(nonatomic, assign) BOOL requiresNoTouchEvents;
+@property(nonatomic, assign) NSUInteger smallIconRequestCount;
 @property(nonatomic, copy) NSArray *compatibleModes;
 @property(nonatomic, copy) NSArray *exclusiveGroups;
 @property(nonatomic, copy) NSString *lastReceivedEventMode;
 @property(nonatomic, copy) NSDictionary *lastReceivedUserInfo;
+@property(nonatomic, strong) UIImage *smallIconImage;
 @end
 
 @implementation LATestListener
@@ -279,6 +281,13 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         return @(self.requiresNoTouchEvents);
     }
     return nil;
+}
+
+- (UIImage *)activator:(LAActivator *)activator
+    requiresSmallIconForListenerName:(NSString *)listenerName
+                               scale:(CGFloat)scale {
+    self.smallIconRequestCount += 1;
+    return self.smallIconImage;
 }
 
 @end
@@ -584,6 +593,27 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
                      ![activator hasSeenListenerWithName:unseenListenerName]
             caseName:@"unseen-listener-registration"
               reason:@"ignoreHasSeen listener registration was not preserved"];
+    NSString *iconListenerName = @"libactivator.test.listener.icon";
+    LATestListener *iconListener = [[LATestListener alloc] init];
+    iconListener.smallIconImage = [[UIImage alloc] init];
+    [activator registerListener:iconListener forName:iconListenerName];
+    UIImage *firstSmallIcon = [activator smallIconForListenerName:iconListenerName];
+    iconListener.smallIconImage = nil;
+    UIImage *secondSmallIcon = [activator smallIconForListenerName:iconListenerName];
+    [recorder expect:firstSmallIcon && firstSmallIcon == secondSmallIcon && iconListener.smallIconRequestCount == 1
+            caseName:@"small-icon-cache"
+              reason:@"Small listener icon lookup did not use the cache"];
+    LATestListener *replacementIconListener = [[LATestListener alloc] init];
+    replacementIconListener.smallIconImage = [[UIImage alloc] init];
+    [activator registerListener:replacementIconListener forName:iconListenerName];
+    UIImage *replacementSmallIcon = [activator smallIconForListenerName:iconListenerName];
+    [recorder expect:replacementSmallIcon == replacementIconListener.smallIconImage &&
+                     replacementIconListener.smallIconRequestCount == 1
+            caseName:@"small-icon-cache-invalidated-by-registration"
+              reason:@"Small listener icon cache was not invalidated by listener registration"];
+    [recorder expect:[activator smallIconForListenerName:@"com.apple.Preferences"] == nil
+            caseName:@"small-icon-no-global-application-fallback"
+              reason:@"Core small icon lookup used a global application icon fallback"];
     __block NSUInteger listenerNotificationCount = 0;
     id listenerObserver =
         [NSNotificationCenter.defaultCenter addObserverForName:LAActivatorAvailableListenersChangedNotification
@@ -958,6 +988,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.listener.c",
         @"libactivator.test.listener.unseen",
         @"libactivator.test.listener.new",
+        @"libactivator.test.listener.icon",
         @"libactivator.test.dispatch.a",
         @"libactivator.test.dispatch.b",
         @"libactivator.test.dispatch.shared.first",
@@ -973,6 +1004,9 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
     NSArray *eventNames = @[
         @"libactivator.test.core",
+        @"libactivator.test.removable-event",
+        @"libactivator.test.nonremovable-event",
+        @"libactivator.test.new-event-data-source",
         @"libactivator.test.dispatch",
         @"libactivator.test.built-in.nothing",
         @"libactivator.test.client-facade.user-info",

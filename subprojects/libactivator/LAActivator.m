@@ -20,14 +20,6 @@
 #import "LARemoteListener.h"
 #import "LATouchActivityTracker.h"
 
-#pragma mark - Private Interfaces
-
-@interface UIImage (LAActivatorApplicationIcon)
-+ (instancetype)_applicationIconImageForBundleIdentifier:(NSString *)bundleIdentifier
-                                                  format:(int)format
-                                                   scale:(CGFloat)scale;
-@end
-
 #pragma mark - Class Extension
 
 @interface LAActivator ()
@@ -36,6 +28,8 @@
 @property(nonatomic, strong) LAActivatorIPCServer *ipcServer;
 @property(nonatomic, strong) LAActivatorRuntimeStateProvider *runtimeStateProvider;
 @property(nonatomic, strong) LATouchActivityTracker *touchActivityTracker;
+@property(nonatomic, strong) NSMutableDictionary *smallIconCache;
+@property(nonatomic, strong) dispatch_queue_t smallIconCacheQueue;
 - (BOOL)la_assignEventWithExplicitMode:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
 - (BOOL)la_addListenerAssignmentWithExplicitMode:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (BOOL)la_removeListenerAssignmentWithExplicitMode:(NSString *)listenerName fromEvent:(LAEvent *)event;
@@ -50,6 +44,10 @@
 - (void)la_rejectSpringBoardOnlySelector:(SEL)selector;
 - (NSString *)la_invalidSpringBoardOperationCulpritName;
 - (void)la_registerSystemNotificationBridgeIfNeeded;
+- (void)la_clearSmallIconCache;
+- (UIImage *)la_cachedSmallIconForListenerName:(NSString *)listenerName found:(BOOL *)found;
+- (void)la_setCachedSmallIcon:(UIImage *)icon forListenerName:(NSString *)listenerName;
+- (UIImage *)la_resolveSmallIconForListenerName:(NSString *)listenerName;
 - (id)la_ipcPropertyListValue:(id)value;
 - (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event;
 - (NSArray *)la_ipcUniqueStringArrayPreservingOrder:(NSArray *)array;
@@ -101,6 +99,9 @@ static void LAActivatorSystemNotificationCallback(CFNotificationCenterRef center
     LAActivator *activator = (__bridge LAActivator *)observer;
     NSString *notificationName = LAActivatorPublicNotificationNameForDarwinName((__bridge NSString *)name);
     if (notificationName.length > 0) {
+        if ([notificationName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
+            [activator la_clearSmallIconCache];
+        }
         [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:activator];
     }
 }
@@ -130,6 +131,8 @@ LAActivator *LASharedActivator;
 - (instancetype)initPrivate {
     self = [super init];
     if (self) {
+        _smallIconCache = [[NSMutableDictionary alloc] init];
+        _smallIconCacheQueue = dispatch_queue_create("libactivator.small-icon-cache", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         if (self.runningInsideSpringBoard) {
             _runtimeStateProvider = [[LAActivatorRuntimeStateProvider alloc] init];
             _backend = [[LAActivatorBackend alloc] initWithPersistence:[self defaultPersistence]];
@@ -207,6 +210,9 @@ LAActivator *LASharedActivator;
     NSString *darwinName = LAActivatorDarwinNotificationNameForPublicName(notificationName);
     if (darwinName.length == 0) {
         return;
+    }
+    if ([notificationName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
+        [self la_clearSmallIconCache];
     }
     [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:self];
     notify_post(darwinName.UTF8String);
@@ -714,7 +720,11 @@ LAActivator *LASharedActivator;
         [self la_rejectSpringBoardOnlySelector:_cmd];
         return;
     }
-    if ([self.backend registerListener:listener forName:name markSeen:YES]) {
+    BOOL changedAvailability = [self.backend registerListener:listener forName:name markSeen:YES];
+    if (listener && name.length > 0) {
+        [self la_clearSmallIconCache];
+    }
+    if (changedAvailability) {
         [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
     }
 }
@@ -724,7 +734,11 @@ LAActivator *LASharedActivator;
         [self la_rejectSpringBoardOnlySelector:_cmd];
         return;
     }
-    if ([self.backend registerListener:listener forName:name markSeen:!ignoreHasSeen]) {
+    BOOL changedAvailability = [self.backend registerListener:listener forName:name markSeen:!ignoreHasSeen];
+    if (listener && name.length > 0) {
+        [self la_clearSmallIconCache];
+    }
+    if (changedAvailability) {
         [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
     }
 }
@@ -735,6 +749,7 @@ LAActivator *LASharedActivator;
         return;
     }
     if ([self.backend unregisterListenerWithName:name]) {
+        [self la_clearSmallIconCache];
         [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
     }
 }
@@ -1328,6 +1343,46 @@ LAActivator *LASharedActivator;
 }
 
 - (UIImage *)smallIconForListenerName:(NSString *)listenerName {
+    if (listenerName.length == 0) {
+        return nil;
+    }
+    BOOL cacheHit = NO;
+    UIImage *cachedIcon = [self la_cachedSmallIconForListenerName:listenerName found:&cacheHit];
+    if (cacheHit) {
+        return cachedIcon;
+    }
+    UIImage *icon = [self la_resolveSmallIconForListenerName:listenerName];
+    [self la_setCachedSmallIcon:icon forListenerName:listenerName];
+    return icon;
+}
+
+- (UIImage *)la_cachedSmallIconForListenerName:(NSString *)listenerName found:(BOOL *)found {
+    __block id cachedIcon = nil;
+    dispatch_sync(self.smallIconCacheQueue, ^{
+        cachedIcon = self.smallIconCache[listenerName];
+    });
+    if (found) {
+        *found = cachedIcon != nil;
+    }
+    return cachedIcon == NSNull.null ? nil : cachedIcon;
+}
+
+- (void)la_setCachedSmallIcon:(UIImage *)icon forListenerName:(NSString *)listenerName {
+    if (listenerName.length == 0) {
+        return;
+    }
+    dispatch_sync(self.smallIconCacheQueue, ^{
+        self.smallIconCache[listenerName] = icon ?: NSNull.null;
+    });
+}
+
+- (void)la_clearSmallIconCache {
+    dispatch_sync(self.smallIconCacheQueue, ^{
+        [self.smallIconCache removeAllObjects];
+    });
+}
+
+- (UIImage *)la_resolveSmallIconForListenerName:(NSString *)listenerName {
     CGFloat scale = UIScreen.mainScreen.scale;
     id<LAListener> listener = [self listenerForName:listenerName];
     if ([listener respondsToSelector:@selector(activator:requiresSmallIconForListenerName:scale:)]) {
@@ -1346,13 +1401,6 @@ LAActivator *LASharedActivator;
         NSData *data = [listener activator:self requiresSmallIconDataForListenerName:listenerName];
         if (data.length > 0) {
             return [UIImage imageWithData:data scale:1.0f];
-        }
-    }
-    if (listenerName.length > 0 &&
-        [UIImage respondsToSelector:@selector(_applicationIconImageForBundleIdentifier:format:scale:)]) {
-        UIImage *applicationIcon = [UIImage _applicationIconImageForBundleIdentifier:listenerName format:0 scale:scale];
-        if (applicationIcon) {
-            return applicationIcon;
         }
     }
     return [LAActivatorResourceManager.sharedManager iconForListenerName:listenerName small:YES scale:scale];
