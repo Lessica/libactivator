@@ -280,6 +280,7 @@ void LAFlatImportCheck(void) {
     LAEvent *event = [LAEvent eventWithName:LAEventNameMenuPressSingle mode:LAEventModeSpringBoard];
     event.userInfo = @{ LAEventUserInfoDisplayIdentifier: @\"com.apple.springboard\" };
     (void)[[LAActivator sharedInstance] version];
+    (void)LAActivatorVersion_1_9_13;
     (void)LAEventNameVolumeMuteOn;
     (void)LAEventNameVolumeDownPressWithMenu;
     (void)LAEventNameFingerprintSensorPressTwice;
@@ -298,8 +299,11 @@ void LAFrameworkImportCheck(void) {
     LAActivator *activator = [LAActivator sharedInstance];
     LAEvent *event = [[LAEvent alloc] initWithName:LAEventNameStatusBarTapSingle mode:LAEventModeApplication];
     [activator sendEvent:event toListenersWithNames:@[]];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     (void)activator.authorizationStatus;
     [activator requestAuthorization];
+#pragma clang diagnostic pop
     (void)[activator assignmentWarningForEventWithName:LAEventNameVolumeMuteOn];
     UIImageView *imageView = [UIImageView new];
     imageView.activatorListenerName = @\"example.listener\";

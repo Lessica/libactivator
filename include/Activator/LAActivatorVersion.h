@@ -45,6 +45,7 @@ typedef enum {
     LAActivatorVersion_1_9_10 = 1091000,
     LAActivatorVersion_1_9_11 = 1091100,
     LAActivatorVersion_1_9_12 = 1091200,
+    LAActivatorVersion_1_9_13 = 1091300,
     LAActivatorVersion_2_0 = 2000000,
 } LAActivatorVersion;
 
@@ -52,7 +53,7 @@ typedef enum {
     LAAuthorizationStatusNotDetermined = -1,
     LAAuthorizationStatusDenied = 0,
     LAAuthorizationStatusAuthorized = 1,
-} LAAuthorizationStatus;
+} LAAuthorizationStatus __attribute__((deprecated("Legacy authorization is not implemented.")));
 
 #ifndef LA_PRIVATE_IVARS
 #define LA_PRIVATE_IVARS(class)

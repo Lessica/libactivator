@@ -128,8 +128,9 @@ LA_PRIVATE_IVARS(LAActivator)
 
 // Authorization
 
-@property(nonatomic, readonly) LAAuthorizationStatus authorizationStatus;
-- (void)requestAuthorization;
+@property(nonatomic, readonly) LAAuthorizationStatus authorizationStatus
+    __attribute__((deprecated("Legacy authorization is not implemented.")));
+- (void)requestAuthorization __attribute__((deprecated("Legacy authorization is not implemented.")));
 
 @end
 

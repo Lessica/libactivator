@@ -30,7 +30,7 @@ This inventory records the public API surface inherited from Activator 1.9.13 an
 | --- | --- | --- | --- |
 | `Activator/Activator.h` | Framework umbrella for the Activator module. | Must implement | Imports all 1.9 Activator public headers. |
 | `libactivator.h` | Flat legacy umbrella. | Must implement | Installed at `/usr/include/libactivator.h`; imports `<Activator/Activator.h>`. |
-| `LAActivatorVersion.h` | `LAActivatorVersion`, `LAAuthorizationStatus`, and `LA_PRIVATE_IVARS`. | Must implement | Version values are compatibility constants through 1.9.12. Add `LAActivatorVersion_2_0 = 2000000` and report it for the 2.0 rewrite. |
+| `LAActivatorVersion.h` | `LAActivatorVersion`, `LAAuthorizationStatus`, and `LA_PRIVATE_IVARS`. | Must implement | Version values are compatibility constants through 1.9.13. Add `LAActivatorVersion_2_0 = 2000000` and report it for the 2.0 rewrite. `LAAuthorizationStatus` is deprecated because the legacy authorization mechanism is not implemented. |
 | `LAActivator.h` | Main facade, assignments, metadata, modes, blacklist, profiles, localization, constants, notifications. | Must implement | API skeleton should land before IPC or SpringBoard runtime. |
 | `LAEvent.h` | `LAEvent` model and built-in event/userInfo constants. | Must implement | Event constants are compatibility symbols; actual event acquisition is capability gated. |
 | `LAListener.h` | `LAListener` protocol for event callbacks, metadata, icons, removal, configuration. | Must implement | Dispatch behavior is runtime-backed; metadata queries can be safe stubs first. |
@@ -135,8 +135,8 @@ This inventory records the public API surface inherited from Activator 1.9.13 an
 | `setApplicationWithDisplayIdentifier:isBlacklisted:` | Must implement | Core blacklist storage/update. |
 | `availableProfileNames` | Must implement | Empty/default profile behavior must be defined. |
 | `currentProfileName` | Must implement | Profile timing was deferred until core compatibility is stable. |
-| `authorizationStatus` | Compatibility no-op | 1.9.13 authorization symbol is preserved; legacy authorization is not implemented and status is always authorized. |
-| `requestAuthorization` | Compatibility no-op | Preserved for source/ABI compatibility only. |
+| `authorizationStatus` | Compatibility no-op, deprecated | 1.9.13 authorization symbol is preserved; legacy authorization is not implemented and status is always authorized. |
+| `requestAuthorization` | Compatibility no-op, deprecated | Preserved for source/ABI compatibility only. |
 | `localizedStringForKey:value:` | Must implement | Activator support bundle-backed with value/key fallback. |
 | `localizedTitleForEventMode:` | Must implement | Uses legacy mode localization keys and fallback strings. |
 | `localizedTitleForEventName:` | Must implement | Data-source and event resource-backed, IPC-routed outside SpringBoard. |
@@ -205,7 +205,7 @@ The listener protocol has only optional methods. The implementation must check `
 
 ### Version Constants
 
-`LAActivatorVersion` preserves legacy version values from 1.3 through 1.9.12. Add `LAActivatorVersion_2_0 = 2000000`, and make `-[LAActivator version]` return it for the 2.0 rewrite while preserving older enum values as ABI/source constants. `LAAuthorizationStatus` is preserved for source compatibility, but the legacy authorization mechanism is intentionally not implemented.
+`LAActivatorVersion` preserves legacy version values from 1.3 through 1.9.13. Add `LAActivatorVersion_2_0 = 2000000`, and make `-[LAActivator version]` return it for the 2.0 rewrite while preserving older enum values as ABI/source constants. `LAAuthorizationStatus` is preserved for source compatibility but deprecated, because the legacy authorization mechanism is intentionally not implemented.
 
 ### Event Mode Constants
 
