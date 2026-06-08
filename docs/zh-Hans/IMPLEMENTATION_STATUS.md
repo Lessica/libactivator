@@ -48,7 +48,7 @@
 | 向后兼容性模型 | ✅ | 必须实现 | libactivator.dylib | 内存中监听器注册表、分配模型 | `listenerNamesAreMutuallyCompatible:` 以及排他性组的行为具有确定性。 |
 | 已查看听众追踪 | ✅ | 必须实现 | libactivator.dylib | 内存中监听器注册表、持久化、IPC 服务器 | `hasSeenListenerWithName:` 返回已持久化的 SpringBoard 监听器注册历史记录，而非 SpringBoard 客户端则通过 IPC 进行查询。 |
 | 黑名单模型 | ✅ | 必须实现 | libactivator.dylib | 无 | 在第 2 步中，黑名单的查询/更新操作在内存中进行；最终对客户端可见的状态必须由 SpringBoard/IPC 提供支持。 |
-| 轮廓模型 | ✅ | 必须实现 | libactivator.dylib | 任务模型 | 步骤 2 中，默认/当前配置文件的行为已在内存中定义且具有确定性；最终对客户端可见的状态必须由 SpringBoard/IPC 提供支持。 |
+| Profile 模型 | ✅ | 必须实现 | libactivator.dylib | 任务模型 | 默认/当前 profile 切换行为是确定的，并已由 SpringBoard/IPC 提供支持；不存在的 profile 当前会创建为空 assignment 命名空间，其语义作为 1.9.x 兼容性问题跟踪。 |
 | 黑名单的持久化 | ✅ | 必须实现 | libactivator.dylib | 任务持久化 | SpringBoard 权威后端会将列入黑名单的显示标识符持久化存储在 v2 运行时首选项 plist 中。 |
 | 配置文件持久化 | ✅ | 必须实现 | libactivator.dylib | 任务持久化 | SpringBoard 的权威后端会将当前配置文件以及每个配置文件的分配信息保存在 v2 运行时首选项 plist 中。 |
 | 本地化资源查询 | ✅ | 必须实现 | libactivator.dylib | 公共常量定义、资源解析器 | 本地化方法会查询 Activator 支持包、事件/监听器包以及确定性备用方案。 |

@@ -1425,18 +1425,18 @@ LAActivator *LASharedActivator;
 - (NSString *)currentEventMode {
     if (!self.runningInsideSpringBoard) {
         return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageCurrentEventMode userInfo:nil]
-                   ?: [self.runtimeStateProvider currentEventMode];
+                   ?: LAEventModeSpringBoard;
     }
-    return [self.runtimeStateProvider currentEventMode];
+    return [self.runtimeStateProvider currentEventMode] ?: LAEventModeSpringBoard;
 }
 
 - (NSString *)currentEventModeUnderneathLockScreen {
     if (!self.runningInsideSpringBoard) {
         return [self.ipcClient stringValueForMessageName:LAActivatorIPCMessageCurrentEventModeUnderneathLockScreen
                                                 userInfo:nil]
-                   ?: [self.runtimeStateProvider currentEventModeUnderneathLockScreen];
+                   ?: LAEventModeSpringBoard;
     }
-    return [self.runtimeStateProvider currentEventModeUnderneathLockScreen];
+    return [self.runtimeStateProvider currentEventModeUnderneathLockScreen] ?: LAEventModeSpringBoard;
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {
