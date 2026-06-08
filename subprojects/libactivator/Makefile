@@ -18,6 +18,7 @@ libactivator_FILES += LAActivatorRuntimeStateProvider.m
 libactivator_FILES += LATouchActivityTracker.m
 libactivator_FILES += LADefaultEventDataSource.m
 libactivator_FILES += LAActivatorIPC.m
+libactivator_FILES += LAActivatorIPCCodec.m
 libactivator_FILES += LAActivatorIPCClient.m
 libactivator_FILES += LAActivatorIPCServer.m
 libactivator_FILES += LARemoteListener.m

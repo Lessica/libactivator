@@ -14,7 +14,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LAActivator (Private)
 - (void)startIPCServerIfNeeded;
-- (void)la_postSystemNotificationName:(NSString *)notificationName;
 - (void)registerListener:(id<LAListener>)listener forName:(NSString *)name ignoreHasSeen:(BOOL)ignoreHasSeen;
 - (void)la_noteHomeScreenVisible:(BOOL)visible;
 - (void)la_noteHomeScreenVisible:(BOOL)visible source:(NSString *)source;
@@ -28,12 +27,14 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSDictionary *)la_runtimeStateDebugDictionary;
 #endif
 - (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
-- (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
-- (BOOL)la_addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event;
-- (BOOL)la_removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event;
-- (BOOL)la_unassignEvent:(LAEvent *)event;
+- (BOOL)la_assignEventAndNotifyIfChanged:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (BOOL)la_addListenerAssignmentAndNotifyIfChanged:(NSString *)listenerName toEvent:(LAEvent *)event;
+- (BOOL)la_removeListenerAssignmentAndNotifyIfChanged:(NSString *)listenerName fromEvent:(LAEvent *)event;
+- (BOOL)la_unassignEventAndNotifyIfChanged:(LAEvent *)event;
 - (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
 - (BOOL)la_setCurrentProfileName:(nullable NSString *)currentProfileName;
+- (nullable NSData *)la_smallIconDataForListenerName:(NSString *)listenerName scale:(CGFloat *)scale;
+- (void)la_sendEvent:(LAEvent *)event directlyToListenerWithName:(NSString *)listenerName abort:(BOOL)abort;
 @end
 
 NS_ASSUME_NONNULL_END

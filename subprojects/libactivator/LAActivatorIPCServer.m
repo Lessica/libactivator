@@ -6,15 +6,14 @@
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LAActivatorIPC.h"
 #import "LAActivator+Private.h"
-#import "LAActivatorResourceManager.h"
+#import "LAActivatorIPC.h"
+#import "LAActivatorIPCCodec.h"
 #if LA_TESTING
 #import "LAActivatorTestSupport.h"
 #endif
 
 #import <AppSupport/CPDistributedMessagingCenter.h>
-#import <dispatch/dispatch.h>
 
 @interface LAActivatorIPCServer ()
 - (NSArray *)registeredMessageNames;
@@ -23,20 +22,11 @@
 - (nullable NSDictionary *)handleAssignmentMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
 - (nullable NSDictionary *)handleRuntimeMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
 - (nullable NSDictionary *)handleDispatchMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
-- (nullable NSDictionary *)handleEventMetadataMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
-- (nullable NSDictionary *)handleListenerMetadataMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
+- (nullable NSDictionary *)handleEventMetadataMessageNamed:(NSString *)messageName
+                                              withUserInfo:(NSDictionary *)userInfo;
+- (nullable NSDictionary *)handleListenerMetadataMessageNamed:(NSString *)messageName
+                                                 withUserInfo:(NSDictionary *)userInfo;
 - (nullable NSDictionary *)handleLocalizationMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
-- (NSDictionary *)replyWithOK:(BOOL)ok value:(id)value;
-- (NSDictionary *)eventReplyWithEvent:(LAEvent *)event;
-- (NSString *)stringInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
-- (NSArray *)stringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
-- (NSArray *)uniqueOrderedStringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
-- (LAEvent *)eventWithUserInfo:(NSDictionary *)userInfo;
-- (NSDictionary *)userInfoWithEvent:(LAEvent *)event;
-- (NSArray *)eventDictionariesWithEvents:(NSArray *)events;
-- (id)propertyListValue:(id)value;
-- (NSDictionary *)smallIconDataReplyForListenerName:(NSString *)listenerName scale:(CGFloat)scale;
-- (void)sendEvent:(LAEvent *)event directlyToListenerName:(NSString *)listenerName abort:(BOOL)abort;
 @end
 
 @implementation LAActivatorIPCServer {
@@ -137,7 +127,7 @@
 
 - (NSDictionary *)handleMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if (![messageName isKindOfClass:NSString.class] || ![userInfo isKindOfClass:NSDictionary.class]) {
-        return [self replyWithOK:NO value:nil];
+        return [LAActivatorIPCCodec replyWithOK:NO value:nil];
     }
 
     NSDictionary *reply = [self handleTestingMessageNamed:messageName withUserInfo:userInfo];
@@ -173,7 +163,7 @@
         return reply;
     }
 
-    return [self replyWithOK:NO value:nil];
+    return [LAActivatorIPCCodec replyWithOK:NO value:nil];
 }
 
 #pragma mark - Message Handling
@@ -189,473 +179,325 @@
 
 - (NSDictionary *)handleRegistryMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAActivatorIPCMessageAvailableEventNames]) {
-        return [self replyWithOK:YES value:_activator.availableEventNames];
+        return [LAActivatorIPCCodec replyWithOK:YES value:_activator.availableEventNames];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageHasEvent]) {
-        return [self replyWithOK:YES
-                           value:@([_activator hasEventWithName:[self stringInUserInfo:userInfo
-                                                                                forKey:LAActivatorIPCKeyEventName]])];
+        NSString *eventName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@([_activator hasEventWithName:eventName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageAvailableListenerNames]) {
-        return [self replyWithOK:YES value:_activator.availableListenerNames];
+        return [LAActivatorIPCCodec replyWithOK:YES value:_activator.availableListenerNames];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageHasListener]) {
-        return [self
-            replyWithOK:YES
-                  value:@([_activator hasListenerWithName:[self stringInUserInfo:userInfo
-                                                                          forKey:LAActivatorIPCKeyListenerName]])];
+        NSString *listenerName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@([_activator hasListenerWithName:listenerName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageHasSeenListener]) {
-        return [self
-            replyWithOK:YES
-                  value:@([_activator hasSeenListenerWithName:[self stringInUserInfo:userInfo
-                                                                              forKey:LAActivatorIPCKeyListenerName]])];
+        NSString *listenerName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@([_activator hasSeenListenerWithName:listenerName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageAvailableProfileNames]) {
-        return [self replyWithOK:YES value:_activator.availableProfileNames];
+        return [LAActivatorIPCCodec replyWithOK:YES value:_activator.availableProfileNames];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageCurrentProfileName]) {
-        return [self replyWithOK:YES value:_activator.currentProfileName ?: @""];
+        return [LAActivatorIPCCodec replyWithOK:YES value:_activator.currentProfileName ?: @""];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageSetCurrentProfileName]) {
-        BOOL changed = [_activator la_setCurrentProfileName:[self stringInUserInfo:userInfo
-                                                                            forKey:LAActivatorIPCKeyProfileName]];
-        return [self replyWithOK:YES value:@(changed)];
+        NSString *profileName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyProfileName];
+        BOOL changed = [_activator la_setCurrentProfileName:profileName];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@(changed)];
     }
     return nil;
 }
 
 - (NSDictionary *)handleAssignmentMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAActivatorIPCMessageAssignedListenerNames]) {
-        return [self replyWithOK:YES
-                           value:[_activator assignedListenerNamesForEvent:[self eventWithUserInfo:userInfo]]];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[_activator assignedListenerNamesForEvent:event]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageEventsAssignedToListener]) {
-        NSArray *events = [_activator
-            eventsAssignedToListenerWithName:[self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName]];
-        return [self replyWithOK:YES value:[self eventDictionariesWithEvents:events]];
+        NSString *listenerName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
+        NSArray *events = [_activator eventsAssignedToListenerWithName:listenerName];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[LAActivatorIPCCodec eventDictionariesWithEvents:events]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageAssignEvent]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
         if (!event) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
-        BOOL changed = [_activator la_assignEvent:event
-                             toListenersWithNames:[self stringArrayInUserInfo:userInfo
-                                                                       forKey:LAActivatorIPCKeyListenerNames]];
-        if (changed) {
-            [_activator la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
-        }
-        return [self replyWithOK:YES value:@(changed)];
+        NSArray *listenerNames = [LAActivatorIPCCodec stringArrayInUserInfo:userInfo
+                                                                     forKey:LAActivatorIPCKeyListenerNames];
+        BOOL changed = [_activator la_assignEventAndNotifyIfChanged:event toListenersWithNames:listenerNames];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@(changed)];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageAddListenerAssignment]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
         if (!event) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
-        BOOL changed =
-            [_activator la_addListenerAssignment:[self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName]
-                                         toEvent:event];
-        if (changed) {
-            [_activator la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
-        }
-        return [self replyWithOK:YES value:@(changed)];
+        NSString *listenerName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
+        BOOL changed = [_activator la_addListenerAssignmentAndNotifyIfChanged:listenerName toEvent:event];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@(changed)];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageRemoveListenerAssignment]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
         if (!event) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
-        BOOL changed = [_activator
-            la_removeListenerAssignment:[self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName]
-                              fromEvent:event];
-        if (changed) {
-            [_activator la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
-        }
-        return [self replyWithOK:YES value:@(changed)];
+        NSString *listenerName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
+        BOOL changed = [_activator la_removeListenerAssignmentAndNotifyIfChanged:listenerName fromEvent:event];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@(changed)];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageUnassignEvent]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
         if (!event) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
-        BOOL changed = [_activator la_unassignEvent:event];
-        if (changed) {
-            [_activator la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
-        }
-        return [self replyWithOK:YES value:@(changed)];
+        BOOL changed = [_activator la_unassignEventAndNotifyIfChanged:event];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@(changed)];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageApplicationIsBlacklisted]) {
-        NSString *displayIdentifier = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyDisplayIdentifier];
-        return [self replyWithOK:YES
-                           value:@([_activator applicationWithDisplayIdentifierIsBlacklisted:displayIdentifier])];
+        NSString *displayIdentifier = [LAActivatorIPCCodec stringInUserInfo:userInfo
+                                                                     forKey:LAActivatorIPCKeyDisplayIdentifier];
+        BOOL blacklisted = [_activator applicationWithDisplayIdentifierIsBlacklisted:displayIdentifier];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@(blacklisted)];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageSetApplicationBlacklisted]) {
-        BOOL changed = [_activator
-            la_setApplicationWithDisplayIdentifier:[self stringInUserInfo:userInfo
-                                                                   forKey:LAActivatorIPCKeyDisplayIdentifier]
-                                     isBlacklisted:[userInfo[LAActivatorIPCKeyBlacklisted] boolValue]];
-        return [self replyWithOK:YES value:@(changed)];
+        NSString *displayIdentifier = [LAActivatorIPCCodec stringInUserInfo:userInfo
+                                                                     forKey:LAActivatorIPCKeyDisplayIdentifier];
+        BOOL changed =
+            [_activator la_setApplicationWithDisplayIdentifier:displayIdentifier
+                                                 isBlacklisted:[userInfo[LAActivatorIPCKeyBlacklisted] boolValue]];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@(changed)];
     }
     return nil;
 }
 
 - (NSDictionary *)handleRuntimeMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAActivatorIPCMessageCurrentEventMode]) {
-        return [self replyWithOK:YES value:_activator.currentEventMode ?: @""];
+        return [LAActivatorIPCCodec replyWithOK:YES value:_activator.currentEventMode ?: @""];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageCurrentEventModeUnderneathLockScreen]) {
-        return [self replyWithOK:YES value:_activator.currentEventModeUnderneathLockScreen ?: @""];
+        return [LAActivatorIPCCodec replyWithOK:YES value:_activator.currentEventModeUnderneathLockScreen ?: @""];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageSupportsUnlockingDeviceToSendEvents]) {
-        return [self replyWithOK:YES value:@(_activator.supportsUnlockingDeviceToSendEvents)];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@(_activator.supportsUnlockingDeviceToSendEvents)];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageCurrentApplicationDisplayIdentifier]) {
-        return [self replyWithOK:YES value:_activator.displayIdentifierForCurrentApplication ?: @""];
+        return [LAActivatorIPCCodec replyWithOK:YES value:_activator.displayIdentifierForCurrentApplication ?: @""];
     }
     return nil;
 }
 
 - (NSDictionary *)handleDispatchMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchAssignedEvent]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
         if (!event) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
         [_activator sendEventToListener:event];
-        return [self eventReplyWithEvent:event];
+        return [LAActivatorIPCCodec eventReplyWithEvent:event];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchEventToListeners]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
         if (!event) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
         [_activator sendEvent:event
-            toListenersWithNames:[self uniqueOrderedStringArrayInUserInfo:userInfo
-                                                                    forKey:LAActivatorIPCKeyListenerNames]];
-        return [self eventReplyWithEvent:event];
+            toListenersWithNames:[LAActivatorIPCCodec
+                                     uniqueOrderedStringArrayInUserInfo:userInfo
+                                                                 forKey:LAActivatorIPCKeyListenerNames]];
+        return [LAActivatorIPCCodec eventReplyWithEvent:event];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchAssignedAbortEvent]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
         if (!event) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
         [_activator sendAbortToListener:event];
-        return [self eventReplyWithEvent:event];
+        return [LAActivatorIPCCodec eventReplyWithEvent:event];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchAbortEventToListeners]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
         if (!event) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
         [_activator sendAbortEvent:event
-              toListenersWithNames:[self uniqueOrderedStringArrayInUserInfo:userInfo
-                                                                      forKey:LAActivatorIPCKeyListenerNames]];
-        return [self eventReplyWithEvent:event];
+              toListenersWithNames:[LAActivatorIPCCodec
+                                       uniqueOrderedStringArrayInUserInfo:userInfo
+                                                                   forKey:LAActivatorIPCKeyListenerNames]];
+        return [LAActivatorIPCCodec eventReplyWithEvent:event];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchPreviewEvent]) {
-        [_activator sendPreviewEventToListenerWithName:[self stringInUserInfo:userInfo
-                                                                       forKey:LAActivatorIPCKeyListenerName]];
-        return [self replyWithOK:YES value:nil];
+        [_activator
+            sendPreviewEventToListenerWithName:[LAActivatorIPCCodec stringInUserInfo:userInfo
+                                                                              forKey:LAActivatorIPCKeyListenerName]];
+        return [LAActivatorIPCCodec replyWithOK:YES value:nil];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageDispatchDeactivateEvent]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
         if (!event) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
         [_activator sendDeactivateEventToListeners:event];
-        return [self eventReplyWithEvent:event];
+        return [LAActivatorIPCCodec eventReplyWithEvent:event];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageRemoteListenerReceiveEvent]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
-        NSString *targetListenerName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
+        NSString *targetListenerName = [LAActivatorIPCCodec stringInUserInfo:userInfo
+                                                                      forKey:LAActivatorIPCKeyListenerName];
         if (!event || targetListenerName.length == 0) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
-        [self sendEvent:event directlyToListenerName:targetListenerName abort:NO];
-        return [self eventReplyWithEvent:event];
+        [_activator la_sendEvent:event directlyToListenerWithName:targetListenerName abort:NO];
+        return [LAActivatorIPCCodec eventReplyWithEvent:event];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageRemoteListenerAbortEvent]) {
-        LAEvent *event = [self eventWithUserInfo:userInfo];
-        NSString *targetListenerName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
+        LAEvent *event = [LAActivatorIPCCodec eventWithUserInfo:userInfo];
+        NSString *targetListenerName = [LAActivatorIPCCodec stringInUserInfo:userInfo
+                                                                      forKey:LAActivatorIPCKeyListenerName];
         if (!event || targetListenerName.length == 0) {
-            return [self replyWithOK:NO value:nil];
+            return [LAActivatorIPCCodec replyWithOK:NO value:nil];
         }
-        [self sendEvent:event directlyToListenerName:targetListenerName abort:YES];
-        return [self eventReplyWithEvent:event];
+        [_activator la_sendEvent:event directlyToListenerWithName:targetListenerName abort:YES];
+        return [LAActivatorIPCCodec eventReplyWithEvent:event];
     }
     return nil;
 }
 
 - (NSDictionary *)handleEventMetadataMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
-    NSString *eventName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
-    NSString *eventMode = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventMode];
+    NSString *eventName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
+    NSString *eventMode = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventMode];
     if ([messageName isEqualToString:LAActivatorIPCMessageEventIsHidden]) {
-        return [self replyWithOK:YES value:@([_activator eventWithNameIsHidden:eventName])];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@([_activator eventWithNameIsHidden:eventName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageEventRequiresAssignment]) {
-        return [self replyWithOK:YES value:@([_activator eventWithNameRequiresAssignment:eventName])];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@([_activator eventWithNameRequiresAssignment:eventName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageCompatibleModesForEvent]) {
-        return [self replyWithOK:YES value:[_activator compatibleModesForEventWithName:eventName]];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[_activator compatibleModesForEventWithName:eventName]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageEventIsCompatibleWithMode]) {
-        return [self replyWithOK:YES value:@([_activator eventWithName:eventName isCompatibleWithMode:eventMode])];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:@([_activator eventWithName:eventName isCompatibleWithMode:eventMode])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageEventSupportsUnlockingDeviceToSend]) {
-        return [self replyWithOK:YES value:@([_activator eventWithNameSupportsUnlockingDeviceToSend:eventName])];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:@([_activator eventWithNameSupportsUnlockingDeviceToSend:eventName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageAssignmentWarningForEvent]) {
-        return [self replyWithOK:YES value:[_activator assignmentWarningForEventWithName:eventName]];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[_activator assignmentWarningForEventWithName:eventName]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageEventIsUnprotected]) {
         id<LAEventDataSource> dataSource = [_activator eventDataSourceForEventName:eventName];
         BOOL unprotected = dataSource && [dataSource respondsToSelector:@selector(eventWithNameIsUnprotected:)] &&
                            [dataSource eventWithNameIsUnprotected:eventName];
-        return [self replyWithOK:YES value:@(unprotected)];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@(unprotected)];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageEventSupportsRemoval]) {
-        return [self replyWithOK:YES value:@([_activator eventWithNameSupportsRemoval:eventName])];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@([_activator eventWithNameSupportsRemoval:eventName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageEventSupportsConfiguration]) {
-        return [self replyWithOK:YES value:@([_activator eventWithNameSupportsConfiguration:eventName])];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@([_activator eventWithNameSupportsConfiguration:eventName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageRemoveEvent]) {
         [_activator removeEventWithName:eventName];
-        return [self replyWithOK:YES value:nil];
+        return [LAActivatorIPCCodec replyWithOK:YES value:nil];
     }
     return nil;
 }
 
 - (NSDictionary *)handleListenerMetadataMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
-    NSString *eventName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
-    NSString *listenerName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
-    NSString *eventMode = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventMode];
+    NSString *eventName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
+    NSString *listenerName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
+    NSString *eventMode = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventMode];
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerInfoDictionaryValue]) {
-        id value = [_activator infoDictionaryValueOfKey:[self stringInUserInfo:userInfo
-                                                                        forKey:LAActivatorIPCKeyInfoDictionaryKey]
-                                    forListenerWithName:listenerName];
-        id propertyListValue = [self propertyListValue:value];
-        return [self replyWithOK:propertyListValue != nil value:propertyListValue];
+        id value = [_activator
+            infoDictionaryValueOfKey:[LAActivatorIPCCodec stringInUserInfo:userInfo
+                                                                    forKey:LAActivatorIPCKeyInfoDictionaryKey]
+                 forListenerWithName:listenerName];
+        id propertyListValue = [LAActivatorIPCCodec propertyListValue:value];
+        return [LAActivatorIPCCodec replyWithOK:propertyListValue != nil value:propertyListValue];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerRequiresAssignment]) {
-        return [self replyWithOK:YES value:@([_activator listenerWithNameRequiresAssignment:listenerName])];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:@([_activator listenerWithNameRequiresAssignment:listenerName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageCompatibleModesForListener]) {
-        return [self replyWithOK:YES value:[_activator compatibleEventModesForListenerWithName:listenerName]];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:[_activator compatibleEventModesForListenerWithName:listenerName]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerIsCompatibleWithMode]) {
-        return [self replyWithOK:YES
-                           value:@([_activator listenerWithName:listenerName isCompatibleWithMode:eventMode])];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:@([_activator listenerWithName:listenerName
+                                                          isCompatibleWithMode:eventMode])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerIsCompatibleWithEvent]) {
-        return [self replyWithOK:YES
-                           value:@([_activator listenerWithName:listenerName isCompatibleWithEventName:eventName])];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:@([_activator listenerWithName:listenerName
+                                                     isCompatibleWithEventName:eventName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerNeedsPoweredDisplay]) {
-        return [self replyWithOK:YES value:@([_activator listenerWithNameNeedsPoweredDisplay:listenerName])];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:@([_activator listenerWithNameNeedsPoweredDisplay:listenerName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageExclusiveAssignmentGroupsForListener]) {
-        return [self replyWithOK:YES value:[_activator exclusiveAssignmentGroupsForListenerName:listenerName]];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:[_activator exclusiveAssignmentGroupsForListenerName:listenerName]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerNamesAreMutuallyCompatible]) {
-        NSArray *listenerNames = [self stringArrayInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerNames];
-        return [self replyWithOK:YES value:@([_activator listenerNamesAreMutuallyCompatible:listenerNames])];
+        NSArray *listenerNames = [LAActivatorIPCCodec stringArrayInUserInfo:userInfo
+                                                                     forKey:LAActivatorIPCKeyListenerNames];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:@([_activator listenerNamesAreMutuallyCompatible:listenerNames])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerSupportsRemoval]) {
-        return [self replyWithOK:YES value:@([_activator listenerWithNameSupportsRemoval:listenerName])];
+        return [LAActivatorIPCCodec replyWithOK:YES value:@([_activator listenerWithNameSupportsRemoval:listenerName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerSupportsConfiguration]) {
-        return [self replyWithOK:YES value:@([_activator listenerWithNameSupportsConfiguration:listenerName])];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:@([_activator listenerWithNameSupportsConfiguration:listenerName])];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageListenerSmallIconData]) {
-        return [self smallIconDataReplyForListenerName:listenerName scale:[userInfo[LAActivatorIPCKeyScale] doubleValue]];
+        CGFloat scale = [userInfo[LAActivatorIPCKeyScale] doubleValue];
+        NSData *data = [_activator la_smallIconDataForListenerName:listenerName scale:&scale];
+        return [LAActivatorIPCCodec smallIconDataReplyWithData:data scale:scale];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageRequestListenerRemoval]) {
         [_activator requestRemovalForListenerWithName:listenerName];
-        return [self replyWithOK:YES value:nil];
+        return [LAActivatorIPCCodec replyWithOK:YES value:nil];
     }
     return nil;
 }
 
 - (NSDictionary *)handleLocalizationMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
-    NSString *eventName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
-    NSString *listenerName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
+    NSString *eventName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
+    NSString *listenerName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerName];
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedTitleForEventName]) {
-        return [self replyWithOK:YES value:[_activator localizedTitleForEventName:eventName]];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[_activator localizedTitleForEventName:eventName]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedTitleForListenerName]) {
-        return [self replyWithOK:YES value:[_activator localizedTitleForListenerName:listenerName]];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[_activator localizedTitleForListenerName:listenerName]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedTitleForListenerNames]) {
-        NSArray *listenerNames = [self uniqueOrderedStringArrayInUserInfo:userInfo
-                                                                   forKey:LAActivatorIPCKeyListenerNames];
-        return [self replyWithOK:YES value:[_activator localizedTitleForListenerNames:listenerNames]];
+        NSArray *listenerNames =
+            [LAActivatorIPCCodec uniqueOrderedStringArrayInUserInfo:userInfo forKey:LAActivatorIPCKeyListenerNames];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[_activator localizedTitleForListenerNames:listenerNames]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedGroupForEventName]) {
-        return [self replyWithOK:YES value:[_activator localizedGroupForEventName:eventName]];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[_activator localizedGroupForEventName:eventName]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedGroupForListenerName]) {
-        return [self replyWithOK:YES value:[_activator localizedGroupForListenerName:listenerName]];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[_activator localizedGroupForListenerName:listenerName]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedDescriptionForEventName]) {
-        return [self replyWithOK:YES value:[_activator localizedDescriptionForEventName:eventName]];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[_activator localizedDescriptionForEventName:eventName]];
     }
     if ([messageName isEqualToString:LAActivatorIPCMessageLocalizedDescriptionForListenerName]) {
-        return [self replyWithOK:YES value:[_activator localizedDescriptionForListenerName:listenerName]];
+        return [LAActivatorIPCCodec replyWithOK:YES
+                                          value:[_activator localizedDescriptionForListenerName:listenerName]];
     }
     return nil;
-}
-
-#pragma mark - Serialization
-
-- (NSDictionary *)replyWithOK:(BOOL)ok value:(id)value {
-    if (value) {
-        return @{LAActivatorIPCKeyOK : @(ok), LAActivatorIPCKeyValue : value};
-    }
-    return @{LAActivatorIPCKeyOK : @(ok)};
-}
-
-- (NSDictionary *)eventReplyWithEvent:(LAEvent *)event {
-    return @{LAActivatorIPCKeyOK : @YES, LAActivatorIPCKeyEventHandled : @([event isHandled])};
-}
-
-- (NSString *)stringInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key {
-    id value = userInfo[key];
-    return [value isKindOfClass:NSString.class] ? value : nil;
-}
-
-- (NSArray *)stringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key {
-    id value = userInfo[key];
-    if (![value isKindOfClass:NSArray.class]) {
-        return @[];
-    }
-
-    NSMutableArray *strings = [NSMutableArray arrayWithCapacity:[value count]];
-    for (id item in value) {
-        if ([item isKindOfClass:NSString.class] && [item length] > 0 && ![strings containsObject:item]) {
-            [strings addObject:item];
-        }
-    }
-    return [[strings sortedArrayUsingSelector:@selector(compare:)] copy];
-}
-
-- (NSArray *)uniqueOrderedStringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key {
-    id value = userInfo[key];
-    if (![value isKindOfClass:NSArray.class]) {
-        return @[];
-    }
-
-    NSMutableArray *strings = [NSMutableArray arrayWithCapacity:[value count]];
-    NSMutableSet *seenStrings = [NSMutableSet set];
-    for (id item in value) {
-        if ([item isKindOfClass:NSString.class] && [item length] > 0 && ![seenStrings containsObject:item]) {
-            [seenStrings addObject:item];
-            [strings addObject:item];
-        }
-    }
-    return [strings copy];
-}
-
-- (LAEvent *)eventWithUserInfo:(NSDictionary *)userInfo {
-    NSString *eventName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
-    if (eventName.length == 0) {
-        return nil;
-    }
-
-    LAEvent *event = [LAEvent eventWithName:eventName
-                                       mode:[self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventMode]];
-    event.handled = [userInfo[LAActivatorIPCKeyEventHandled] boolValue];
-
-    id eventUserInfo = userInfo[LAActivatorIPCKeyEventUserInfo];
-    if ([eventUserInfo isKindOfClass:NSDictionary.class]) {
-        event.userInfo = eventUserInfo;
-    }
-    return event;
-}
-
-- (NSDictionary *)userInfoWithEvent:(LAEvent *)event {
-    if (event.name.length == 0) {
-        return @{};
-    }
-
-    NSMutableDictionary *userInfo = [@{LAActivatorIPCKeyEventName : event.name} mutableCopy];
-    if (event.mode.length > 0) {
-        userInfo[LAActivatorIPCKeyEventMode] = event.mode;
-    }
-    return [userInfo copy];
-}
-
-- (NSArray *)eventDictionariesWithEvents:(NSArray *)events {
-    NSMutableArray *dictionaries = [NSMutableArray arrayWithCapacity:events.count];
-    for (LAEvent *event in events) {
-        if ([event isKindOfClass:LAEvent.class] && event.name.length > 0) {
-            [dictionaries addObject:[self userInfoWithEvent:event]];
-        }
-    }
-    return [dictionaries copy];
-}
-
-- (id)propertyListValue:(id)value {
-    if (!value) {
-        return nil;
-    }
-    return [NSPropertyListSerialization propertyList:value isValidForFormat:NSPropertyListBinaryFormat_v1_0] ? value
-                                                                                                             : nil;
-}
-
-- (NSDictionary *)smallIconDataReplyForListenerName:(NSString *)listenerName scale:(CGFloat)scale {
-    if (listenerName.length == 0) {
-        return [self replyWithOK:NO value:nil];
-    }
-
-    CGFloat actualScale = scale > 0.0f ? scale : UIScreen.mainScreen.scale;
-    NSData *data = nil;
-    id<LAListener> listener = [_activator listenerForName:listenerName];
-    if ([listener respondsToSelector:@selector(activator:requiresSmallIconDataForListenerName:scale:)]) {
-        data = [listener activator:_activator requiresSmallIconDataForListenerName:listenerName scale:&actualScale];
-    }
-    if (data.length == 0 && [listener respondsToSelector:@selector(activator:
-                                                             requiresSmallIconDataForListenerName:)]) {
-        data = [listener activator:_activator requiresSmallIconDataForListenerName:listenerName];
-        actualScale = 1.0f;
-    }
-    if (data.length == 0) {
-        data = [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName
-                                                                           small:YES
-                                                                           scale:&actualScale];
-    }
-    if (data.length == 0) {
-        return [self replyWithOK:NO value:nil];
-    }
-    return @{LAActivatorIPCKeyOK : @YES, LAActivatorIPCKeyValue : data, LAActivatorIPCKeyScale : @(actualScale)};
-}
-
-- (void)sendEvent:(LAEvent *)event directlyToListenerName:(NSString *)listenerName abort:(BOOL)abort {
-    if (![NSThread isMainThread]) {
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            [self sendEvent:event directlyToListenerName:listenerName abort:abort];
-        });
-        return;
-    }
-
-    id<LAListener> listener = [_activator listenerForName:listenerName];
-    if (!listener) {
-        return;
-    }
-    if (abort) {
-        if ([listener respondsToSelector:@selector(activator:abortEvent:forListenerName:)]) {
-            [listener activator:_activator abortEvent:event forListenerName:listenerName];
-        } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
-            [listener activator:_activator abortEvent:event];
-        }
-        return;
-    }
-    if ([listener respondsToSelector:@selector(activator:receiveEvent:forListenerName:)]) {
-        [listener activator:_activator receiveEvent:event forListenerName:listenerName];
-    } else if ([listener respondsToSelector:@selector(activator:receiveEvent:)]) {
-        [listener activator:_activator receiveEvent:event];
-    }
 }
 
 @end

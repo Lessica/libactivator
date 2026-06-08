@@ -13,11 +13,11 @@
 #import "LAActivator+Private.h"
 #import "LAActivatorBackend.h"
 #import "LAActivatorIPC.h"
-#import "LAListenerMetadataCache.h"
 #import "LAActivatorPersistence.h"
 #import "LAActivatorResourceManager.h"
 #import "LAActivatorRuntimeStateProvider.h"
 #import "LADefaultEventDataSource.h"
+#import "LAListenerMetadataCache.h"
 #import "LARemoteListener.h"
 #import "LATouchActivityTracker.h"
 
@@ -34,6 +34,10 @@
 - (BOOL)la_addListenerAssignmentWithExplicitMode:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (BOOL)la_removeListenerAssignmentWithExplicitMode:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (BOOL)la_unassignEventWithExplicitMode:(LAEvent *)event;
+- (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (BOOL)la_addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event;
+- (BOOL)la_removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event;
+- (BOOL)la_unassignEvent:(LAEvent *)event;
 - (NSArray *)la_dispatchableListenerNames:(NSArray *)listenerNames forEvent:(LAEvent *)event;
 - (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames allowDeferral:(BOOL)allowDeferral;
 - (BOOL)la_sendUnlockingEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames eventMode:(NSString *)eventMode;
@@ -60,8 +64,7 @@ static NSString *const LAActivatorDarwinAvailableEventsChangedNotification =
     @"libactivator.notification.available-events-changed";
 static NSString *const LAActivatorDarwinAssignmentsChangedNotification =
     @"libactivator.notification.assignments-changed";
-static NSString *const LAActivatorDarwinEventModeChangedNotification =
-    @"libactivator.notification.event-mode-changed";
+static NSString *const LAActivatorDarwinEventModeChangedNotification = @"libactivator.notification.event-mode-changed";
 
 static NSString *LAActivatorPublicNotificationNameForDarwinName(NSString *darwinName) {
     if ([darwinName isEqualToString:LAActivatorDarwinAvailableListenersChangedNotification]) {
@@ -532,8 +535,8 @@ LAActivator *LASharedActivator;
         [seenNames addObject:listenerName];
 
         id<LAListener> listener = [self listenerForName:listenerName];
-        if (!listener || ![listener respondsToSelector:@selector(activator:
-                                                           receiveUnlockingDeviceEvent:forListenerName:)]) {
+        if (!listener ||
+            ![listener respondsToSelector:@selector(activator:receiveUnlockingDeviceEvent:forListenerName:)]) {
             continue;
         }
         if ([self listenerWithName:listenerName isCompatibleWithMode:eventMode]) {
@@ -576,6 +579,36 @@ LAActivator *LASharedActivator;
         } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
             [listener activator:self abortEvent:event];
         }
+    }
+}
+
+- (void)la_sendEvent:(LAEvent *)event directlyToListenerWithName:(NSString *)listenerName abort:(BOOL)abort {
+    if (!self.runningInsideSpringBoard || !event || listenerName.length == 0) {
+        return;
+    }
+    if (![NSThread isMainThread]) {
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            [self la_sendEvent:event directlyToListenerWithName:listenerName abort:abort];
+        });
+        return;
+    }
+
+    id<LAListener> listener = [self listenerForName:listenerName];
+    if (!listener) {
+        return;
+    }
+    if (abort) {
+        if ([listener respondsToSelector:@selector(activator:abortEvent:forListenerName:)]) {
+            [listener activator:self abortEvent:event forListenerName:listenerName];
+        } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
+            [listener activator:self abortEvent:event];
+        }
+        return;
+    }
+    if ([listener respondsToSelector:@selector(activator:receiveEvent:forListenerName:)]) {
+        [listener activator:self receiveEvent:event forListenerName:listenerName];
+    } else if ([listener respondsToSelector:@selector(activator:receiveEvent:)]) {
+        [listener activator:self receiveEvent:event];
     }
 }
 
@@ -775,9 +808,15 @@ LAActivator *LASharedActivator;
 }
 
 - (void)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
-    if ([self la_assignEvent:event toListenersWithNames:listenerNames]) {
+    [self la_assignEventAndNotifyIfChanged:event toListenersWithNames:listenerNames];
+}
+
+- (BOOL)la_assignEventAndNotifyIfChanged:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
+    BOOL changed = [self la_assignEvent:event toListenersWithNames:listenerNames];
+    if (changed) {
         [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
     }
+    return changed;
 }
 
 - (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
@@ -808,15 +847,27 @@ LAActivator *LASharedActivator;
 }
 
 - (void)addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event {
-    if ([self la_addListenerAssignment:listenerName toEvent:event]) {
-        [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
-    }
+    [self la_addListenerAssignmentAndNotifyIfChanged:listenerName toEvent:event];
 }
 
 - (void)removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event {
-    if ([self la_removeListenerAssignment:listenerName fromEvent:event]) {
+    [self la_removeListenerAssignmentAndNotifyIfChanged:listenerName fromEvent:event];
+}
+
+- (BOOL)la_addListenerAssignmentAndNotifyIfChanged:(NSString *)listenerName toEvent:(LAEvent *)event {
+    BOOL changed = [self la_addListenerAssignment:listenerName toEvent:event];
+    if (changed) {
         [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
     }
+    return changed;
+}
+
+- (BOOL)la_removeListenerAssignmentAndNotifyIfChanged:(NSString *)listenerName fromEvent:(LAEvent *)event {
+    BOOL changed = [self la_removeListenerAssignment:listenerName fromEvent:event];
+    if (changed) {
+        [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
+    }
+    return changed;
 }
 
 - (BOOL)la_addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event {
@@ -874,9 +925,15 @@ LAActivator *LASharedActivator;
 }
 
 - (void)unassignEvent:(LAEvent *)event {
-    if ([self la_unassignEvent:event]) {
+    [self la_unassignEventAndNotifyIfChanged:event];
+}
+
+- (BOOL)la_unassignEventAndNotifyIfChanged:(LAEvent *)event {
+    BOOL changed = [self la_unassignEvent:event];
+    if (changed) {
         [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
     }
+    return changed;
 }
 
 - (BOOL)la_unassignEvent:(LAEvent *)event {
@@ -973,9 +1030,7 @@ LAActivator *LASharedActivator;
 - (BOOL)hasEventWithName:(NSString *)name {
     if (!self.runningInsideSpringBoard) {
         NSDictionary *userInfo = @{LAActivatorIPCKeyEventName : name ?: @""};
-        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageHasEvent
-                                              userInfo:userInfo
-                                          defaultValue:NO];
+        return [self.ipcClient boolValueForMessageName:LAActivatorIPCMessageHasEvent userInfo:userInfo defaultValue:NO];
     }
     return [self.backend hasEventWithName:name];
 }
@@ -1165,8 +1220,8 @@ LAActivator *LASharedActivator;
                                                       userInfo:userInfo];
     }
     id<LAListener> listener = [self listenerForName:name];
-    if (listener && [listener respondsToSelector:@selector(activator:
-                                                     requiresInfoDictionaryValueOfKey:forListenerWithName:)]) {
+    if (listener &&
+        [listener respondsToSelector:@selector(activator:requiresInfoDictionaryValueOfKey:forListenerWithName:)]) {
         id value = [listener activator:self requiresInfoDictionaryValueOfKey:key forListenerWithName:name];
         if (value) {
             return value;
@@ -1215,8 +1270,8 @@ LAActivator *LASharedActivator;
                                                userInfo:@{LAActivatorIPCKeyListenerName : name ?: @""}];
     }
     id<LAListener> listener = [self listenerForName:name];
-    if (listener && [listener respondsToSelector:@selector(activator:
-                                                     requiresCompatibleEventModesForListenerWithName:)]) {
+    if (listener &&
+        [listener respondsToSelector:@selector(activator:requiresCompatibleEventModesForListenerWithName:)]) {
         NSArray *modes = [LAActivatorBackend
             normalizedStringArray:[listener activator:self requiresCompatibleEventModesForListenerWithName:name]];
         if (modes.count > 0) {
@@ -1291,7 +1346,7 @@ LAActivator *LASharedActivator;
         return [listener activator:self requiresNeedsPoweredDisplayForListenerName:listenerName];
     }
     id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"needs-powered-display"
-                                                               forListenerName:listenerName];
+                                                                  forListenerName:listenerName];
     return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
 }
 
@@ -1302,8 +1357,8 @@ LAActivator *LASharedActivator;
                                                userInfo:userInfo];
     }
     id<LAListener> listener = [self listenerForName:listenerName];
-    if (listener && [listener respondsToSelector:@selector(activator:
-                                                     requiresExclusiveAssignmentGroupsForListenerName:)]) {
+    if (listener &&
+        [listener respondsToSelector:@selector(activator:requiresExclusiveAssignmentGroupsForListenerName:)]) {
         NSArray *groups = [LAActivatorBackend
             normalizedStringArray:[listener activator:self
                                       requiresExclusiveAssignmentGroupsForListenerName:listenerName]];
@@ -1311,9 +1366,9 @@ LAActivator *LASharedActivator;
             return groups;
         }
     }
-    return [LAActivatorBackend
-        normalizedStringArray:[LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"exclusive-assignment-groups"
-                                                                             forListenerName:listenerName]];
+    return [LAActivatorBackend normalizedStringArray:[LAActivatorResourceManager.sharedManager
+                                                         infoDictionaryValueOfKey:@"exclusive-assignment-groups"
+                                                                  forListenerName:listenerName]];
 }
 
 - (BOOL)listenerNamesAreMutuallyCompatible:(NSArray *)listenerNames {
@@ -1345,7 +1400,8 @@ LAActivator *LASharedActivator;
 - (UIImage *)smallIconForListenerName:(NSString *)listenerName {
     return [self.listenerMetadataCache smallIconForListenerName:listenerName
                                                        resolver:^UIImage * {
-                                                           return [self la_resolveSmallIconForListenerName:listenerName];
+                                                           return
+                                                               [self la_resolveSmallIconForListenerName:listenerName];
                                                        }];
 }
 
@@ -1375,6 +1431,32 @@ LAActivator *LASharedActivator;
         }
     }
     return [LAActivatorResourceManager.sharedManager iconForListenerName:listenerName small:YES scale:scale];
+}
+
+- (NSData *)la_smallIconDataForListenerName:(NSString *)listenerName scale:(CGFloat *)scale {
+    if (!self.runningInsideSpringBoard || listenerName.length == 0) {
+        return nil;
+    }
+
+    CGFloat actualScale = scale && *scale > 0.0f ? *scale : UIScreen.mainScreen.scale;
+    NSData *data = nil;
+    id<LAListener> listener = [self listenerForName:listenerName];
+    if ([listener respondsToSelector:@selector(activator:requiresSmallIconDataForListenerName:scale:)]) {
+        data = [listener activator:self requiresSmallIconDataForListenerName:listenerName scale:&actualScale];
+    }
+    if (data.length == 0 && [listener respondsToSelector:@selector(activator:requiresSmallIconDataForListenerName:)]) {
+        data = [listener activator:self requiresSmallIconDataForListenerName:listenerName];
+        actualScale = 1.0f;
+    }
+    if (data.length == 0) {
+        data = [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName
+                                                                           small:YES
+                                                                           scale:&actualScale];
+    }
+    if (scale) {
+        *scale = actualScale;
+    }
+    return data.length > 0 ? data : nil;
 }
 
 - (UIImage *)imageForListenerName:(NSString *)listenerName usingTemplate:(NSBundle *)templateBundle {
@@ -1560,10 +1642,11 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedTitleForListenerName:(NSString *)listenerName {
-    return [self.listenerMetadataCache localizedTitleForListenerName:listenerName
-                                                            resolver:^NSString * {
-                                                                return [self la_resolveLocalizedTitleForListenerName:listenerName];
-                                                            }];
+    return [self.listenerMetadataCache
+        localizedTitleForListenerName:listenerName
+                             resolver:^NSString * {
+                                 return [self la_resolveLocalizedTitleForListenerName:listenerName];
+                             }];
 }
 
 - (NSString *)la_resolveLocalizedTitleForListenerName:(NSString *)listenerName {
@@ -1620,10 +1703,11 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedGroupForListenerName:(NSString *)listenerName {
-    return [self.listenerMetadataCache localizedGroupForListenerName:listenerName
-                                                            resolver:^NSString * {
-                                                                return [self la_resolveLocalizedGroupForListenerName:listenerName];
-                                                            }];
+    return [self.listenerMetadataCache
+        localizedGroupForListenerName:listenerName
+                             resolver:^NSString * {
+                                 return [self la_resolveLocalizedGroupForListenerName:listenerName];
+                             }];
 }
 
 - (NSString *)la_resolveLocalizedGroupForListenerName:(NSString *)listenerName {
@@ -1675,11 +1759,11 @@ LAActivator *LASharedActivator;
 }
 
 - (NSString *)localizedDescriptionForListenerName:(NSString *)listenerName {
-    return [self.listenerMetadataCache localizedDescriptionForListenerName:listenerName
-                                                                  resolver:^NSString * {
-                                                                      return [self la_resolveLocalizedDescriptionForListenerName:
-                                                                                       listenerName];
-                                                                  }];
+    return [self.listenerMetadataCache
+        localizedDescriptionForListenerName:listenerName
+                                   resolver:^NSString * {
+                                       return [self la_resolveLocalizedDescriptionForListenerName:listenerName];
+                                   }];
 }
 
 - (NSString *)la_resolveLocalizedDescriptionForListenerName:(NSString *)listenerName {

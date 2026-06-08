@@ -7,15 +7,10 @@
 //
 
 #import "LAActivatorIPC.h"
+#import "LAActivatorIPCCodec.h"
 
 #import <Activator/Activator.h>
 #import <AppSupport/CPDistributedMessagingCenter.h>
-
-@interface LAActivatorIPCClient ()
-+ (NSString *)la_stringInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
-+ (LAEvent *)la_eventWithUserInfo:(NSDictionary *)userInfo;
-+ (NSArray *)la_eventsWithDictionaries:(NSArray *)eventDictionaries;
-@end
 
 @implementation LAActivatorIPCClient {
     CPDistributedMessagingCenter *_center;
@@ -63,7 +58,7 @@
 }
 
 - (NSArray *)eventsValueForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo {
-    return [[self class] la_eventsWithDictionaries:[self arrayValueForMessageName:messageName userInfo:userInfo]];
+    return [LAActivatorIPCCodec eventsWithDictionaries:[self arrayValueForMessageName:messageName userInfo:userInfo]];
 }
 
 - (BOOL)sendEventMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo event:(LAEvent *)event {
@@ -81,39 +76,6 @@
 
 - (BOOL)sendMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo {
     return [self replyForMessageName:messageName userInfo:userInfo] != nil;
-}
-
-#pragma mark - Serialization
-
-+ (NSString *)la_stringInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key {
-    id value = userInfo[key];
-    return [value isKindOfClass:NSString.class] ? value : nil;
-}
-
-+ (LAEvent *)la_eventWithUserInfo:(NSDictionary *)userInfo {
-    NSString *eventName = [self la_stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
-    if (eventName.length == 0) {
-        return nil;
-    }
-    return [LAEvent eventWithName:eventName mode:[self la_stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventMode]];
-}
-
-+ (NSArray *)la_eventsWithDictionaries:(NSArray *)eventDictionaries {
-    if (![eventDictionaries isKindOfClass:NSArray.class]) {
-        return @[];
-    }
-
-    NSMutableArray *events = [NSMutableArray arrayWithCapacity:eventDictionaries.count];
-    for (id dictionary in eventDictionaries) {
-        if (![dictionary isKindOfClass:NSDictionary.class]) {
-            continue;
-        }
-        LAEvent *event = [self la_eventWithUserInfo:dictionary];
-        if (event) {
-            [events addObject:event];
-        }
-    }
-    return [events copy];
 }
 
 @end
