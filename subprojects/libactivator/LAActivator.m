@@ -10,10 +10,10 @@
 #import <dispatch/dispatch.h>
 #import <notify.h>
 
+#import "LAActivator+Private.h"
 #import "LAActivatorBackend.h"
 #import "LAActivatorIPC.h"
 #import "LAActivatorPersistence.h"
-#import "LAActivator+Private.h"
 #import "LAActivatorResourceManager.h"
 #import "LAActivatorRuntimeStateProvider.h"
 #import "LADefaultEventDataSource.h"
@@ -88,11 +88,8 @@ static NSString *LAActivatorDarwinNotificationNameForPublicName(NSString *public
     return nil;
 }
 
-static void LAActivatorSystemNotificationCallback(CFNotificationCenterRef center,
-                                                  void *observer,
-                                                  CFStringRef name,
-                                                  const void *object,
-                                                  CFDictionaryRef userInfo) {
+static void LAActivatorSystemNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name,
+                                                  const void *object, CFDictionaryRef userInfo) {
     LAActivator *activator = (__bridge LAActivator *)observer;
     NSString *notificationName = LAActivatorPublicNotificationNameForDarwinName((__bridge NSString *)name);
     if (notificationName.length > 0) {
@@ -188,12 +185,9 @@ LAActivator *LASharedActivator;
         LAActivatorDarwinAssignmentsChangedNotification,
     ];
     for (NSString *notificationName in notificationNames) {
-        CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
-                                        (__bridge const void *)self,
-                                        LAActivatorSystemNotificationCallback,
-                                        (__bridge CFStringRef)notificationName,
-                                        NULL,
-                                        CFNotificationSuspensionBehaviorCoalesce);
+        CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self,
+                                        LAActivatorSystemNotificationCallback, (__bridge CFStringRef)notificationName,
+                                        NULL, CFNotificationSuspensionBehaviorCoalesce);
     }
 }
 
@@ -458,8 +452,9 @@ LAActivator *LASharedActivator;
     }
 
     NSString *eventMode = event.mode ?: self.currentEventMode;
-    if ([eventMode isEqualToString:LAEventModeLockScreen] &&
-        [self la_sendUnlockingEvent:event toListenerNames:listenerNames eventMode:eventMode]) {
+    if ([eventMode isEqualToString:LAEventModeLockScreen] && [self la_sendUnlockingEvent:event
+                                                                         toListenerNames:listenerNames
+                                                                               eventMode:eventMode]) {
         return;
     }
 
@@ -927,8 +922,9 @@ LAActivator *LASharedActivator;
 
 - (NSArray *)eventsAssignedToListenerWithName:(NSString *)listenerName {
     if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{LAActivatorIPCKeyListenerName : listenerName ?: @""};
         return [self.ipcClient eventsValueForMessageName:LAActivatorIPCMessageEventsAssignedToListener
-                                                userInfo:@{LAActivatorIPCKeyListenerName : listenerName ?: @""}];
+                                                userInfo:userInfo];
     }
     NSSet *availableEventNames = [NSSet setWithArray:self.availableEventNames];
     NSMutableArray *availableEvents = [[NSMutableArray alloc] init];
