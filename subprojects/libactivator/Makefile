@@ -39,6 +39,8 @@ libactivator_FRAMEWORKS += Foundation
 libactivator_FRAMEWORKS += UIKit
 libactivator_FRAMEWORKS += CoreGraphics
 
+libactivator_LIBRARIES += MobileGestalt
+
 libactivator_PRIVATE_FRAMEWORKS += AppSupport
 
 libactivator_INSTALL_PATH := /usr/lib

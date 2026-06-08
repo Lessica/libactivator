@@ -88,11 +88,11 @@
 
 - (NSString *)configurationViewControllerClassNameForEventWithName:(NSString *)eventName bundle:(NSBundle **)bundle {
     NSDictionary *info = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName];
-    NSString *className =
-        [info[@"settings-view-controller-class"] isKindOfClass:NSString.class] ? info[@"settings-view-controller-class"]
-                                                                               : info[@"configuration"];
+    NSString *className = [info[@"settings-view-controller-class"] isKindOfClass:NSString.class]
+                              ? info[@"settings-view-controller-class"]
+                              : info[@"configuration"];
     if (className.length > 0 && bundle) {
-        *bundle = [LAActivatorResourceManager.sharedManager eventBundleForName:eventName];
+        *bundle = [LAActivatorResourceManager.sharedManager configurationBundleForEventName:eventName];
     }
     return className;
 }

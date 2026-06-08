@@ -14,6 +14,7 @@
 #import "LAActivatorBackend.h"
 #import "LAActivatorIPC.h"
 #import "LAActivatorPersistence.h"
+#import "LAActivatorResourceManager.h"
 
 #import <Activator/Activator.h>
 #import <IOKit/hid/IOHIDEvent.h>
@@ -359,6 +360,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (NSDictionary *)runDeviceRuntimeTestsWithActivator:(LAActivator *)activator;
 + (void)runEventTestsWithRecorder:(LATestRecorder *)recorder;
 + (void)runPersistenceTestsWithRecorder:(LATestRecorder *)recorder;
++ (void)runResourceTestsWithRecorder:(LATestRecorder *)recorder;
 + (void)runSpringBoardCoreTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runDispatchTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runBuiltInActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
@@ -467,6 +469,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [self removeTestPlist];
     [self runEventTestsWithRecorder:recorder];
     [self runPersistenceTestsWithRecorder:recorder];
+    [self runResourceTestsWithRecorder:recorder];
     [self runSpringBoardCoreTestsWithRecorder:recorder activator:activator];
     [self runDispatchTestsWithRecorder:recorder activator:activator];
     [self runBuiltInActionTestsWithRecorder:recorder activator:activator];
@@ -589,6 +592,48 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [NSFileManager.defaultManager removeItemAtPath:path error:nil];
 }
 
++ (void)runResourceTestsWithRecorder:(LATestRecorder *)recorder {
+    [recorder beginSuite:@"Resources"];
+
+    NSFileManager *fileManager = NSFileManager.defaultManager;
+    LAActivatorResourceManager *resourceManager = LAActivatorResourceManager.sharedManager;
+
+    NSString *eventName = @"libactivator.test.resource.capability";
+    NSString *eventPath = [[resourceManager eventsDirectoryPath] stringByAppendingPathComponent:eventName];
+    [fileManager removeItemAtPath:eventPath error:nil];
+    [fileManager createDirectoryAtPath:eventPath withIntermediateDirectories:YES attributes:nil error:nil];
+    NSDictionary *eventInfo = @{
+        @"title" : @"Unsupported Test Event",
+        @"group" : @"Testing",
+        @"required-capabilities" : @[ @"libactivator.test.missing-capability" ],
+    };
+    [eventInfo writeToFile:[eventPath stringByAppendingPathComponent:@"Info.plist"] atomically:YES];
+    [recorder expect:![resourceManager.availableEventNames containsObject:eventName] &&
+                     [resourceManager eventInfoDictionaryForName:eventName] == nil
+            caseName:@"required-capability-filter"
+              reason:@"Unsupported resource capability should hide event metadata"];
+
+    [fileManager removeItemAtPath:eventPath error:nil];
+
+    NSArray *smallIcons = [resourceManager infoDictionaryValueOfKey:@"small-icons"
+                                                    forListenerName:@"libactivator.settings.wifi"];
+    [recorder expect:[smallIcons isKindOfClass:NSArray.class] && smallIcons.count > 0
+            caseName:@"small-icons-metadata"
+              reason:@"1.9.13 bundled listener small icon metadata was not read"];
+
+    NSString *resourceRootPath = @"/var/mobile/Library/Caches/libactivator-resource-path-test.dat";
+    NSString *resourcePath = jbroot(resourceRootPath);
+    NSData *resourceData = [@"libactivator-resource-path-test" dataUsingEncoding:NSUTF8StringEncoding];
+    [resourceData writeToFile:resourcePath atomically:YES];
+    NSString *resolvedPath = [resourceManager resolvedPathForResourcePath:resourceRootPath];
+    NSData *resolvedData = resolvedPath.length > 0 ? [NSData dataWithContentsOfFile:resolvedPath] : nil;
+    [recorder expect:[resolvedPath isEqualToString:resourcePath] && [resolvedData isEqualToData:resourceData]
+            caseName:@"absolute-path-resolution"
+              reason:@"Absolute resource path did not resolve through jbroot before the original path"];
+
+    [fileManager removeItemAtPath:resourcePath error:nil];
+}
+
 + (void)runSpringBoardCoreTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"SpringBoardCore"];
 
@@ -617,7 +662,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
               reason:@"Event was not registered"];
     [recorder expect:[activator hasEventWithName:LAEventNameVolumeMuteOn] &&
                      [activator hasEventWithName:LAEventNameVolumeDownPressWithMenu] &&
-                     [activator hasEventWithName:LAEventNameFingerprintSensorPressTwice]
+                     [activator hasEventWithName:LAEventNameStatusBarTapSingle]
             caseName:@"bundled-event-registry"
               reason:@"1.9.13 bundled event metadata was not registered"];
     [recorder expect:[activator eventWithNameSupportsUnlockingDeviceToSend:LAEventNameFingerprintSensorHold] == NO

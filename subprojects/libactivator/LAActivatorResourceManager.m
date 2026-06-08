@@ -11,12 +11,15 @@
 #import <dispatch/dispatch.h>
 #import <roothide.h>
 
+extern Boolean MGGetBoolAnswer(CFStringRef key);
+
 @interface LAActivatorResourceManager ()
 @property(nonatomic, strong) NSBundle *cachedSupportBundle;
 @property(nonatomic, strong) NSMutableDictionary *eventBundles;
 @property(nonatomic, strong) NSMutableDictionary *listenerBundles;
 @property(nonatomic, strong) NSDictionary *bundledEventInfo;
 @property(nonatomic, strong) NSDictionary *bundledListenerInfo;
+@property(nonatomic, strong) dispatch_queue_t cacheQueue;
 @end
 
 @implementation LAActivatorResourceManager
@@ -37,6 +40,7 @@
     if (self) {
         _eventBundles = [[NSMutableDictionary alloc] init];
         _listenerBundles = [[NSMutableDictionary alloc] init];
+        _cacheQueue = dispatch_queue_create("libactivator.resources", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
     }
     return self;
 }
@@ -58,10 +62,22 @@
 #pragma mark - Bundles
 
 - (NSBundle *)supportBundle {
-    if (!self.cachedSupportBundle) {
-        self.cachedSupportBundle = [NSBundle bundleWithPath:[self supportDirectoryPath]];
+    __block NSBundle *bundle = nil;
+    dispatch_sync(self.cacheQueue, ^{
+        bundle = self.cachedSupportBundle;
+    });
+    if (bundle) {
+        return bundle;
     }
-    return self.cachedSupportBundle;
+
+    bundle = [NSBundle bundleWithPath:[self supportDirectoryPath]];
+    dispatch_sync(self.cacheQueue, ^{
+        if (!self.cachedSupportBundle) {
+            self.cachedSupportBundle = bundle;
+        }
+        bundle = self.cachedSupportBundle;
+    });
+    return bundle;
 }
 
 - (NSBundle *)eventBundleForName:(NSString *)eventName {
@@ -69,15 +85,34 @@
         return nil;
     }
 
-    NSBundle *bundle = self.eventBundles[eventName];
-    if (!bundle) {
-        NSString *path = [[self eventsDirectoryPath] stringByAppendingPathComponent:eventName];
-        bundle = [NSBundle bundleWithPath:path];
-        if (bundle) {
-            self.eventBundles[eventName] = bundle;
-        }
+    __block NSBundle *bundle = nil;
+    dispatch_sync(self.cacheQueue, ^{
+        bundle = self.eventBundles[eventName];
+    });
+    if (bundle) {
+        return bundle;
+    }
+
+    NSString *path = [[self eventsDirectoryPath] stringByAppendingPathComponent:eventName];
+    bundle = [NSBundle bundleWithPath:path];
+    if (bundle) {
+        dispatch_sync(self.cacheQueue, ^{
+            if (!self.eventBundles[eventName]) {
+                self.eventBundles[eventName] = bundle;
+            }
+            bundle = self.eventBundles[eventName];
+        });
     }
     return bundle;
+}
+
+- (NSBundle *)configurationBundleForEventName:(NSString *)eventName {
+    NSDictionary *info = [self eventInfoDictionaryForName:eventName];
+    NSString *path = [info[@"settings-view-controller-bundle"] isKindOfClass:NSString.class]
+                         ? info[@"settings-view-controller-bundle"]
+                         : nil;
+    NSString *resolvedPath = [self resolvedPathForResourcePath:path];
+    return resolvedPath.length > 0 ? [NSBundle bundleWithPath:resolvedPath] : [self eventBundleForName:eventName];
 }
 
 - (NSDictionary *)eventInfoDictionaryForName:(NSString *)eventName {
@@ -87,9 +122,12 @@
 
     NSDictionary *dictionary = self.bundledEventInfo[eventName];
     if ([dictionary isKindOfClass:NSDictionary.class]) {
-        return dictionary;
+        return [self resourceInfoDictionaryIsCompatible:dictionary] ? dictionary : nil;
     }
-    return [[self eventBundleForName:eventName] infoDictionary];
+    NSString *path = [[[self eventsDirectoryPath] stringByAppendingPathComponent:eventName]
+        stringByAppendingPathComponent:@"Info.plist"];
+    dictionary = [NSDictionary dictionaryWithContentsOfFile:path];
+    return [self resourceInfoDictionaryIsCompatible:dictionary] ? dictionary : nil;
 }
 
 - (NSArray *)availableEventNames {
@@ -111,9 +149,17 @@
 }
 
 - (BOOL)eventBundleIsCompatibleForName:(NSString *)eventName {
-    NSArray *range = [self eventInfoDictionaryForName:eventName][@"CoreFoundationVersion"];
+    return [self eventInfoDictionaryForName:eventName] != nil;
+}
+
+- (BOOL)resourceInfoDictionaryIsCompatible:(NSDictionary *)info {
+    if (![info isKindOfClass:NSDictionary.class]) {
+        return NO;
+    }
+
+    NSArray *range = info[@"CoreFoundationVersion"];
     if (![range isKindOfClass:NSArray.class]) {
-        return YES;
+        return [self requiredCapabilitiesAreSatisfiedForInfoDictionary:info];
     }
 
     if (range.count == 0 || range.count > 2) {
@@ -127,16 +173,45 @@
         [range[1] doubleValue] <= kCFCoreFoundationVersionNumber) {
         return NO;
     }
+    return [self requiredCapabilitiesAreSatisfiedForInfoDictionary:info];
+}
+
+- (BOOL)requiredCapabilitiesAreSatisfiedForInfoDictionary:(NSDictionary *)info {
+    NSArray *capabilities = info[@"required-capabilities"];
+    if (![capabilities isKindOfClass:NSArray.class]) {
+        return YES;
+    }
+
+    for (id value in capabilities) {
+        if (![value isKindOfClass:NSString.class] || [value length] == 0) {
+            return NO;
+        }
+        if (!MGGetBoolAnswer((__bridge CFStringRef)value)) {
+            return NO;
+        }
+    }
     return YES;
 }
 
 - (NSDictionary *)bundledEventInfo {
-    if (!_bundledEventInfo) {
-        NSString *path = [[self eventsDirectoryPath] stringByAppendingPathComponent:@"bundled.plist"];
-        NSDictionary *dictionary = [NSDictionary dictionaryWithContentsOfFile:path];
-        _bundledEventInfo = [dictionary isKindOfClass:NSDictionary.class] ? dictionary : @{};
+    __block NSDictionary *bundledInfo = nil;
+    dispatch_sync(self.cacheQueue, ^{
+        bundledInfo = _bundledEventInfo;
+    });
+    if (bundledInfo) {
+        return bundledInfo;
     }
-    return _bundledEventInfo;
+
+    NSString *path = [[self eventsDirectoryPath] stringByAppendingPathComponent:@"bundled.plist"];
+    NSDictionary *dictionary = [NSDictionary dictionaryWithContentsOfFile:path];
+    bundledInfo = [dictionary isKindOfClass:NSDictionary.class] ? dictionary : @{};
+    dispatch_sync(self.cacheQueue, ^{
+        if (!_bundledEventInfo) {
+            _bundledEventInfo = bundledInfo;
+        }
+        bundledInfo = _bundledEventInfo;
+    });
+    return bundledInfo;
 }
 
 - (NSBundle *)listenerBundleForName:(NSString *)listenerName {
@@ -144,24 +219,46 @@
         return nil;
     }
 
-    NSBundle *bundle = self.listenerBundles[listenerName];
-    if (!bundle) {
-        NSString *path = [[self listenersDirectoryPath] stringByAppendingPathComponent:listenerName];
-        bundle = [NSBundle bundleWithPath:path];
-        if (bundle) {
-            self.listenerBundles[listenerName] = bundle;
-        }
+    __block NSBundle *bundle = nil;
+    dispatch_sync(self.cacheQueue, ^{
+        bundle = self.listenerBundles[listenerName];
+    });
+    if (bundle) {
+        return bundle;
+    }
+
+    NSString *path = [[self listenersDirectoryPath] stringByAppendingPathComponent:listenerName];
+    bundle = [NSBundle bundleWithPath:path];
+    if (bundle) {
+        dispatch_sync(self.cacheQueue, ^{
+            if (!self.listenerBundles[listenerName]) {
+                self.listenerBundles[listenerName] = bundle;
+            }
+            bundle = self.listenerBundles[listenerName];
+        });
     }
     return bundle;
 }
 
 - (NSDictionary *)bundledListenerInfo {
-    if (!_bundledListenerInfo) {
-        NSString *path = [[self listenersDirectoryPath] stringByAppendingPathComponent:@"bundled.plist"];
-        NSDictionary *dictionary = [NSDictionary dictionaryWithContentsOfFile:path];
-        _bundledListenerInfo = [dictionary isKindOfClass:NSDictionary.class] ? dictionary : @{};
+    __block NSDictionary *bundledInfo = nil;
+    dispatch_sync(self.cacheQueue, ^{
+        bundledInfo = _bundledListenerInfo;
+    });
+    if (bundledInfo) {
+        return bundledInfo;
     }
-    return _bundledListenerInfo;
+
+    NSString *path = [[self listenersDirectoryPath] stringByAppendingPathComponent:@"bundled.plist"];
+    NSDictionary *dictionary = [NSDictionary dictionaryWithContentsOfFile:path];
+    bundledInfo = [dictionary isKindOfClass:NSDictionary.class] ? dictionary : @{};
+    dispatch_sync(self.cacheQueue, ^{
+        if (!_bundledListenerInfo) {
+            _bundledListenerInfo = bundledInfo;
+        }
+        bundledInfo = _bundledListenerInfo;
+    });
+    return bundledInfo;
 }
 
 - (NSDictionary *)listenerInfoDictionaryForName:(NSString *)listenerName {
@@ -171,9 +268,12 @@
 
     NSDictionary *dictionary = self.bundledListenerInfo[listenerName];
     if ([dictionary isKindOfClass:NSDictionary.class]) {
-        return dictionary;
+        return [self resourceInfoDictionaryIsCompatible:dictionary] ? dictionary : nil;
     }
-    return [[self listenerBundleForName:listenerName] infoDictionary];
+    NSString *path = [[[self listenersDirectoryPath] stringByAppendingPathComponent:listenerName]
+        stringByAppendingPathComponent:@"Info.plist"];
+    dictionary = [NSDictionary dictionaryWithContentsOfFile:path];
+    return [self resourceInfoDictionaryIsCompatible:dictionary] ? dictionary : nil;
 }
 
 - (id)infoDictionaryValueOfKey:(NSString *)key forListenerName:(NSString *)listenerName {
@@ -315,22 +415,95 @@
 
 - (NSData *)iconDataForListenerName:(NSString *)listenerName small:(BOOL)small scale:(CGFloat *)scale {
     NSBundle *bundle = [self listenerBundleForName:listenerName];
-    if (!bundle) {
-        return nil;
+    CGFloat requestedScale = scale ? *scale : 1.0f;
+    if (bundle) {
+        for (NSString *resourceName in [self iconResourceNamesForSmallIcon:small scale:requestedScale]) {
+            NSString *path = [bundle pathForResource:resourceName ofType:@"png"];
+            NSData *data = path ? [NSData dataWithContentsOfFile:path] : nil;
+            if (data.length > 0) {
+                if (scale && requestedScale != 1.0f && ![resourceName containsString:@"@"]) {
+                    *scale = 1.0f;
+                }
+                return data;
+            }
+        }
     }
 
-    CGFloat requestedScale = scale ? *scale : 1.0f;
-    for (NSString *resourceName in [self iconResourceNamesForSmallIcon:small scale:requestedScale]) {
-        NSString *path = [bundle pathForResource:resourceName ofType:@"png"];
-        NSData *data = path ? [NSData dataWithContentsOfFile:path] : nil;
+    if (small) {
+        NSData *data = [self smallIconDataFromMetadataForListenerName:listenerName scale:scale];
         if (data.length > 0) {
-            if (scale && requestedScale != 1.0f && ![resourceName containsString:@"@"]) {
-                *scale = 1.0f;
-            }
             return data;
         }
     }
     return nil;
+}
+
+- (NSData *)smallIconDataFromMetadataForListenerName:(NSString *)listenerName scale:(CGFloat *)scale {
+    NSArray *paths = [self infoDictionaryValueOfKey:@"small-icons" forListenerName:listenerName];
+    if (![paths isKindOfClass:NSArray.class]) {
+        return nil;
+    }
+
+    CGFloat requestedScale = scale ? *scale : 1.0f;
+    for (id value in paths) {
+        if (![value isKindOfClass:NSString.class] || [value length] == 0) {
+            continue;
+        }
+        for (NSString *path in [self iconCandidatePathsForPath:value requestedScale:requestedScale]) {
+            NSData *data = [NSData dataWithContentsOfFile:path];
+            if (data.length > 0) {
+                if (scale) {
+                    *scale = [self scaleForIconPath:path requestedScale:requestedScale];
+                }
+                return data;
+            }
+        }
+    }
+    return nil;
+}
+
+- (NSArray *)iconCandidatePathsForPath:(NSString *)path requestedScale:(CGFloat)requestedScale {
+    NSString *resolvedPath = [self resolvedPathForResourcePath:path];
+    if (resolvedPath.length == 0) {
+        return @[];
+    }
+    if (requestedScale == 1.0f) {
+        return @[ resolvedPath ];
+    }
+
+    NSString *extension = resolvedPath.pathExtension;
+    NSString *basePath = extension.length > 0 ? [resolvedPath stringByDeletingPathExtension] : resolvedPath;
+    NSString *scaledPath = [basePath stringByAppendingFormat:@"@%.0fx", requestedScale];
+    if (extension.length > 0) {
+        scaledPath = [scaledPath stringByAppendingPathExtension:extension];
+    }
+    return @[ scaledPath, resolvedPath ];
+}
+
+- (CGFloat)scaleForIconPath:(NSString *)path requestedScale:(CGFloat)requestedScale {
+    NSString *lastPathComponent = path.lastPathComponent;
+    if ([lastPathComponent containsString:@"@3x"]) {
+        return 3.0f;
+    }
+    if ([lastPathComponent containsString:@"@2x"]) {
+        return 2.0f;
+    }
+    return requestedScale == 1.0f ? 1.0f : 1.0f;
+}
+
+- (NSString *)resolvedPathForResourcePath:(NSString *)path {
+    if (path.length == 0) {
+        return nil;
+    }
+    if (![path hasPrefix:@"/"]) {
+        return [NSFileManager.defaultManager fileExistsAtPath:path] ? path : nil;
+    }
+
+    NSString *jailbreakPath = jbroot(path);
+    if ([NSFileManager.defaultManager fileExistsAtPath:jailbreakPath]) {
+        return jailbreakPath;
+    }
+    return [NSFileManager.defaultManager fileExistsAtPath:path] ? path : nil;
 }
 
 - (UIImage *)iconForListenerName:(NSString *)listenerName small:(BOOL)small scale:(CGFloat)scale {

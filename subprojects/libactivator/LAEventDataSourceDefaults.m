@@ -55,8 +55,8 @@
 }
 
 - (NSString *)configurationViewControllerClassNameForEventWithName:(NSString *)eventName bundle:(NSBundle **)bundle {
-    NSString *className =
-        [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"settings-view-controller-class"];
+    NSString *className = [LAActivatorResourceManager.sharedManager
+        eventInfoDictionaryForName:eventName][@"settings-view-controller-class"];
     if (![className isKindOfClass:NSString.class] || className.length == 0) {
         className = [LAActivatorResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"configuration"];
     }
@@ -64,7 +64,7 @@
         return nil;
     }
     if (bundle) {
-        *bundle = [LAActivatorResourceManager.sharedManager eventBundleForName:eventName];
+        *bundle = [LAActivatorResourceManager.sharedManager configurationBundleForEventName:eventName];
     }
     return className;
 }
