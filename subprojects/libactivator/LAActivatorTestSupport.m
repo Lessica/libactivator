@@ -568,6 +568,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     listenerA.requiresNoTouchEvents = YES;
     listenerA.receiveCount = 0;
     listenerB.receiveCount = 0;
+    listenerB.otherHandledCount = 0;
     listenerA.lastReceivedEventMode = LAEventModeSpringBoard;
     LAEvent *deferredEvent = [LAEvent eventWithName:eventName];
     [self sendSyntheticTouchWithTouching:YES];
@@ -576,6 +577,12 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:deferredEvent.handled && listenerA.receiveCount == 0
             caseName:@"deferred-no-touch-enqueue"
               reason:@"Deferred event was not held while touch was active"];
+    [recorder expect:listenerB.receiveCount == 1
+            caseName:@"deferred-no-touch-continues-next-listener"
+              reason:@"Deferred no-touch dispatch blocked the next listener"];
+    [recorder expect:listenerB.otherHandledCount == 1
+            caseName:@"deferred-no-touch-notifies-next-listener"
+              reason:@"Deferred no-touch dispatch did not notify the next listener"];
     [self sendSyntheticTouchWithTouching:NO];
     [self waitForSyntheticTouchDelivery];
     [self waitForMainQueue];
@@ -676,19 +683,26 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
     NSString *eventName = @"libactivator.test.dispatch";
     NSString *unlockingListenerName = @"libactivator.test.dispatch.unlock";
+    NSString *lockScreenListenerName = @"libactivator.test.dispatch.lock";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
     LATestListener *unlockingListener = [[LATestListener alloc] init];
+    LATestListener *lockScreenListener = [[LATestListener alloc] init];
     unlockingListener.compatibleModes = @[ LAEventModeSpringBoard ];
+    lockScreenListener.compatibleModes = @[ LAEventModeLockScreen ];
     dataSource.supportsUnlockingDeviceToSend = YES;
     [activator registerEventDataSource:dataSource forEventName:eventName];
     [activator registerListener:unlockingListener forName:unlockingListenerName];
+    [activator registerListener:lockScreenListener forName:lockScreenListenerName];
     [activator la_noteHomeScreenVisible:YES];
     [activator la_noteLockScreenVisible:YES];
     [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeLockScreen]
-        toListenersWithNames:@[ unlockingListenerName ]];
+        toListenersWithNames:@[ unlockingListenerName, lockScreenListenerName ]];
     [recorder expect:unlockingListener.unlockingCount == 1
             caseName:@"unlock-to-send-callback"
               reason:@"Unlock-to-send callback did not run"];
+    [recorder expect:lockScreenListener.receiveCount == 0
+            caseName:@"unlock-to-send-stops-normal-dispatch"
+              reason:@"Lock screen listener received an event after unlock-to-send handled it"];
 
     [self cleanRuntimeInputStateWithActivator:activator];
 }
@@ -758,6 +772,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.dispatch.a",
         @"libactivator.test.dispatch.b",
         @"libactivator.test.dispatch.simple-abort",
+        @"libactivator.test.dispatch.lock",
         @"libactivator.test.dispatch.unlock",
     ];
     for (NSString *listenerName in listenerNames) {

@@ -39,7 +39,7 @@
 - (BOOL)la_unassignEventWithExplicitMode:(LAEvent *)event;
 - (NSArray *)la_dispatchableListenerNames:(NSArray *)listenerNames forEvent:(LAEvent *)event;
 - (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames allowDeferral:(BOOL)allowDeferral;
-- (void)la_sendUnlockingEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames eventMode:(NSString *)eventMode;
+- (BOOL)la_sendUnlockingEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames eventMode:(NSString *)eventMode;
 - (BOOL)la_listenerWithNameRequiresNoTouchEvents:(NSString *)listenerName;
 - (void)la_sendAbortEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames;
 - (void)la_notifyEventModeChanged:(NSString *)eventMode;
@@ -369,8 +369,9 @@ LAActivator *LASharedActivator;
     }
 
     NSString *eventMode = event.mode ?: self.currentEventMode;
-    if ([eventMode isEqualToString:LAEventModeLockScreen]) {
-        [self la_sendUnlockingEvent:event toListenerNames:listenerNames eventMode:eventMode];
+    if ([eventMode isEqualToString:LAEventModeLockScreen] &&
+        [self la_sendUnlockingEvent:event toListenerNames:listenerNames eventMode:eventMode]) {
+        return;
     }
 
     NSString *displayIdentifier = self.displayIdentifierForCurrentApplication;
@@ -409,19 +410,20 @@ LAActivator *LASharedActivator;
     }
 }
 
-- (void)la_sendUnlockingEvent:(LAEvent *)event
+- (BOOL)la_sendUnlockingEvent:(LAEvent *)event
               toListenerNames:(NSArray *)listenerNames
                     eventMode:(NSString *)eventMode {
     if (![eventMode isEqualToString:LAEventModeLockScreen] || !self.supportsUnlockingDeviceToSendEvents ||
         ![self eventWithNameSupportsUnlockingDeviceToSend:event.name]) {
-        return;
+        return NO;
     }
 
     NSString *underneathMode = self.currentEventModeUnderneathLockScreen;
     if (underneathMode.length == 0 || [underneathMode isEqualToString:LAEventModeLockScreen]) {
-        return;
+        return NO;
     }
 
+    BOOL unlockingEventWasHandled = NO;
     NSMutableSet *seenNames = [NSMutableSet set];
     for (id value in listenerNames) {
         if (![value isKindOfClass:NSString.class] || [value length] == 0 || [seenNames containsObject:value]) {
@@ -449,11 +451,14 @@ LAActivator *LASharedActivator;
         BOOL handled = [listener activator:self receiveUnlockingDeviceEvent:event forListenerName:listenerName];
         if (handled) {
             event.handled = YES;
+            unlockingEventWasHandled = YES;
         }
         if (!wasHandled && event.handled) {
+            unlockingEventWasHandled = YES;
             [self la_notifyListenersThatListener:listener handledEvent:event];
         }
     }
+    return unlockingEventWasHandled;
 }
 
 - (BOOL)la_listenerWithNameRequiresNoTouchEvents:(NSString *)listenerName {

@@ -147,6 +147,8 @@ These phases describe engineering dependency order, not heavyweight milestones.
 - Prefer capability detection over hardcoded system-version branching.
 - All event delivery must make listener compatibility checks before invocation.
 - Listener callbacks should not block the event acquisition layer longer than necessary.
+- `requires-no-touch-events` is listener-level deferral. When a listener is deferred because touches are active, the original event is marked handled and a fresh deferred event is delivered to that listener after touches end, but normal dispatch continues to later listeners in the same listener list.
+- `otherListenerDidHandleEvent:` is a global handled-edge notification. It is sent once when an event changes from unhandled to handled, to every registered listener except the listener that caused the transition; it does not remove later listeners from the current dispatch list.
 - Handling state, abort delivery, preview delivery, deactivate delivery, and multi-listener assignment behavior must be covered by tests or explicit manual verification notes.
 - SpringBoard-only behavior should be verified by a lightweight on-device diagnostic layer and manual verification checklists at first, not by a heavy automated harness.
 - Frida may be used against a real device with `frida -U SpringBoard` to inspect interface availability, attach temporary hooks, and ask the project owner to perform actions that validate hook behavior.
