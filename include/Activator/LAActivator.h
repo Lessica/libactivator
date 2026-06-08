@@ -6,14 +6,14 @@
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import <UIKit/UIKit.h>
-
 #import "LAActivatorVersion.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 // Main event dispatcher that is responsible for sending events, maintaining the list of actions/events, and querying
 // information about them
+
+@class UIImage;
 
 @class LAEvent;
 @class LAListenerConfigurationViewController;
