@@ -19,11 +19,14 @@
 ## 协作方式
 
 - 先理解现有规约、Public API 和参考实现，再进行实现决策。
+- 日常协作优先读取 `docs/README.md`、`docs/PROJECT_CONVENTIONS.md`、`docs/DEVICE_WORKFLOW.md`、`docs/TESTING.md`、`docs/BUILT_IN_ROADMAP.md`。
+- `docs/archive/` 下的文档是历史归档，只用于追溯先前决策、证据和旧 inventory；如果根目录新文档与归档文档冲突，以根目录新文档为准。
 - 保持改动范围清晰，避免把无关重构混入当前任务。
 - 不要提交 `references/`；它只是本地参考快照。
-- 新增重要工程约定时，优先更新 `docs/PROJECT_CONVENTIONS.md`。
+- 新增重要工程约定时，优先更新 `docs/PROJECT_CONVENTIONS.md`；涉及真机交互、测试分类或内置能力路线时，分别更新对应的新文档。
 - `docs/` 目录下的文档不要按固定行宽硬换行；普通段落应保持一段一行。
-- `docs/zh-Hans` 目录下的文档使用简体中文编写。
+- `docs/` 根目录下的新文档使用简体中文编写，能用中文描述的尽量用中文。
+- 如果后续重新新增语言副本目录，例如 `docs/zh-Hans`，其中的文档也必须使用简体中文编写。
 - 遇到不确定的兼容性、越狱布局、IPC、SpringBoard 私有 API 选择时，先记录待决策点，再与用户确认。
 
 ## 验证方式

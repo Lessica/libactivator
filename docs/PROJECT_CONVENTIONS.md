@@ -1,212 +1,95 @@
-# libactivator Rewrite Conventions
+# 项目规约
 
-This document is the working agreement for the libactivator rewrite. It is intentionally compact at first; decisions should move here once we agree they are stable enough to guide implementation.
+本文件是当前重写工作的高优先级规约。旧文档已归档，历史细节可查 `docs/archive/2026-06-09/`；日常实现决策先看本文件。
 
-## Reference Baseline
+## 基线与目标
 
-- Public API and built-in resource baseline: `references/latest`, extracted from `libactivator_1.9.13~rc6_iphoneos-arm.deb`.
-- Historical 1.9.0 headers remain under `references/headers` for archaeology only; they are no longer authoritative for rewrite compatibility decisions.
-- Legacy implementation reference: `references/master`, from `origin/master` (`b245f923bb683a902e932c9307286bcaa9a26cd3`, Public Release 1.6.2-1).
-- The legacy implementation is behavior reference only. Do not copy old implementation patterns unless we explicitly re-approve them for iOS 15+.
-- Assume every iOS SPI used by the legacy implementation is no longer valid.
-- Assume every iOS public API used by the legacy implementation must be mapped to its modern iOS 16.5 SDK usage before adoption.
-- Do not use deprecated APIs.
-- If an SPI is invalid and there is no reliable modern iOS reverse-engineering reference, do not invent an implementation or search the web for a guess. Leave a placeholder and ask the project owner immediately.
+- 当前兼容基线是 `references/latest` 中解包出的 Activator `1.9.13~rc6`，包括 Public API、导出符号和内置资源 catalog。
+- `references/headers` 中的 1.9.0 headers 只作考古参考，不再作为兼容决策依据。
+- `references/master` 是旧实现语义参考，不能照搬实现；当它与 1.9.13 Public API 或资源基线冲突时，以 1.9.13 为准。
+- 新版本线按 2.x 维护，假设原作者不再继续维护旧项目。
+- 最低系统版本为 iOS 15.0，构建使用 Theos、`$THEOS` 中的 iOS 16.5 SDK、`arm64 arm64e`。
+- 必须支持 rootful、rootless、roothide。Theos/theos-roothide 负责大部分布局差异；运行时路径必须通过 `jbroot(...)` 等 roothide 入口处理。
 
-## Project Goals
+## 兼容性原则
 
-- Treat this rewrite as the continuation of the project under new maintenance. Assume the original author will not return to maintain the legacy project.
-- Version the new project as 2.x.
-- Preserve, remain source-compatible with, and extend the final public API.
-- Target iOS 15.0 and newer.
-- Support rootful, rootless, and roothide jailbreak layouts.
-- Build with Theos, using `$THEOS` and its iOS 16.5 SDK.
-- Build for `arm64` and `arm64e`.
+- Public API 的类名、协议名、selector、常量、通知名和 import 入口是兼容契约：`#import <libactivator.h>`、`#import <Activator/Activator.h>`、`@import Activator` 都必须持续可用。
+- 旧 API 中过时或不再实现的部分要保留 source/ABI 兼容符号，并明确标为 deprecated 或 no-op。典型例子包括 legacy authorization、`dangerousToSendEvents` 和 1.9.13 已降级的大图标接口。
+- 不确定的 SPI 不许编造实现，也不要靠联网搜索拼答案；先留下占位和待决策点，然后问项目 owner。
+- 原实现使用过的 iOS SPI 默认视为失效；原实现使用过的 Public API 必须确认 iOS 16.5 SDK 下的现代用法后才能采用；不得使用 deprecated API。
+- legacy 行为如果明显是 bug、安全风险或过时包袱，可以不盲目保留，但必须记录差异原因。
 
-## Compatibility Rules
+## 进程与注入边界
 
-- Public class names, protocol names, selectors, constants, and expected semantics from `references/latest/package/usr/include/libactivator` are compatibility contracts.
-- The final 1.9 public API design is authoritative. The legacy `master` implementation is only a light reference and must not override the public API contract.
-- API extensions must be additive unless we intentionally create a documented compatibility break.
-- The legacy public API overloads the words event and `LAEvent`. Keep the selectors source-compatible, but document the four distinct meanings wherever this matters: a dispatched runtime `LAEvent` instance; an assignment descriptor keyed by `LAEvent.name` and `LAEvent.mode`; an event definition key represented by an `NSString` event name; and the `LAEventDataSource` provider that owns definition metadata and capabilities.
-- Keep legacy-compatible models where they still make sense. When a legacy behavior is a bug, unsafe design, or obsolete burden, document it and mark the compatibility surface as deprecated instead of preserving the old behavior blindly.
-- New behavior should prefer graceful no-op or explicit error reporting over crashes when a listener, event, private API, or SpringBoard feature is absent.
-- Keep legacy event and listener names stable, even when the implementation is completely new.
-- The legacy 1.9.13 authorization mechanism is not implemented in the rewrite. Keep the public source/ABI symbols for compatibility, but treat `authorizationStatus` as always authorized and `requestAuthorization` as a no-op.
+- SpringBoard 是权威 runtime owner。event registry、listener registry、assignments、profiles、blacklist、metadata dispatch、event delivery 和 runtime mode 最终都应收敛到 SpringBoard。
+- 非 SpringBoard 进程中的 `LAActivator` 是 facade。能跨进程的调用走 IPC；不能跨进程的调用必须明确 no-op、返回安全 fallback 或记录详细英文日志，不能悄悄创建本地孤岛状态。
+- 不允许注入用户 App。不允许使用 `com.apple.UIKit` filter，因为它会注入所有 App。
+- 允许注入明确 Bundle ID 且以 `com.apple.` 开头的 Apple App，但必须逐项说明理由并使用精确 filter。
+- 如果未来某项功能确实需要用户 App 注入，它必须作为 libactivator 之外的独立可选组件设计。
 
-## Architecture Rules
+## Theos 与命名
 
-- Keep the public client library small and stable.
-- Keep SpringBoard-specific private API usage behind a SpringBoard runtime layer.
-- UIKit, SpringBoard, and FrontBoard private API calls inside SpringBoard must run on the main queue unless a specific API is proven thread-safe.
-- The rewritten libactivator must not inject into user apps.
-- Injection into Apple apps is allowed only when the bundle identifier is explicitly known and starts with `com.apple.`.
-- Do not use a `com.apple.UIKit` injection filter, because it injects into all apps and creates broad compatibility risk.
-- Apple app injection must use explicit per-bundle filters and must be justified by the feature that needs it. Do not add wildcard Apple app injection.
-- In-app status bar touch support is expected to be possible on modern iOS without app injection; investigate the concrete implementation when that feature is built.
-- If a future feature truly requires user app injection, implement it as a separate optional component outside libactivator itself.
-- Separate these responsibilities:
-  - Public API facade.
-  - IPC client and server protocol.
-  - Event registry and metadata.
-  - Listener registry and metadata.
-  - Assignment, profile, and blacklist storage.
-  - SpringBoard event acquisition adapters.
-  - Built-in action/listener implementations.
-  - Command-line compatibility tool.
-  - Settings UI.
-  - Jailbreak path/layout abstraction.
-- Event semantics and event acquisition must not be the same module. A gesture name is stable; the hook or recognizer that detects it may change by iOS version or environment.
-- Design the core first and keep it solid. Built-in events, listeners, and actions should then be implemented incrementally one by one.
-- Modern foreground-application lookup, lock-screen state, and home-screen state have known project-owner references. Ask for those references when implementing that runtime layer.
-- The SpringBoard runtime is the authoritative owner for activator runtime state. Event registries, listener registries, assignments, profiles, blacklist state, metadata dispatch, and event delivery must converge there once IPC is implemented.
-- Non-SpringBoard clients should treat `LAActivator` as a public API facade. Runtime-backed calls must either route to SpringBoard through IPC or use an explicit non-crashing fallback.
-- In-process model behavior inside `libactivator.dylib` is acceptable during the core model phase for pure logic validation. Do not treat per-process local registries in clients as the final runtime design.
-- APIs that register Objective-C objects, such as listener and event data-source registration, are SpringBoard-runtime concepts. Non-SpringBoard behavior must be explicit and must not silently create an isolated client-only runtime.
-- Public object-registration calls made outside SpringBoard should be rejected with detailed runtime logging. They must not present UI, create local client registrations, and they must not be treated as missing cross-process object registration.
-- Object-returning listener lookup uses a private remote proxy outside SpringBoard when the authoritative SpringBoard registry reports that a listener exists. This proxy is compatibility behavior, not cross-process object registration and not a public API extension.
-- Localization is part of the core compatibility layer. Public localization methods should query the Activator support bundle first, use event/listener bundle metadata as fallbacks, and only then fall back to stable literal strings.
-- Event and listener resource metadata live under the Activator support directory and must be resolved through `jbroot(...)` at runtime. Do not use raw `/Library/Activator` paths in implementation code.
+- 不在 Makefile 中定义或兜底 `$THEOS`；调用方负责提供环境。
+- 不覆盖 Theos 内部路径变量或缓存变量，例如 `THEOS_LIBRARY_PATH`、`THEOS_PACKAGE_DIR`、`CLANG_MODULE_CACHE_PATH`。
+- target 文件放在各自 subproject 内，根 Makefile 只负责串联 subproject。
+- 不使用 Logos。tweak 代码使用 Objective-C / Objective-C++ 和 CaptainHook，源文件不要使用 `.x` 或 `.xm`。
+- `ActivatorTweak.m` 只作为 tweak 主入口；新增 tweak-local 类型使用 `LAT` 或 `LATweak` 前缀。
+- 独立 App 使用 `LAApp` 命名前缀；Settings UI 使用 `LAS` 或 `LASettings`；Settings preference panel 使用 `LAP` 或 `LAPreferences`。
+- 不允许使用 `LibActivator` 这种旧式奇怪命名。
 
-## Development Phases
+## 代码风格
 
-These phases describe engineering dependency order, not heavyweight milestones.
+- 与用户交流使用简体中文；代码、注释、日志、诊断文本、测试 case 名、提交信息使用英语；本地化资源除外。
+- 头文件使用 Xcode 默认风格 copyright，并补齐 `NS_ASSUME_NONNULL_BEGIN/END`。
+- 新代码默认使用 ARC。除非 Theos/runtime 边界确实需要，否则不要写手动内存管理。
+- 私有接口必须先声明再调用；禁止直接调用 `objc_msgSend`。
+- UIKit、SpringBoard、FrontBoard 私有 UI API 默认在主队列调用，除非已经确认该 API 线程安全。
+- 用 GCD 和 `dispatch_once` 管理并发与单例，不使用 `@synchronized(self)`。
+- 一个实现文件默认只放一个主要类。多个类堆在一个 `.m` 里只允许用于明确记录过的兼容 shim 或极小私有局部类型。
+- 不要把一两行逻辑抽成无意义 C helper。只有确实有抽象价值、能减少真实复杂度的逻辑才抽成 ObjC method、类或服务。
+- 可以用 `#pragma mark` 给长文件分区，但更优先把职责拆到合适的私有类型。
 
-- Establish the modern Theos foundation: targets, install paths, public header staging, jailbreak path abstraction, formatting, and empty build validation.
-- Implement the public API and core model: 1.9-compatible classes, constants, facade behavior, event model, listener model, assignments, profiles, and blacklist logic.
-- Implement storage and metadata: validated schemas, atomic persistence, serialization behavior, localization, icons, configuration hooks, removal hooks, event metadata, and listener metadata.
-- Implement IPC with `CPDistributedMessagingCenter` request/response handling, error handling, notifications, and payload validation.
-- Implement the SpringBoard runtime: server bootstrap, runtime state, foreground app state, lock/home state, listener registration, event delivery, diagnostics, and Frida-assisted validation workflows.
-- Implement event acquisition incrementally by event family. Each event must have a modern iOS capability assessment before registration.
-- Implement built-in listeners/actions incrementally. Each listener/action must have a modern iOS capability assessment before registration.
-- Implement the 1.9.13 `activator` command-line compatibility tool as a separate production tool target. Do not mix it with the development test runner or testing IPC.
-- Implement the Settings UI library and hosts: `libactivatorsettings.dylib`, the PreferenceBundle host, the Activator.app host, and third-party host loading.
-- Harden integration and packaging: on-device verification checklists, debug traces, rootful/rootless/roothide package checks, and release documentation.
+## IPC 与通知
 
-## Build Rules
+- IPC 使用 `AppSupport` 的 `CPDistributedMessagingCenter`，server name 固定为 `libactivator.springboard`。
+- 不再引入 direct XPC、`CFMessagePort`、自定义 timeout 或 version negotiation。客户端和 SpringBoard server 一体分发，安装后需要重启 SpringBoard。
+- 当前没有具体沙盒穿透需求时不引入 `libSandy`；如果未来某个 system service bridge 需要穿透沙盒，只为那个具体 bridge 引入。
+- IPC payload 只使用 property-list-safe dictionary。`LAEvent` 跨进程只传 `EventName`、`EventMode`、`EventHandled` 和 property-list-safe `UserInfo`。
+- `LAActivatorIPCServer` 只能是 transport adapter：注册 message、解码 payload、调用 `LAActivator` 内部 facade、编码 reply。业务规则、通知触发、listener/resource fallback、dispatch sequencing 不应放在 IPC server 里。
+- Public change notifications 是进程内 `NSNotification` 名称。跨进程传播使用私有 Darwin notification 名称，再由各进程 facade 重新投递本地 public notification，避免同名混淆。
 
-- Use modern Theos project structure, not the historical `framework` submodule.
-- Use concise component names for new code: `LAApp` for the standalone Activator app, `LAS` or `LASettings` for Settings UI code, `LAP` or `LAPreferences` for the Settings preference panel, `ActivatorTweak` only for the primary tweak target and main entry file, and `LAT` or `LATweak` for additional tweak-local classes, files, and private types.
-- Set deployment target to iOS 15.0.
-- Build all production binaries for `arm64 arm64e`.
-- Expose public headers with a flat compatibility entry point and a framework-style canonical path, matching Theos conventions such as `substrate.h`: `/usr/include/libactivator.h` should include `<Activator/Activator.h>`, while canonical public headers live under `/usr/include/Activator/` and `Activator.framework/Headers/`.
-- Do not install public headers under `/usr/include/libactivator/`.
-- Keep package metadata in root `layout/` at its final package path.
-- Keep each tweak filter plist in that tweak's subproject root so Theos can stage it through the normal `tweak.mk` flow. Do not place tweak filter plists in the repository root.
-- Do not use Logos syntax in this project. Tweak targets should use normal Objective-C or Objective-C++ source files and should not use `.x` or `.xm` source extensions.
-- Use a root aggregate Makefile to orchestrate binary subprojects. Do not mix unrelated target ownership into the root package/staging layer.
-- Keep the `activator` command-line tool as a production `tool.mk` subproject installed at `/usr/bin/activator`. It may call stable public API and production IPC only; it must not depend on `LA_TESTING`, hidden testing IPC, or the development test runner.
-- Do not define `$THEOS` in project Makefiles. Callers must provide it through the environment or command line.
-- Do not override Theos internal path variables or compiler cache paths in project Makefiles, including `THEOS_LIBRARY_PATH`, `THEOS_PACKAGE_DIR`, and `CLANG_MODULE_CACHE_PATH`.
-- Keep target-owned source files inside their owning subproject. Shared implementation files may live under `subprojects/common`.
-- Avoid implicit SDK-version assumptions in source. Gate private symbols and optional runtime features dynamically.
-- Do not introduce generated build artifacts into source control.
-- Device integration tests must be isolated behind `LA_TESTING`. Normal builds must not compile test-only source files, test IPC messages, test device automation, or test persistence paths.
-- `scripts/run-tests.sh` is the current device integration test entry point. It expects the caller to source the desired jailbreak environment first, then it runs `gmake do LA_TESTING=1` and executes the installed device runner over SSH.
-- Device tests must compare the SpringBoard pid before and after the runner. Treat a pid change as a SpringBoard restart even when the test runner exits successfully.
+## 数据、资源与缓存
 
-## Jailbreak Layout Rules
+- v2 运行时偏好路径固定为 `jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")`；测试构建使用隔离路径，不读取或写入用户真实配置。
+- 非 SpringBoard 客户端不得写运行时持久化文件。
+- 无效或不可读 plist 当作不存在；不删除、不重命名、不备份、不立即覆盖。
+- 配置变更先更新 SpringBoard in-memory state，磁盘写入可以在 main run loop 合并 flush。读取 Public API 或 IPC 应返回最新内存状态，直接读取 plist 的外部代码可能暂时看到旧磁盘快照。
+- 持久化文件写入后使用旧式兼容权限 `0666`，并设置 `NSFileProtectionNone`。
+- 资源基线来自 1.9.13：event metadata 使用 `Library/Activator/Events/bundled.plist`，listener/action metadata 使用 `Library/Activator/Listeners/bundled.plist`，目录式 `Info.plist` lookup 只作为第三方扩展兼容路径。
+- runtime lookup 必须先走 `jbroot(...)` 后的路径；对历史 metadata 中的绝对路径，可先查 `jbroot(path)`，不存在时再尝试原路径。
+- `required-capabilities` 这类设备能力字段属于资源模型有效性，应通过 MobileGestalt 等能力查询参与过滤，不要引入无关重量级 API。
+- listener localization、metadata、small icon 等高频查询应通过专门 cache/service 统一处理，缓存清理策略也应集中管理，例如内存警告时清理 listener metadata cache。
 
-- Do not scatter absolute paths such as `/Library`, `/usr/lib`, or `/var/mobile` through feature code.
-- Route install paths and runtime lookup paths through one path abstraction.
-- Path decisions must account for rootful, rootless, and roothide separately.
-- Theos and theos-roothide handle most package layout differences. The rewrite should focus on correct runtime path discovery.
-- Use `$THEOS/vendor/include/roothide.h` as the primary reference for roothide runtime path handling.
-- Package layout and runtime discovery rules should be documented next to the path abstraction once implemented.
+## Runtime 规则
 
-## IPC Rules
+- runtime state 应采用事件驱动缓存模型，而不是在热路径反复同步主线程查询 UI/SpringBoard 状态。
+- 前台 App、主屏幕、App Switcher、锁屏、screen blank 等状态源应来自 SpringBoard 自身 hook 和已验证信号；不要引入 `BKSApplicationStateMonitor` 这类偏重的全局观察者来观察 SpringBoard 自身。
+- 当前 runtime mode 语义：锁屏优先；App Switcher 属于 SpringBoard UI；锁屏下的 underneath mode 按底下真实状态；覆盖层原则上按 underneath mode。
+- `_accessibilityFrontMostApplication` 是 SpringBoard 内可用的前台应用来源。display identifier 语义优先使用 `displayIdentifier`，再 fallback 到 `bundleIdentifier`。
+- `requires-no-touch-events` 是 listener-level deferral：触摸活跃时原 event 立即标记 handled，延迟事件冻结 listener name 和 event mode，触摸结束后直接投递给原 listener，不重新跑 blacklist/mode/compat 过滤。
+- `unlock-to-send` 当前只实现 callback 兼容路径，不实现 passcode submit 或完整主动解锁流程。
+- `otherListenerDidHandleEvent:` 是全局 handled-edge notification：事件从未处理变成已处理时发送一次，通知除当前处理者以外的已注册 listener；不从当前待分发列表中移除后续 listener。
 
-- Treat the legacy `CFMessagePort` protocol as behavior reference, not as the default design.
-- Use `CPDistributedMessagingCenter` from the `AppSupport` framework as the IPC layer. Treat it as the integrated XPC client/server boundary for this project; do not build an additional direct-XPC layer around it.
-- `CPDistributedMessagingCenter` does not bypass sandbox restrictions. If a sandboxed system service needs cross-process communication later, add `libSandy` only for that specific bridge. Do not introduce `libSandy` during phases that have no concrete sandbox-crossing requirement.
-- The new IPC layer must define request/response shape, notifications, failure behavior, and payload validation.
-- Do not add custom timeout handling or version negotiation on top of `CPDistributedMessagingCenter`. The client and SpringBoard server ship together, and installation requires a SpringBoard restart.
-- IPC uses `libactivator.springboard` as the `CPDistributedMessagingCenter` name. Non-SpringBoard `LAActivator` clients may query and mutate state/config through this channel, and event dispatch calls may be forwarded to the SpringBoard authoritative runtime.
-- State/config IPC payloads must be property-list-safe dictionaries. Events are represented by `EventName` and `EventMode`; listener names, profile names, and display identifiers are plain strings or string arrays.
-- Event dispatch IPC payloads must remain property-list-safe. Events are represented by `EventName`, `EventMode`, `EventHandled`, and optional `UserInfo`; non-property-list-safe `UserInfo` values are not preserved across process boundaries.
-- Unlike the legacy keyed-archive IPC path, the modern event IPC path intentionally does not preserve arbitrary Objective-C objects in `LAEvent.userInfo`. It may recursively keep property-list-safe `UserInfo` values and drop unsafe values.
-- State/config IPC replies use an `OK` boolean and optional `Value`. Event dispatch replies use `OK` and `EventHandled`. When the server is unavailable or a payload is invalid, clients return the existing safe default for that public selector and must not write local persistent runtime state.
-- Listener object registration and event data-source object registration remain authoritative in SpringBoard. Cross-process object registration is not part of the current IPC slice; if implemented later, it must proxy into SpringBoard instead of creating isolated client-local runtime state.
-- IPC payloads must be validated before use.
-- `LAActivatorIPCServer` is a transport adapter only: it registers messages, decodes payloads through the IPC codec, calls the `LAActivator` internal facade, and encodes replies. It must not post public/system notifications, directly dispatch listener callbacks, or perform listener/resource fallback.
-- IPC codec code may validate types and convert property-list payloads, but compatibility rules, removal gates, metadata fallback, dispatch sequencing, and notification emission belong in the `LAActivator` facade or dedicated private services.
-- Public API calls that cross process boundaries should have predictable main thread behavior.
-- Public notifications are process-local `NSNotification` names. Cross-process state changes should be propagated through IPC and then reposted locally by each client process.
-- Public change notifications must be delivered from SpringBoard as the authoritative state source. The public `NSNotification` names stay API-compatible, while the underlying Darwin notification names must use distinct private `libactivator.notification.*` strings to keep cross-process diagnostics unambiguous.
-- Testing IPC is allowed only under `LA_TESTING`. It must not be present in ordinary package builds or public headers.
+## Settings UI 边界
 
-## Data Rules
+- Settings UI 真实逻辑属于独立动态库 `libactivatorsettings.dylib`，PreferenceBundle、Activator.app 和第三方越狱 App 都只是 host。
+- `libactivator.dylib` 只保留 public settings class compatibility shims，让旧第三方代码能链接和解析类名。
+- `LASettingsShims.m` 是占位兼容例外，不得作为后续 UI 或 runtime 实现的文件组织范式。
+- Settings UI、App、PreferenceBundle 暂不混入 built-in runtime 能力阶段。
 
-- Define schemas for assignments, profiles, blacklist entries, event metadata, and listener metadata.
-- Direct upgrades from the legacy Activator installation to this rewrite are not an expected use case. Do not design automatic legacy preference migration into the core.
-- If legacy preference import becomes useful later, implement it as an explicit standalone import tool rather than core startup behavior.
-- New persistent data should be atomic to write, schema-validated, and explicit about ownership and permissions.
-- Prefer structured serialization over ad hoc string parsing.
-- Runtime preferences must be stored at `jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")`. Rootless and roothide builds must not write to the real `/var/mobile` path.
-- Testing builds must use the isolated runtime preference path `jbroot(@"/var/mobile/Library/Preferences/libactivator.tests.plist")` and must never read, write, back up, or restore the user's real runtime preference plist.
-- The v2 runtime preference plist uses schema version `1` with these top-level keys: `SchemaVersion`, `CurrentProfileName`, `Profiles`, `BlacklistedDisplayIdentifiers`, and `SeenListenerNames`.
-- Each entry under `Profiles` is keyed by profile name and contains an `Assignments` dictionary. Assignments are stored as `eventName -> modeKey -> listenerNames`, where nil event mode is represented by an empty string.
-- Persisted listener-name arrays and blacklisted display identifier arrays must contain only non-empty strings, deduplicated and sorted.
-- Invalid or unreadable runtime preference plists should be treated as absent. Do not move, delete, immediately overwrite, migrate, or reuse the legacy cache plist path.
+## 需要停下来问 owner 的情况
 
-## Runtime Rules
-
-- Assume SpringBoard private APIs are unstable. Isolate every private selector or class lookup behind a small adapter.
-- `LAActivator` is the public API facade. Private runtime state should live in backend/persistence types rather than directly in the facade.
-- Only the SpringBoard authoritative backend may load from or save to the runtime preference plist. Non-SpringBoard clients must not create isolated persistent state before IPC exists.
-- Public listener registration marks the listener name as seen. SpringBoard-owned dynamic listener families may use the private legacy `ignoreHasSeen:` registration path when registration should not count as user-visible listener discovery.
-- Prefer capability detection over hardcoded system-version branching.
-- All event delivery must make listener compatibility checks before invocation.
-- Listener callbacks should not block the event acquisition layer longer than necessary.
-- Explicit event dispatch with `sendEvent:toListenerWithName:` or `sendEvent:toListenersWithNames:` bypasses assignment resolution only. It must still follow normal event delivery policy, including listener existence checks, compatibility checks, foreground application blacklist checks, no-touch deferral, unlock-to-send handling, and handled-edge notifications.
-- `requires-no-touch-events` is listener-level deferral. When a listener is deferred because touches are active, the original event is marked handled and a fresh deferred event is delivered to that listener after touches end, but normal dispatch continues to later listeners in the same listener list.
-- `otherListenerDidHandleEvent:` is a global handled-edge notification. It is sent once when an event changes from unhandled to handled, to every registered listener except the listener that caused the transition; it does not remove later listeners from the current dispatch list.
-- Handling state, abort delivery, preview delivery, deactivate delivery, and multi-listener assignment behavior must be covered by tests or explicit manual verification notes.
-- SpringBoard-only behavior should be verified by a lightweight on-device diagnostic layer and manual verification checklists at first, not by a heavy automated harness.
-- Frida may be used against a real device with `frida -U SpringBoard` to inspect interface availability, attach temporary hooks, and ask the project owner to perform actions that validate hook behavior.
-
-## Built-in Capability Rules
-
-- Keep legacy built-in event, listener, and action names stable when they remain part of the public compatibility surface.
-- Each built-in event, listener, and action must be evaluated independently for modern iOS capability and documented before implementation.
-- Do not register a built-in listener/action unless its modern iOS behavior is understood and implemented.
-- If a legacy built-in capability is obsolete, unavailable, or unsafe on modern iOS, document the reason and leave it unregistered or explicitly unavailable.
-
-## UI Rules
-
-- Preserve the old information architecture: modes, events, listeners, search, assignments, profiles, blacklist, menus, and configuration controllers.
-- Rebuild the UI for iOS 15-era UIKit.
-- Do not keep historical ad UI, `UIWebView`, `UIAlertView`, or `UIActionSheet` patterns.
-- Settings UI should consume the same public API surface third-party callers use where practical.
-- Real Settings UI logic must live in an independent dynamic library.
-- `libactivator.dylib` must keep compatibility shims for public settings classes from `LASettingsViewController.h`, because third-party jailbreak apps may dynamically link `libactivator.dylib` and use those classes to present Settings UI.
-- `LASettingsShims.m` is a narrow compatibility exception: it may contain multiple placeholder settings classes only because this phase provides empty shims for the legacy public API surface. Do not treat it as an implementation pattern for real Settings UI or future runtime code.
-- The PreferenceBundle, Activator.app, and third-party jailbreak apps are hosts for the Settings UI library.
-- Do not export a new Settings UI host integration API until that contract is explicitly designed and approved.
-- Name framework-like dynamic libraries with the `libxxx.dylib` convention.
-- Use `libactivatorsettings.dylib` as the Settings UI dynamic library file name unless implementation details force a better name.
-- Install framework-like dynamic libraries under `$JBROOT/usr/lib`.
-- Expose corresponding framework structures under `$JBROOT/Library/Frameworks`.
-- The framework binary inside `$JBROOT/Library/Frameworks/<Name>.framework` should be a relative symlink to `../../../usr/lib/<library>.dylib` where possible, because the symlink itself lives inside the `.framework` directory.
-- Hosts must load the Settings UI dynamic library dynamically and keep host-only code thin.
-
-## Code Style Rules
-
-- Prefer ARC for new Objective-C code unless a Theos/runtime boundary requires otherwise.
-- Keep manual memory management out of new code by default.
-- Use clear module names and small files with explicit ownership.
-- New implementation code should use one primary public class per source file. Multiple classes in one implementation file are allowed only for explicitly documented compatibility shims or tiny private helper types that are wholly owned by that file.
-- Do not place multiple unrelated runtime, model, persistence, IPC, or UI implementation classes in a single source file.
-- Avoid global mutable state except for compatibility globals required by the public API, such as `LASharedActivator`.
-- Keep comments sparse and useful: explain private API choices, compatibility quirks, and non-obvious synchronization.
-
-## Testing And Verification
-
-- Add API compatibility checks early.
-- Add focused unit tests for pure logic: event model, assignment resolution, metadata compatibility, path resolution, and serialization.
-- Add integration/manual verification notes for SpringBoard hooks and device-only behavior.
-- Build verification should include rootful, rootless, and roothide packaging assumptions before release.
-
-## Open Decisions
-
-- None currently recorded.
+- 现代 SPI 名称、调用时机、线程要求或行为语义不明确。
+- 某个旧能力在 iOS 15+ 上可能需要用户 App 注入。
+- 某个内置 event/listener/action 的现代实现方式没有可靠证据。
+- 旧实现、1.9.13 package、现有 rewrite 行为之间出现非显然冲突。

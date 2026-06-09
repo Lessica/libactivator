@@ -1,0 +1,41 @@
+# 真机交互规约
+
+本文件记录与真机设备交互时必须遵守的方式。设备验证是为了确认 SpringBoard runtime、越狱布局和私有 API 行为；它不是普通代码风格检查的替代品。
+
+## 环境选择
+
+- 当前连接哪类设备，就先 source 对应脚本，例如 rootless 设备使用 `. scripts/rootless.sh`，roothide 设备使用 `. scripts/roothide.sh`。
+- 不要混跑默认 rootful scheme 来验证 rootless/roothide 设备。调试 rootless 或 roothide 真机时，构建安装命令必须跟当前设备 scheme 一致。
+- 不要在命令中自行兜底定义 `$THEOS`。本项目假设调用环境已经提供正确的 `$THEOS`。
+- 不要引入无意义的 `THEOS_DEVICE_USER`、`TARGET_INSTALL_REMOTE`、额外 `rm -rf .theos/_` 或大量 `>/dev/null`。脚本应薄、直接、可读。
+
+## 构建与安装
+
+- rootless/rootful/roothide 的包布局由 Theos 和对应环境脚本处理；实现代码只关心运行时路径转换。
+- 测试构建使用 `LA_TESTING=1`，普通包不能包含 testing IPC、test runner、测试持久化路径或测试自动化入口。
+- 安装后需要重启 SpringBoard，尤其是 IPC server、tweak hook 和 dylib ABI 发生变化时。
+- 判断 SpringBoard 是否崩溃或重启，第一信号是 SpringBoard pid 是否变化；crash report 用于随后定位栈。
+
+## 日志与崩溃
+
+- 使用 `scripts/device-console.sh` 抓取设备日志。
+- 使用 `scripts/device-crashlogs.sh list` 查看 SpringBoard crash report，使用 `pull` 拉取，使用 `clean` 清理旧日志以便复现。
+- SpringBoard 卡死、watchdog timeout 或软重启后，先清理问题构建并重装稳定构建，确保设备能进桌面，再继续调查。
+- 诊断日志必须使用英语，避免中文进入运行时日志。
+
+## Frida 诊断边界
+
+- Frida 只用于诊断、探针和临时 hook，不算自动化测试，也不要写进测试结论。
+- 只允许 USB Frida，不允许 remote Frida。
+- 需要对 SpringBoard 附加 Frida 时通常要提权执行。
+- 不要使用 `frida -q` 做交互或长时间观察；当前 Frida CLI 的 `-q` 会 quiet 并在 `-l` 或 `-e` 后退出，容易误判为“Frida 自己断开”。
+- 探针脚本如果需要保留，应放在项目内可读位置；不要放到 `/tmp` 后让 owner 看不到实际执行内容。临时探针完成后如果不再有价值，可以删除。
+- 不要在 Frida JS 线程直接查询 UIKit/SpringBoard UI 状态；涉及 UI 状态的 probe 必须切到 SpringBoard 主队列。
+- 避免把 Frida 动态创建的 ObjC object 长期注册进 SpringBoard registry。优先使用临时 hook 或短生命周期调用，并在结束前清理。
+
+## 手工场景观察
+
+- `scripts/watch-runtime-state.sh` 用于实时观察 runtime state，它不是 pass/fail 测试。
+- 手工观察时应明确当前操作步骤，例如从主屏幕打开 App、App-to-App 切换、打开 App Switcher、锁屏下拉、锁屏底下是 App 或主屏幕、强杀 App。
+- 观察到的状态差异不要立刻归因于 runtime bug；先确认测试流程是否等价于真实手工路径，尤其是自动化打开 App 与用户手势路径可能触发不同 SpringBoard lifecycle。
+- iOS 版本差异要单独记录。iOS 15 与 iOS 16 的 SpringBoard 类名和 hook 点可能不同，不能只针对一台设备做死。

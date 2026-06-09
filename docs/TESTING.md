@@ -1,78 +1,62 @@
-# Testing
+# 测试与验证规约
 
-This document defines the categories, entry points, and boundaries of this project’s test harness. Logs, suite names, case names, and failure reasons in the test code must be in English; this document may be in Chinese.
+本文件定义项目内测试的分类、执行位置和提交门槛。测试日志、suite 名、case 名、失败原因必须使用英语；本说明文档使用简体中文。
 
-## Execution Ownership
+## 默认提交门槛
 
-Test logic is executed based on the ownership of the behavior under test.
+默认稳定测试入口：
 
-Runner-owned tests execute assertions within the `libactivator-tests` process. They are used to verify non-SpringBoard client perspectives, such as command-line entry points, testing IPC reachability, result aggregation, exit codes, whether the `LAActivator` facade in a regular process is forwarded to SpringBoard via IPC, and client fallback behavior when the server is unavailable. Runner-owned tests must not directly create or modify SpringBoard’s authoritative runtime state; when SpringBoard state is required, it must be prepared via formal IPC or testing IPC fixtures.
+```sh
+. scripts/rootless.sh
+scripts/run-tests.sh
+```
 
-SpringBoard-owned tests execute assertions within the SpringBoard process via hidden testing IPC. Any tests that depend on the SpringBoard authoritative backend, real listener objects, event data sources, built-in listeners/actions, dispatch callbacks, persistence writes, runtime state providers, SpringBoard SPI, main queue device actions, or real hooks must be placed in SpringBoard-owned tests. Tests related to `registerListener:forName:` and `registerEventDataSource:forEventName:` also fall into this category.
-
-Watchers are responsible only for observing the SpringBoard runtime state; they do not execute assertions and do not produce pass/fail results. Watcher output cannot be used as automated test results; it serves only to assist manual assessment of state changes in real-world scenarios.
-
-By default, stable tests may include runner-owned tests and SpringBoard-owned tests, but they must remain stable and reproducible, and must not corrupt real user configurations or persist runtime state. Runtime input and runtime device are specialized categories and must not be included in the default submission threshold.
-
-## Stable Tests
-
-Default entry points:
+或在 roothide 设备上：
 
 ```sh
 . scripts/roothide.sh
 scripts/run-tests.sh
 ```
 
-Default execution on the device-side runner:
+`scripts/run-tests.sh` 的职责是构建并安装 `LA_TESTING=1` testing package，然后通过 SSH 运行设备上已安装的 `/usr/libexec/libactivator/libactivator-tests run`。脚本应报告 SpringBoard pid 前后变化，pid 变化即视为 SpringBoard 重启。
 
-```sh
-/usr/libexec/libactivator/libactivator-tests run
-```
+## 执行责任划分
 
-Stable tests constitute the commit threshold and cover only tests that are stable, repeatable, and do not pollute the SpringBoard runtime state:
+runner-owned tests 在 `libactivator-tests` 进程内执行断言，适合验证非 SpringBoard 客户端视角，例如 CLI 入口、测试 IPC 可达性、结果聚合、退出码、普通进程中的 `LAActivator` facade 是否通过 IPC 转发、server 不可用时的 fallback。
 
-- `ClientFacade`
-- `LAEvent`
-- `Persistence`
-- `SpringBoardCore`
-- `Dispatch`
-- `BuiltInActions`
+SpringBoard-owned tests 通过隐藏 testing IPC 在 SpringBoard 内执行断言，适合验证 SpringBoard authoritative backend、真实 listener object、event data source、built-in listener/action、dispatch callback、persistence 写入、runtime state provider、SpringBoard SPI、主队列设备动作和真实 hook。
 
-`ClientFacade` runs within the runner process, verifying the Public API facade, IPC forwarding, remote listener proxy, assignment/blacklist/profile round-trips, and dispatch handler callbacks from the perspective of a regular process. Other default stable suites run via SpringBoard-owned testing IPC.
+watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail 结果。watcher 输出只能帮助人工判断，不能作为自动化测试通过依据。
 
-Stable tests must not call `la_noteHomeScreenVisible:`, `la_noteLockScreenVisible:`, `la_noteScreenBlanked:`, or any other runtime state injection entry points. A failure indicates a regression in the core model, IPC, dispatch, or implemented built-in actions.
+## 测试类别
 
-## Runtime Input Tests
+`run` 是默认稳定套件，允许包含 runner-owned tests 和 SpringBoard-owned tests，但必须稳定、可重复、不能污染用户配置或 SpringBoard runtime state。它覆盖 `ClientFacade`、`LAEvent`、`Persistence`、`SpringBoardCore`、`Dispatch`、`Resources`、`TouchActivity`、`BuiltInActions` 等核心能力。
 
-Command-line entry point:
+`run-runtime-input` 只测试 `LAActivatorRuntimeStateProvider` 的输入模型，允许调用 `la_noteHomeScreenVisible:`、`la_noteLockScreenVisible:`、`la_noteScreenBlanked:` 等注入入口，但前后必须清空状态，并且不能和真实设备场景连跑。
 
-```sh
-/usr/libexec/libactivator/libactivator-tests run-runtime-input
-```
+`run-device-runtime` 只测试真实 SpringBoard hook 和真实设备状态，严禁调用任何 `la_note*` 注入入口。它不属于默认提交门槛，失败说明设备自动化流程、当前设备状态或 hook 场景需要单独调查。
 
-Runtime input tests verify only the set of input sources and manual input semantics of `LAActivatorRuntimeStateProvider`. They allow calls to `la_noteHomeScreenVisible:`, `la_noteLockScreenVisible:`, and `la_noteScreenBlanked:`, but the runtime input state must be cleared before and after the suite.
+`watch-runtime-state` 只做实时观察，不属于测试。
 
-Runtime input tests must not perform device automation actions such as opening an app, returning to the home screen, locking the screen, or unlocking the device. A failure indicates an issue with the provider’s input model or callback-only runtime semantics.
+## 禁止混用
 
-## Runtime Device Tests
+- stable tests 不得调用 `la_noteHomeScreenVisible:`、`la_noteLockScreenVisible:`、`la_noteScreenBlanked:` 或其他 runtime state 注入入口。
+- `RuntimeDevice` 不得调用任何 `la_note*` 注入状态。
+- 清理逻辑只能恢复为空或安全状态，不能为了“方便测试”制造 `home visible YES`、`lock visible YES` 这类状态。
+- 不要把多个 suite 混在一起复用脏状态。需要设备场景、输入模型、核心逻辑时，拆成独立 suite、独立准备、独立清理。
+- 不要用 skip 绕过不稳定问题。真实瞬时抖动应通过合理重试、放宽动作后时延或修正自动化流程处理。
 
-Entry point:
+## 新增测试放置规则
 
-```sh
-/usr/libexec/libactivator/libactivator-tests run-device-runtime
-```
+- 纯模型、序列化、assignment、profile、blacklist、resource manager、cache、IPC codec 这类不依赖 SpringBoard UI 的测试优先放入 stable。
+- 需要真实 listener object、data source、dispatch 回调、built-in action 对象、touch tracker drain 的测试，如果行为由 SpringBoard runtime owner 承载，应放入 SpringBoard-owned stable suite。
+- 需要打开 App、回主屏幕、锁屏、解锁、App Switcher、强杀 App 的测试默认不进 stable，先放 `run-device-runtime` 或手工观察。
+- 为测试而新增 production 入口必须先证明必要性，并用 `LA_TESTING` 宏隔离。普通构建不能包含 testing IPC、testing path 或测试自动化接口。
 
-Runtime device tests verify real SpringBoard hooks and device state. They only allow tests driven by device actions and real SpringBoard state; invoking any `la_note*` runtime state injection entry points is prohibited.
+## API 与静态检查
 
-Runtime device tests are not part of the default submission threshold. A failure merely indicates that the device automation workflow, current device state, or real hook scenario requires separate investigation; it does not block the submission of core or built-in actions.
+`scripts/check-public-api.sh` 负责 1.9.13 Public API 的 compile/link/runtime metadata 检查。它不是设备 runtime 测试，但 Public API 或导出符号有变化时必须运行。
 
-## Runtime Watcher
+静态检查应覆盖：无 Logos、无 direct XPC、无 `CFMessagePort`、无不必要 `libSandy`、无 `ROOT_PATH` 宏族、无用户 App 注入 filter、无直接 `objc_msgSend`、新增代码/注释/日志无中文。
 
-Watcher entry points:
-
-```sh
-. scripts/roothide.sh
-scripts/watch-runtime-state.sh
-```
-
-The Watcher only outputs the current SpringBoard runtime state for manual observation. It is not an automated pass/fail test.
+文档-only 改动通常运行 `git diff --check` 即可；代码、资源、脚本改动应按影响范围运行匹配的测试。
