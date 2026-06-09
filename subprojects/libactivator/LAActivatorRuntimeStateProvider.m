@@ -224,16 +224,16 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
 }
 
 - (NSString *)displayIdentifierForApplication:(id<LAActivatorSpringBoardApplication>)application {
-    if ([application respondsToSelector:@selector(bundleIdentifier)]) {
-        NSString *bundleIdentifier = [application bundleIdentifier];
-        if ([bundleIdentifier isKindOfClass:NSString.class] && bundleIdentifier.length > 0) {
-            return bundleIdentifier;
-        }
-    }
     if ([application respondsToSelector:@selector(displayIdentifier)]) {
         NSString *displayIdentifier = [application displayIdentifier];
         if ([displayIdentifier isKindOfClass:NSString.class] && displayIdentifier.length > 0) {
             return displayIdentifier;
+        }
+    }
+    if ([application respondsToSelector:@selector(bundleIdentifier)]) {
+        NSString *bundleIdentifier = [application bundleIdentifier];
+        if ([bundleIdentifier isKindOfClass:NSString.class] && bundleIdentifier.length > 0) {
+            return bundleIdentifier;
         }
     }
     return nil;

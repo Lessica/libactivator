@@ -183,6 +183,7 @@ CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, eve
 CHOptimizedMethod1(self, void, SpringBoard, applicationDidFinishLaunching, id, application) {
     CHSuper1(SpringBoard, applicationDidFinishLaunching, application);
     [LASharedActivator la_noteRuntimeStateMayHaveChanged];
+    [LASharedActivator startIPCServerIfNeeded];
 }
 
 #pragma mark - Darwin Notifications
@@ -256,7 +257,6 @@ static void LATInstallHooks(void) {
 }
 
 __attribute__((constructor)) static void LATweakInitialize(void) {
-    [[LAActivator sharedInstance] startIPCServerIfNeeded];
     [LATBuiltInListenerRegistry registerBuiltInListenersWithActivator:[LAActivator sharedInstance]];
     LATInstallHooks();
 }
