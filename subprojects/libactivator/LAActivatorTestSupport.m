@@ -15,6 +15,7 @@
 #import "LAActivatorIPC.h"
 #import "LAActivatorPersistence.h"
 #import "LAActivatorResourceManager.h"
+#import "LATouchActivityTracker.h"
 
 #import <Activator/Activator.h>
 #import <IOKit/hid/IOHIDEvent.h>
@@ -145,6 +146,30 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     };
 }
 
+@end
+
+@interface LATestTouch : UITouch
+@property(nonatomic, assign) UITouchPhase testPhase;
+@end
+
+@implementation LATestTouch
+- (UITouchPhase)phase {
+    return self.testPhase;
+}
+@end
+
+@interface LATestTouchEvent : UIEvent
+@property(nonatomic, copy) NSSet *testTouches;
+@end
+
+@implementation LATestTouchEvent
+- (UIEventType)type {
+    return UIEventTypeTouches;
+}
+
+- (NSSet *)allTouches {
+    return self.testTouches ?: [NSSet set];
+}
 @end
 
 @interface LATestEventDataSource : NSObject <LAEventDataSource>
@@ -361,6 +386,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (void)runEventTestsWithRecorder:(LATestRecorder *)recorder;
 + (void)runPersistenceTestsWithRecorder:(LATestRecorder *)recorder;
 + (void)runResourceTestsWithRecorder:(LATestRecorder *)recorder;
++ (void)runTouchActivityTestsWithRecorder:(LATestRecorder *)recorder;
 + (void)runSpringBoardCoreTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runDispatchTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runBuiltInActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
@@ -470,6 +496,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [self runEventTestsWithRecorder:recorder];
     [self runPersistenceTestsWithRecorder:recorder];
     [self runResourceTestsWithRecorder:recorder];
+    [self runTouchActivityTestsWithRecorder:recorder];
     [self runSpringBoardCoreTestsWithRecorder:recorder activator:activator];
     [self runDispatchTestsWithRecorder:recorder activator:activator];
     [self runBuiltInActionTestsWithRecorder:recorder activator:activator];
@@ -632,6 +659,66 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
               reason:@"Absolute resource path did not resolve through jbroot before the original path"];
 
     [fileManager removeItemAtPath:resourcePath error:nil];
+}
+
++ (void)runTouchActivityTestsWithRecorder:(LATestRecorder *)recorder {
+    [recorder beginSuite:@"TouchActivity"];
+
+    LATouchActivityTracker *tracker = [[LATouchActivityTracker alloc] init];
+    __block NSInteger immediateCount = 0;
+    [tracker performWhenTouchesEnd:^{
+        immediateCount += 1;
+    }];
+    [self waitForMainQueue];
+    [recorder expect:immediateCount == 1
+            caseName:@"inactive-runs-immediately"
+              reason:@"Inactive touch tracker did not run pending work immediately"];
+
+    LATestTouch *touch = [[LATestTouch alloc] init];
+    LATestTouchEvent *event = [[LATestTouchEvent alloc] init];
+    event.testTouches = [NSSet setWithObject:touch];
+
+    touch.testPhase = UITouchPhaseBegan;
+    [tracker noteTouchEvent:event];
+    [recorder expect:tracker.touchActive
+            caseName:@"touch-began-active"
+              reason:@"Touch began did not mark tracker active"];
+
+    __block NSInteger pendingCount = 0;
+    [tracker performWhenTouchesEnd:^{
+        pendingCount += 1;
+    }];
+    [tracker performWhenTouchesEnd:^{
+        pendingCount += 1;
+    }];
+    [self waitForMainQueue];
+    [recorder expect:pendingCount == 0
+            caseName:@"active-defers-blocks"
+              reason:@"Active touch tracker ran pending work before touches ended"];
+
+    touch.testPhase = UITouchPhaseEnded;
+    [tracker noteTouchEvent:event];
+    [self waitForMainQueue];
+    [recorder expect:!tracker.touchActive && pendingCount == 2
+            caseName:@"touch-ended-drains-blocks"
+              reason:@"Touch ended did not drain all pending work"];
+
+    LATouchActivityTracker *cancelTracker = [[LATouchActivityTracker alloc] init];
+    LATestTouch *cancelledTouch = [[LATestTouch alloc] init];
+    LATestTouchEvent *cancelEvent = [[LATestTouchEvent alloc] init];
+    cancelEvent.testTouches = [NSSet setWithObject:cancelledTouch];
+    cancelledTouch.testPhase = UITouchPhaseBegan;
+    [cancelTracker noteTouchEvent:cancelEvent];
+    __block NSInteger cancelCount = 0;
+    [cancelTracker performWhenTouchesEnd:^{
+        cancelCount += 1;
+    }];
+    cancelledTouch.testPhase = UITouchPhaseCancelled;
+    [cancelTracker noteTouchEvent:cancelEvent];
+    [self waitForMainQueue];
+    [recorder expect:!cancelTracker.touchActive && cancelCount == 1
+            caseName:@"touch-cancel-drains-blocks"
+              reason:@"Touch cancellation did not drain pending work"];
 }
 
 + (void)runSpringBoardCoreTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
