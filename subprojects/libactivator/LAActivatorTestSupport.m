@@ -758,6 +758,13 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
                      localizationListener.localizedDescriptionRequestCount == 1
             caseName:@"listener-localization-cache"
               reason:@"Listener localization lookup did not use the metadata cache"];
+    [NSNotificationCenter.defaultCenter postNotificationName:UIApplicationDidReceiveMemoryWarningNotification
+                                                      object:UIApplication.sharedApplication];
+    NSString *thirdLocalizedTitle = [activator localizedTitleForListenerName:localizationListenerName];
+    [recorder expect:[thirdLocalizedTitle isEqualToString:@"Changed Title"] &&
+                     localizationListener.localizedTitleRequestCount == 2
+            caseName:@"listener-cache-cleared-by-memory-warning"
+              reason:@"Listener metadata cache was not cleared by memory warning"];
     LATestListener *replacementLocalizationListener = [[LATestListener alloc] init];
     replacementLocalizationListener.localizedTitle = @"Replacement Title";
     [activator registerListener:replacementLocalizationListener forName:localizationListenerName];

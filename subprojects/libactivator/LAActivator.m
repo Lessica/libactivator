@@ -49,6 +49,7 @@
 - (NSString *)la_invalidSpringBoardOperationCulpritName;
 - (void)la_registerSystemNotificationBridgeIfNeeded;
 - (void)la_clearListenerMetadataCaches;
+- (void)la_didReceiveMemoryWarning:(NSNotification *)notification;
 - (UIImage *)la_resolveSmallIconForListenerName:(NSString *)listenerName;
 - (NSString *)la_resolveLocalizedTitleForListenerName:(NSString *)listenerName;
 - (NSString *)la_resolveLocalizedGroupForListenerName:(NSString *)listenerName;
@@ -136,6 +137,10 @@ LAActivator *LASharedActivator;
     self = [super init];
     if (self) {
         _listenerMetadataCache = [[LAListenerMetadataCache alloc] init];
+        [NSNotificationCenter.defaultCenter addObserver:self
+                                               selector:@selector(la_didReceiveMemoryWarning:)
+                                                   name:UIApplicationDidReceiveMemoryWarningNotification
+                                                 object:nil];
         if (self.runningInsideSpringBoard) {
             _runtimeStateProvider = [[LAActivatorRuntimeStateProvider alloc] init];
             _backend = [[LAActivatorBackend alloc] initWithPersistence:[self defaultPersistence]];
@@ -1408,6 +1413,10 @@ LAActivator *LASharedActivator;
 
 - (void)la_clearListenerMetadataCaches {
     [self.listenerMetadataCache removeAllObjects];
+}
+
+- (void)la_didReceiveMemoryWarning:(NSNotification *)notification {
+    [self la_clearListenerMetadataCaches];
 }
 
 - (UIImage *)la_resolveSmallIconForListenerName:(NSString *)listenerName {
