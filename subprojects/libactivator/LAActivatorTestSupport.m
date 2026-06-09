@@ -376,6 +376,14 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 }
 @end
 
+@interface NSObject (LATestURLActionListenerTesting)
++ (void)setTestingOpenHandler:(BOOL (^)(NSURL *url, NSString *listenerName))handler;
++ (void)setTestingURLMetadata:(NSDictionary *)metadata forListenerName:(NSString *)listenerName;
++ (NSURL *)testingLastOpenedURL;
++ (NSString *)testingLastOpenedListenerName;
++ (void)resetTestingState;
+@end
+
 @interface LAActivatorTestSupport ()
 + (NSDictionary *)okReplyWithValue:(id)value;
 + (NSDictionary *)failureReply;
@@ -389,7 +397,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (void)runTouchActivityTestsWithRecorder:(LATestRecorder *)recorder;
 + (void)runSpringBoardCoreTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runDispatchTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
-+ (void)runBuiltInActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
++ (void)runBuiltInActionRegistryTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
++ (void)runBuiltInURLActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runRuntimeInputTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runRuntimeDeviceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)cleanActivator:(LAActivator *)activator;
@@ -499,7 +508,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [self runTouchActivityTestsWithRecorder:recorder];
     [self runSpringBoardCoreTestsWithRecorder:recorder activator:activator];
     [self runDispatchTestsWithRecorder:recorder activator:activator];
-    [self runBuiltInActionTestsWithRecorder:recorder activator:activator];
+    [self runBuiltInActionRegistryTestsWithRecorder:recorder activator:activator];
+    [self runBuiltInURLActionTestsWithRecorder:recorder activator:activator];
     [self cleanActivator:activator];
     return [recorder resultDictionary];
 }
@@ -1077,12 +1087,14 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
               reason:@"Deferred dispatch rewrote nil event mode"];
 }
 
-+ (void)runBuiltInActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
-    [recorder beginSuite:@"BuiltInActions"];
++ (void)runBuiltInActionRegistryTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"BuiltInActionRegistry"];
 
     NSString *eventName = @"libactivator.test.built-in.nothing";
     NSString *nothingName = @"libactivator.system.nothing";
-    NSString *metadataOnlyName = @"libactivator.settings.wifi";
+    NSString *urlName = @"libactivator.clock.timer";
+    NSString *urlsName = @"libactivator.settings.usage";
+    NSString *metadataOnlyName = @"libactivator.ipod.toggle-playback";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
 
     [activator registerEventDataSource:dataSource forEventName:eventName];
@@ -1093,9 +1105,20 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:[activator hasSeenListenerWithName:nothingName]
             caseName:@"nothing-seen"
               reason:@"Built-in nothing listener was not recorded as seen"];
+    [recorder
+          expect:[[activator availableListenerNames] containsObject:urlName] && [activator hasListenerWithName:urlName]
+        caseName:@"url-action-registered"
+          reason:@"Built-in URL action listener was not registered"];
+    [recorder expect:[activator hasSeenListenerWithName:urlName]
+            caseName:@"url-action-seen"
+              reason:@"Built-in URL action listener was not recorded as seen"];
+    [recorder expect:[[activator availableListenerNames] containsObject:urlsName] &&
+                     [activator hasListenerWithName:urlsName]
+            caseName:@"urls-action-registered"
+              reason:@"Built-in URL action with versioned metadata was not registered"];
     [recorder expect:![activator hasListenerWithName:metadataOnlyName]
             caseName:@"metadata-only-not-registered"
-              reason:@"Staged metadata registered a listener without an implementation"];
+              reason:@"Non-URL staged metadata registered a listener without an implementation"];
 
     LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator assignEvent:event toListenerWithName:nothingName];
@@ -1103,6 +1126,88 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:event.handled
             caseName:@"nothing-handles-event"
               reason:@"Built-in nothing listener did not mark the event handled"];
+}
+
++ (void)runBuiltInURLActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"BuiltInURLActions"];
+
+    Class urlActionClass = NSClassFromString(@"LATURLActionListener");
+    [recorder expect:urlActionClass != Nil
+            caseName:@"url-action-class-available"
+              reason:@"LATURLActionListener class was not loaded in SpringBoard"];
+    if (!urlActionClass) {
+        return;
+    }
+
+    NSString *eventName = @"libactivator.test.built-in.url";
+    NSString *singleURLName = @"libactivator.clock.timer";
+    NSString *versionedURLName = @"libactivator.settings.usage";
+    NSString *missingURLName = @"libactivator.test.url.missing";
+    NSString *invalidURLName = @"libactivator.test.url.invalid";
+    LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+    __block NSInteger openCount = 0;
+    [activator registerEventDataSource:dataSource forEventName:eventName];
+
+    [(id)urlActionClass resetTestingState];
+    [(id)urlActionClass setTestingOpenHandler:^BOOL(NSURL *url, NSString *listenerName) {
+        openCount += 1;
+        return YES;
+    }];
+
+    LAEvent *singleURLEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:singleURLEvent toListenerWithName:singleURLName];
+    NSURL *singleURL = [(id)urlActionClass testingLastOpenedURL];
+    NSString *singleListenerName = [(id)urlActionClass testingLastOpenedListenerName];
+    [recorder expect:singleURLEvent.handled && openCount == 1
+            caseName:@"single-url-handles-event"
+              reason:@"URL action with single url metadata did not handle the event"];
+    [recorder expect:[[singleURL absoluteString] isEqualToString:@"clock-timer:default"] &&
+                     [singleListenerName isEqualToString:singleURLName]
+            caseName:@"single-url-selection"
+              reason:@"URL action did not open the single url metadata value"];
+
+    LAEvent *versionedURLEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:versionedURLEvent toListenerWithName:versionedURLName];
+    NSURL *versionedURL = [(id)urlActionClass testingLastOpenedURL];
+    [recorder expect:versionedURLEvent.handled && openCount == 2
+            caseName:@"versioned-url-handles-event"
+              reason:@"URL action with versioned urls metadata did not handle the event"];
+    [recorder expect:[[versionedURL absoluteString] isEqualToString:@"prefs:root=General&path=STORAGE_ICLOUD_USAGE"]
+            caseName:@"versioned-url-selection"
+              reason:@"URL action did not select the current CoreFoundation URL"];
+
+    [(id)urlActionClass setTestingOpenHandler:^BOOL(NSURL *url, NSString *listenerName) {
+        openCount += 1;
+        return NO;
+    }];
+    LAEvent *openFailureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:openFailureEvent toListenerWithName:singleURLName];
+    [recorder expect:!openFailureEvent.handled && openCount == 3
+            caseName:@"url-open-failure-unhandled"
+              reason:@"URL action marked the event handled when the opener failed"];
+
+    id testURLListener = [[urlActionClass alloc] init];
+    [activator registerListener:testURLListener forName:missingURLName];
+    [(id)urlActionClass resetTestingState];
+    [(id)urlActionClass setTestingOpenHandler:^BOOL(NSURL *url, NSString *listenerName) {
+        openCount += 1;
+        return YES;
+    }];
+    LAEvent *missingURLEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:missingURLEvent toListenerWithName:missingURLName];
+    [recorder expect:!missingURLEvent.handled && [(id)urlActionClass testingLastOpenedURL] == nil
+            caseName:@"missing-url-metadata-unhandled"
+              reason:@"URL action handled an event with no URL metadata"];
+
+    [activator registerListener:testURLListener forName:invalidURLName];
+    [(id)urlActionClass setTestingURLMetadata:@{@"url" : @"not a valid absolute URL"} forListenerName:invalidURLName];
+    LAEvent *invalidURLEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:invalidURLEvent toListenerWithName:invalidURLName];
+    [recorder expect:!invalidURLEvent.handled && [(id)urlActionClass testingLastOpenedURL] == nil
+            caseName:@"invalid-url-metadata-unhandled"
+              reason:@"URL action handled an event with invalid URL metadata"];
+
+    [(id)urlActionClass resetTestingState];
 }
 
 + (void)runRuntimeInputTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
@@ -1277,6 +1382,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.dispatch.lock",
         @"libactivator.test.dispatch.unlock",
         @"libactivator.test.client-facade.user-info",
+        @"libactivator.test.url.missing",
+        @"libactivator.test.url.invalid",
     ];
     for (NSString *listenerName in listenerNames) {
         [activator unregisterListenerWithName:listenerName];
@@ -1289,6 +1396,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.new-event-data-source",
         @"libactivator.test.dispatch",
         @"libactivator.test.built-in.nothing",
+        @"libactivator.test.built-in.url",
         @"libactivator.test.client-facade.user-info",
     ];
     for (NSString *eventName in eventNames) {

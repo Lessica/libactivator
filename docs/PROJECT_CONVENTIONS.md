@@ -65,10 +65,19 @@
 - 无效或不可读 plist 当作不存在；不删除、不重命名、不备份、不立即覆盖。
 - 配置变更先更新 SpringBoard in-memory state，磁盘写入可以在 main run loop 合并 flush。读取 Public API 或 IPC 应返回最新内存状态，直接读取 plist 的外部代码可能暂时看到旧磁盘快照。
 - 持久化文件写入后使用旧式兼容权限 `0666`，并设置 `NSFileProtectionNone`。
+- 旧实现的 `_getObjectForPreference:` / `_setObject:forPreference:` 面向 flat key；当前 v2 schema 不应退回旧 flat 文件结构。兼容层应放在 libactivator 层，由独立 bridge 负责把有 v2 等价模型的 key family 翻译到 backend，把没有 v2 等价模型的 key 保存在 legacy passthrough store。
+- 目前已确认需要语义翻译的 flat key family 是 `LAEventListener(<mode>)-<eventName>`、`LABlacklisted-<displayIdentifier>` 和 `LAHasSeenListener-<listenerName>`。`LAMenuSettings`、`LAHideAds`、`LAHideIcon`、`LAShowHiddenEvents`、`LAIgnoreProtectedApplications`、`LAHasNewCydia`、`LASystemVersionPrompt-<systemVersion>` 以及第三方自定义 preference key 没有当前 v2 runtime 等价模型，应作为 legacy passthrough 数据处理，除非后续 Settings UI 或安装迁移阶段重新定义其语义。
 - 资源基线来自 1.9.13：event metadata 使用 `Library/Activator/Events/bundled.plist`，listener/action metadata 使用 `Library/Activator/Listeners/bundled.plist`，目录式 `Info.plist` lookup 只作为第三方扩展兼容路径。
 - runtime lookup 必须先走 `jbroot(...)` 后的路径；对历史 metadata 中的绝对路径，可先查 `jbroot(path)`，不存在时再尝试原路径。
 - `required-capabilities` 这类设备能力字段属于资源模型有效性，应通过 MobileGestalt 等能力查询参与过滤，不要引入无关重量级 API。
 - listener localization、metadata、small icon 等高频查询应通过专门 cache/service 统一处理，缓存清理策略也应集中管理，例如内存警告时清理 listener metadata cache。
+
+## CLI 与安装后处理
+
+- `/usr/bin/activator` 是 production compatibility tool，不是测试入口；不得为了端到端测试增加 1.9.13 不存在的子命令。
+- CLI 应复刻 1.9.13 的命令面：`listeners`、`events`、`modes`、`current-mode`、`current-app`、`get <key>`、`set <key> <value>`、`activate <event> [<listener>]`、`send <listener>`、`deactivate <event>`，以及 package maintainer script 内部调用但 usage 不展示的 `postinst`。
+- CLI 的 `get` / `set` 语义通过 libactivator 私有 preference compatibility bridge 进入 SpringBoard authoritative backend；不要在 CLI 内解析或直接写 preference 文件。
+- `postinst` 当前保持 no-op 是有意取舍。1.9.13 的 `activator postinst` 只做安装后兼容清理：在 `kCFCoreFoundationVersionNumber < 1200.0` 时从 `/private/var/mobile/Library/BulletinBoard/SectionInfo.plist` 删除 `com.apple.springboard.notificationcenter.today` 和 `com.apple.springboard.notificationcenter.tomorrow`，删除对应 PushStore 文件，并始终尝试把 `SectionInfo.plist` chown 为 uid/gid `501`。现代 rootless/rootless-era 安装逻辑优先放在 shell maintainer script；只有遇到 shell 不适合表达的安装后操作时，才重新评估是否把逻辑放入 CLI `postinst`。
 
 ## Runtime 规则
 

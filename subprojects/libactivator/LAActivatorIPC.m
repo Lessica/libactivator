@@ -26,6 +26,8 @@ NSString *const LAActivatorIPCMessageSetApplicationBlacklisted = @"libactivator.
 NSString *const LAActivatorIPCMessageAvailableProfileNames = @"libactivator.request.available-profile-names";
 NSString *const LAActivatorIPCMessageCurrentProfileName = @"libactivator.request.current-profile-name";
 NSString *const LAActivatorIPCMessageSetCurrentProfileName = @"libactivator.request.set-current-profile-name";
+NSString *const LAActivatorIPCMessagePreferenceValue = @"libactivator.request.preference-value";
+NSString *const LAActivatorIPCMessageSetPreferenceValue = @"libactivator.request.set-preference-value";
 NSString *const LAActivatorIPCMessageCurrentEventMode = @"libactivator.request.current-event-mode";
 NSString *const LAActivatorIPCMessageCurrentEventModeUnderneathLockScreen =
     @"libactivator.request.current-event-mode-underneath-lock-screen";
@@ -40,8 +42,7 @@ NSString *const LAActivatorIPCMessageCompatibleModesForEvent = @"libactivator.re
 NSString *const LAActivatorIPCMessageEventIsCompatibleWithMode = @"libactivator.request.event-is-compatible-with-mode";
 NSString *const LAActivatorIPCMessageEventSupportsUnlockingDeviceToSend =
     @"libactivator.request.event-supports-unlocking-device-to-send";
-NSString *const LAActivatorIPCMessageAssignmentWarningForEvent =
-    @"libactivator.request.assignment-warning-for-event";
+NSString *const LAActivatorIPCMessageAssignmentWarningForEvent = @"libactivator.request.assignment-warning-for-event";
 NSString *const LAActivatorIPCMessageEventIsUnprotected = @"libactivator.request.event-is-unprotected";
 NSString *const LAActivatorIPCMessageEventSupportsRemoval = @"libactivator.request.event-supports-removal";
 NSString *const LAActivatorIPCMessageEventSupportsConfiguration = @"libactivator.request.event-supports-configuration";
@@ -115,6 +116,8 @@ NSString *const LAActivatorIPCKeyListenerNames = @"ListenerNames";
 NSString *const LAActivatorIPCKeyDisplayIdentifier = @"DisplayIdentifier";
 NSString *const LAActivatorIPCKeyBlacklisted = @"Blacklisted";
 NSString *const LAActivatorIPCKeyProfileName = @"ProfileName";
+NSString *const LAActivatorIPCKeyPreferenceKey = @"PreferenceKey";
+NSString *const LAActivatorIPCKeyPreferenceValue = @"PreferenceValue";
 NSString *const LAActivatorIPCKeyInfoDictionaryKey = @"InfoDictionaryKey";
 NSString *const LAActivatorIPCKeyScale = @"Scale";
 

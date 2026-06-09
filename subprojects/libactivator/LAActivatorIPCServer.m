@@ -78,6 +78,8 @@
         LAActivatorIPCMessageAvailableProfileNames,
         LAActivatorIPCMessageCurrentProfileName,
         LAActivatorIPCMessageSetCurrentProfileName,
+        LAActivatorIPCMessagePreferenceValue,
+        LAActivatorIPCMessageSetPreferenceValue,
         LAActivatorIPCMessageCurrentEventMode,
         LAActivatorIPCMessageCurrentEventModeUnderneathLockScreen,
         LAActivatorIPCMessageSupportsUnlockingDeviceToSendEvents,
@@ -206,6 +208,16 @@
         NSString *profileName = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyProfileName];
         BOOL changed = [_activator la_setCurrentProfileName:profileName];
         return [LAActivatorIPCCodec replyWithOK:YES value:@(changed)];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessagePreferenceValue]) {
+        NSString *preferenceKey = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyPreferenceKey];
+        return [LAActivatorIPCCodec replyWithOK:YES value:[_activator _getObjectForPreference:preferenceKey]];
+    }
+    if ([messageName isEqualToString:LAActivatorIPCMessageSetPreferenceValue]) {
+        NSString *preferenceKey = [LAActivatorIPCCodec stringInUserInfo:userInfo forKey:LAActivatorIPCKeyPreferenceKey];
+        id preferenceValue = [LAActivatorIPCCodec propertyListValue:userInfo[LAActivatorIPCKeyPreferenceValue]];
+        [_activator _setObject:preferenceValue forPreference:preferenceKey];
+        return [LAActivatorIPCCodec replyWithOK:YES value:nil];
     }
     return nil;
 }

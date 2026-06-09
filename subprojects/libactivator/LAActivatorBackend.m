@@ -21,6 +21,7 @@ static NSString *const LAActivatorProfilesKey = @"Profiles";
 static NSString *const LAActivatorAssignmentsKey = @"Assignments";
 static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"BlacklistedDisplayIdentifiers";
 static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
+static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
 @interface LAActivatorBackend ()
 @property(nonatomic, strong) NSMutableDictionary *eventDataSources;
@@ -28,6 +29,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 @property(nonatomic, strong) NSMutableDictionary *profiles;
 @property(nonatomic, strong) NSMutableSet *blacklistedDisplayIdentifiers;
 @property(nonatomic, strong) NSMutableSet *seenListenerNames;
+@property(nonatomic, strong) NSMutableDictionary *legacyPreferences;
 @property(nonatomic, copy) NSArray *cachedListenerNames;
 @property(nonatomic, strong) dispatch_queue_t stateQueue;
 @property(nonatomic, strong) LAActivatorPersistence *persistence;
@@ -51,6 +53,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
         _profiles = [[NSMutableDictionary alloc] init];
         _blacklistedDisplayIdentifiers = [[NSMutableSet alloc] init];
         _seenListenerNames = [[NSMutableSet alloc] init];
+        _legacyPreferences = [[NSMutableDictionary alloc] init];
         _stateQueue = dispatch_queue_create("libactivator.state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         dispatch_queue_set_specific(_stateQueue, LAActivatorBackendStateQueueKey,
                                     (void *)LAActivatorBackendStateQueueKey, NULL);
@@ -72,6 +75,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
     _currentProfileName = LAActivatorDefaultProfileName;
     self.profiles[LAActivatorDefaultProfileName] =
         [@{LAActivatorAssignmentsKey : [[NSMutableDictionary alloc] init]} mutableCopy];
+    [self.legacyPreferences removeAllObjects];
 }
 
 #pragma mark - Utilities
@@ -174,6 +178,7 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
             [self.blacklistedDisplayIdentifiers.allObjects sortedArrayUsingSelector:@selector(compare:)],
         LAActivatorSeenListenerNamesKey :
             [self.seenListenerNames.allObjects sortedArrayUsingSelector:@selector(compare:)],
+        LAActivatorLegacyPreferencesKey : self.legacyPreferences ?: @{},
     };
     return dictionary;
 }
@@ -285,9 +290,12 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
     NSArray *blacklistedDisplayIdentifiers =
         [LAActivatorBackend normalizedStringArray:dictionary[LAActivatorBlacklistedDisplayIdentifiersKey]];
     NSArray *seenListenerNames = [LAActivatorBackend normalizedStringArray:dictionary[LAActivatorSeenListenerNamesKey]];
+    NSDictionary *legacyPreferences = dictionary[LAActivatorLegacyPreferencesKey];
     self.profiles = loadedProfiles;
     self.blacklistedDisplayIdentifiers = [NSMutableSet setWithArray:blacklistedDisplayIdentifiers];
     self.seenListenerNames = [NSMutableSet setWithArray:seenListenerNames];
+    self.legacyPreferences = [legacyPreferences isKindOfClass:NSDictionary.class] ? [legacyPreferences mutableCopy]
+                                                                                  : [[NSMutableDictionary alloc] init];
     _currentProfileName = [currentProfileName copy];
 }
 
@@ -439,29 +447,33 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 #pragma mark - Assignments
 
 - (BOOL)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames {
-    if (event.name.length == 0) {
+    return [self assignEventName:event.name mode:event.mode toListenerNames:listenerNames];
+}
+
+- (BOOL)assignEventName:(NSString *)eventName mode:(NSString *)mode toListenerNames:(NSArray *)listenerNames {
+    if (eventName.length == 0) {
         return NO;
     }
 
-    NSString *mode = event.mode ?: @"";
+    NSString *normalizedMode = mode ?: @"";
     NSArray *normalizedNames = [LAActivatorBackend normalizedStringArray:listenerNames];
     __block BOOL changed = NO;
     dispatch_sync(self.stateQueue, ^{
         NSMutableDictionary *assignments = [self assignmentsForCurrentProfile];
-        NSMutableDictionary *eventAssignments = assignments[event.name];
+        NSMutableDictionary *eventAssignments = assignments[eventName];
         if (!eventAssignments) {
             eventAssignments = [[NSMutableDictionary alloc] init];
-            assignments[event.name] = eventAssignments;
+            assignments[eventName] = eventAssignments;
         }
 
         if (normalizedNames.count > 0) {
-            changed = ![eventAssignments[mode] isEqualToArray:normalizedNames];
-            eventAssignments[mode] = normalizedNames;
+            changed = ![eventAssignments[normalizedMode] isEqualToArray:normalizedNames];
+            eventAssignments[normalizedMode] = normalizedNames;
         } else {
-            changed = eventAssignments[mode] != nil;
-            [eventAssignments removeObjectForKey:mode];
+            changed = eventAssignments[normalizedMode] != nil;
+            [eventAssignments removeObjectForKey:normalizedMode];
             if (eventAssignments.count == 0) {
-                [assignments removeObjectForKey:event.name];
+                [assignments removeObjectForKey:eventName];
             }
         }
         if (changed) {
@@ -532,15 +544,19 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 }
 
 - (NSArray *)assignedListenerNamesForEvent:(LAEvent *)event {
-    if (event.name.length == 0) {
+    return [self assignedListenerNamesForEventName:event.name mode:event.mode];
+}
+
+- (NSArray *)assignedListenerNamesForEventName:(NSString *)eventName mode:(NSString *)mode {
+    if (eventName.length == 0) {
         return @[];
     }
 
-    NSString *mode = event.mode ?: @"";
+    NSString *normalizedMode = mode ?: @"";
     __block NSArray *listenerNames = nil;
     dispatch_sync(self.stateQueue, ^{
         NSDictionary *assignments = [self assignmentsForCurrentProfile];
-        listenerNames = [assignments[event.name][mode] copy];
+        listenerNames = [assignments[eventName][normalizedMode] copy];
     });
     return listenerNames ?: @[];
 }
@@ -595,6 +611,65 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
             [self.blacklistedDisplayIdentifiers removeObject:displayIdentifier];
         }
         [self savePersistentState];
+    });
+    return changed;
+}
+
+#pragma mark - Legacy Preferences
+
+- (BOOL)setListenerName:(NSString *)listenerName seen:(BOOL)seen {
+    if (listenerName.length == 0) {
+        return NO;
+    }
+    __block BOOL changed = NO;
+    dispatch_sync(self.stateQueue, ^{
+        BOOL currentlySeen = [self.seenListenerNames containsObject:listenerName];
+        changed = currentlySeen != seen;
+        if (!changed) {
+            return;
+        }
+        if (seen) {
+            [self.seenListenerNames addObject:listenerName];
+        } else {
+            [self.seenListenerNames removeObject:listenerName];
+        }
+        [self savePersistentState];
+    });
+    return changed;
+}
+
+- (id)objectForLegacyPreferenceKey:(NSString *)key {
+    if (key.length == 0) {
+        return nil;
+    }
+    __block id object = nil;
+    dispatch_sync(self.stateQueue, ^{
+        object = self.legacyPreferences[key];
+    });
+    return object;
+}
+
+- (BOOL)setObject:(id)object forLegacyPreferenceKey:(NSString *)key {
+    if (key.length == 0) {
+        return NO;
+    }
+    __block BOOL changed = NO;
+    dispatch_sync(self.stateQueue, ^{
+        id existingObject = self.legacyPreferences[key];
+        if (object) {
+            changed = ![existingObject isEqual:object];
+            if (changed) {
+                self.legacyPreferences[key] = object;
+            }
+        } else {
+            changed = existingObject != nil;
+            if (changed) {
+                [self.legacyPreferences removeObjectForKey:key];
+            }
+        }
+        if (changed) {
+            [self savePersistentState];
+        }
     });
     return changed;
 }

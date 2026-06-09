@@ -125,11 +125,26 @@
 
 范围：
 
-- 先实现只读命令，例如 listeners、events、modes、current-mode、current-app。
-- 再实现 assignment 查询/设置、profile/blacklist 操作。
-- 最后实现 send/deactivate 等事件触发命令。
+- 命令面应保持 1.9.13 兼容：`listeners`、`events`、`modes`、`current-mode`、`current-app`、`get <key>`、`set <key> <value>`、`activate <event> [<listener>]`、`send <listener>`、`deactivate <event>`。
+- `postinst` 是隐藏安装后入口，旧 usage 不展示。当前保留 no-op；不要为了测试或便利增加新子命令。
+- `get` / `set` 只负责调用 libactivator compatibility facade，不在 CLI 内实现 flat key 解析或直接读写 plist。
+- 事件触发命令使用当前 event mode 构造 `LAEvent`，按旧语义以 `event.handled ? 0 : 1` 作为退出状态。
 
 边界：CLI 是 production tool，不是 test runner；不能依赖 `LA_TESTING`、hidden testing IPC 或测试 plist。
+
+已确认的 1.9.13 逆向结论：
+
+- 旧 CLI 启动命令前会 `dlopen("/usr/lib/libactivator.dylib", RTLD_LAZY)` 并检查 `[LAActivator.sharedInstance isAlive]`；不可达时 `exit(-1)`。
+- `listeners`、`events`、`modes` 分别逐行打印 `availableListenerNames`、`availableEventNames`、`availableEventModes`。
+- `current-mode` 打印 `currentEventMode`；`current-app` 仅在 `displayIdentifierForCurrentApplication.length > 0` 时打印。
+- `get <key>` 调用 `_getObjectForPreference:` 并打印返回对象的 `description`；`set <key> <value>` 调用 `_setObject:forPreference:`，value 是命令行字符串。
+- `activate <event>` 调用 `sendEventToListener:`；`activate <event> <listener>` 调用 `sendEvent:toListenerWithName:`；`send <listener>` 使用 event name `libactivator` 调用指定 listener；`deactivate <event>` 调用 `sendDeactivateEventToListeners:`。
+- 旧 `postinst` 在 `kCFCoreFoundationVersionNumber < 1200.0` 时清理 BulletinBoard `SectionInfo.plist` 里的 today/tomorrow 通知中心 section 和对应 PushStore 文件，并始终尝试把 `SectionInfo.plist` chown 为 `501:501`。当前项目暂不复刻该副作用，等确实需要非 shell 安装后逻辑时再实现。
+
+legacy preference 兼容边界：
+
+- 旧 flat key 不应迫使 v2 persistence 退回 flat 结构。`LAEventListener(<mode>)-<eventName>`、`LABlacklisted-<displayIdentifier>`、`LAHasSeenListener-<listenerName>` 属于 runtime model，应翻译到 v2 backend。
+- `LAMenuSettings`、Settings UI flag、system version prompt 和第三方自定义 key 暂无 v2 runtime 等价模型，应走 legacy passthrough store，后续 Settings UI 或安装迁移阶段可以再定义更具体的语义。
 
 ## 当前建议的下一步
 

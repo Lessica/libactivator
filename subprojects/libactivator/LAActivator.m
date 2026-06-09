@@ -17,6 +17,7 @@
 #import "LAActivatorResourceManager.h"
 #import "LAActivatorRuntimeStateProvider.h"
 #import "LADefaultEventDataSource.h"
+#import "LALegacyPreferenceBridge.h"
 #import "LAListenerMetadataCache.h"
 #import "LARemoteListener.h"
 #import "LATouchActivityTracker.h"
@@ -30,6 +31,7 @@
 @property(nonatomic, strong) LAActivatorRuntimeStateProvider *runtimeStateProvider;
 @property(nonatomic, strong) LATouchActivityTracker *touchActivityTracker;
 @property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
+@property(nonatomic, strong) LALegacyPreferenceBridge *legacyPreferenceBridge;
 - (BOOL)la_assignEventWithExplicitMode:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
 - (BOOL)la_addListenerAssignmentWithExplicitMode:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (BOOL)la_removeListenerAssignmentWithExplicitMode:(NSString *)listenerName fromEvent:(LAEvent *)event;
@@ -144,6 +146,7 @@ LAActivator *LASharedActivator;
         if (self.runningInsideSpringBoard) {
             _runtimeStateProvider = [[LAActivatorRuntimeStateProvider alloc] init];
             _backend = [[LAActivatorBackend alloc] initWithPersistence:[self defaultPersistence]];
+            _legacyPreferenceBridge = [[LALegacyPreferenceBridge alloc] initWithBackend:_backend];
             _touchActivityTracker = [[LATouchActivityTracker alloc] init];
             __weak typeof(self) weakSelf = self;
             [_runtimeStateProvider setEventModeChangeHandler:^(NSString *eventMode) {
@@ -166,6 +169,35 @@ LAActivator *LASharedActivator;
     persistence = [LAActivatorPersistence defaultPersistence];
 #endif
     return persistence;
+}
+
+#pragma mark - Legacy Preferences
+
+- (id)_getObjectForPreference:(NSString *)preference {
+    if (preference.length == 0) {
+        return nil;
+    }
+    if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{LAActivatorIPCKeyPreferenceKey : preference ?: @""};
+        return [self.ipcClient propertyListValueForMessageName:LAActivatorIPCMessagePreferenceValue userInfo:userInfo];
+    }
+    return [self.legacyPreferenceBridge objectForPreferenceKey:preference];
+}
+
+- (void)_setObject:(id)value forPreference:(NSString *)preference {
+    if (preference.length == 0) {
+        return;
+    }
+    if (!self.runningInsideSpringBoard) {
+        NSMutableDictionary *userInfo = [@{LAActivatorIPCKeyPreferenceKey : preference ?: @""} mutableCopy];
+        id propertyListValue = [self la_ipcPropertyListValue:value];
+        if (propertyListValue) {
+            userInfo[LAActivatorIPCKeyPreferenceValue] = propertyListValue;
+        }
+        [self.ipcClient sendMessageName:LAActivatorIPCMessageSetPreferenceValue userInfo:userInfo];
+        return;
+    }
+    [self.legacyPreferenceBridge setObject:value forPreferenceKey:preference];
 }
 
 #pragma mark - Runtime State
@@ -541,8 +573,8 @@ LAActivator *LASharedActivator;
         [seenNames addObject:listenerName];
 
         id<LAListener> listener = [self listenerForName:listenerName];
-        if (!listener ||
-            ![listener respondsToSelector:@selector(activator:receiveUnlockingDeviceEvent:forListenerName:)]) {
+        if (!listener || ![listener respondsToSelector:@selector(activator:
+                                                           receiveUnlockingDeviceEvent:forListenerName:)]) {
             continue;
         }
         if ([self listenerWithName:listenerName isCompatibleWithMode:eventMode]) {
@@ -1226,8 +1258,8 @@ LAActivator *LASharedActivator;
                                                       userInfo:userInfo];
     }
     id<LAListener> listener = [self listenerForName:name];
-    if (listener &&
-        [listener respondsToSelector:@selector(activator:requiresInfoDictionaryValueOfKey:forListenerWithName:)]) {
+    if (listener && [listener respondsToSelector:@selector(activator:
+                                                     requiresInfoDictionaryValueOfKey:forListenerWithName:)]) {
         id value = [listener activator:self requiresInfoDictionaryValueOfKey:key forListenerWithName:name];
         if (value) {
             return value;
@@ -1276,8 +1308,8 @@ LAActivator *LASharedActivator;
                                                userInfo:@{LAActivatorIPCKeyListenerName : name ?: @""}];
     }
     id<LAListener> listener = [self listenerForName:name];
-    if (listener &&
-        [listener respondsToSelector:@selector(activator:requiresCompatibleEventModesForListenerWithName:)]) {
+    if (listener && [listener respondsToSelector:@selector(activator:
+                                                     requiresCompatibleEventModesForListenerWithName:)]) {
         NSArray *modes = [LAActivatorBackend
             normalizedStringArray:[listener activator:self requiresCompatibleEventModesForListenerWithName:name]];
         if (modes.count > 0) {
@@ -1363,8 +1395,8 @@ LAActivator *LASharedActivator;
                                                userInfo:userInfo];
     }
     id<LAListener> listener = [self listenerForName:listenerName];
-    if (listener &&
-        [listener respondsToSelector:@selector(activator:requiresExclusiveAssignmentGroupsForListenerName:)]) {
+    if (listener && [listener respondsToSelector:@selector(activator:
+                                                     requiresExclusiveAssignmentGroupsForListenerName:)]) {
         NSArray *groups = [LAActivatorBackend
             normalizedStringArray:[listener activator:self
                                       requiresExclusiveAssignmentGroupsForListenerName:listenerName]];

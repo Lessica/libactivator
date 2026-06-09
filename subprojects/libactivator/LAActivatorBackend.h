@@ -35,14 +35,19 @@ __attribute__((visibility("hidden")))
 - (BOOL)hasEventWithName:(NSString *)name;
 
 - (BOOL)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (BOOL)assignEventName:(NSString *)eventName mode:(nullable NSString *)mode toListenerNames:(NSArray *)listenerNames;
 - (BOOL)addListenerName:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (BOOL)removeListenerName:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (BOOL)unassignEvent:(LAEvent *)event;
 - (NSArray *)assignedListenerNamesForEvent:(LAEvent *)event;
+- (NSArray *)assignedListenerNamesForEventName:(NSString *)eventName mode:(nullable NSString *)mode;
 - (NSArray *)eventsAssignedToListenerWithName:(NSString *)listenerName;
 
 - (BOOL)applicationWithDisplayIdentifierIsBlacklisted:(NSString *)displayIdentifier;
 - (BOOL)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
+- (BOOL)setListenerName:(NSString *)listenerName seen:(BOOL)seen;
+- (nullable id)objectForLegacyPreferenceKey:(NSString *)key;
+- (BOOL)setObject:(nullable id)object forLegacyPreferenceKey:(NSString *)key;
 - (NSArray *)availableProfileNames;
 - (BOOL)setCurrentProfileNameIfChanged:(nullable NSString *)currentProfileName;
 

@@ -10,6 +10,7 @@ libactivator_FILES += LAEvent.m
 libactivator_FILES += LAListenerFallbacks.m
 libactivator_FILES += LAEventDataSourceFallbacks.m
 libactivator_FILES += LAActivatorPersistence.m
+libactivator_FILES += LALegacyPreferenceBridge.m
 libactivator_FILES += LAActivatorBackend.m
 libactivator_FILES += LAActivatorResourceManager.m
 libactivator_FILES += LAListenerMetadataCache.m
