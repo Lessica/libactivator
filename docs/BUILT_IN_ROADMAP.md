@@ -39,7 +39,6 @@
 
 - `required-capabilities` 通过 MobileGestalt 能力 key 过滤，例如 `ipad`、`touch-id`、`real-home-button`、`fake-home-button`、`watch-companion`。
 - `small-icons` 路径按 `jbroot(path)` 优先、原路径 fallback 的方式解析。
-- `glyph.pdf` lookup 接入 Settings UI 可用的数据层，但不在核心里恢复 1.9.0 大图标 callback。
 - resource manager 缓存必须有并发保护，清理策略要集中。
 - resource tests 覆盖 bundled plist、目录式 third-party `Info.plist`、required capabilities、small-icons path fallback、excluded social compose actions。
 
@@ -115,7 +114,8 @@
 - modes/events/listeners 列表、搜索、assignments、profiles、blacklist。
 - listener/event configuration controller factory。
 - menu editor 和 menu listener runtime provider。
-- glyph/small icon 展示、localization、resource metadata 展示。
+- `glyph.pdf` lookup 和 glyph/small icon 展示、localization、resource metadata 展示。
+- `glyph.pdf` 只作为 Settings UI 展示资源接入，不在 `libactivator` 核心里恢复 1.9.0 大图标 callback。
 
 边界：Settings UI 不实现 event acquisition，也不直接拥有 SpringBoard runtime state；它通过 Public API/IPC 操作 SpringBoard authoritative backend。
 

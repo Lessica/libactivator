@@ -8,6 +8,7 @@
 - `DEVICE_WORKFLOW.md`：与真机设备交互时必须遵守的流程，包括 rootless/roothide 环境、安装、日志、崩溃日志、Frida 诊断边界。
 - `TESTING.md`：测试分类、执行责任和默认验证入口，说明哪些测试可以进提交门槛，哪些只能作为专项诊断。
 - `BUILT_IN_ROADMAP.md`：下一阶段内置 event / listener / action 的实现路线图，明确各类能力由哪个模块承载、按什么顺序推进。
+- `BUILT_IN_ACTION_TRACKER.md`：内置 listener/action 的具体事项跟踪表，记录每项动作的依据、状态和首次验证方式。
 
 ## 归档说明
 
