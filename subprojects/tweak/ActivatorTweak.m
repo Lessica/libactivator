@@ -8,8 +8,8 @@
 
 #define CHUseSubstrate
 
-#import "LATBuiltInListenerRegistry.h"
 #import "LAActivator+Private.h"
+#import "LATBuiltInListenerRegistry.h"
 
 #import <CaptainHook/CaptainHook.h>
 #import <UIKit/UIKit.h>
@@ -20,6 +20,7 @@ CHDeclareClass(UIViewController);
 CHDeclareClass(SBBacklightController);
 CHDeclareClass(SBCoverSheetPrimarySlidingViewController);
 CHDeclareClass(SBMainSwitcherViewController);
+CHDeclareClass(SBMainSwitcherControllerCoordinator);
 CHDeclareClass(SBHIconManager);
 CHDeclareClass(_UISystemGestureWindow);
 
@@ -53,14 +54,39 @@ static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
 - (BOOL)isMainSwitcherVisible;
 @end
 
+@interface SBMainSwitcherControllerCoordinator : NSObject
+- (BOOL)isAnySwitcherVisible;
+@end
+
 static void LATUpdateMainSwitcherVisibility(SBMainSwitcherViewController *switcher) {
-    dispatch_async(dispatch_get_main_queue(), ^{
+    dispatch_block_t updateBlock = ^{
         if (![switcher respondsToSelector:@selector(isMainSwitcherVisible)]) {
             return;
         }
         [LASharedActivator la_noteSpringBoardInterfaceVisible:[switcher isMainSwitcherVisible]
                                                        source:LATRuntimeStateSourceMainSwitcher];
-    });
+    };
+    if ([NSThread isMainThread]) {
+        updateBlock();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), updateBlock);
+    }
+}
+
+static void LATUpdateMainSwitcherCoordinatorVisibility(SBMainSwitcherControllerCoordinator *coordinator) {
+    dispatch_block_t updateBlock = ^{
+        if (![coordinator respondsToSelector:@selector(isAnySwitcherVisible)]) {
+            [LASharedActivator la_noteRuntimeStateMayHaveChanged];
+            return;
+        }
+        [LASharedActivator la_noteSpringBoardInterfaceVisible:[coordinator isAnySwitcherVisible]
+                                                       source:LATRuntimeStateSourceMainSwitcher];
+    };
+    if ([NSThread isMainThread]) {
+        updateBlock();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), updateBlock);
+    }
 }
 
 #pragma mark - UIViewController
@@ -115,6 +141,22 @@ CHOptimizedMethod2(self, void, SBMainSwitcherViewController, layoutStateTransiti
     CHSuper2(SBMainSwitcherViewController, layoutStateTransitionCoordinator, coordinator,
              transitionDidEndWithTransitionContext, context);
     LATUpdateMainSwitcherVisibility(self);
+}
+
+#pragma mark - SBMainSwitcherControllerCoordinator
+
+CHOptimizedMethod2(self, void, SBMainSwitcherControllerCoordinator, layoutStateTransitionCoordinator, id, coordinator,
+                   transitionDidBeginWithTransitionContext, id, context) {
+    CHSuper2(SBMainSwitcherControllerCoordinator, layoutStateTransitionCoordinator, coordinator,
+             transitionDidBeginWithTransitionContext, context);
+    LATUpdateMainSwitcherCoordinatorVisibility(self);
+}
+
+CHOptimizedMethod2(self, void, SBMainSwitcherControllerCoordinator, layoutStateTransitionCoordinator, id, coordinator,
+                   transitionDidEndWithTransitionContext, id, context) {
+    CHSuper2(SBMainSwitcherControllerCoordinator, layoutStateTransitionCoordinator, coordinator,
+             transitionDidEndWithTransitionContext, context);
+    LATUpdateMainSwitcherCoordinatorVisibility(self);
 }
 
 #pragma mark - SBHIconManager
@@ -178,6 +220,7 @@ static void LATLoadSpringBoardClasses(void) {
     CHLoadClass_(&SBCoverSheetPrimarySlidingViewController$,
                  NSClassFromString(@"SBCoverSheetPrimarySlidingViewController"));
     CHLoadClass_(&SBMainSwitcherViewController$, NSClassFromString(@"SBMainSwitcherViewController"));
+    CHLoadClass_(&SBMainSwitcherControllerCoordinator$, NSClassFromString(@"SBMainSwitcherControllerCoordinator"));
     CHLoadClass_(&SBHIconManager$, NSClassFromString(@"SBHIconManager"));
     CHLoadClass_(&_UISystemGestureWindow$, NSClassFromString(@"_UISystemGestureWindow"));
 }
@@ -197,6 +240,10 @@ static void LATInstallHooks(void) {
         CHHook2(SBMainSwitcherViewController, layoutStateTransitionCoordinator,
                 transitionDidBeginWithTransitionContext);
         CHHook2(SBMainSwitcherViewController, layoutStateTransitionCoordinator, transitionDidEndWithTransitionContext);
+        CHHook2(SBMainSwitcherControllerCoordinator, layoutStateTransitionCoordinator,
+                transitionDidBeginWithTransitionContext);
+        CHHook2(SBMainSwitcherControllerCoordinator, layoutStateTransitionCoordinator,
+                transitionDidEndWithTransitionContext);
         if (@available(iOS 17, *)) {
             CHHook1(SBHIconManager, rootFolderControllerViewWillAppear);
             CHHook1(SBHIconManager, rootFolderControllerViewDidDisappear);

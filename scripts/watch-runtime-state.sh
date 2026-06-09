@@ -3,6 +3,8 @@
 # Usage:
 #   . scripts/roothide.sh
 #   scripts/watch-runtime-state.sh
+#   . scripts/rootless.sh
+#   scripts/watch-runtime-state.sh
 #
 # Environment:
 #   THEOS_DEVICE_IP and THEOS_DEVICE_PORT are expected to be provided by the
@@ -12,5 +14,10 @@
 
 set -e
 
+test_runner_path="${LA_TEST_RUNNER_PATH:-/usr/libexec/libactivator/libactivator-tests}"
+if [ "${THEOS_PACKAGE_SCHEME:-}" = "rootless" ]; then
+    test_runner_path="${LA_TEST_RUNNER_PATH:-/var/jb/usr/libexec/libactivator/libactivator-tests}"
+fi
+
 ssh -p "${THEOS_DEVICE_PORT:-22}" "${THEOS_DEVICE_USER:-root}@${THEOS_DEVICE_IP}" \
-    "${LA_TEST_RUNNER_PATH:-/usr/libexec/libactivator/libactivator-tests} watch-runtime"
+    "${test_runner_path} watch-runtime"

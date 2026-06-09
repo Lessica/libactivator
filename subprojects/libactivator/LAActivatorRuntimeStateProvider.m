@@ -26,7 +26,10 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
 @interface LAActivatorRuntimeStateProvider ()
 - (NSString *)foregroundDisplayIdentifierIgnoringLockState;
 - (NSString *)displayIdentifierForApplication:(id<LAActivatorSpringBoardApplication>)application;
-- (NSString *)eventModeWithScreenOn:(BOOL)screenOn uiLocked:(BOOL)uiLocked;
+- (NSString *)eventModeWithScreenOn:(BOOL)screenOn uiLocked:(BOOL)uiLocked underneathMode:(NSString *)underneathMode;
+- (NSString *)eventModeUnderneathLockScreenWithHomeScreenVisible:(BOOL)homeScreenVisible
+                                     springBoardInterfaceVisible:(BOOL)springBoardInterfaceVisible
+                                     foregroundDisplayIdentifier:(NSString *)foregroundDisplayIdentifier;
 - (void)updateVisibilitySet:(NSMutableSet *)visibilitySet visible:(BOOL)visible source:(NSString *)source;
 - (void)updateStateWithBlock:(void (^)(void))block;
 @end
@@ -36,8 +39,14 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
     NSMutableSet *_springBoardInterfaceVisibilitySources;
     NSMutableSet *_lockScreenVisibilitySources;
     BOOL _screenBlanked;
+    BOOL _cachedScreenOn;
+    BOOL _cachedUILocked;
+    NSUInteger _stateGeneration;
     dispatch_queue_t _stateQueue;
-    NSString *_lastEventMode;
+    NSString *_cachedEventMode;
+    NSString *_cachedEventModeUnderneathLockScreen;
+    NSString *_cachedDisplayIdentifier;
+    NSString *_cachedForegroundDisplayIdentifier;
     void (^_eventModeChangeHandler)(NSString *eventMode);
     LAActivatorUnlockService *_unlockService;
 }
@@ -52,7 +61,9 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
         _lockScreenVisibilitySources = [[NSMutableSet alloc] init];
         _stateQueue = dispatch_queue_create("libactivator.runtime-state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _unlockService = [[LAActivatorUnlockService alloc] init];
-        _lastEventMode = LAEventModeSpringBoard;
+        _cachedScreenOn = YES;
+        _cachedEventMode = LAEventModeSpringBoard;
+        _cachedEventModeUnderneathLockScreen = LAEventModeSpringBoard;
     }
     return self;
 }
@@ -117,27 +128,19 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
 #pragma mark - State
 
 - (NSString *)currentEventMode {
-    __block BOOL screenOn = YES;
+    __block NSString *eventMode = nil;
     dispatch_sync(_stateQueue, ^{
-        screenOn = !self->_screenBlanked;
+        eventMode = [self->_cachedEventMode copy];
     });
-    return [self eventModeWithScreenOn:screenOn uiLocked:[_unlockService isUILocked]];
+    return eventMode ?: LAEventModeSpringBoard;
 }
 
 - (NSString *)currentEventModeUnderneathLockScreen {
-    __block BOOL homeScreenVisible = NO;
-    __block BOOL springBoardInterfaceVisible = NO;
+    __block NSString *eventMode = nil;
     dispatch_sync(_stateQueue, ^{
-        homeScreenVisible = self->_homeScreenVisibilitySources.count > 0;
-        springBoardInterfaceVisible = self->_springBoardInterfaceVisibilitySources.count > 0;
+        eventMode = [self->_cachedEventModeUnderneathLockScreen copy];
     });
-    if (homeScreenVisible || springBoardInterfaceVisible) {
-        return LAEventModeSpringBoard;
-    }
-    if ([self foregroundDisplayIdentifierIgnoringLockState].length > 0) {
-        return LAEventModeApplication;
-    }
-    return LAEventModeSpringBoard;
+    return eventMode ?: LAEventModeSpringBoard;
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {
@@ -145,10 +148,11 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
 }
 
 - (NSString *)displayIdentifierForCurrentApplication {
-    if (![[self currentEventMode] isEqualToString:LAEventModeApplication]) {
-        return nil;
-    }
-    return [self foregroundDisplayIdentifierIgnoringLockState];
+    __block NSString *displayIdentifier = nil;
+    dispatch_sync(_stateQueue, ^{
+        displayIdentifier = [self->_cachedDisplayIdentifier copy];
+    });
+    return displayIdentifier;
 }
 
 #if LA_TESTING
@@ -157,22 +161,29 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
     __block NSArray *springBoardInterfaceSources = nil;
     __block NSArray *lockSources = nil;
     __block BOOL screenOn = YES;
+    __block BOOL uiLocked = NO;
+    __block NSString *frontMost = nil;
+    __block NSString *mode = nil;
+    __block NSString *underneathMode = nil;
+    __block NSString *displayIdentifier = nil;
     dispatch_sync(_stateQueue, ^{
         homeSources = [[self->_homeScreenVisibilitySources allObjects] sortedArrayUsingSelector:@selector(compare:)];
         springBoardInterfaceSources =
             [[self->_springBoardInterfaceVisibilitySources allObjects] sortedArrayUsingSelector:@selector(compare:)];
         lockSources = [[self->_lockScreenVisibilitySources allObjects] sortedArrayUsingSelector:@selector(compare:)];
-        screenOn = !self->_screenBlanked;
+        screenOn = self->_cachedScreenOn;
+        uiLocked = self->_cachedUILocked;
+        frontMost = [self->_cachedForegroundDisplayIdentifier copy];
+        mode = [self->_cachedEventMode copy];
+        underneathMode = [self->_cachedEventModeUnderneathLockScreen copy];
+        displayIdentifier = [self->_cachedDisplayIdentifier copy];
     });
 
-    BOOL uiLocked = [_unlockService isUILocked];
     BOOL springBoardInterfaceVisible = homeSources.count > 0 || springBoardInterfaceSources.count > 0;
-    NSString *frontMost = [self foregroundDisplayIdentifierIgnoringLockState] ?: @"";
-    NSString *mode = [self eventModeWithScreenOn:screenOn uiLocked:uiLocked] ?: @"";
     return @{
-        @"Mode" : mode,
-        @"UnderneathMode" : self.currentEventModeUnderneathLockScreen ?: @"",
-        @"DisplayIdentifier" : self.displayIdentifierForCurrentApplication ?: @"",
+        @"Mode" : mode ?: @"",
+        @"UnderneathMode" : underneathMode ?: @"",
+        @"DisplayIdentifier" : displayIdentifier ?: @"",
         @"HomeSources" : homeSources ?: @[],
         @"SpringBoardInterfaceSources" : springBoardInterfaceSources ?: @[],
         @"LockSources" : lockSources ?: @[],
@@ -181,7 +192,7 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
         @"SpringBoardInterfaceVisible" : @(springBoardInterfaceVisible),
         @"InLockScreen" : @(!screenOn || uiLocked),
         @"UILocked" : @(uiLocked),
-        @"FrontMost" : frontMost,
+        @"FrontMost" : frontMost ?: @"",
     };
 }
 #endif
@@ -228,11 +239,23 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
     return nil;
 }
 
-- (NSString *)eventModeWithScreenOn:(BOOL)screenOn uiLocked:(BOOL)uiLocked {
+- (NSString *)eventModeWithScreenOn:(BOOL)screenOn uiLocked:(BOOL)uiLocked underneathMode:(NSString *)underneathMode {
     if (!screenOn || uiLocked) {
         return LAEventModeLockScreen;
     }
-    return [self currentEventModeUnderneathLockScreen];
+    return underneathMode ?: LAEventModeSpringBoard;
+}
+
+- (NSString *)eventModeUnderneathLockScreenWithHomeScreenVisible:(BOOL)homeScreenVisible
+                                     springBoardInterfaceVisible:(BOOL)springBoardInterfaceVisible
+                                     foregroundDisplayIdentifier:(NSString *)foregroundDisplayIdentifier {
+    if (homeScreenVisible || springBoardInterfaceVisible) {
+        return LAEventModeSpringBoard;
+    }
+    if (foregroundDisplayIdentifier.length > 0) {
+        return LAEventModeApplication;
+    }
+    return LAEventModeSpringBoard;
 }
 
 - (void)updateVisibilitySet:(NSMutableSet *)visibilitySet visible:(BOOL)visible source:(NSString *)source {
@@ -246,16 +269,42 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
 
 - (void)updateStateWithBlock:(void (^)(void))block {
     __block NSString *previousMode = nil;
+    __block NSUInteger generation = 0;
+    __block BOOL screenOn = YES;
+    __block BOOL homeScreenVisible = NO;
+    __block BOOL springBoardInterfaceVisible = NO;
     dispatch_sync(_stateQueue, ^{
-        previousMode = [self->_lastEventMode copy];
+        previousMode = [self->_cachedEventMode copy];
         block();
+        self->_stateGeneration++;
+        generation = self->_stateGeneration;
+        screenOn = !self->_screenBlanked;
+        homeScreenVisible = self->_homeScreenVisibilitySources.count > 0;
+        springBoardInterfaceVisible = self->_springBoardInterfaceVisibilitySources.count > 0;
     });
 
-    NSString *eventMode = self.currentEventMode;
+    BOOL uiLocked = [_unlockService isUILocked];
+    NSString *foregroundDisplayIdentifier = [self foregroundDisplayIdentifierIgnoringLockState];
+    NSString *underneathMode = [self eventModeUnderneathLockScreenWithHomeScreenVisible:homeScreenVisible
+                                                            springBoardInterfaceVisible:springBoardInterfaceVisible
+                                                            foregroundDisplayIdentifier:foregroundDisplayIdentifier];
+    NSString *eventMode = [self eventModeWithScreenOn:screenOn uiLocked:uiLocked underneathMode:underneathMode];
+    NSString *displayIdentifier =
+        [eventMode isEqualToString:LAEventModeApplication] ? foregroundDisplayIdentifier : nil;
     __block void (^handler)(NSString *eventMode) = nil;
     dispatch_sync(_stateQueue, ^{
-        if (eventMode.length > 0 && ![eventMode isEqualToString:self->_lastEventMode]) {
-            self->_lastEventMode = [eventMode copy];
+        if (generation != self->_stateGeneration) {
+            return;
+        }
+
+        self->_cachedScreenOn = screenOn;
+        self->_cachedUILocked = uiLocked;
+        self->_cachedEventMode = [eventMode copy] ?: LAEventModeSpringBoard;
+        self->_cachedEventModeUnderneathLockScreen = [underneathMode copy] ?: LAEventModeSpringBoard;
+        self->_cachedDisplayIdentifier = [displayIdentifier copy];
+        self->_cachedForegroundDisplayIdentifier = [foregroundDisplayIdentifier copy];
+
+        if (eventMode.length > 0 && ![eventMode isEqualToString:previousMode]) {
             handler = [self->_eventModeChangeHandler copy];
         }
     });

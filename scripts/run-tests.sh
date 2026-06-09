@@ -20,16 +20,21 @@ wait_for_springboard_pid() {
     done
 }
 
+test_runner_path="${LA_TEST_RUNNER_PATH:-/usr/libexec/libactivator/libactivator-tests}"
+if [ "${THEOS_PACKAGE_SCHEME:-}" = "rootless" ]; then
+    test_runner_path="${LA_TEST_RUNNER_PATH:-/var/jb/usr/libexec/libactivator/libactivator-tests}"
+fi
+
 # shellcheck disable=SC1010
 gmake clean do LA_TESTING=1
 
 springboard_pid_before="$(wait_for_springboard_pid)"
 echo "[tests] SpringBoard pid before runner: ${springboard_pid_before}"
 
-echo "[tests] Running stable tests with ${LA_TEST_RUNNER_PATH:-/usr/libexec/libactivator/libactivator-tests} on ${THEOS_DEVICE_IP}"
+echo "[tests] Running stable tests with ${test_runner_path} on ${THEOS_DEVICE_IP}"
 set +e
 ssh -p "${THEOS_DEVICE_PORT:-22}" "${THEOS_DEVICE_USER:-root}@${THEOS_DEVICE_IP}" \
-    "${LA_TEST_RUNNER_PATH:-/usr/libexec/libactivator/libactivator-tests}"
+    "${test_runner_path}"
 runner_status="$?"
 set -e
 
