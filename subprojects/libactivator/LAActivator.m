@@ -495,7 +495,8 @@ LAActivator *LASharedActivator;
             __weak typeof(self) weakSelf = self;
             [self.touchActivityTracker performWhenTouchesEnd:^{
                 __strong typeof(weakSelf) strongSelf = weakSelf;
-                [strongSelf la_sendEvent:deferredEvent toListenerNames:@[ listenerName ] allowDeferral:NO];
+                deferredEvent.handled = NO;
+                [strongSelf la_sendEvent:deferredEvent directlyToListenerWithName:listenerName abort:NO];
             }];
             continue;
         }

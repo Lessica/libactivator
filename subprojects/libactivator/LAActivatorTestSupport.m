@@ -968,12 +968,16 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:listenerB.otherHandledCount == 1
             caseName:@"deferred-no-touch-notifies-next-listener"
               reason:@"Deferred no-touch dispatch did not notify the next listener"];
+    listenerA.compatibleModes = @[];
     [self sendSyntheticTouchWithTouching:NO];
     [self waitForSyntheticTouchDelivery];
     [self waitForMainQueue];
     [recorder expect:listenerA.receiveCount == 1 && listenerB.receiveCount == 1
             caseName:@"deferred-no-touch-drain"
               reason:@"Deferred event did not dispatch after touch ended"];
+    [recorder expect:listenerA.receiveCount == 1
+            caseName:@"deferred-no-touch-direct-drain"
+              reason:@"Deferred event was filtered during drain"];
     [recorder expect:listenerA.lastReceivedEventMode == nil
             caseName:@"nil-mode-deferred-dispatch"
               reason:@"Deferred dispatch rewrote nil event mode"];
