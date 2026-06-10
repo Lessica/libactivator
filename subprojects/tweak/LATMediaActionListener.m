@@ -10,6 +10,8 @@
 
 #import <CoreFoundation/CoreFoundation.h>
 #import <HBLog.h>
+#import <UIKit/UIKit.h>
+#import <dlfcn.h>
 #import <mach/mach_time.h>
 
 typedef const struct __IOHIDEvent *IOHIDEventRef;
@@ -32,20 +34,65 @@ static const uint32_t LATMediaHIDUsageVolumeDecrement = 0xEA;
 static const uint32_t LATMediaHIDEventOptionNone = 0;
 static const uint64_t LATMediaHIDSenderID = 0x8000000817319371;
 
+typedef NS_ENUM(NSUInteger, LATMediaActionKind) {
+    LATMediaActionKindHID,
+    LATMediaActionKindVolumeHUD,
+    LATMediaActionKindRingerReset,
+    LATMediaActionKindRingerMute,
+};
+
+typedef NS_ENUM(NSUInteger, LATMediaRingerMuteAction) {
+    LATMediaRingerMuteActionMute,
+    LATMediaRingerMuteActionUnmute,
+    LATMediaRingerMuteActionToggle,
+};
+
+typedef int (*LATMediaRingerStateGetter)(void);
+
 @interface LATMediaActionCommand : NSObject
 @property(nonatomic, copy, readonly) NSString *listenerName;
 @property(nonatomic, copy, readonly) NSString *selectorName;
+@property(nonatomic, assign, readonly) LATMediaActionKind kind;
+@property(nonatomic, assign, readonly) LATMediaRingerMuteAction ringerMuteAction;
 @property(nonatomic, assign, readonly) uint32_t page;
 @property(nonatomic, assign, readonly) uint32_t usage;
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
                                 page:(uint32_t)page
                                usage:(uint32_t)usage;
+- (instancetype)initWithVolumeHUDListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName;
+- (instancetype)initWithRingerResetListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName;
+- (instancetype)initWithRingerMuteListenerName:(NSString *)listenerName
+                                  selectorName:(NSString *)selectorName
+                                        action:(LATMediaRingerMuteAction)action;
 @end
 
 @interface LATMediaHIDEventSender : NSObject
 - (BOOL)sendCommand:(LATMediaActionCommand *)command listenerName:(NSString *)listenerName;
 @end
+
+@interface LATMediaVolumeHUDPresenter : NSObject
+- (BOOL)presentVolumeHUDForListenerName:(NSString *)listenerName;
+@end
+
+@interface LATMediaRingerStateResetter : NSObject
+- (BOOL)resetRingerStateForListenerName:(NSString *)listenerName;
+@end
+
+@interface LATMediaRingerMuteController : NSObject
+- (BOOL)applyRingerMuteAction:(LATMediaRingerMuteAction)action listenerName:(NSString *)listenerName;
+#if LA_TESTING
+- (NSString *)testingPhaseForAction:(LATMediaRingerMuteAction)action;
+#endif
+@end
+
+@interface LATMediaActionListener ()
++ (id)volumeControlInstance;
++ (id)ringerControlInstance;
+@end
+
+static __weak id LATCapturedVolumeControl;
+static __weak id LATCapturedRingerControl;
 
 #if LA_TESTING
 static LATMediaActionSendHandler LATTestingSendHandler;
@@ -66,8 +113,51 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
     if (self) {
         _listenerName = [listenerName copy];
         _selectorName = [selectorName copy];
+        _kind = LATMediaActionKindHID;
+        _ringerMuteAction = LATMediaRingerMuteActionMute;
         _page = page;
         _usage = usage;
+    }
+    return self;
+}
+
+- (instancetype)initWithVolumeHUDListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName {
+    self = [super init];
+    if (self) {
+        _listenerName = [listenerName copy];
+        _selectorName = [selectorName copy];
+        _kind = LATMediaActionKindVolumeHUD;
+        _ringerMuteAction = LATMediaRingerMuteActionMute;
+        _page = 0;
+        _usage = 0;
+    }
+    return self;
+}
+
+- (instancetype)initWithRingerResetListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName {
+    self = [super init];
+    if (self) {
+        _listenerName = [listenerName copy];
+        _selectorName = [selectorName copy];
+        _kind = LATMediaActionKindRingerReset;
+        _ringerMuteAction = LATMediaRingerMuteActionMute;
+        _page = 0;
+        _usage = 0;
+    }
+    return self;
+}
+
+- (instancetype)initWithRingerMuteListenerName:(NSString *)listenerName
+                                  selectorName:(NSString *)selectorName
+                                        action:(LATMediaRingerMuteAction)action {
+    self = [super init];
+    if (self) {
+        _listenerName = [listenerName copy];
+        _selectorName = [selectorName copy];
+        _kind = LATMediaActionKindRingerMute;
+        _ringerMuteAction = action;
+        _page = 0;
+        _usage = 0;
     }
     return self;
 }
@@ -150,14 +240,199 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
 
 @end
 
+@implementation LATMediaVolumeHUDPresenter
+
+- (BOOL)presentVolumeHUDForListenerName:(NSString *)listenerName {
+#if LA_TESTING
+    LATTestingLastSentListenerName = [listenerName copy];
+    LATTestingLastSentPage = 0;
+    LATTestingLastSentUsage = 0;
+    if (!LATTestingSentPhases) {
+        LATTestingSentPhases = [[NSMutableArray alloc] init];
+    }
+    [LATTestingSentPhases addObject:@"volume-hud"];
+    if (LATTestingSendHandler) {
+        return LATTestingSendHandler(listenerName ?: @"", 0, 0);
+    }
+#endif
+
+    if (![NSThread isMainThread]) {
+        __block BOOL presented = NO;
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            presented = [self presentVolumeHUDForListenerName:listenerName];
+        });
+        return presented;
+    }
+
+    id volumeControl = [LATMediaActionListener volumeControlInstance];
+    if (!volumeControl) {
+        HBLogError(@"Unable to present volume HUD for media action %@ because SBVolumeControl was not captured",
+                   listenerName ?: @"");
+        return NO;
+    }
+
+    SEL presentSelector = NSSelectorFromString(@"_presentVolumeHUDWithVolume:");
+    if (![volumeControl respondsToSelector:presentSelector]) {
+        HBLogError(@"SBVolumeControl does not support _presentVolumeHUDWithVolume:");
+        return NO;
+    }
+
+    float volume = 0.5f;
+    SEL effectiveVolumeSelector = NSSelectorFromString(@"_effectiveVolume");
+    if ([volumeControl respondsToSelector:effectiveVolumeSelector]) {
+        float (*effectiveVolume)(id, SEL) =
+            (float (*)(id, SEL))[volumeControl methodForSelector:effectiveVolumeSelector];
+        volume = effectiveVolume(volumeControl, effectiveVolumeSelector);
+    }
+
+    void (*presentVolumeHUD)(id, SEL, float) =
+        (void (*)(id, SEL, float))[volumeControl methodForSelector:presentSelector];
+    presentVolumeHUD(volumeControl, presentSelector, volume);
+    return YES;
+}
+
+@end
+
+@implementation LATMediaRingerStateResetter
+
+- (BOOL)resetRingerStateForListenerName:(NSString *)listenerName {
+#if LA_TESTING
+    LATTestingLastSentListenerName = [listenerName copy];
+    LATTestingLastSentPage = 0;
+    LATTestingLastSentUsage = 0;
+    if (!LATTestingSentPhases) {
+        LATTestingSentPhases = [[NSMutableArray alloc] init];
+    }
+    [LATTestingSentPhases addObject:@"ringer-reset"];
+    if (LATTestingSendHandler) {
+        return LATTestingSendHandler(listenerName ?: @"", 0, 0);
+    }
+#endif
+
+    if (![NSThread isMainThread]) {
+        __block BOOL reset = NO;
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            reset = [self resetRingerStateForListenerName:listenerName];
+        });
+        return reset;
+    }
+
+    LATMediaRingerStateGetter getRingerState =
+        (LATMediaRingerStateGetter)dlsym(RTLD_DEFAULT, "BKSHIDServicesGetRingerState");
+    if (!getRingerState) {
+        HBLogError(@"Unable to reset ringer state for media action %@ because BKSHIDServicesGetRingerState was not found",
+                   listenerName ?: @"");
+        return NO;
+    }
+
+    UIApplication *application = UIApplication.sharedApplication;
+    SEL updateSelector = NSSelectorFromString(@"_updateRingerState:withVisuals:updatePreferenceRegister:");
+    if (!application || ![application respondsToSelector:updateSelector]) {
+        HBLogError(@"Unable to reset ringer state for media action %@ because SpringBoard does not support %@",
+                   listenerName ?: @"", NSStringFromSelector(updateSelector));
+        return NO;
+    }
+
+    int ringerState = getRingerState();
+    void (*updateRingerState)(id, SEL, int, BOOL, BOOL) =
+        (void (*)(id, SEL, int, BOOL, BOOL))[application methodForSelector:updateSelector];
+    updateRingerState(application, updateSelector, ringerState, NO, NO);
+    return YES;
+}
+
+@end
+
+@implementation LATMediaRingerMuteController
+
+- (BOOL)applyRingerMuteAction:(LATMediaRingerMuteAction)action listenerName:(NSString *)listenerName {
+#if LA_TESTING
+    LATTestingLastSentListenerName = [listenerName copy];
+    LATTestingLastSentPage = 0;
+    LATTestingLastSentUsage = 0;
+    if (!LATTestingSentPhases) {
+        LATTestingSentPhases = [[NSMutableArray alloc] init];
+    }
+    [LATTestingSentPhases addObject:[self testingPhaseForAction:action]];
+    if (LATTestingSendHandler) {
+        return LATTestingSendHandler(listenerName ?: @"", 0, 0);
+    }
+#endif
+
+    if (![NSThread isMainThread]) {
+        __block BOOL applied = NO;
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            applied = [self applyRingerMuteAction:action listenerName:listenerName];
+        });
+        return applied;
+    }
+
+    id ringerControl = [LATMediaActionListener ringerControlInstance];
+    if (!ringerControl) {
+        HBLogError(@"Unable to apply ringer mute action %@ because SBRingerControl was not captured",
+                   listenerName ?: @"");
+        return NO;
+    }
+
+    SEL setMutedSelector = NSSelectorFromString(@"setRingerMuted:");
+    if (![ringerControl respondsToSelector:setMutedSelector]) {
+        HBLogError(@"SBRingerControl does not support setRingerMuted:");
+        return NO;
+    }
+
+    BOOL muted = NO;
+    if (action == LATMediaRingerMuteActionToggle) {
+        SEL isMutedSelector = NSSelectorFromString(@"isRingerMuted");
+        if (![ringerControl respondsToSelector:isMutedSelector]) {
+            HBLogError(@"SBRingerControl does not support isRingerMuted");
+            return NO;
+        }
+        BOOL (*isMuted)(id, SEL) = (BOOL (*)(id, SEL))[ringerControl methodForSelector:isMutedSelector];
+        muted = !isMuted(ringerControl, isMutedSelector);
+    } else {
+        muted = (action == LATMediaRingerMuteActionMute);
+    }
+
+    void (*setMuted)(id, SEL, BOOL) = (void (*)(id, SEL, BOOL))[ringerControl methodForSelector:setMutedSelector];
+    setMuted(ringerControl, setMutedSelector, muted);
+
+    SEL activateHUDSelector = NSSelectorFromString(@"activateRingerHUDFromMuteSwitch:");
+    if ([ringerControl respondsToSelector:activateHUDSelector]) {
+        void (*activateHUD)(id, SEL, int) =
+            (void (*)(id, SEL, int))[ringerControl methodForSelector:activateHUDSelector];
+        activateHUD(ringerControl, activateHUDSelector, muted ? 0 : 1);
+    }
+    return YES;
+}
+
+#if LA_TESTING
+- (NSString *)testingPhaseForAction:(LATMediaRingerMuteAction)action {
+    switch (action) {
+        case LATMediaRingerMuteActionMute:
+            return @"ringer-mute";
+        case LATMediaRingerMuteActionUnmute:
+            return @"ringer-unmute";
+        case LATMediaRingerMuteActionToggle:
+            return @"ringer-toggle";
+    }
+}
+#endif
+
+@end
+
 @implementation LATMediaActionListener {
     LATMediaHIDEventSender *_sender;
+    LATMediaVolumeHUDPresenter *_volumeHUDPresenter;
+    LATMediaRingerStateResetter *_ringerStateResetter;
+    LATMediaRingerMuteController *_ringerMuteController;
 }
 
 - (instancetype)init {
     self = [super init];
     if (self) {
         _sender = [[LATMediaHIDEventSender alloc] init];
+        _volumeHUDPresenter = [[LATMediaVolumeHUDPresenter alloc] init];
+        _ringerStateResetter = [[LATMediaRingerStateResetter alloc] init];
+        _ringerMuteController = [[LATMediaRingerMuteController alloc] init];
     }
     return self;
 }
@@ -183,7 +458,7 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
     LATMediaActionCommand *command = [self.class commandsByListenerName][listenerName ?: @""];
     if (!command) {
-        HBLogWarn(@"Media action %@ has no HID command mapping", listenerName ?: @"");
+        HBLogWarn(@"Media action %@ has no command mapping", listenerName ?: @"");
         return;
     }
 
@@ -192,7 +467,22 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
         return;
     }
 
-    if ([_sender sendCommand:command listenerName:listenerName]) {
+    BOOL sent = NO;
+    switch (command.kind) {
+        case LATMediaActionKindHID:
+            sent = [_sender sendCommand:command listenerName:listenerName];
+            break;
+        case LATMediaActionKindVolumeHUD:
+            sent = [_volumeHUDPresenter presentVolumeHUDForListenerName:listenerName];
+            break;
+        case LATMediaActionKindRingerReset:
+            sent = [_ringerStateResetter resetRingerStateForListenerName:listenerName];
+            break;
+        case LATMediaActionKindRingerMute:
+            sent = [_ringerMuteController applyRingerMuteAction:command.ringerMuteAction listenerName:listenerName];
+            break;
+    }
+    if (sent) {
         event.handled = YES;
     }
 }
@@ -242,6 +532,19 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
                                                    selectorName:@"decreaseVolume"
                                                            page:LATMediaHIDPageConsumer
                                                           usage:LATMediaHIDUsageVolumeDecrement],
+            [[LATMediaActionCommand alloc] initWithVolumeHUDListenerName:@"libactivator.audio.show-volume-bar"
+                                                            selectorName:@"showVolumeBar"],
+            [[LATMediaActionCommand alloc] initWithRingerResetListenerName:@"libactivator.audio.reset-ringer-state"
+                                                              selectorName:@"resetRingerState"],
+            [[LATMediaActionCommand alloc] initWithRingerMuteListenerName:@"libactivator.audio.mute-ringer"
+                                                             selectorName:@"muteRinger"
+                                                                   action:LATMediaRingerMuteActionMute],
+            [[LATMediaActionCommand alloc] initWithRingerMuteListenerName:@"libactivator.audio.unmute-ringer"
+                                                             selectorName:@"unmuteRinger"
+                                                                   action:LATMediaRingerMuteActionUnmute],
+            [[LATMediaActionCommand alloc] initWithRingerMuteListenerName:@"libactivator.audio.toggle-ringer-mute"
+                                                             selectorName:@"toggleRingerMute"
+                                                                   action:LATMediaRingerMuteActionToggle],
         ];
 
         NSMutableDictionary<NSString *, LATMediaActionCommand *> *mutableCommands =
@@ -252,6 +555,33 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
         commands = [mutableCommands copy];
     });
     return commands;
+}
+
++ (void)noteVolumeControlInstance:(id)volumeControl {
+    if (volumeControl) {
+        LATCapturedVolumeControl = volumeControl;
+    }
+}
+
++ (void)noteRingerControlInstance:(id)ringerControl {
+    if (ringerControl) {
+        LATCapturedRingerControl = ringerControl;
+    }
+}
+
++ (id)volumeControlInstance {
+    return LATCapturedVolumeControl;
+}
+
++ (id)ringerControlInstance {
+    id ringerControl = LATCapturedRingerControl;
+    if (ringerControl) {
+        return ringerControl;
+    }
+
+    id __unsafe_unretained *globalRingerControl =
+        (id __unsafe_unretained *)dlsym(RTLD_DEFAULT, "_globalRingerControl");
+    return globalRingerControl ? *globalRingerControl : nil;
 }
 
 #if LA_TESTING

@@ -591,7 +591,7 @@ def validate_resource_catalog(project_root: Path) -> None:
     check(isinstance(events, dict), "Event resource catalog is not a dictionary")
     check(isinstance(listeners, dict), "Listener resource catalog is not a dictionary")
     check(len(events) == 121, f"Unexpected event resource count: {len(events)}")
-    check(len(listeners) == 106, f"Unexpected listener resource count: {len(listeners)}")
+    check(len(listeners) == 109, f"Unexpected listener resource count: {len(listeners)}")
 
     excluded_listeners = {
         "libactivator.twitter.compose-tweet",
@@ -644,7 +644,7 @@ def main() -> int:
         f"{checked_metadata} Objective-C metadata entries, "
         f"{checked_properties} properties"
     )
-    log("Resource catalog validation: 121 events, 106 listeners.")
+    log("Resource catalog validation: 121 events, 109 listeners.")
     log("Metadata check passed.")
     return 0
 

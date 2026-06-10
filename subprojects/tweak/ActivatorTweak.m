@@ -10,6 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LATBuiltInListenerRegistry.h"
+#import "LATMediaActionListener.h"
 
 #import <CaptainHook/CaptainHook.h>
 #import <UIKit/UIKit.h>
@@ -21,6 +22,7 @@ CHDeclareClass(SBBacklightController);
 CHDeclareClass(SBCoverSheetPrimarySlidingViewController);
 CHDeclareClass(SBMainSwitcherViewController);
 CHDeclareClass(SBMainSwitcherControllerCoordinator);
+CHDeclareClass(SBVolumeControl);
 CHDeclareClass(SBHIconManager);
 CHDeclareClass(_UISystemGestureWindow);
 
@@ -159,6 +161,17 @@ CHOptimizedMethod2(self, void, SBMainSwitcherControllerCoordinator, layoutStateT
     LATUpdateMainSwitcherCoordinatorVisibility(self);
 }
 
+#pragma mark - SBVolumeControl
+
+CHOptimizedMethod4(self, id, SBVolumeControl, initWithHUDController, id, hudController, ringerControl, id,
+                   ringerControl, telephonyManager, id, telephonyManager, conferenceManager, id, conferenceManager) {
+    id instance = CHSuper4(SBVolumeControl, initWithHUDController, hudController, ringerControl, ringerControl,
+                           telephonyManager, telephonyManager, conferenceManager, conferenceManager);
+    [LATMediaActionListener noteVolumeControlInstance:instance];
+    [LATMediaActionListener noteRingerControlInstance:ringerControl];
+    return instance;
+}
+
 #pragma mark - SBHIconManager
 
 CHOptimizedMethod1(self, void, SBHIconManager, rootFolderControllerViewWillAppear, id, controller) {
@@ -222,6 +235,7 @@ static void LATLoadSpringBoardClasses(void) {
                  NSClassFromString(@"SBCoverSheetPrimarySlidingViewController"));
     CHLoadClass_(&SBMainSwitcherViewController$, NSClassFromString(@"SBMainSwitcherViewController"));
     CHLoadClass_(&SBMainSwitcherControllerCoordinator$, NSClassFromString(@"SBMainSwitcherControllerCoordinator"));
+    CHLoadClass_(&SBVolumeControl$, NSClassFromString(@"SBVolumeControl"));
     CHLoadClass_(&SBHIconManager$, NSClassFromString(@"SBHIconManager"));
     CHLoadClass_(&_UISystemGestureWindow$, NSClassFromString(@"_UISystemGestureWindow"));
 }
@@ -245,6 +259,7 @@ static void LATInstallHooks(void) {
                 transitionDidBeginWithTransitionContext);
         CHHook2(SBMainSwitcherControllerCoordinator, layoutStateTransitionCoordinator,
                 transitionDidEndWithTransitionContext);
+        CHHook4(SBVolumeControl, initWithHUDController, ringerControl, telephonyManager, conferenceManager);
         if (@available(iOS 17, *)) {
             CHHook1(SBHIconManager, rootFolderControllerViewWillAppear);
             CHHook1(SBHIconManager, rootFolderControllerViewDidDisappear);

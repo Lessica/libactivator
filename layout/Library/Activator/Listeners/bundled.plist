@@ -53,6 +53,28 @@
 		<key>title</key>
 		<string>Launch Playing App</string>
 	</dict>
+	<key>libactivator.audio.mute-ringer</key>
+	<dict>
+		<key>description</key>
+		<string>Turn ringer mute on</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>switch-com.a3tweaks.switch.ringer</string>
+		</array>
+		<key>group</key>
+		<string>Audio</string>
+		<key>needs-powered-display</key>
+		<string>0</string>
+		<key>selector</key>
+		<string>muteRinger</string>
+		<key>small-icons</key>
+		<array>
+			<string>/Applications/Preferences.app/Settings-Sound.png</string>
+			<string>/Applications/Music~iphone.app/Icon-Small.png</string>
+		</array>
+		<key>title</key>
+		<string>Mute Ringer</string>
+	</dict>
 	<key>libactivator.audio.reset-ringer-state</key>
 	<dict>
 		<key>description</key>
@@ -99,6 +121,50 @@
 		</array>
 		<key>title</key>
 		<string>Show Volume Bar</string>
+	</dict>
+	<key>libactivator.audio.toggle-ringer-mute</key>
+	<dict>
+		<key>description</key>
+		<string>Toggle ringer mute</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>switch-com.a3tweaks.switch.ringer</string>
+		</array>
+		<key>group</key>
+		<string>Audio</string>
+		<key>needs-powered-display</key>
+		<string>0</string>
+		<key>selector</key>
+		<string>toggleRingerMute</string>
+		<key>small-icons</key>
+		<array>
+			<string>/Applications/Preferences.app/Settings-Sound.png</string>
+			<string>/Applications/Music~iphone.app/Icon-Small.png</string>
+		</array>
+		<key>title</key>
+		<string>Toggle Ringer Mute</string>
+	</dict>
+	<key>libactivator.audio.unmute-ringer</key>
+	<dict>
+		<key>description</key>
+		<string>Turn ringer mute off</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>switch-com.a3tweaks.switch.ringer</string>
+		</array>
+		<key>group</key>
+		<string>Audio</string>
+		<key>needs-powered-display</key>
+		<string>0</string>
+		<key>selector</key>
+		<string>unmuteRinger</string>
+		<key>small-icons</key>
+		<array>
+			<string>/Applications/Preferences.app/Settings-Sound.png</string>
+			<string>/Applications/Music~iphone.app/Icon-Small.png</string>
+		</array>
+		<key>title</key>
+		<string>Unmute Ringer</string>
 	</dict>
 	<key>libactivator.camera.invoke-shutter</key>
 	<dict>
