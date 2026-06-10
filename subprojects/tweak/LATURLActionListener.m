@@ -17,10 +17,10 @@
 @end
 
 #if LA_TESTING
-static LATURLActionOpenHandler LATTestingOpenHandler;
-static NSURL *LATTestingLastOpenedURL;
-static NSString *LATTestingLastOpenedListenerName;
-static NSMutableDictionary *LATTestingURLMetadata;
+static LATURLActionOpenHandler LATTestingOpenHandler = nil;
+static NSURL *LATTestingLastOpenedURL = nil;
+static NSString *LATTestingLastOpenedListenerName = nil;
+static NSMutableDictionary *LATTestingURLMetadata = nil;
 #endif
 
 @implementation LATURLActionListener

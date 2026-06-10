@@ -29,7 +29,7 @@ typedef NS_ENUM(NSUInteger, LATRingerActionKind) {
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
                         testingPhase:(NSString *)testingPhase
-                                 kind:(LATRingerActionKind)kind;
+                                kind:(LATRingerActionKind)kind;
 @end
 
 @interface LATRingerStateResetter : NSObject
@@ -44,13 +44,13 @@ typedef NS_ENUM(NSUInteger, LATRingerActionKind) {
 + (id)ringerControlInstance;
 @end
 
-static __weak id LATCapturedRingerControl;
+static __weak id LATCapturedRingerControl = nil;
 
 #if LA_TESTING
-static LATRingerActionHandler LATTestingActionHandler;
-static NSString *LATTestingLastActionListenerName;
-static NSString *LATTestingLastActionPhase;
-static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
+static LATRingerActionHandler LATTestingActionHandler = nil;
+static NSString *LATTestingLastActionListenerName = nil;
+static NSString *LATTestingLastActionPhase = nil;
+static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
 #endif
 
 @implementation LATRingerActionCommand
@@ -58,7 +58,7 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
                         testingPhase:(NSString *)testingPhase
-                                 kind:(LATRingerActionKind)kind {
+                                kind:(LATRingerActionKind)kind {
     self = [super init];
     if (self) {
         _listenerName = [listenerName copy];
@@ -108,7 +108,7 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
     int ringerState = getRingerState();
     void (*updateRingerState)(id, SEL, int, BOOL, BOOL) =
         (void (*)(id, SEL, int, BOOL, BOOL))[application methodForSelector:updateSelector];
-    updateRingerState(application, updateSelector, ringerState, NO, NO);
+    updateRingerState(application, updateSelector, ringerState, YES, NO);
     return YES;
 }
 
@@ -153,7 +153,7 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
             HBLogError(@"SBRingerControl does not support isRingerMuted");
             return NO;
         }
-        BOOL (*isMuted)(id, SEL) = (BOOL (*)(id, SEL))[ringerControl methodForSelector:isMutedSelector];
+        BOOL (*isMuted)(id, SEL) = (BOOL(*)(id, SEL))[ringerControl methodForSelector:isMutedSelector];
         muted = !isMuted(ringerControl, isMutedSelector);
     } else {
         muted = (command.kind == LATRingerActionKindMute);
@@ -219,14 +219,14 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
 
     BOOL applied = NO;
     switch (command.kind) {
-        case LATRingerActionKindReset:
-            applied = [_stateResetter resetRingerStateForListenerName:listenerName testingPhase:command.testingPhase];
-            break;
-        case LATRingerActionKindMute:
-        case LATRingerActionKindUnmute:
-        case LATRingerActionKindToggle:
-            applied = [_muteController applyCommand:command];
-            break;
+    case LATRingerActionKindReset:
+        applied = [_stateResetter resetRingerStateForListenerName:listenerName testingPhase:command.testingPhase];
+        break;
+    case LATRingerActionKindMute:
+    case LATRingerActionKindUnmute:
+    case LATRingerActionKindToggle:
+        applied = [_muteController applyCommand:command];
+        break;
     }
     if (applied) {
         event.handled = YES;
@@ -253,19 +253,19 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
             [[LATRingerActionCommand alloc] initWithListenerName:@"libactivator.audio.reset-ringer-state"
                                                     selectorName:@"resetRingerState"
                                                     testingPhase:@"ringer-reset"
-                                                             kind:LATRingerActionKindReset],
+                                                            kind:LATRingerActionKindReset],
             [[LATRingerActionCommand alloc] initWithListenerName:@"libactivator.audio.mute-ringer"
                                                     selectorName:@"muteRinger"
                                                     testingPhase:@"ringer-mute"
-                                                             kind:LATRingerActionKindMute],
+                                                            kind:LATRingerActionKindMute],
             [[LATRingerActionCommand alloc] initWithListenerName:@"libactivator.audio.unmute-ringer"
                                                     selectorName:@"unmuteRinger"
                                                     testingPhase:@"ringer-unmute"
-                                                             kind:LATRingerActionKindUnmute],
+                                                            kind:LATRingerActionKindUnmute],
             [[LATRingerActionCommand alloc] initWithListenerName:@"libactivator.audio.toggle-ringer-mute"
                                                     selectorName:@"toggleRingerMute"
                                                     testingPhase:@"ringer-toggle"
-                                                             kind:LATRingerActionKindToggle],
+                                                            kind:LATRingerActionKindToggle],
         ];
 
         NSMutableDictionary<NSString *, LATRingerActionCommand *> *mutableCommands =

@@ -62,15 +62,15 @@ typedef NS_ENUM(NSUInteger, LATMediaActionKind) {
 + (id)volumeControlInstance;
 @end
 
-static __weak id LATCapturedVolumeControl;
+static __weak id LATCapturedVolumeControl = nil;
 
 #if LA_TESTING
-static LATMediaActionSendHandler LATTestingSendHandler;
-static NSString *LATTestingLastSentListenerName;
-static uint32_t LATTestingLastSentPage;
-static uint32_t LATTestingLastSentUsage;
-static NSMutableArray<NSString *> *LATTestingSentPhases;
-static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
+static LATMediaActionSendHandler LATTestingSendHandler = nil;
+static NSString *LATTestingLastSentListenerName = nil;
+static uint32_t LATTestingLastSentPage = 0;
+static uint32_t LATTestingLastSentUsage = 0;
+static NSMutableArray<NSString *> *LATTestingSentPhases = nil;
+static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
 #endif
 
 @implementation LATMediaActionCommand
@@ -279,12 +279,12 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors;
 
     BOOL sent = NO;
     switch (command.kind) {
-        case LATMediaActionKindHID:
-            sent = [_sender sendCommand:command listenerName:listenerName];
-            break;
-        case LATMediaActionKindVolumeHUD:
-            sent = [_volumeHUDPresenter presentVolumeHUDForListenerName:listenerName];
-            break;
+    case LATMediaActionKindHID:
+        sent = [_sender sendCommand:command listenerName:listenerName];
+        break;
+    case LATMediaActionKindVolumeHUD:
+        sent = [_volumeHUDPresenter presentVolumeHUDForListenerName:listenerName];
+        break;
     }
     if (sent) {
         event.handled = YES;

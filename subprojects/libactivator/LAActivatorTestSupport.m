@@ -1254,13 +1254,16 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     }
 
     NSDictionary<NSString *, NSDictionary<NSString *, id> *> *expectedCommands = @{
-        @"libactivator.ipod.toggle-playback" : @{@"selector" : @"togglePlayback", @"page" : @(0x0C), @"usage" : @(0xCD)},
+        @"libactivator.ipod.toggle-playback" :
+            @{@"selector" : @"togglePlayback", @"page" : @(0x0C), @"usage" : @(0xCD)},
         @"libactivator.ipod.pause-playback" : @{@"selector" : @"pauseMedia", @"page" : @(0x0C), @"usage" : @(0xB1)},
         @"libactivator.ipod.resume-playback" : @{@"selector" : @"playMedia", @"page" : @(0x0C), @"usage" : @(0xB0)},
         @"libactivator.ipod.next-track" : @{@"selector" : @"nextTrack", @"page" : @(0x0C), @"usage" : @(0xB5)},
         @"libactivator.ipod.previous-track" : @{@"selector" : @"previousTrack", @"page" : @(0x0C), @"usage" : @(0xB6)},
-        @"libactivator.audio.increase-volume" : @{@"selector" : @"increaseVolume", @"page" : @(0x0C), @"usage" : @(0xE9)},
-        @"libactivator.audio.decrease-volume" : @{@"selector" : @"decreaseVolume", @"page" : @(0x0C), @"usage" : @(0xEA)},
+        @"libactivator.audio.increase-volume" :
+            @{@"selector" : @"increaseVolume", @"page" : @(0x0C), @"usage" : @(0xE9)},
+        @"libactivator.audio.decrease-volume" :
+            @{@"selector" : @"decreaseVolume", @"page" : @(0x0C), @"usage" : @(0xEA)},
     };
     NSDictionary<NSString *, NSString *> *expectedNonHIDSelectors = @{
         @"libactivator.audio.show-volume-bar" : @"showVolumeBar",
@@ -1331,8 +1334,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     NSArray<NSString *> *sentPhases = [(id)mediaActionClass testingSentPhases];
     BOOL sentDownUpPairs = sentPhases.count == expectedCommands.count * 2;
     for (NSUInteger index = 0; sentDownUpPairs && index < sentPhases.count; index += 2) {
-        sentDownUpPairs = [sentPhases[index] isEqualToString:@"down"] &&
-                          [sentPhases[index + 1] isEqualToString:@"up"];
+        sentDownUpPairs = [sentPhases[index] isEqualToString:@"down"] && [sentPhases[index + 1] isEqualToString:@"up"];
     }
     [recorder expect:sentDownUpPairs
             caseName:@"media-action-down-up-order"
@@ -1345,14 +1347,13 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     LAEvent *showVolumeBarEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendEvent:showVolumeBarEvent toListenerWithName:showVolumeBarName];
     NSArray<NSString *> *showVolumeBarPhases = [(id)mediaActionClass testingSentPhases];
-    [recorder expect:showVolumeBarEvent.handled &&
-                     [[(id)mediaActionClass testingLastSentListenerName] isEqualToString:showVolumeBarName] &&
-                     [(id)mediaActionClass testingLastSentPage] == 0 &&
-                     [(id)mediaActionClass testingLastSentUsage] == 0 &&
-                     showVolumeBarPhases.count == 1 &&
-                     [showVolumeBarPhases.firstObject isEqualToString:@"volume-hud"]
-            caseName:@"media-volume-hud-action-handles"
-              reason:@"Volume HUD media action did not use the presenter path"];
+    [recorder
+          expect:showVolumeBarEvent.handled &&
+                 [[(id)mediaActionClass testingLastSentListenerName] isEqualToString:showVolumeBarName] &&
+                 [(id)mediaActionClass testingLastSentPage] == 0 && [(id)mediaActionClass testingLastSentUsage] == 0 &&
+                 showVolumeBarPhases.count == 1 && [showVolumeBarPhases.firstObject isEqualToString:@"volume-hud"]
+        caseName:@"media-volume-hud-action-handles"
+          reason:@"Volume HUD media action did not use the presenter path"];
 
     [(id)mediaActionClass resetTestingState];
     [(id)mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
@@ -1486,8 +1487,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     }];
     LAEvent *mismatchedSelectorEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendEvent:mismatchedSelectorEvent toListenerWithName:toggleRingerName];
-    [recorder expect:!mismatchedSelectorEvent.handled &&
-                     [(id)ringerActionClass testingLastActionListenerName] == nil
+    [recorder expect:!mismatchedSelectorEvent.handled && [(id)ringerActionClass testingLastActionListenerName] == nil
             caseName:@"ringer-action-selector-mismatch-unhandled"
               reason:@"Ringer action handled an event with mismatched selector metadata"];
 

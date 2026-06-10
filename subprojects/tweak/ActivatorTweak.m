@@ -31,12 +31,12 @@ static NSString *const LATRuntimeStateSourceCoverSheetTransition = @"cover-sheet
 static NSString *const LATRuntimeStateSourceIconManagerRootFolder = @"icon-manager-root-folder";
 static NSString *const LATRuntimeStateSourceMainSwitcher = @"main-switcher";
 
-static Class LATCoverSheetViewControllerClass;
-static Class LATPosterSwitcherViewControllerClass;
-static Class LATDashboardCameraPageViewControllerClass;
-static Class LATInCallTransientOverlayViewControllerClass;
-static Class LATLockScreenEmergencyCallViewControllerClass;
-static Class LATIconControllerClass;
+static Class LATCoverSheetViewControllerClass = nil;
+static Class LATPosterSwitcherViewControllerClass = nil;
+static Class LATDashboardCameraPageViewControllerClass = nil;
+static Class LATInCallTransientOverlayViewControllerClass = nil;
+static Class LATLockScreenEmergencyCallViewControllerClass = nil;
+static Class LATIconControllerClass = nil;
 
 static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
     if ((LATCoverSheetViewControllerClass && [viewController isKindOfClass:LATCoverSheetViewControllerClass]) ||
