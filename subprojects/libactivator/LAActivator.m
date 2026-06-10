@@ -7,6 +7,7 @@
 //
 
 #import <Activator/Activator.h>
+#import <HBLog.h>
 #import <dispatch/dispatch.h>
 #import <notify.h>
 
@@ -657,9 +658,9 @@ LAActivator *LASharedActivator;
     NSString *selectorName = NSStringFromSelector(selector);
     NSString *culprit = [self la_invalidSpringBoardOperationCulpritName];
 
-    NSLog(@"libactivator: Invalid SpringBoard operation: %@ called -[LAActivator %@] from outside SpringBoard. "
-           "This call was rejected and no client-local runtime state was created. Contact %@'s developer.",
-          culprit, selectorName, culprit);
+    HBLogError(@"Invalid SpringBoard operation: %@ called -[LAActivator %@] from outside SpringBoard. "
+               "This call was rejected and no client-local runtime state was created. Contact %@'s developer.",
+               culprit, selectorName, culprit);
 }
 
 - (NSString *)la_invalidSpringBoardOperationCulpritName {

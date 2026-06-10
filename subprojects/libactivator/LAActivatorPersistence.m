@@ -8,6 +8,7 @@
 
 #import "LAActivatorPersistence.h"
 
+#import <HBLog.h>
 #import <roothide.h>
 #import <sys/stat.h>
 
@@ -86,7 +87,7 @@
     };
     NSError *attributesError = nil;
     if (![NSFileManager.defaultManager setAttributes:attributes ofItemAtPath:self.filePath error:&attributesError]) {
-        NSLog(@"libactivator: Failed to update persistence file attributes: %@", attributesError);
+        HBLogWarn(@"Failed to update persistence file attributes: %@", attributesError);
     }
     return YES;
 }

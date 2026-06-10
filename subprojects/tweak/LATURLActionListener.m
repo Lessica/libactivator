@@ -8,6 +8,7 @@
 
 #import "LATURLActionListener.h"
 
+#import <HBLog.h>
 #import <UIKit/UIKit.h>
 
 @interface LSApplicationWorkspace : NSObject
@@ -27,13 +28,13 @@ static NSMutableDictionary *LATTestingURLMetadata;
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
     NSString *urlString = [self urlStringForListenerName:listenerName activator:activator];
     if (urlString.length == 0) {
-        NSLog(@"libactivator: URL action %@ has no URL metadata", listenerName ?: @"");
+        HBLogWarn(@"URL action %@ has no URL metadata", listenerName ?: @"");
         return;
     }
 
     NSURL *url = [NSURL URLWithString:urlString];
     if (url.scheme.length == 0) {
-        NSLog(@"libactivator: URL action %@ has invalid URL metadata: %@", listenerName ?: @"", urlString);
+        HBLogWarn(@"URL action %@ has invalid URL metadata: %@", listenerName ?: @"", urlString);
         return;
     }
 
@@ -103,12 +104,12 @@ static NSMutableDictionary *LATTestingURLMetadata;
 
     Class workspaceClass = NSClassFromString(@"LSApplicationWorkspace");
     if (![workspaceClass respondsToSelector:@selector(defaultWorkspace)]) {
-        NSLog(@"libactivator: LSApplicationWorkspace is unavailable");
+        HBLogError(@"LSApplicationWorkspace is unavailable");
         return NO;
     }
     LSApplicationWorkspace *workspace = [workspaceClass defaultWorkspace];
     if (![workspace respondsToSelector:@selector(openSensitiveURL:withOptions:error:)]) {
-        NSLog(@"libactivator: LSApplicationWorkspace does not support openSensitiveURL:withOptions:error:");
+        HBLogError(@"LSApplicationWorkspace does not support openSensitiveURL:withOptions:error:");
         return NO;
     }
 
@@ -116,8 +117,8 @@ static NSMutableDictionary *LATTestingURLMetadata;
         NSError *error = nil;
         BOOL opened = [workspace openSensitiveURL:url withOptions:@{} error:&error];
         if (!opened) {
-            NSLog(@"libactivator: Failed to open URL action %@ URL %@: %@", listenerName ?: @"",
-                  url.absoluteString ?: @"", error.localizedDescription ?: @"unknown error");
+            HBLogError(@"Failed to open URL action %@ URL %@: %@", listenerName ?: @"", url.absoluteString ?: @"",
+                       error.localizedDescription ?: @"unknown error");
         }
     });
 

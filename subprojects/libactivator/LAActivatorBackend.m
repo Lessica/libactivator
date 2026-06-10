@@ -10,6 +10,7 @@
 
 #import "LAActivatorPersistence.h"
 
+#import <HBLog.h>
 #import <dispatch/dispatch.h>
 
 static const void *LAActivatorBackendStateQueueKey = &LAActivatorBackendStateQueueKey;
@@ -156,7 +157,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
     BOOL saved = [self.persistence saveDictionary:dictionary];
     if (!saved) {
-        NSLog(@"libactivator: Failed to save persistent state");
+        HBLogError(@"Failed to save persistent state");
     }
     return saved;
 }

@@ -11,6 +11,8 @@
 #import "LATNothingListener.h"
 #import "LATURLActionListener.h"
 
+#import <HBLog.h>
+
 @implementation LATBuiltInListenerRegistry
 
 + (void)registerBuiltInListenersWithActivator:(LAActivator *)activator {
@@ -24,7 +26,7 @@
             if ([self listenerHasURLMetadata:listenerName activator:activator]) {
                 [activator registerListener:urlActionListener forName:listenerName];
             } else {
-                NSLog(@"libactivator: Skipping URL action %@ because URL metadata is missing", listenerName);
+                HBLogWarn(@"Skipping URL action %@ because URL metadata is missing", listenerName);
             }
         }
     });
