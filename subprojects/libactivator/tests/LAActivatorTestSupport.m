@@ -12,6 +12,7 @@
 #import "LAActivatorIPC.h"
 #import "LATestBuiltInActionRegistrySuite.h"
 #import "LATestBuiltInMediaActionsSuite.h"
+#import "LATestBuiltInPhoneActionsSuite.h"
 #import "LATestBuiltInRingerActionsSuite.h"
 #import "LATestBuiltInURLActionsSuite.h"
 #import "LATestDispatchSuite.h"
@@ -110,6 +111,7 @@
     [LATestBuiltInURLActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInMediaActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInRingerActionsSuite runWithRecorder:recorder activator:activator];
+    [LATestBuiltInPhoneActionsSuite runWithRecorder:recorder activator:activator];
     [LATestEnvironment cleanActivator:activator];
     return [recorder resultDictionary];
 }
@@ -133,4 +135,3 @@
 }
 
 @end
-

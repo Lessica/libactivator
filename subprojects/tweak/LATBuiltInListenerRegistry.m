@@ -11,6 +11,7 @@
 #import "LATBuiltInListenerRegistrant.h"
 #import "LATMediaActionListener.h"
 #import "LATNothingListener.h"
+#import "LATPhoneActionListener.h"
 #import "LATRingerActionListener.h"
 #import "LATURLActionListener.h"
 
@@ -30,6 +31,10 @@
         },
         @{
             @"RegistrantClass" : LATRingerActionListener.class,
+            @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
+        },
+        @{
+            @"RegistrantClass" : LATPhoneActionListener.class,
             @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
         },
     ];

@@ -20,7 +20,9 @@ Audio / Media actions / listener family 已完成第一批。当前 `Listeners/b
 
 Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。当前包含 1 个 ringer state 同步动作和 3 个现代 ringer mute 动作：ringer reset 按 1.9.13 旧实现通过 `BKSHIDServicesGetRingerState` 读取硬件开关状态并调用 SpringBoard `-_updateRingerState:withVisuals:updatePreferenceRegister:` 同步；ringer mute 动作通过 `SBVolumeControl` init hook 捕获 `SBRingerControl` 后调用 `setRingerMuted:` 并触发 ringer HUD。注意 `libactivator.volume.mute`、`libactivator.volume.unmute`、`libactivator.volume.toggle-mute-twice` 仍是 Events，不复用为 listener name。
 
-下一阶段应进入 Phone tab URL subfamily 或低风险 system selector actions。不要把没有 `url`/`urls` metadata 的旧 selector action 继续塞进 `LATURLActionListener`；即使旧实现内部也是打开 URL，也应按新的 family 单独建 listener class、allowlist、测试和手工验证清单。
+Phone actions / listener family 已拆分为独立 `LATPhoneActionListener`。当前包含 5 个 Phone tab URL 动作和 2 个 call control 动作：Phone tab URL 使用旧 master 在 CoreFoundation 675 之后的 URL 形态；call control 动作参考 `TRAppIntentXpcServiceConnection.mm` 中已验证的 CoreTelephony 路径，通过 `dlopen` / `dlsym` 解析私有符号并在主队列异步执行。`libactivator.phone.disconnect-call` 的 selector metadata 仍按 1.9.13 资源保持为 `answerCall`，runtime 行为由 listener name 区分。`event.handled = YES` 表示 phone listener 已消费请求，不表示电话状态或目标 tab 已完成变化。
+
+下一阶段应进入低风险 system selector actions。不要把没有 `url`/`urls` metadata 的旧 selector action 继续塞进 `LATURLActionListener`；即使旧实现内部也是打开 URL，也应按新的 family 单独建 listener class、allowlist、测试和手工验证清单。
 
 ## 已实现动作
 
@@ -28,8 +30,9 @@ Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。
 | --- | --- | --- | --- | --- | --- |
 | `libactivator.system.nothing` | 不执行操作，吞掉原始动作 | `LATNothingListener` | 1.9.13 `Listeners/bundled.plist`；旧 master `LASimpleListener -doNothing` | `implemented` | 已由 `LATBuiltInListenerRegistry` 注册，stable `BuiltInActionRegistry` 覆盖 dispatch 后 `event.handled = YES`。 |
 | URL actions family | Clock 和 Settings URL actions | `LATURLActionListener` | 1.9.13 `Listeners/bundled.plist` 中保留的 `url` / `urls` metadata；旧 master `LASimpleListener -openURLWithActivator:event:listenerName:` | `implemented` | 44 个保留项已注册；obsolete 项已从资源移除；stable `BuiltInURLActions` 覆盖 metadata 选择、无效 metadata、opener hook 和 handled 语义。 |
-| Audio / Media actions family | 播放控制、切歌、音量增减、显示音量 HUD、打开当前播放应用 | `LATMediaActionListener` | 1.9.13 `Listeners/bundled.plist` 中的 selector/title metadata；`STHIDEventGenerator.mm` 的 HID Consumer event 发送方式；真机 Frida 验证的 `SBVolumeControl -_presentVolumeHUDWithVolume:`；1.9.13 `_LANowPlayingApplicationListener -applicationForListenerName:` 逆向结论 | `implemented` | 7 个 HID command 项、1 个 SpringBoard volume HUD 项和 1 个 now-playing application launch 项已注册；music controls 保持未注册；stable `BuiltInMediaActions` 覆盖 allowlist、metadata、sender/presenter/launcher hook 和 handled 语义。 |
-| Ringer actions family | 重置响铃状态、设置响铃静音 | `LATRingerActionListener` | 1.9.13 `ActivatorSpringBoard` 中 `_LASimpleListener -resetRingerState` 的实现；`DeviceConfigurator.mm` 中 `SBRingerControl` 的现代 ringer mute 写入路径 | `implemented` | 1 个 ringer state sync 项和 3 个 ringer mute 项已注册；stable `BuiltInRingerActions` 覆盖 allowlist、selector metadata、resetter/controller hook 和 handled 语义。 |
+| Audio / Media actions family | 播放控制、切歌、音量增减、显示音量 HUD、打开当前播放应用 | `LATMediaActionListener` | 1.9.13 `Listeners/bundled.plist` 中的 selector/title metadata；`STHIDEventGenerator.mm` 的 HID Consumer event 发送方式；真机 Frida 验证的 `SBVolumeControl -_presentVolumeHUDWithVolume:`；1.9.13 `_LANowPlayingApplicationListener -applicationForListenerName:` 逆向结论 | `implemented` | 7 个 HID command 项、1 个 SpringBoard volume HUD 项和 1 个 now-playing application launch 项已注册；music controls 保持未注册；stable `BuiltInMediaActions` 覆盖 allowlist、metadata 和 runtime registration。 |
+| Ringer actions family | 重置响铃状态、设置响铃静音 | `LATRingerActionListener` | 1.9.13 `ActivatorSpringBoard` 中 `_LASimpleListener -resetRingerState` 的实现；`DeviceConfigurator.mm` 中 `SBRingerControl` 的现代 ringer mute 写入路径 | `implemented` | 1 个 ringer state sync 项和 3 个 ringer mute 项已注册；stable `BuiltInRingerActions` 覆盖 allowlist、selector metadata 和 runtime registration。 |
+| Phone actions family | 打开 Phone tab、接听来电、挂断活动或来电 | `LATPhoneActionListener` | 旧 master `LASimpleListener` 中 Phone tab URL 实现；1.9.13 `Listeners/bundled.plist` 中 selector metadata；`TRAppIntentXpcServiceConnection.mm` 中 CoreTelephony call control 路径 | `implemented` | 5 个 Phone tab URL 项和 2 个 call control 项已注册；stable `BuiltInPhoneActions` 覆盖 allowlist、selector metadata 和 runtime registration。 |
 
 ## URL Actions 完成清单
 
@@ -104,23 +107,21 @@ Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。
 | `libactivator.audio.unmute-ringer` | Unmute Ringer | `unmuteRinger` | `implemented` | 现代新增 action；不复用 `libactivator.volume.unmute` event name。通过 `SBRingerControl setRingerMuted:NO` 取消软静音，并调用 `activateRingerHUDFromMuteSwitch:1`。 |
 | `libactivator.audio.toggle-ringer-mute` | Toggle Ringer Mute | `toggleRingerMute` | `implemented` | 现代新增 action；不复用 `libactivator.volume.toggle-mute-twice` event name。通过 `SBRingerControl isRingerMuted` 计算目标状态，再调用 `setRingerMuted:` 与 ringer HUD。 |
 
+## Phone Actions 完成清单
+
+| Listener name | 标题 | selector / 语义 | 状态 | 实施备注 |
+| --- | --- | --- | --- | --- |
+| `libactivator.phone.favorites` | Show Favorites | `showPhoneFavorites` | `implemented` | 使用旧 master 在 CoreFoundation 675 之后采用的 `mobilephone-recents:favorites`。 |
+| `libactivator.phone.recents` | Show Recents | `showPhoneRecents` | `implemented` | 使用 `mobilephone-recents:`。 |
+| `libactivator.phone.contacts` | Show Contacts | `showPhoneContacts` | `implemented` | 使用 `mobilephone-recents:contacts`。 |
+| `libactivator.phone.keypad` | Show Keypad | `showPhoneKeypad` | `implemented` | 使用 `mobilephone-recents:keypad`。 |
+| `libactivator.phone.voicemail` | Show Voicemail | `showPhoneVoicemail` | `implemented` | 使用旧 master 的现代 URL `vmshow:`。 |
+| `libactivator.phone.answer-call` | Answer Call | `answerCall` | `implemented` | 通过 CoreTelephony 查找 incoming call 并调用 `CTCallAnswer`；若无通话、无来电或 SPI 不可用，仍消费事件并记录诊断。 |
+| `libactivator.phone.disconnect-call` | Disconnect Call | `answerCall` | `implemented` | 资源中的 selector metadata 保持旧值 `answerCall`；runtime 按 listener name 调用 `CTCallListDisconnectAll`，用于挂断活动通话或拒接来电。 |
+
 ## 下一阶段建议
 
-### 1. Phone Tab URL Subfamily
-
-这些旧动作没有 `url` metadata，但旧 master 内部通过 URL 打开 Phone 的具体 tab。它们应作为独立 `LATPhoneActionListener` 评估，而不是扩大 URL metadata family 的职责。
-
-| Listener name | 标题 | 旧 selector | 建议状态 | 实施备注 |
-| --- | --- | --- | --- | --- |
-| `libactivator.phone.favorites` | Show Favorites | `showPhoneFavorites` | `candidate` | 验证 `mobilephone-recents:favorites` 在当前设备/iOS 上是否可用。 |
-| `libactivator.phone.recents` | Show Recents | `showPhoneRecents` | `candidate` | 验证 `mobilephone-recents:`。 |
-| `libactivator.phone.contacts` | Show Contacts | `showPhoneContacts` | `candidate` | 验证 `mobilephone-recents:contacts`。 |
-| `libactivator.phone.keypad` | Show Keypad | `showPhoneKeypad` | `candidate` | 验证 `mobilephone-recents:keypad`。 |
-| `libactivator.phone.voicemail` | Show Voicemail | `showPhoneVoicemail` | `candidate` | 验证 `vmshow:`。 |
-| `libactivator.phone.answer-call` | Answer Call | `answerCall` | `blocked` | 旧 metadata 看起来与 disconnect-call 共用 selector，必须逆向确认，不可猜。 |
-| `libactivator.phone.disconnect-call` | Disconnect Call | `answerCall` | `blocked` | 需要 call control SPI 决策。 |
-
-### 2. Low-Risk System Actions Candidates
+### 1. Low-Risk System Actions Candidates
 
 这些动作可并行调研，但不建议抢在 media command family 之前批量实现。
 
@@ -131,7 +132,7 @@ Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。
 | `libactivator.system.first-springboard-page` | First SpringBoard Page | `candidate` | 需要确认 Home Screen controller 现代入口。 |
 | `libactivator.system.spotlight` | Spotlight | `candidate` | 需要确认 Spotlight/Search UI 现代入口。 |
 
-### 3. 暂缓或高风险
+### 2. 暂缓或高风险
 
 以下 action family 暂不作为下一阶段默认目标：Control Center、Notification Center、Switcher、Power UI、Siri/Voice Control、Wallet、rotation、lock screen show/dismiss/toggle、Safe Mode、watch haptics、camera shutter、compose mail/SMS/notes、screen brightness。它们不是不能做，而是需要 owner-assisted SPI probe、真实 UI checklist 或明确产品决策后再进入 `candidate`。
 
@@ -139,5 +140,5 @@ Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。
 
 - 新增 family 必须有独立 listener class，代码层面显式 allowlist 注册，不扫描 metadata 自动生成 runtime listener。
 - 每个 family 至少拆出一个 stable suite，延续 `BuiltInActionRegistry` / `BuiltInURLActions` 的风格，不把新阶段测试继续塞进旧 URL suite。
-- stable tests 覆盖 registration、`hasSeen`、metadata-only 不注册、sender hook 成功/失败和 `event.handled` 语义；`event.handled` 表示 listener 消费事件，不表示系统动作最终成功；真实系统状态变化进入设备手工 checklist。
+- stable tests 覆盖 registration、`hasSeen`、metadata-only 不注册、metadata / selector gate 和 `event.handled` 语义；`event.handled` 表示 listener 消费事件，不表示系统动作最终成功；真实系统状态变化进入设备手工 checklist。不要为了 stable tests 给真实 action path 增加替换 sender、presenter、launcher 或 opener 的测试 hook。
 - 实现前先记录现代 SPI 选择；如果接口不确定，先标 `blocked` 并和 owner 确认，不用 public API fallback 掩盖行为差异。

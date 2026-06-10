@@ -9,6 +9,7 @@ ActivatorTweak_FILES += ActivatorTweak.m
 ActivatorTweak_FILES += LATBuiltInListenerRegistry.m
 ActivatorTweak_FILES += listeners/LATMediaActionListener.m
 ActivatorTweak_FILES += listeners/LATNothingListener.m
+ActivatorTweak_FILES += listeners/LATPhoneActionListener.m
 ActivatorTweak_FILES += listeners/LATRingerActionListener.m
 ActivatorTweak_FILES += listeners/LATURLActionListener.m
 

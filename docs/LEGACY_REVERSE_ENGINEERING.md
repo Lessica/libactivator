@@ -45,3 +45,9 @@ for (uint64_t offset = rangeStart; offset < rangeEnd; offset++) {
 旧实现大意是：如果 `SBNowPlayingAlertItem` 已经显示，则通过 `SBAlertItemsController` 关闭；否则在可显示 now-playing UI 的条件下创建并激活一个 `SBNowPlayingAlertItem`。若该 UI 路径不可用，则退回到打开 now-playing application / Music fallback 的路径。
 
 这个语义依赖旧 SpringBoard 的 now-playing alert modal。现代 iOS 已没有对应的 `SBNowPlayingAlertItem` 用户体验，用户可见的等价入口更接近 Control Center 的 Now Playing 模块。把 `libactivator.ipod.music-controls` 实现成“打开 Control Center”会改变旧 action 的含义，也属于系统 UI family 的另一个产品决策。因此当前将该动作标记为 `obsolete`，不作为 Audio / Media listener family 的待实现项。
+
+## Phone actions
+
+旧 master 的 `_LASimpleListener` 中包含 5 个 Phone tab selector：`showPhoneFavorites`、`showPhoneRecents`、`showPhoneContacts`、`showPhoneKeypad`、`showPhoneVoicemail`。这些动作没有 `url` metadata，但旧实现内部直接调用 SpringBoard `applicationOpenURL:publicURLsOnly:`；CoreFoundation 版本小于 675 时使用 `doubletap://com.apple.mobilephone?view=...`，675 及之后使用 `mobilephone-recents:favorites`、`mobilephone-recents:`、`mobilephone-recents:contacts`、`mobilephone-recents:keypad` 和 `vmshow:`。当前实现只采用后一组 URL，并通过 `LSApplicationWorkspace openSensitiveURL:withOptions:error:` 在非主队列提交。
+
+1.9.13 资源中 `libactivator.phone.answer-call` 和 `libactivator.phone.disconnect-call` 的 selector metadata 都是 `answerCall`。当前保持这个历史资源形状，不修改 metadata；runtime 由 listener name 分派到不同 call control 行为。`answer-call` 参考 `TRAppIntentXpcServiceConnection.mm`，通过 CoreTelephony 枚举当前 calls，查找 `kCTCallStatusIncomingCall` 并调用 `CTCallAnswer`。`disconnect-call` 使用同一参考中的“terminate any calls”路径，调用 `CTCallListDisconnectAll` 来覆盖活动通话和来电拒接场景。

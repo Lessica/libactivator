@@ -50,6 +50,7 @@ libactivator_FILES += tests/suites/builtins/LATestBuiltInActionRegistrySuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInURLActionsSuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInMediaActionsSuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInRingerActionsSuite.m
+libactivator_FILES += tests/suites/builtins/LATestBuiltInPhoneActionsSuite.m
 libactivator_FILES += tests/suites/runtime/LATestRuntimeInputSuite.m
 libactivator_FILES += tests/suites/runtime/LATestRuntimeDeviceSuite.m
 libactivator_CFLAGS += -DLA_TESTING=1

@@ -22,6 +22,7 @@
     NSString *mediaName = @"libactivator.ipod.toggle-playback";
     NSString *nowPlayingName = @"libactivator.audio.launch-playing-app";
     NSString *ringerName = @"libactivator.audio.reset-ringer-state";
+    NSString *phoneName = @"libactivator.phone.recents";
     NSString *metadataOnlyName = @"libactivator.ipod.music-controls";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
 
@@ -65,6 +66,13 @@
     [recorder expect:[activator hasSeenListenerWithName:ringerName]
             caseName:@"ringer-action-seen"
               reason:@"Built-in ringer action listener was not recorded as seen"];
+    [recorder expect:[[activator availableListenerNames] containsObject:phoneName] &&
+                     [activator hasListenerWithName:phoneName]
+            caseName:@"phone-action-registered"
+              reason:@"Built-in phone action listener was not registered"];
+    [recorder expect:[activator hasSeenListenerWithName:phoneName]
+            caseName:@"phone-action-seen"
+              reason:@"Built-in phone action listener was not recorded as seen"];
     [recorder expect:![activator hasListenerWithName:metadataOnlyName]
             caseName:@"metadata-only-not-registered"
               reason:@"Staged metadata registered a listener without an implementation"];
