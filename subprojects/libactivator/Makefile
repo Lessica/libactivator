@@ -31,8 +31,35 @@ libactivator_CFLAGS += -fobjc-arc
 libactivator_CFLAGS += -I../../include
 
 ifeq ($(LA_TESTING),1)
-libactivator_FILES += LAActivatorTestSupport.m
+libactivator_FILES += tests/LAActivatorTestSupport.m
+libactivator_FILES += tests/support/LATestEnvironment.m
+libactivator_FILES += tests/support/LATestRecorder.m
+libactivator_FILES += tests/fakes/LATestCountingPersistence.m
+libactivator_FILES += tests/fakes/LATestEventDataSource.m
+libactivator_FILES += tests/fakes/LATestListener.m
+libactivator_FILES += tests/fakes/LATestSimpleAbortListener.m
+libactivator_FILES += tests/fakes/LATestTouch.m
+libactivator_FILES += tests/fakes/LATestTouchEvent.m
+libactivator_FILES += tests/suites/core/LATestEventSuite.m
+libactivator_FILES += tests/suites/core/LATestPersistenceSuite.m
+libactivator_FILES += tests/suites/core/LATestResourceSuite.m
+libactivator_FILES += tests/suites/core/LATestTouchActivitySuite.m
+libactivator_FILES += tests/suites/core/LATestSpringBoardCoreSuite.m
+libactivator_FILES += tests/suites/core/LATestDispatchSuite.m
+libactivator_FILES += tests/suites/builtins/LATestBuiltInActionRegistrySuite.m
+libactivator_FILES += tests/suites/builtins/LATestBuiltInURLActionsSuite.m
+libactivator_FILES += tests/suites/builtins/LATestBuiltInMediaActionsSuite.m
+libactivator_FILES += tests/suites/builtins/LATestBuiltInRingerActionsSuite.m
+libactivator_FILES += tests/suites/runtime/LATestRuntimeInputSuite.m
+libactivator_FILES += tests/suites/runtime/LATestRuntimeDeviceSuite.m
 libactivator_CFLAGS += -DLA_TESTING=1
+libactivator_CFLAGS += -I.
+libactivator_CFLAGS += -Itests
+libactivator_CFLAGS += -Itests/support
+libactivator_CFLAGS += -Itests/fakes
+libactivator_CFLAGS += -Itests/suites/core
+libactivator_CFLAGS += -Itests/suites/builtins
+libactivator_CFLAGS += -Itests/suites/runtime
 libactivator_PRIVATE_FRAMEWORKS += IOKit
 endif
 

@@ -1,5 +1,5 @@
 // Usage:
-//   .venv/bin/frida -U SpringBoard -l scripts/watch-frontmost-transitions-frida.js
+//   .venv/bin/frida -U SpringBoard -l scripts/probes/watch-frontmost-transitions-frida.js
 //
 // Purpose:
 //   Observe SpringBoard transition hooks that may indicate frontmost application

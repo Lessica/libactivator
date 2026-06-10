@@ -1,5 +1,5 @@
 // Usage:
-//   frida -U SpringBoard -l scripts/discover-volume-control-instances-frida.js
+//   frida -U SpringBoard -l scripts/probes/discover-volume-control-instances-frida.js
 //
 // Purpose:
 //   Find live SBVolumeControl instances and inspect read-only state useful for

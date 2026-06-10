@@ -1,5 +1,5 @@
 // Usage:
-//   frida -U SpringBoard -l scripts/probe-volume-hud-frida.js
+//   frida -U SpringBoard -l scripts/probes/probe-volume-hud-frida.js
 //
 // Purpose:
 //   Verify whether SBVolumeControl -_presentVolumeHUDWithVolume: can present

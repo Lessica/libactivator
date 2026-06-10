@@ -2,9 +2,9 @@
 
 # Usage:
 #   . scripts/roothide.sh
-#   scripts/watch-runtime-state.sh
+#   scripts/probes/watch-runtime-state.sh
 #   . scripts/rootless.sh
-#   scripts/watch-runtime-state.sh
+#   scripts/probes/watch-runtime-state.sh
 #
 # Environment:
 #   THEOS_DEVICE_IP and THEOS_DEVICE_PORT are expected to be provided by the

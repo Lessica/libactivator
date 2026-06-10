@@ -1,5 +1,5 @@
 // Usage:
-//   frida -U SpringBoard -l scripts/discover-switcher-frida.js
+//   frida -U SpringBoard -l scripts/probes/discover-switcher-frida.js
 //
 // Purpose:
 //   Discover App Switcher related Objective-C classes and transition selectors

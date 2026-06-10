@@ -1,5 +1,5 @@
 // Usage:
-//   frida -U SpringBoard -l scripts/discover-volume-control-frida.js
+//   frida -U SpringBoard -l scripts/probes/discover-volume-control-frida.js
 //
 // Purpose:
 //   Discover volume-control related Objective-C classes and selectors on the
