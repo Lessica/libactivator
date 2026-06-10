@@ -8,23 +8,17 @@
 
 #import "LAActivatorUnlockService.h"
 
-@protocol LAActivatorLockScreenManagerClass <NSObject>
-+ (id)sharedInstance;
-@end
-
-@protocol LAActivatorLockScreenManager <NSObject>
-@optional
+@interface SBLockScreenManager : NSObject
++ (instancetype)sharedInstance;
 - (BOOL)isUILocked;
 - (void)attemptUnlockWithPasscode:(NSString *)passcode;
-- (void)attemptUnlockWithPasscode:(NSString *)passcode finishUIUnlock:(BOOL)finishUIUnlock completion:(id)completion;
+- (void)attemptUnlockWithPasscode:(NSString *)passcode
+                   finishUIUnlock:(BOOL)finishUIUnlock
+                       completion:(nullable id)completion;
 @end
 
-@protocol LAActivatorBacklightControllerClass <NSObject>
-+ (id)sharedInstance;
-@end
-
-@protocol LAActivatorBacklightController <NSObject>
-@optional
+@interface SBBacklightController : NSObject
++ (instancetype)sharedInstance;
 - (void)turnOnScreenFullyWithBacklightSource:(NSInteger)source;
 @end
 
@@ -35,7 +29,7 @@
 - (BOOL)isUILocked {
     __block BOOL locked = NO;
     [self performOnMainThreadSynchronously:^{
-        id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
+        SBLockScreenManager *manager = [self lockScreenManager];
         if ([manager respondsToSelector:@selector(isUILocked)]) {
             locked = [manager isUILocked];
         }
@@ -50,7 +44,7 @@
 - (BOOL)canRequestUnlock {
     __block BOOL canRequest = NO;
     [self performOnMainThreadSynchronously:^{
-        id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
+        SBLockScreenManager *manager = [self lockScreenManager];
         if (![manager respondsToSelector:@selector(isUILocked)]) {
             return;
         }
@@ -63,12 +57,12 @@
 - (BOOL)requestUnlockWithPasscode:(NSString *)passcode {
     __block BOOL attempted = NO;
     [self performOnMainThreadSynchronously:^{
-        id<LAActivatorBacklightController> backlightController = [self backlightController];
+        SBBacklightController *backlightController = [self backlightController];
         if ([backlightController respondsToSelector:@selector(turnOnScreenFullyWithBacklightSource:)]) {
             [backlightController turnOnScreenFullyWithBacklightSource:1];
         }
 
-        id<LAActivatorLockScreenManager> manager = [self lockScreenManager];
+        SBLockScreenManager *manager = [self lockScreenManager];
         if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:finishUIUnlock:completion:)]) {
             [manager attemptUnlockWithPasscode:passcode ?: @"" finishUIUnlock:YES completion:nil];
             attempted = YES;
@@ -93,20 +87,20 @@
     dispatch_sync(dispatch_get_main_queue(), block);
 }
 
-- (id<LAActivatorLockScreenManager>)lockScreenManager {
-    id<LAActivatorLockScreenManagerClass> managerClass = (id)NSClassFromString(@"SBLockScreenManager");
+- (SBLockScreenManager *)lockScreenManager {
+    Class managerClass = NSClassFromString(@"SBLockScreenManager");
     if (![managerClass respondsToSelector:@selector(sharedInstance)]) {
         return nil;
     }
-    return [managerClass sharedInstance];
+    return [(id)managerClass sharedInstance];
 }
 
-- (id<LAActivatorBacklightController>)backlightController {
-    id<LAActivatorBacklightControllerClass> controllerClass = (id)NSClassFromString(@"SBBacklightController");
+- (SBBacklightController *)backlightController {
+    Class controllerClass = NSClassFromString(@"SBBacklightController");
     if (![controllerClass respondsToSelector:@selector(sharedInstance)]) {
         return nil;
     }
-    return [controllerClass sharedInstance];
+    return [(id)controllerClass sharedInstance];
 }
 
 @end

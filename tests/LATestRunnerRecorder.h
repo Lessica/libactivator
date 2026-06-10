@@ -11,9 +11,13 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATestRunnerRecorder : NSObject
+
+#pragma mark - Recording
+
 - (void)beginSuite:(NSString *)suiteName;
 - (void)expect:(BOOL)condition caseName:(NSString *)caseName reason:(NSString *)reason;
-- (NSDictionary *)resultDictionary;
+- (NSDictionary<NSString *, id> *)resultDictionary;
+
 @end
 
 NS_ASSUME_NONNULL_END

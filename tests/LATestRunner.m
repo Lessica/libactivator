@@ -8,19 +8,17 @@
 
 #import "LATestRunner.h"
 
-#import <AppSupport/CPDistributedMessagingCenter.h>
 #import <Activator/Activator.h>
+#import <AppSupport/CPDistributedMessagingCenter.h>
 
 #import "LAActivatorIPC.h"
 #import "LATestRunnerRecorder.h"
 
 @interface LATestRunner ()
-- (BOOL)waitUntilTrue:(BOOL (^)(void))predicate timeout:(NSTimeInterval)timeout;
+@property(nonatomic, strong) CPDistributedMessagingCenter *center;
 @end
 
-@implementation LATestRunner {
-    CPDistributedMessagingCenter *_center;
-}
+@implementation LATestRunner
 
 - (instancetype)init {
     self = [super init];
@@ -69,7 +67,8 @@
         return 2;
     }
 
-    printf("[runtime] time mode underneath display frontMost screenOn uiLocked lockVisible sbInterface inLockScreen homeSources springBoardSources lockSources\n");
+    printf("[runtime] time mode underneath display frontMost screenOn uiLocked lockVisible sbInterface inLockScreen "
+           "homeSources springBoardSources lockSources\n");
     fflush(stdout);
     while (YES) {
         NSDictionary *reply = [self sendCommand:LAActivatorIPCTestingCommandRuntimeState];
@@ -138,7 +137,9 @@
     [self sendSelector:@selector(sendEventToListener:) toActivator:activator nilEventWithObject:nil];
     [self sendSelector:@selector(sendEvent:toListenerWithName:) toActivator:activator nilEventWithObject:nothingName];
     [self sendSelector:@selector(sendAbortToListener:) toActivator:activator nilEventWithObject:nil];
-    [self sendSelector:@selector(sendAbortEvent:toListenerWithName:) toActivator:activator nilEventWithObject:nothingName];
+    [self sendSelector:@selector(sendAbortEvent:toListenerWithName:)
+               toActivator:activator
+        nilEventWithObject:nothingName];
     [self sendSelector:@selector(sendDeactivateEventToListeners:) toActivator:activator nilEventWithObject:nil];
     [recorder expect:YES caseName:@"nil-event-dispatch-noop" reason:@"Nil event dispatch should not fail"];
 
@@ -147,8 +148,8 @@
             caseName:@"assignment-round-trip"
               reason:@"Client assignment did not round-trip through SpringBoard"];
     [recorder expect:[self events:[activator eventsAssignedToListenerWithName:nothingName]
-               containEventName:eventName
-                            mode:LAEventModeSpringBoard]
+                         containEventName:eventName
+                                     mode:LAEventModeSpringBoard]
             caseName:@"reverse-assignment"
               reason:@"Client reverse assignment lookup did not include the assigned event"];
     [activator unassignEvent:allModesEvent];
@@ -165,11 +166,11 @@
                                                         assignmentNotificationCount += 1;
                                                     }];
     [activator addListenerAssignment:nothingName toEvent:allModesEvent];
-    BOOL receivedAssignmentNotification =
-        [self waitUntilTrue:^BOOL {
+    BOOL receivedAssignmentNotification = [self
+        waitUntilTrue:^BOOL {
             return assignmentNotificationCount > 0;
         }
-                      timeout:2.0];
+              timeout:2.0];
     [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.2]];
     [recorder expect:[[activator assignedListenerNamesForEvent:event] isEqualToArray:@[ nothingName ]]
             caseName:@"add-assignment-round-trip"
@@ -217,17 +218,17 @@
     NSDictionary *probeResult = [probeResultReply[LAActivatorIPCKeyValue] isKindOfClass:NSDictionary.class]
                                     ? probeResultReply[LAActivatorIPCKeyValue]
                                     : nil;
-    NSDictionary *receivedUserInfo = [probeResult[@"UserInfo"] isKindOfClass:NSDictionary.class]
-                                         ? probeResult[@"UserInfo"]
-                                         : nil;
+    NSDictionary *receivedUserInfo =
+        [probeResult[@"UserInfo"] isKindOfClass:NSDictionary.class] ? probeResult[@"UserInfo"] : nil;
     [recorder expect:userInfoEvent.handled && [probeResult[@"ReceiveCount"] integerValue] == 1
             caseName:@"dispatch-user-info-probe"
               reason:@"Client dispatch userInfo probe did not reach SpringBoard"];
-    [recorder expect:[receivedUserInfo[@"safe"] isEqual:@"value"] && [receivedUserInfo[@"nested"][@"safe"] isEqual:@42] &&
-                     [receivedUserInfo[@"array"] isEqualToArray:@[ @"keep" ]] && receivedUserInfo[@"unsafe"] == nil &&
-                     receivedUserInfo[@"nested"][@"unsafe"] == nil
-            caseName:@"dispatch-user-info-plist-filter"
-              reason:@"Client dispatch did not filter non-property-list userInfo values"];
+    [recorder
+          expect:[receivedUserInfo[@"safe"] isEqual:@"value"] && [receivedUserInfo[@"nested"][@"safe"] isEqual:@42] &&
+                 [receivedUserInfo[@"array"] isEqualToArray:@[ @"keep" ]] && receivedUserInfo[@"unsafe"] == nil &&
+                 receivedUserInfo[@"nested"][@"unsafe"] == nil
+        caseName:@"dispatch-user-info-plist-filter"
+          reason:@"Client dispatch did not filter non-property-list userInfo values"];
 
     [activator unassignEvent:event];
     [recorder expect:[activator assignedListenerNamesForEvent:event].count == 0
@@ -308,8 +309,9 @@
 }
 
 - (NSDictionary *)sendCommand:(NSString *)command {
-    NSDictionary *reply = [_center sendMessageAndReceiveReplyName:LAActivatorIPCMessageTesting
-                                                         userInfo:@{LAActivatorIPCKeyTestingCommand : command ?: @""}];
+    NSDictionary *reply =
+        [self.center sendMessageAndReceiveReplyName:LAActivatorIPCMessageTesting
+                                           userInfo:@{LAActivatorIPCKeyTestingCommand : command ?: @""}];
     return [reply isKindOfClass:NSDictionary.class] ? reply : @{};
 }
 
@@ -367,19 +369,13 @@
         [state[@"DisplayIdentifier"] isKindOfClass:NSString.class] ? state[@"DisplayIdentifier"] : @"";
     NSString *frontMost = [state[@"FrontMost"] isKindOfClass:NSString.class] ? state[@"FrontMost"] : @"";
 
-    printf("[runtime] %s mode=%s underneath=%s display=%s frontMost=%s screenOn=%s uiLocked=%s lockVisible=%s sbInterface=%s inLockScreen=%s home=%s springBoard=%s lock=%s\n",
-           [[formatter stringFromDate:NSDate.date] UTF8String],
-           [mode UTF8String],
-           [underneathMode UTF8String],
-           [displayIdentifier UTF8String],
-           [frontMost UTF8String],
-           [state[@"ScreenOn"] boolValue] ? "YES" : "NO",
-           [state[@"UILocked"] boolValue] ? "YES" : "NO",
-           [state[@"LockScreenVisible"] boolValue] ? "YES" : "NO",
+    printf("[runtime] %s mode=%s underneath=%s display=%s frontMost=%s screenOn=%s uiLocked=%s lockVisible=%s "
+           "sbInterface=%s inLockScreen=%s home=%s springBoard=%s lock=%s\n",
+           [[formatter stringFromDate:NSDate.date] UTF8String], [mode UTF8String], [underneathMode UTF8String],
+           [displayIdentifier UTF8String], [frontMost UTF8String], [state[@"ScreenOn"] boolValue] ? "YES" : "NO",
+           [state[@"UILocked"] boolValue] ? "YES" : "NO", [state[@"LockScreenVisible"] boolValue] ? "YES" : "NO",
            [state[@"SpringBoardInterfaceVisible"] boolValue] ? "YES" : "NO",
-           [state[@"InLockScreen"] boolValue] ? "YES" : "NO",
-           [homeSources UTF8String],
-           [springBoardSources UTF8String],
+           [state[@"InLockScreen"] boolValue] ? "YES" : "NO", [homeSources UTF8String], [springBoardSources UTF8String],
            [lockSources UTF8String]);
     fflush(stdout);
 }

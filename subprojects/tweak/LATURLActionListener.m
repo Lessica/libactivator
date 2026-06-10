@@ -14,12 +14,6 @@
 - (void)applicationOpenURL:(NSURL *)url publicURLsOnly:(BOOL)publicURLsOnly;
 @end
 
-@interface LATURLActionListener ()
-- (nullable NSString *)urlStringForListenerName:(NSString *)listenerName activator:(LAActivator *)activator;
-- (nullable NSString *)urlStringInURLsValue:(id)value;
-- (BOOL)openURL:(NSURL *)url listenerName:(NSString *)listenerName;
-@end
-
 #if LA_TESTING
 static LATURLActionOpenHandler LATTestingOpenHandler;
 static NSURL *LATTestingLastOpenedURL;

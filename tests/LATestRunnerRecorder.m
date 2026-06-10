@@ -10,12 +10,14 @@
 
 #import "LAActivatorIPC.h"
 
-@implementation LATestRunnerRecorder {
-    NSMutableArray *_suites;
-    NSMutableArray *_failures;
-    NSInteger _caseCount;
-    NSInteger _passCount;
-}
+@interface LATestRunnerRecorder ()
+@property(nonatomic, strong) NSMutableArray<NSString *> *suites;
+@property(nonatomic, strong) NSMutableArray<NSString *> *failures;
+@property(nonatomic, assign) NSInteger caseCount;
+@property(nonatomic, assign) NSInteger passCount;
+@end
+
+@implementation LATestRunnerRecorder
 
 - (instancetype)init {
     self = [super init];
@@ -27,31 +29,31 @@
 }
 
 - (void)beginSuite:(NSString *)suiteName {
-    if (suiteName.length > 0 && ![_suites containsObject:suiteName]) {
-        [_suites addObject:suiteName];
+    if (suiteName.length > 0 && ![self.suites containsObject:suiteName]) {
+        [self.suites addObject:suiteName];
     }
 }
 
 - (void)expect:(BOOL)condition caseName:(NSString *)caseName reason:(NSString *)reason {
-    _caseCount += 1;
+    self.caseCount += 1;
     if (condition) {
-        _passCount += 1;
+        self.passCount += 1;
         return;
     }
 
-    NSString *suiteName = [_suites lastObject] ?: @"Unknown";
-    [_failures addObject:[NSString stringWithFormat:@"%@/%@: %@", suiteName, caseName ?: @"unknown",
-                                                    reason ?: @"Expectation failed"]];
+    NSString *suiteName = [self.suites lastObject] ?: @"Unknown";
+    [self.failures addObject:[NSString stringWithFormat:@"%@/%@: %@", suiteName, caseName ?: @"unknown",
+                                                        reason ?: @"Expectation failed"]];
 }
 
 - (NSDictionary *)resultDictionary {
     return @{
-        LAActivatorIPCKeyTestingSuites : [_suites copy],
-        LAActivatorIPCKeyTestingFailures : [_failures copy],
+        LAActivatorIPCKeyTestingSuites : [self.suites copy],
+        LAActivatorIPCKeyTestingFailures : [self.failures copy],
         LAActivatorIPCKeyTestingSkipped : @[],
-        LAActivatorIPCKeyTestingCaseCount : @(_caseCount),
-        LAActivatorIPCKeyTestingPassCount : @(_passCount),
-        LAActivatorIPCKeyTestingFailureCount : @(_failures.count),
+        LAActivatorIPCKeyTestingCaseCount : @(self.caseCount),
+        LAActivatorIPCKeyTestingPassCount : @(self.passCount),
+        LAActivatorIPCKeyTestingFailureCount : @(self.failures.count),
         LAActivatorIPCKeyTestingSkipCount : @0,
     };
 }

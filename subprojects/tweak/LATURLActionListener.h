@@ -18,7 +18,8 @@ typedef BOOL (^LATURLActionOpenHandler)(NSURL *url, NSString *listenerName);
 
 @interface LATURLActionListener (Testing)
 + (void)setTestingOpenHandler:(nullable LATURLActionOpenHandler)handler;
-+ (void)setTestingURLMetadata:(nullable NSDictionary *)metadata forListenerName:(NSString *)listenerName;
++ (void)setTestingURLMetadata:(nullable NSDictionary<NSString *, id> *)metadata
+              forListenerName:(NSString *)listenerName;
 + (nullable NSURL *)testingLastOpenedURL;
 + (nullable NSString *)testingLastOpenedListenerName;
 + (void)resetTestingState;

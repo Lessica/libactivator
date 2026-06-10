@@ -11,10 +11,14 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATestRunner : NSObject
+
+#pragma mark - Commands
+
 - (int)runStableTests;
 - (int)runRuntimeInputTests;
 - (int)runDeviceRuntimeTests;
 - (int)watchRuntimeState;
+
 @end
 
 NS_ASSUME_NONNULL_END

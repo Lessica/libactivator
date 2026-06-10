@@ -11,11 +11,6 @@
 #import "LATNothingListener.h"
 #import "LATURLActionListener.h"
 
-@interface LATBuiltInListenerRegistry ()
-+ (NSArray *)urlActionListenerNames;
-+ (BOOL)listenerHasURLMetadata:(NSString *)listenerName activator:(LAActivator *)activator;
-@end
-
 @implementation LATBuiltInListenerRegistry
 
 + (void)registerBuiltInListenersWithActivator:(LAActivator *)activator {

@@ -20,10 +20,12 @@
 - (int)run;
 @end
 
-@implementation LACommandLineTool {
-    NSArray<NSString *> *_arguments;
-    LAActivator *_activator;
-}
+@interface LACommandLineTool ()
+@property(nonatomic, copy) NSArray<NSString *> *arguments;
+@property(nonatomic, strong) LAActivator *activator;
+@end
+
+@implementation LACommandLineTool
 
 - (instancetype)initWithArgc:(int)argc argv:(char *[])argv {
     self = [super init];
@@ -39,19 +41,19 @@
 }
 
 - (int)run {
-    if (_arguments.count <= 1) {
+    if (self.arguments.count <= 1) {
         [self printUsage];
         return 0;
     }
 
     NSString *command = [self argumentAtIndex:1];
-    if (_arguments.count == 2) {
+    if (self.arguments.count == 2) {
         return [self runCommandWithoutArguments:command];
     }
-    if (_arguments.count == 3) {
+    if (self.arguments.count == 3) {
         return [self runCommand:command argument:[self argumentAtIndex:2]];
     }
-    if (_arguments.count == 4) {
+    if (self.arguments.count == 4) {
         return [self runCommand:command firstArgument:[self argumentAtIndex:2] secondArgument:[self argumentAtIndex:3]];
     }
 
@@ -61,23 +63,23 @@
 
 - (int)runCommandWithoutArguments:(NSString *)command {
     if ([command isEqualToString:@"listeners"]) {
-        [self printObjects:_activator.availableListenerNames];
+        [self printObjects:self.activator.availableListenerNames];
         return 0;
     }
     if ([command isEqualToString:@"events"]) {
-        [self printObjects:_activator.availableEventNames];
+        [self printObjects:self.activator.availableEventNames];
         return 0;
     }
     if ([command isEqualToString:@"modes"]) {
-        [self printObjects:_activator.availableEventModes];
+        [self printObjects:self.activator.availableEventModes];
         return 0;
     }
     if ([command isEqualToString:@"current-mode"]) {
-        [self printObject:_activator.currentEventMode];
+        [self printObject:self.activator.currentEventMode];
         return 0;
     }
     if ([command isEqualToString:@"current-app"]) {
-        NSString *displayIdentifier = _activator.displayIdentifierForCurrentApplication;
+        NSString *displayIdentifier = self.activator.displayIdentifierForCurrentApplication;
         if (displayIdentifier.length > 0) {
             [self printObject:displayIdentifier];
         }
@@ -132,7 +134,7 @@
 }
 
 - (int)runGetCommandWithKey:(NSString *)key {
-    id value = [_activator _getObjectForPreference:key];
+    id value = [self.activator _getObjectForPreference:key];
     if (value) {
         [self printObject:value];
     }
@@ -140,7 +142,7 @@
 }
 
 - (int)runSetCommandWithKey:(NSString *)key value:(NSString *)value {
-    [_activator _setObject:value forPreference:key];
+    [self.activator _setObject:value forPreference:key];
     return 0;
 }
 
@@ -149,7 +151,7 @@
 }
 
 - (LAEvent *)eventWithCurrentModeNamed:(NSString *)eventName {
-    return [LAEvent eventWithName:eventName mode:_activator.currentEventMode];
+    return [LAEvent eventWithName:eventName mode:self.activator.currentEventMode];
 }
 
 - (int)exitStatusForEvent:(LAEvent *)event {
@@ -157,11 +159,11 @@
 }
 
 - (NSString *)argumentAtIndex:(NSUInteger)index {
-    return index < _arguments.count ? _arguments[index] : @"";
+    return index < self.arguments.count ? self.arguments[index] : @"";
 }
 
 - (void)printUsage {
-    fprintf(stderr, "Activator version: %ld\n", (long)_activator.version);
+    fprintf(stderr, "Activator version: %ld\n", (long)self.activator.version);
     fputs("Usage:\n", stderr);
     fputs("\tactivator listeners\n", stderr);
     fputs("\tactivator events\n", stderr);
