@@ -47,7 +47,6 @@
 "MODE_DESCRIPTION_springboard" = "Когда перед Вами иконки приложений";
 "LISTENER_TITLE_libactivator.speech.synthesize_FORMAT" = "Сказать \"%@\"";
 "EVENT_DESCRIPTION_libactivator.volume.down-up" = "Нажать нижнюю, потом верхнюю";
-"LISTENER_TITLE_libactivator.settings.usage" = "Статистика";
 "LISTENER_TITLE_libactivator.settings.virtual-assistant" = "Siri";
 "EVENT_GROUP_TITLE_Switches (Deactivate)" = "Переключатели (Выкл.)";
 "LISTENER_DESCRIPTION_libactivator.settings.virtual-assistant" = "Открыть Настройки->Siri";
@@ -86,7 +85,6 @@
 "EVENT_GROUP_TITLE_Slide In Gesture" = "Свайпы в центр экрана";
 "LISTENER_TITLE_libactivator.settings.keyboard" = "Клавиатура";
 "LISTENER_DESCRIPTION_libactivator.phone.contacts" = "Открыть Телефон->Контакты";
-"LISTENER_TITLE_libactivator.settings.brightness-and-wallpaper" = "Яркость и обои";
 "LISTENER_GROUP_TITLE_Switches" = "Переключатели";
 "EVENT_TITLE_libactivator.five-finger.spread" = "Развести 5 пальцев";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.right" = "Нажать дважды в правой части СБ";
@@ -126,7 +124,6 @@
 "EVENT_TITLE_libactivator.icon.flick.down_FORMAT" = "Потянуть %@ вниз";
 "EVENT_DESCRIPTION_libactivator.drag-off.right" = "Провести из центра экрана вправо";
 "EVENT_DESCRIPTION_libactivator.lockscreen.clock.swipe-left" = "Провести пальцем по часам влево";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "Открыть Настройки->Twitter";
 "EVENT_TITLE_libactivator.four-finger.tap" = "4П:Касание экрана";
 "LISTENER_DESCRIPTION_toggle_disable" = "Выкл. переключатель";
 "LISTENER_GROUP_TITLE_Audio" = "Аудио";
@@ -187,7 +184,6 @@
 "LISTENER_TITLE_libactivator.phone.voicemail" = "Показать Голос. почту";
 "NEW_EVENT_DESCRIPTION_libactivator.message-received_MESSAGE_FORMAT" = "Сообщ. содержит \"%@\"";
 "TOO_NEW_MESSAGE" = "Activator не тестировался на совместимость с данной версией. Возможно не все функции будут работать как задумано.";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "Открыть Настройки->Яркость";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-bottom.right-to-left" = "Провести по нижней границе справа налево";
 "EVENT_DESCRIPTION_libactivator.power.connected" = "При подключении зарядки";
 "EVENT_DESCRIPTION_libactivator.four-finger.tap" = "Коснуться экрана четырьмя пальцами";
@@ -236,7 +232,6 @@
 "N_ACTIONS" = "%d действ.";
 "EVENT_DESCRIPTION_libactivator.three-finger.spread" = "Развести 3 пальца на экране";
 "CANCEL" = "Отмена";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "Открыть Настройки->Статистика";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_AND_SENDER_FORMAT" = "Тема содержит \"%2$@\", отправитель: %1$@";
 "EVENT_DESCRIPTION_libactivator.statusbar.hold.right" = "Нажать и держать в правой части СБ";
 "LISTENER_TITLE_toggle_3G" = "3G";
@@ -249,7 +244,6 @@
 "EVENT_TITLE_libactivator.three-finger.spread" = "Развести 3 пальца";
 "LISTENER_TITLE_libactivator.system.safemode" = "Безопасный режим";
 "LISTENER_TITLE_libactivator.settings.vpn" = "VPN";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness-and-wallpaper" = "Открыть Настройки->Яркость и обои";
 "SET_VOLUME_TO_FORMAT" = "Уровень громкости %@%%";
 "EVENT_DESCRIPTION_libactivator.three-finger.tap" = "Коснуться экрана тремя пальцами";
 "EVENT_TITLE_libactivator.motion.shake" = "Потрясти устройство";
@@ -310,7 +304,6 @@
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SENDER_FORMAT" = "Отправитель: %@";
 "LISTENER_TITLE_libactivator.phone.contacts" = "Показать Контакты";
 "LISTENER_TITLE_libactivator.system.powerdown" = "Выключить";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "Открыть Настройки->Сеть";
 "LISTENER_TITLE_com.rpetrich.superscroller.up" = "Вверх";
 "EVENT_DESCRIPTION_libactivator.slide-in.left-bottom" = "Провести от левой нижней части экрана к центру";
 "LISTENER_TITLE_libactivator.sms.compose-message" = "Создать сообщение";
@@ -378,7 +371,6 @@
 "EVENT_DESCRIPTION_libactivator.slide-in.right-bottom" = "Провести от правой нижней части экрана к центру";
 "LISTENER_TITLE_libactivator.phone.keypad" = "Показать Клавиши";
 "EVENT_TITLE_libactivator.statusbar.hold.left" = "Держать слева";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "Эквалайзер";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-left.top-to-bottom" = "Провести сверху вниз по границе экрана";
 "CURRENTLY_ASSIGNED_TO" = "Назначено для:";
 "EVENT_TITLE_libactivator.icon.flick.up_FORMAT" = "Потянуть %@ вверх";
@@ -396,7 +388,6 @@
 "LISTENER_DESCRIPTION_com.rpetrich.superscroller.autodown" = "Листание вниз";
 "EVENT_TITLE_libactivator.icon.flick.up" = "Провести по иконке вверх";
 "EVENT_DESCRIPTION_libactivator.five-finger.tap" = "Коснуться экрана пятью пальцами";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "Открыть Настройки->Эквалайзер";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.left" = "Нажать дважды в левой части СБ";
 "LISTENER_DESCRIPTION_libactivator.settings.keyboard" = "Открыть Настройки->Клавиатура";
 "EVENT_TITLE_libactivator.two-finger-slide-in.bottom-left" = "2П:Низ экрана-Лево";
@@ -418,7 +409,6 @@
 "LISTENER_DESCRIPTION_com.rpetrich.activoice.search" = "Активировать текстовый поиск Google";
 "EVENT_DESCRIPTION_libactivator.menu.press.single" = "Нажать один раз";
 "EVENT_DESCRIPTION_libactivator.headset.disconnected" = "При отключении гарнитуры";
-"LISTENER_TITLE_libactivator.settings.network" = "Сеть";
 "NEW_EVENT_TITLE_libactivator.scheduled" = "Отметка времени";
 "EVENT_GROUP_TITLE_Application Launched" = "Запущено приложение";
 "LISTENER_TITLE_libactivator.ipod.music-controls" = "Управление плеером";
@@ -531,7 +521,6 @@
 "EVENT_TITLE_libactivator.slide-in.left-top" = "Верх экрана-Лево";
 "NEW_EVENT_DESCRIPTION_libactivator.icon.tap.double" = "Двойное касание указанной иконки";
 "PROFILES_DETAIL" = "Настроить профили назначений";
-"LISTENER_TITLE_libactivator.settings.brightness" = "Яркость";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.twice" = "Коснуться сенсора дважды";
 "EVENT_GROUP_TITLE_Scheduled" = "Запланировано";
 "EVENT_DESCRIPTION_libactivator.motion.shake" = "Потрясти!";
@@ -562,7 +551,6 @@
 "LISTENER_DESCRIPTION_libactivator.lockscreen.show" = "Заблокировать";
 "LISTENER_DESCRIPTION_libactivator.settings.date-time" = "Открыть Настройки->Дата и Время";
 "EVENT_DESCRIPTION_libactivator.icon.flick.up" = "Провести по иконке вверх";
-"LISTENER_TITLE_libactivator.settings.twitter" = "Twitter";
 "EVENT_DESCRIPTION_libactivator.three-finger.pinch" = "Свести 3 пальца на экране";
 "EVENT_TITLE_libactivator.statusbar.tap.double" = "Двойное касание";
 "BOOKMARKS_DETAIL" = "Управлять действиями с закладками";

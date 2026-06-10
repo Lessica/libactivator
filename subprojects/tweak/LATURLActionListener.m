@@ -10,8 +10,9 @@
 
 #import <UIKit/UIKit.h>
 
-@interface UIApplication (LATSpringBoardURLAction)
-- (void)applicationOpenURL:(NSURL *)url publicURLsOnly:(BOOL)publicURLsOnly;
+@interface LSApplicationWorkspace : NSObject
++ (instancetype)defaultWorkspace;
+- (BOOL)openSensitiveURL:(NSURL *)url withOptions:(NSDictionary *)options error:(NSError **)error;
 @end
 
 #if LA_TESTING
@@ -92,32 +93,44 @@ static NSMutableDictionary *LATTestingURLMetadata;
 }
 
 - (BOOL)openURL:(NSURL *)url listenerName:(NSString *)listenerName {
-    __block BOOL opened = NO;
-    dispatch_block_t openBlock = ^{
 #if LA_TESTING
-        LATTestingLastOpenedURL = url;
-        LATTestingLastOpenedListenerName = [listenerName copy];
-        if (LATTestingOpenHandler) {
-            opened = LATTestingOpenHandler(url, listenerName ?: @"");
-            return;
-        }
+    LATTestingLastOpenedURL = url;
+    LATTestingLastOpenedListenerName = [listenerName copy];
+    if (LATTestingOpenHandler) {
+        return LATTestingOpenHandler(url, listenerName ?: @"");
+    }
 #endif
 
-        UIApplication *application = UIApplication.sharedApplication;
-        if (![application respondsToSelector:@selector(applicationOpenURL:publicURLsOnly:)]) {
-            NSLog(@"libactivator: SpringBoard does not support applicationOpenURL:publicURLsOnly:");
-            return;
-        }
-        [application applicationOpenURL:url publicURLsOnly:NO];
-        opened = YES;
-    };
-
-    if ([NSThread isMainThread]) {
-        openBlock();
-    } else {
-        dispatch_sync(dispatch_get_main_queue(), openBlock);
+    Class workspaceClass = NSClassFromString(@"LSApplicationWorkspace");
+    if (![workspaceClass respondsToSelector:@selector(defaultWorkspace)]) {
+        NSLog(@"libactivator: LSApplicationWorkspace is unavailable");
+        return NO;
     }
-    return opened;
+    LSApplicationWorkspace *workspace = [workspaceClass defaultWorkspace];
+    if (![workspace respondsToSelector:@selector(openSensitiveURL:withOptions:error:)]) {
+        NSLog(@"libactivator: LSApplicationWorkspace does not support openSensitiveURL:withOptions:error:");
+        return NO;
+    }
+
+    dispatch_async([self.class URLActionOpenQueue], ^{
+        NSError *error = nil;
+        BOOL opened = [workspace openSensitiveURL:url withOptions:@{} error:&error];
+        if (!opened) {
+            NSLog(@"libactivator: Failed to open URL action %@ URL %@: %@", listenerName ?: @"",
+                  url.absoluteString ?: @"", error.localizedDescription ?: @"unknown error");
+        }
+    });
+
+    return YES;
+}
+
++ (dispatch_queue_t)URLActionOpenQueue {
+    static dispatch_queue_t queue;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        queue = dispatch_queue_create("com.libactivator.url-actions.open", DISPATCH_QUEUE_SERIAL);
+    });
+    return queue;
 }
 
 #if LA_TESTING

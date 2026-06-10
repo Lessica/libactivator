@@ -150,9 +150,7 @@
 "LISTENER_DESCRIPTION_libactivator.settings.accessibility" = "打开设置的辅助功能页面";
 "LISTENER_DESCRIPTION_libactivator.settings.auto-lock" = "打开设置的自动锁定页面";
 "LISTENER_DESCRIPTION_libactivator.settings.bluetooth" = "打开设置的蓝牙页面";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "打开设置的亮度页面";
 "LISTENER_DESCRIPTION_libactivator.settings.date-time" = "打开设置的日期与时间页面";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "打开设置的均衡器页面";
 "LISTENER_DESCRIPTION_libactivator.settings.facetime" = "打开设置的 FaceTime 页面";
 "LISTENER_DESCRIPTION_libactivator.settings.general" = "打开设置的通用页面";
 "LISTENER_DESCRIPTION_libactivator.settings.icloud" = "打开设置的 iCloud 页面";
@@ -160,7 +158,6 @@
 "LISTENER_DESCRIPTION_libactivator.settings.keyboard" = "打开设置的键盘页面";
 "LISTENER_DESCRIPTION_libactivator.settings.location-services" = "打开设置的定位服务页面";
 "LISTENER_DESCRIPTION_libactivator.settings.music" = "打开设置的音乐页面";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "打开设置的网络页面";
 "LISTENER_DESCRIPTION_libactivator.settings.notes" = "打开设置的备忘录页面";
 "LISTENER_DESCRIPTION_libactivator.settings.notifications" = "打开设置的通知页面";
 "LISTENER_DESCRIPTION_libactivator.settings.phone" = "打开设置的电话页面";
@@ -168,8 +165,6 @@
 "LISTENER_DESCRIPTION_libactivator.settings.safari" = "打开设置的 Safari 页面";
 "LISTENER_DESCRIPTION_libactivator.settings.sounds" = "打开设置的声音页面";
 "LISTENER_DESCRIPTION_libactivator.settings.store" = "打开设置的商店页面";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "打开设置的 Twitter 页面";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "打开设置的用量页面";
 "LISTENER_DESCRIPTION_libactivator.settings.virtual-assistant" = "打开设置的虚拟助理页面";
 "LISTENER_DESCRIPTION_libactivator.settings.vpn" = "打开设置的 VPN 页面";
 "LISTENER_DESCRIPTION_libactivator.settings.wallpaper" = "打开设置的墙纸页面";
@@ -213,9 +208,7 @@
 "LISTENER_TITLE_libactivator.settings.accessibility" = "辅助功能";
 "LISTENER_TITLE_libactivator.settings.auto-lock" = "自动锁定";
 "LISTENER_TITLE_libactivator.settings.bluetooth" = "蓝牙";
-"LISTENER_TITLE_libactivator.settings.brightness" = "亮度";
 "LISTENER_TITLE_libactivator.settings.date-time" = "日期与时间";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "均衡器";
 "LISTENER_TITLE_libactivator.settings.facetime" = "FaceTime";
 "LISTENER_TITLE_libactivator.settings.general" = "通用";
 "LISTENER_TITLE_libactivator.settings.icloud" = "iCloud";
@@ -223,7 +216,6 @@
 "LISTENER_TITLE_libactivator.settings.keyboard" = "键盘";
 "LISTENER_TITLE_libactivator.settings.location-services" = "定位服务";
 "LISTENER_TITLE_libactivator.settings.music" = "音乐";
-"LISTENER_TITLE_libactivator.settings.network" = "网络";
 "LISTENER_TITLE_libactivator.settings.notes" = "备忘录";
 "LISTENER_TITLE_libactivator.settings.notifications" = "通知";
 "LISTENER_TITLE_libactivator.settings.phone" = "电话";
@@ -231,8 +223,6 @@
 "LISTENER_TITLE_libactivator.settings.safari" = "Safari";
 "LISTENER_TITLE_libactivator.settings.sounds" = "声音";
 "LISTENER_TITLE_libactivator.settings.store" = "商店";
-"LISTENER_TITLE_libactivator.settings.twitter" = "Twitter";
-"LISTENER_TITLE_libactivator.settings.usage" = "用量";
 "LISTENER_TITLE_libactivator.settings.virtual-assistant" = "虚拟助理";
 "LISTENER_TITLE_libactivator.settings.vpn" = "VPN";
 "LISTENER_TITLE_libactivator.settings.wallpaper" = "墙纸";

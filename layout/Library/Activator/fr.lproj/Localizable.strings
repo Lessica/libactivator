@@ -26,10 +26,8 @@
 "OUT_OF_DATE_MESSAGE" = "Activator fonctionne mieux sur une version moderne de iOS.\nS'il vous plaît envisager de mettre à niveau.";
 "ACTIVATOR_DISABLED" = "Activator désactivé";
 "LISTENER_TITLE_libactivator.ipod.previous-track" = "Piste précédente";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "Ouvre Réglages d'Utilisation";
 "LISTENER_TITLE_libactivator.settings.wifi" = "Wi-Fi";
 "EVENT_DESCRIPTION_libactivator.menu.press.single" = "Appuyez une fois sur le bouton d'accueil";
-"LISTENER_TITLE_libactivator.settings.brightness" = "Luminosité";
 "LISTENER_DESCRIPTION_libactivator.system.take-screenshot" = "Enregistre le contenu de l'écran à vos photos";
 "LISTENER_TITLE_toggle_Data" = "Données";
 "LISTENER_DESCRIPTION_com.rpetrich.superscroller.down" = "Faite défiler une page vers le bas";
@@ -63,8 +61,6 @@
 "LISTENER_DESCRIPTION_libactivator.phone.voicemail" = "Lance Téléphone à l'onglet Messagerie vocale";
 "LISTENER_TITLE_libactivator.system.safemode" = "Mode sans échec";
 "EVENT_TITLE_libactivator.springboard.spread" = "Écarter les icônes";
-"LISTENER_TITLE_libactivator.settings.usage" = "Utilisation";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "Ouvre Réglages à Égaliseur";
 "EVENT_TITLE_libactivator.volume.down.press" = "Appui sur bas";
 "EVENT_DESCRIPTION_libactivator.slide-in.top-left" = "Glissez sur l'écran à partir du haut gauche";
 "ACTIVATOR_DISABLED_MESSAGE" = "La plupart des fonctions d'Activator sont actuellement désactivées parce que Mobile Substrate ne fonctionne pas. Si votre appareil est en mode sans échec , vous allez voir \"Quittez le mode sans échec\" en haut de votre écran , vous pouvez appuyer sur \"Redémarrer\" pour revenir au mode normal .";
@@ -218,11 +214,9 @@
 "EVENT_DESCRIPTION_libactivator.statusbar.swipe.right" = "Appuyez et glissez vers la droite de la barre de statut";
 "OUT_OF_DATE_TITLE" = "Version du système obsolète";
 "EVENT_TITLE_libactivator.volume.up.press" = "Appui sur haut";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "Ouvre Réglages à Luminosité";
 "LISTENER_DESCRIPTION_toggle" = "Active/désactive toggle";
 "NEW_MENU" = "Nouveau menu";
 "ALERT_OK" = "OK";
-"LISTENER_TITLE_libactivator.settings.network" = "Réseau";
 "EVENT_DESCRIPTION_libactivator.volume.down.press" = "Appuyez le bouton bas du volume";
 "EVENT_DESCRIPTION_libactivator.volume.down.hold.short" = "Appuyez et maintenez enfoncé le bouton bas";
 "TOO_NEW_MESSAGE" = "Activator n'a pas été testé avec cette version d'iOS.\nCertaines fonctionnalités peuvent ne pas fonctionner comme prévu.";
@@ -292,9 +286,7 @@
 "EVENT_TITLE_libactivator.slide-in.bottom" = "À partir du bas de l'écran";
 "LISTENER_TITLE_libactivator.system.sleepbutton" = "Bouton de veille";
 "ADD" = "Ajouter";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "Ouvre Réglages de Twitter";
 "LISTENER_DESCRIPTION_libactivator.settings.vpn" = "Ouvre Réglages du VPN";
-"LISTENER_TITLE_libactivator.settings.twitter" = "Twitter";
 "EVENT_DESCRIPTION_libactivator.springboard.spread" = "Écartez les icônes du SpringBoard avec deux doigts";
 "SHOW_ACTIVATOR_ICON_ON_SPRINGBOARD" = "Afficher l'icône d'Activator sur le SpringBoard";
 "ALERT_REASSIGN" = "Réassigner";
@@ -308,8 +300,6 @@
 "LISTENER_DESCRIPTION_libactivator.system.spotlight" = "Active la page de recherche du SpringBoard";
 "EVENT_DESCRIPTION_libactivator.slide-in.bottom-right" = "Glissez sur l'écran à partir du bas droit";
 "EVENT_DESCRIPTION_libactivator.two-finger-slide-in.top-left" = "Glissez sur l'écran à partir du haut gauche";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "Égaliseur";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "Ouvre Réglages du Réseau";
 "EVENT_GROUP_TITLE_Motion" = "Mouvement";
 "RESET_ALERT_TITLE" = "Réinitialiser les paramètres d'Activator";
 "EVENT_TITLE_libactivator.statusbar.tap.double" = "Appui double";

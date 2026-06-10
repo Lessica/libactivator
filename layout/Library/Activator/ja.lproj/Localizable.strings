@@ -17,7 +17,6 @@
 "EVENT_TITLE_libactivator.statusbar.swipe.left" = "左にスワイプ";
 "BOOKMARK_TITLE" = "ブックマークのタイトル";
 "LISTENER_DESCRIPTION_libactivator.settings.facetime" = "FaceTimeの設定を開く";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "ネットワークの設定を開く";
 "LISTENER_DESCRIPTION_libactivator.settings.bluetooth" = "Bluetoothの設定を開く";
 "LISTENER_TITLE_libactivator.lockscreen.toggle" = "ロック/アンロック";
 "EVENT_TITLE_libactivator.volume.up.press" = "上を1回押す";
@@ -83,7 +82,6 @@
 "EVENT_TITLE_libactivator.lock.hold.short" = "長押し";
 "EVENT_DESCRIPTION_libactivator.slide-in.top-right" = "スクリーン右上から下にスワイプ";
 "MENUS_DETAIL" = "Activatorの動作を自分で設定できます";
-"LISTENER_TITLE_libactivator.settings.network" = "ネットワーク";
 "LISTENER_TITLE_libactivator.system.homebutton" = "ホーム";
 "LISTENER_DESCRIPTION_com.rpetrich.voicekeys" = "音声認識を開始/終了";
 "LISTENER_DESCRIPTION_libactivator.settings.international" = "言語環境の設定を開く";
@@ -98,7 +96,6 @@
 "LISTENER_DESCRIPTION_application" = "このAppを起動";
 "EVENT_TITLE_libactivator.five-finger.spread" = "5本指でピンチアウト";
 "DONATE_DETAIL" = "PayPalで寄付";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "Twitterの設定を開く";
 "LISTENER_TITLE_libactivator.settings.location-services" = "位置情報サービス";
 "EVENT_GROUP_TITLE_Audio" = "オーディオ";
 "LISTENER_DESCRIPTION_libactivator.lockscreen.dismiss" = "デバイスのロックを解除";
@@ -117,12 +114,10 @@
 "LISTENER_DESCRIPTION_libactivator.settings.photos" = "フォトの設定を開く";
 "LISTENER_TITLE_toggle_SSH" = "SSH";
 "EVENT_TITLE_libactivator.menu.hold.long" = "長押し";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "明るさの設定を開く";
 "BACKUP_RESTORE_ASSIGNMENT_FOOTER" = "エクスポートした設定は %@ に保存され、iTunes か iCloudで同期した時にバックアップされます。";
 "LISTENER_TITLE_libactivator.ipod.start-playback" = "再生";
 "LISTENER_DESCRIPTION_libactivator.phone.favorites" = "電話.appのお気に入りを開く";
 "ENABLED" = "有効";
-"LISTENER_TITLE_libactivator.settings.twitter" = "Twitter";
 "EVENT_TITLE_libactivator.three-finger.spread" = "3本指でピンチアウト";
 "ADD_NEW_MENU" = "新規メニューを追加";
 "LISTENER_DESCRIPTION_toggle_enable" = "Activate toggle";
@@ -207,7 +202,6 @@
 "LISTENER_DESCRIPTION_libactivator.phone.voicemail" = "電話.appのボイスメールを開く";
 "EVENT_TITLE_libactivator.statusbar.tap.single" = "1回タップ";
 "LISTENER_DESCRIPTION_libactivator.system.safemode" = "セーフモードで起動";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "使用状況の設定を開く";
 "LISTENER_TITLE_libactivator.system.activate-switcher" = "タスクバー";
 "EVENT_GROUP_TITLE_Headset" = "ヘッドセットのボタン";
 "LISTENER_TITLE_libactivator.weibo.compose-post" = "Weiboへ投稿";
@@ -271,7 +265,6 @@
 "LISTENER_DESCRIPTION_libactivator.mail.compose-message" = "メール.appを立ち上げる";
 "LISTENER_TITLE_toggle_Location" = "位置情報";
 "EVENT_TITLE_libactivator.menu.press.at-springboard" = "1回押す";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "イコライザの設定を開く";
 "LOCALIZATION_ABOUT" = "";
 "FAILED_TO_WRITE_SETTINGS_FILE" = "設定ファイルへの書き込みに失敗しました: ";
 "EVENT_TITLE_libactivator.statusbar.swipe.down" = "下にスワイプ";
@@ -290,7 +283,6 @@
 "LISTENER_TITLE_toggle_Bluetooth" = "Bluetooth";
 "EVENT_DESCRIPTION_libactivator.volume.up.press" = "ボリュームボタン上を1回押す";
 "LISTENER_TITLE_libactivator.ipod.next-track" = "次の曲";
-"LISTENER_TITLE_libactivator.settings.brightness" = "明るさ";
 "EVENT_TITLE_libactivator.slide-in.top-left" = "スクリーン左上";
 "EVENT_TITLE_libactivator.volume.toggle-mute-twice" = "スイッチを切り替え";
 "RESET_SETTINGS_DETAIL" = "全ての設定を初期値に戻す";
@@ -304,7 +296,6 @@
 "LISTENER_DESCRIPTION_libactivator.settings.safari" = "Safariの設定を開く";
 "LISTENER_TITLE_com.rpetrich.superscroller.down" = "下にスクロール";
 "MODE_DESCRIPTION_springboard" = "ホーム画面上での動作を設定";
-"LISTENER_TITLE_libactivator.settings.usage" = "使用状況";
 "EVENT_DESCRIPTION_libactivator.menu.hold.short" = "ホームボタンをやや長押し";
 "EVENT_TITLE_libactivator.statusbar.hold" = "長押し";
 "EVENT_TITLE_libactivator.statusbar.tap.single.right" = "右側を1回タップ";
@@ -378,7 +369,6 @@
 "BOOKMARK_URL" = "ブックマークのURL";
 "LISTENER_TITLE_libactivator.settings.facetime" = "FaceTime";
 "LISTENER_DESCRIPTION_libactivator.ipod.toggle-playback" = "楽曲を再生/再生中の楽曲を一時停止";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "イコライザ";
 "EVENT_DESCRIPTION_libactivator.slide-in.left-top" = "スクリーン左上から下にスワイプ";
 "EVENT_TITLE_libactivator.statusbar.tap.single.left" = "左側を1回タップ";
 "EVENT_TITLE_libactivator.statusbar.hold.right" = "右側長押し";

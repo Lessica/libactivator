@@ -44,7 +44,6 @@
 "MODE_DESCRIPTION_springboard" = "כאשר האייקונים בספרינגבורד נראים לעין";
 "LISTENER_TITLE_libactivator.speech.synthesize_FORMAT" = "אמירת \"%@\"";
 "EVENT_DESCRIPTION_libactivator.volume.down-up" = "הקשה על הכפתור התחתון של הווליום, ואז על העליון";
-"LISTENER_TITLE_libactivator.settings.usage" = "שימוש";
 "LISTENER_TITLE_libactivator.settings.virtual-assistant" = "Siri";
 "LISTENER_DESCRIPTION_libactivator.settings.virtual-assistant" = "הצגת עמוד ההגדרות של \"Siri\"";
 "LISTENER_TITLE_libactivator.ipod.pause-playback" = "השהייה";
@@ -82,7 +81,6 @@
 "EVENT_GROUP_TITLE_Slide In Gesture" = "החלקה במחוות";
 "LISTENER_TITLE_libactivator.settings.keyboard" = "מקלדת";
 "LISTENER_DESCRIPTION_libactivator.phone.contacts" = "הצגת לשונית \"אנשי הקשר\" בטלפון";
-"LISTENER_TITLE_libactivator.settings.brightness-and-wallpaper" = "טפטים ובהירות";
 "LISTENER_GROUP_TITLE_Switches" = "מתגים";
 "NEW_EVENT_TITLE_libactivator.mail-received_SENDER_FORMAT" = "מאת %@";
 "EVENT_TITLE_libactivator.five-finger.spread" = "פריסה ב-5 אצבעות";
@@ -126,7 +124,6 @@
 "EVENT_TITLE_libactivator.icon.flick.down_FORMAT" = "החלקת אייקון %@ מטה";
 "EVENT_DESCRIPTION_libactivator.drag-off.right" = "גרירת המסך מצד ימין";
 "EVENT_DESCRIPTION_libactivator.lockscreen.clock.swipe-left" = "החלקה שמאלה באיזור השעון/התאריך";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "הצגת עמוד ההגדרות של \"טוויטר\"";
 "EVENT_TITLE_libactivator.four-finger.tap" = "הקשה ב-4 אצבעות";
 "LISTENER_DESCRIPTION_toggle_disable" = "כיבוי כפתור";
 "LISTENER_GROUP_TITLE_Audio" = "שמע";
@@ -190,7 +187,6 @@
 "LISTENER_TITLE_libactivator.phone.voicemail" = "הצגת תא קולי";
 "NEW_EVENT_DESCRIPTION_libactivator.message-received_MESSAGE_FORMAT" = "כל הודעה נכנסת המכילה את המילה \"%@\"";
 "TOO_NEW_MESSAGE" = "גרסת ה-IOS שברשותך חדשה מידי, Activator לא נבדק עדיין על גרסת iOS זו. יתכן שחלק מן האפשרויות לא יתפקדו או יפעלו כראוי.";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "הצגת עמוד ההגדרות של \"בהירות\"";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-bottom.right-to-left" = "גרירה לאורך קצה המסך מימין לשמאל";
 "LISTENER_TITLE_com.rpetrich.videopane.destroy-pane" = "השמדת ווידאו";
 "EVENT_DESCRIPTION_libactivator.power.connected" = "כאשר המכשיר מחובר לטעינה ונטען";
@@ -241,13 +237,11 @@
 "EVENT_DESCRIPTION_libactivator.three-finger.spread" = "פריסה על מסך עם 3 אצבעות";
 "CANCEL" = "ביטול";
 "EVENT_DESCRIPTION_org.rdharris.appactivate.app3" = "הקשה כפולה על היישום השלישי שנבחר";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "הצגת עמוד ה-\"שימוש\" בהגדרות";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_AND_SENDER_FORMAT" = " מייל חדש בנושא \"%2$@\" מאת %1$@";
 "EVENT_DESCRIPTION_libactivator.statusbar.hold.right" = "הקשה והחזקה מימין לסטטוס-בר ל-2 שניות";
 "LISTENER_TITLE_toggle_3G" = "3G";
 "MORE" = "עוד";
 "EVENT_TITLE_libactivator.volume.mute" = "מצב שקט";
-"LISTENER_TITLE_libactivator.settings.facebook" = "Facebook";
 "EVENT_TITLE_libactivator.volume.both.press" = "הקשה על שניהם";
 "LISTENER_TITLE_libactivator.settings.facetime" = "FaceTime";
 "LISTENER_GROUP_TITLE_Profiles" = "פרופילים";
@@ -257,7 +251,6 @@
 "EVENT_TITLE_libactivator.three-finger.spread" = "פריסה ב-3 אצבעות";
 "LISTENER_TITLE_libactivator.system.safemode" = "מצב בטוח";
 "LISTENER_TITLE_libactivator.settings.vpn" = "VPN";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness-and-wallpaper" = "הצגת עמוד ההגדרות של \"טפטים ובהירות\"";
 "SET_VOLUME_TO_FORMAT" = "קביעת עוצמת השמע על %@%%";
 "EVENT_DESCRIPTION_libactivator.three-finger.tap" = "הקשה על המסך עם 3 אצבעות";
 "EVENT_TITLE_libactivator.motion.shake" = "ניעור המכשיר";
@@ -322,7 +315,6 @@
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SENDER_FORMAT" = "כל מייל חדש שמגיע מ-%@";
 "LISTENER_TITLE_libactivator.phone.contacts" = "הצגת אנשי קשר";
 "LISTENER_TITLE_libactivator.system.powerdown" = "כיבוי";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "הצגת עמוד הגדרות ה-\"רשת\"";
 "LISTENER_TITLE_com.rpetrich.superscroller.up" = "למעלה";
 "EVENT_DESCRIPTION_libactivator.slide-in.left-bottom" = "החלקה על המסך מהפינה השמאלית-תחתונה";
 "LISTENER_TITLE_libactivator.sms.compose-message" = "כתיבת הודעה חדשה";
@@ -398,7 +390,6 @@
 "EVENT_DESCRIPTION_libactivator.slide-in.right-bottom" = "החלקה מהפינה הימנית-עליונה";
 "LISTENER_TITLE_libactivator.phone.keypad" = "הצגת מקשי חיוג";
 "EVENT_TITLE_libactivator.statusbar.hold.left" = "הקשה והחזקה על הצד השמאלי";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "אקולייזר";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-left.top-to-bottom" = "גרירה לאורך תחתית המסך מלמעלה למטה";
 "CURRENTLY_ASSIGNED_TO" = "כעת משוייך אל:";
 "EVENT_TITLE_libactivator.icon.flick.up_FORMAT" = "החלקת אייקון %@ מעלה";
@@ -417,7 +408,6 @@
 "LISTENER_DESCRIPTION_com.rpetrich.superscroller.autodown" = "גלילה אינסופית מטה";
 "EVENT_TITLE_libactivator.icon.flick.up" = "החלקת אייקון מעלה";
 "EVENT_DESCRIPTION_libactivator.five-finger.tap" = "הקשה על המסך עם 5 אצבעות";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "הצגת עמוד הגדרות ה-\"אקולייזר\"";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.left" = "הקשה כפולה על הצד השמאלי בסטטוס-בר";
 "EVENT_DESCRIPTION_com.mathieubolard.killbackground" = "הורג את כל היישומים הפעילים ברקע";
 "LISTENER_DESCRIPTION_libactivator.settings.keyboard" = "הצגת עמוד הגדרות ה-\"מקלדת\"";
@@ -439,7 +429,6 @@
 "LISTENER_DESCRIPTION_libactivator.settings.facetime" = "הצגת עמוד הגדרות ה-\"FaceTime\"";
 "EVENT_DESCRIPTION_libactivator.menu.press.single" = "הקשה יחידה על כפתור הבית";
 "EVENT_DESCRIPTION_libactivator.headset.disconnected" = "כאשר אוזניות נותקו מהמכשיר";
-"LISTENER_TITLE_libactivator.settings.network" = "רשת";
 "NEW_EVENT_TITLE_libactivator.scheduled" = "תזמון";
 "EVENT_GROUP_TITLE_Application Launched" = "פתיחת יישומים";
 "LISTENER_TITLE_libactivator.ipod.music-controls" = "מקשי השליטה של הנגן";
@@ -556,7 +545,6 @@
 "EVENT_DESCRIPTION_libactivator.four- finger.spread" = "פריסה על המסך עם 4 אצבעות";
 "NEW_EVENT_DESCRIPTION_libactivator.icon.tap.double" = "הקשה כפולה על אייקון ספציפי בספריגבורד";
 "PROFILES_DETAIL" = "הגדרת פרופיל עם שיוכי פעולות בהתאמה אישית";
-"LISTENER_TITLE_libactivator.settings.brightness" = "בהירות";
 "EVENT_GROUP_TITLE_Scheduled" = "תזמונים";
 "EVENT_DESCRIPTION_libactivator.motion.shake" = "שקשוק המכשיר חזק! כלפי מעלה ומטה";
 "UNASSIGNED" = "(לא משוייך)";
@@ -586,7 +574,6 @@
 "LISTENER_DESCRIPTION_libactivator.lockscreen.show" = "נעילת המכשיר על-ידי כיבוי המסך";
 "LISTENER_DESCRIPTION_libactivator.settings.date-time" = "הצגת עמוד ההגדרות של \"תאריך ושעה\"";
 "EVENT_DESCRIPTION_libactivator.icon.flick.up" = "החלקת כל אייקון כלפי מעלה בספרינגבורד";
-"LISTENER_TITLE_libactivator.settings.twitter" = "טוויטר";
 "EVENT_DESCRIPTION_libactivator.three-finger.pinch" = "צביטת המסך עם 3 אצבעות";
 "EVENT_TITLE_libactivator.statusbar.tap.double" = "הקשה כפולה";
 "BOOKMARKS_DETAIL" = "נהל סימניות פעולות מותאמות";

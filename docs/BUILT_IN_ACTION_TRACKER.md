@@ -22,55 +22,55 @@ URL actions 的范围来自 1.9.13 `layout/Library/Activator/Listeners/bundled.p
 
 | Listener name | 分组 | 标题 | 当前阶段 | URL metadata | 首次验证 |
 | --- | --- | --- | --- | --- | --- |
-| `libactivator.clock.alarm` | Clock | Alarm | `candidate` | `clock-alarm:default` | 真机手工确认 Clock URL 是否仍有效 |
-| `libactivator.clock.bedtime` | Clock | Bedtime | `candidate` | `clock-sleep-alarm:default` | 真机手工确认 Clock URL 是否仍有效 |
-| `libactivator.clock.stopwatch` | Clock | Stopwatch | `candidate` | `clock-stopwatch:default` | 真机手工确认 Clock URL 是否仍有效 |
-| `libactivator.clock.timer` | Clock | Timer | `candidate` | `clock-timer:default` | 真机手工确认 Clock URL 是否仍有效 |
-| `libactivator.clock.world-clock` | Clock | World Clock | `candidate` | `clock-worldclock:default` | 真机手工确认 Clock URL 是否仍有效 |
-| `libactivator.settings.about` | Settings | About | `candidate` | `prefs:root=General&path=About` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.accessibility` | Settings | Accessibility | `candidate` | `prefs:root=General&path=ACCESSIBILITY` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.auto-lock` | Settings | Auto-Lock | `candidate` | `prefs:root=General&path=AUTOLOCK` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.background-app-refresh` | Settings | Background App Refresh | `candidate` | `prefs:root=General&path=AUTO_CONTENT_DOWNLOAD` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.battery` | Settings | Battery | `candidate` | `prefs:root=BATTERY_USAGE` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.bluetooth` | Settings | Bluetooth | `candidate` | `prefs:root=General&path=Bluetooth`<br>`700`<br>`prefs:root=Bluetooth` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.brightness` | Settings | Brightness | `candidate` | `prefs:root=Brightness` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.brightness-and-wallpaper` | Settings | Brightness & Wallpaper | `candidate` | `prefs:root=Wallpaper` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.carplay` | Settings | Carplay | `candidate` | `prefs:root=General&path=CARPLAY` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.cellular` | Settings | Cellular | `candidate` | `prefs:root=General&path=MOBILE_DATA_SETTINGS_ID`<br>`1000`<br>`prefs:root=MOBILE_DATA_SETTINGS_ID` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.control-center` | Settings | Control Center | `candidate` | `prefs:root=ControlCenter` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.date-time` | Settings | Date & Time | `candidate` | `prefs:root=General&path=DATE_AND_TIME` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.display` | Settings | Display & Brightness | `candidate` | `prefs:root=DISPLAY` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.do-not-disturb` | Settings | Do Not Disturb | `candidate` | `prefs:root=DO_NOT_DISTURB` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.equalizer` | Settings | Equalizer | `candidate` | `prefs:root=MUSIC&path=EQ` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.facebook` | Settings | Facebook | `candidate` | `prefs:root=FACEBOOK` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.facetime` | Settings | FaceTime | `candidate` | `prefs:root=FACETIME` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.game-center` | Settings | Game Center | `candidate` | `prefs:root=GAMECENTER` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.general` | Settings | General | `candidate` | `prefs:root=General` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.handoff` | Settings | Handoff | `candidate` | `prefs:root=General&path=CONTINUITY_SPEC` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.icloud` | Settings | iCloud | `candidate` | `prefs:root=CASTLE` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.international` | Settings | Language & Region | `candidate` | `prefs:root=General&path=INTERNATIONAL` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.keyboard` | Settings | Keyboard | `candidate` | `prefs:root=General&path=Keyboard` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.location-services` | Settings | Location Services | `candidate` | `prefs:root=LOCATION_SERVICES` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.mail` | Settings | Mail, Contacts, Calendars | `candidate` | `prefs:root=ACCOUNT_SETTINGS` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.managed-configuration` | Settings | Profiles & Device Management | `candidate` | `prefs:root=General&path=ManagedConfigurationList` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.maps` | Settings | Maps | `candidate` | `prefs:root=MAPS` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.messages` | Settings | Messages | `candidate` | `prefs:root=MESSAGES` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.music` | Settings | Music | `candidate` | `prefs:root=MUSIC` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.network` | Settings | Network | `candidate` | `prefs:root=General&path=Network` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.notes` | Settings | Notes | `candidate` | `prefs:root=NOTES` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.notifications` | Settings | Notifications | `candidate` | `prefs:root=NOTIFICATIONS_ID` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.passcode` | Settings | Touch ID & Passcode | `candidate` | `prefs:root=PASSCODE` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.phone` | Settings | Phone | `candidate` | `prefs:root=Phone` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.photos` | Settings | Photos | `candidate` | `prefs:root=Photos` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.privacy` | Settings | Privacy | `candidate` | `prefs:root=Privacy` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.reminders` | Settings | Reminders | `candidate` | `prefs:root=REMINDERS` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.safari` | Settings | Safari | `candidate` | `prefs:root=Safari`<br>`1240`<br>`prefs:root=SAFARI` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.sounds` | Settings | Sounds | `candidate` | `prefs:root=Sounds` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.store` | Settings | Store | `candidate` | `prefs:root=STORE` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.tethering` | Settings | Personal Hotspot | `candidate` | `prefs:root=INTERNET_TETHERING` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.twitter` | Settings | Twitter | `candidate` | `prefs:root=TWITTER` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.usage` | Settings | Usage | `candidate` | `prefs:root=General&path=USAGE`<br>`1240`<br>`prefs:root=General&path=STORAGE_ICLOUD_USAGE` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.virtual-assistant` | Settings | Siri | `candidate` | `prefs:root=General&path=Assistant`<br>`1240`<br>`prefs:root=General&path=SIRI` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.vpn` | Settings | VPN | `candidate` | `prefs:root=General&path=VPN` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.wallpaper` | Settings | Wallpaper | `candidate` | `prefs:root=Wallpaper` | 真机手工确认 Settings URL 是否仍有效 |
-| `libactivator.settings.wifi` | Settings | Wi-Fi | `candidate` | `prefs:root=WIFI` | 真机手工确认 Settings URL 是否仍有效 |
+| `libactivator.clock.alarm` | Clock | Alarm | `implemented` | `clock-alarm:default` | ✅ |
+| `libactivator.clock.bedtime` | Clock | Bedtime | `obsolete` | `clock-sleep-alarm:default` | 已失效 |
+| `libactivator.clock.stopwatch` | Clock | Stopwatch | `implemented` | `clock-stopwatch:default` | ✅ |
+| `libactivator.clock.timer` | Clock | Timer | `implemented` | `clock-timer:default` | ✅ |
+| `libactivator.clock.world-clock` | Clock | World Clock | `implemented` | `clock-worldclock:default` | ✅ |
+| `libactivator.settings.about` | Settings | About | `implemented` | `prefs:root=General&path=About` | ✅ |
+| `libactivator.settings.accessibility` | Settings | Accessibility | `implemented` | `prefs:root=ACCESSIBILITY` | ✅ |
+| `libactivator.settings.auto-lock` | Settings | Auto-Lock | `implemented` | `prefs:root=General&path=AUTOLOCK` | ✅ |
+| `libactivator.settings.background-app-refresh` | Settings | Background App Refresh | `implemented` | `prefs:root=General&path=AUTO_CONTENT_DOWNLOAD` | ✅ |
+| `libactivator.settings.battery` | Settings | Battery | `implemented` | `prefs:root=BATTERY_USAGE` | ✅ |
+| `libactivator.settings.bluetooth` | Settings | Bluetooth | `implemented` | `prefs:root=General&path=Bluetooth`<br>`700`<br>`prefs:root=Bluetooth` | ✅ |
+| `libactivator.settings.brightness` | Settings | Brightness | `obsolete` | `prefs:root=Brightness` | 和 `libactivator.settings.display` 重复 |
+| `libactivator.settings.brightness-and-wallpaper` | Settings | Brightness & Wallpaper | `obsolete` | `prefs:root=Wallpaper` | 和 `libactivator.settings.wallpaper` 重复 |
+| `libactivator.settings.carplay` | Settings | Carplay | `implemented` | `prefs:root=General&path=CARPLAY` | ✅ |
+| `libactivator.settings.cellular` | Settings | Cellular | `implemented` | `prefs:root=General&path=MOBILE_DATA_SETTINGS_ID`<br>`1000`<br>`prefs:root=MOBILE_DATA_SETTINGS_ID` | ✅ |
+| `libactivator.settings.control-center` | Settings | Control Center | `implemented` | `prefs:root=ControlCenter` | ✅ |
+| `libactivator.settings.date-time` | Settings | Date & Time | `implemented` | `prefs:root=General&path=DATE_AND_TIME` | ✅ |
+| `libactivator.settings.display` | Settings | Display & Brightness | `implemented` | `prefs:root=DISPLAY` | ✅ |
+| `libactivator.settings.do-not-disturb` | Settings | Do Not Disturb | `implemented` | `prefs:root=DO_NOT_DISTURB` | ✅ |
+| `libactivator.settings.equalizer` | Settings | Equalizer | `obsolete` | `prefs:root=MUSIC&path=EQ` | 只能打开音乐设置 |
+| `libactivator.settings.facebook` | Settings | Facebook | `obsolete` | `prefs:root=FACEBOOK` | 已失效 |
+| `libactivator.settings.facetime` | Settings | FaceTime | `implemented` | `prefs:root=FACETIME` | ✅ |
+| `libactivator.settings.game-center` | Settings | Game Center | `implemented` | `prefs:root=GAMECENTER` | ✅ |
+| `libactivator.settings.general` | Settings | General | `implemented` | `prefs:root=General` | ✅ |
+| `libactivator.settings.handoff` | Settings | Handoff | `implemented` | `prefs:root=General&path=CONTINUITY_SPEC` | ✅ |
+| `libactivator.settings.icloud` | Settings | iCloud | `implemented` | `prefs:root=CASTLE` | ✅ |
+| `libactivator.settings.international` | Settings | Language & Region | `implemented` | `prefs:root=General&path=INTERNATIONAL` | ✅ |
+| `libactivator.settings.keyboard` | Settings | Keyboard | `implemented` | `prefs:root=General&path=Keyboard` | ✅ |
+| `libactivator.settings.location-services` | Settings | Location Services | `implemented` | `prefs:root=LOCATION_SERVICES` | ✅ |
+| `libactivator.settings.mail` | Settings | Mail, Contacts, Calendars | `implemented` | `prefs:root=ACCOUNT_SETTINGS` | ✅ |
+| `libactivator.settings.managed-configuration` | Settings | Profiles & Device Management | `implemented` | `prefs:root=General&path=ManagedConfigurationList` | ✅ |
+| `libactivator.settings.maps` | Settings | Maps | `implemented` | `prefs:root=MAPS` | ✅ |
+| `libactivator.settings.messages` | Settings | Messages | `implemented` | `prefs:root=MESSAGES` | ✅ |
+| `libactivator.settings.music` | Settings | Music | `implemented` | `prefs:root=MUSIC` | ✅ |
+| `libactivator.settings.network` | Settings | Network | `obsolete` | `prefs:root=General&path=Network` | 已失效 |
+| `libactivator.settings.notes` | Settings | Notes | `implemented` | `prefs:root=NOTES` | ✅ |
+| `libactivator.settings.notifications` | Settings | Notifications | `implemented` | `prefs:root=NOTIFICATIONS_ID` | ✅ |
+| `libactivator.settings.passcode` | Settings | Touch ID & Passcode | `implemented` | `prefs:root=PASSCODE` | ✅ |
+| `libactivator.settings.phone` | Settings | Phone | `implemented` | `prefs:root=Phone` | ✅ |
+| `libactivator.settings.photos` | Settings | Photos | `implemented` | `prefs:root=Photos` | ✅ |
+| `libactivator.settings.privacy` | Settings | Privacy | `implemented` | `prefs:root=Privacy` | ✅ |
+| `libactivator.settings.reminders` | Settings | Reminders | `implemented` | `prefs:root=REMINDERS` | ✅ |
+| `libactivator.settings.safari` | Settings | Safari | `implemented` | `prefs:root=Safari`<br>`1240`<br>`prefs:root=SAFARI` | ✅ |
+| `libactivator.settings.sounds` | Settings | Sounds | `implemented` | `prefs:root=Sounds` | ✅ |
+| `libactivator.settings.store` | Settings | Store | `implemented` | `prefs:root=STORE` | ✅ |
+| `libactivator.settings.tethering` | Settings | Personal Hotspot | `implemented` | `prefs:root=INTERNET_TETHERING` | ✅ |
+| `libactivator.settings.twitter` | Settings | Twitter | `obsolete` | `prefs:root=TWITTER` | 已失效 |
+| `libactivator.settings.usage` | Settings | Usage | `obsolete` | `prefs:root=General&path=USAGE`<br>`1240`<br>`prefs:root=General&path=STORAGE_ICLOUD_USAGE` | 已失效 |
+| `libactivator.settings.virtual-assistant` | Settings | Siri | `implemented` | `prefs:root=General&path=Assistant`<br>`1240`<br>`prefs:root=General&path=SIRI` | ✅ |
+| `libactivator.settings.vpn` | Settings | VPN | `implemented` | `prefs:root=VPN` | ✅ |
+| `libactivator.settings.wallpaper` | Settings | Wallpaper | `implemented` | `prefs:root=Wallpaper` | ✅ |
+| `libactivator.settings.wifi` | Settings | Wi-Fi | `implemented` | `prefs:root=WIFI` | ✅ |

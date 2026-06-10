@@ -23,7 +23,6 @@
 "BOOKMARK_TITLE" = "Bladwijzer Titel";
 "LISTENER_DESCRIPTION_libactivator.settings.facetime" = "Open Instellingen op FaceTime";
 "EVENT_TITLE_libactivator.icon.flick.left_FORMAT" = "%@ Icoon-Veeg Links";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "Open Instellingen op Mobiel Netwerk";
 "LISTENER_DESCRIPTION_libactivator.settings.bluetooth" = "Open Instellingen op Bluetooth";
 "LISTENER_TITLE_libactivator.lockscreen.toggle" = "Ver-/Ontgrendel";
 "EVENT_TITLE_libactivator.volume.up.press" = "Omhoog Drukken";
@@ -93,7 +92,6 @@
 "LISTENER_DESCRIPTION_com.rpetrich.activoice.voice" = "Activeer Google's spraak-zoeken";
 "LISTENER_GROUP_TITLE_Activoice" = "Activoice";
 "LISTENER_DESCRIPTION_libactivator.system.homebutton" = "Simuleer een druk op de thuisknop";
-"LISTENER_TITLE_libactivator.settings.brightness-and-wallpaper" = "Helderheid en achtergrond";
 "LISTENER_TITLE_com.rpetrich.activoice.apps" = "Google Apps";
 "LISTENER_TITLE_libactivator.system.virtual-assistant" = "Siri";
 "SAFE_MODE_TITLE" = "In Veilige Modus";
@@ -112,7 +110,6 @@
 "LISTENER_DESCRIPTION_libactivator.settings.international" = "Open Instellingen op Internationaal";
 "EVENT_TITLE_libactivator.menu.press.triple" = "Driedubbele Druk";
 "EVENT_TITLE_libactivator.two-finger-slide-in.left-bottom" = "Van Links-Beneden Scherm";
-"LISTENER_TITLE_libactivator.settings.network" = "Mobiel netwerk";
 "EVENT_DESCRIPTION_libactivator.four-finger.tap" = "Tik scherm met vier vingers";
 "LISTENER_DESCRIPTION_com.rpetrich.voicekeys" = "Start/stop spraakherkenning";
 "EVENT_DESCRIPTION_libactivator.icon.flick.right" = "Veeg een app icoon naar rechts";
@@ -125,7 +122,6 @@
 "EVENT_TITLE_libactivator.five-finger.spread" = "Vijf-Vinger Spreid";
 "LISTENER_DESCRIPTION_libactivator.settings.date-time" = "Open Instellingen op Datum en tijd";
 "DONATE_DETAIL" = "Draag bij via PayPal";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "Open Instellingen op Twitter";
 "LISTENER_TITLE_libactivator.settings.location-services" = "Locatievoorzieningen";
 "EVENT_GROUP_TITLE_Audio" = "Audio";
 "LISTENER_DESCRIPTION_libactivator.lockscreen.dismiss" = "Ontgrendelt het apparaat";
@@ -148,7 +144,6 @@
 "EVENT_DESCRIPTION_libactivator.five-finger.tap" = "Tap scherm met vijf vingers";
 "SHOW_ACTIVATOR_ICON_ON_SPRINGBOARD" = "Toon Activator Icoon op SpringBoard";
 "LISTENER_DESCRIPTION_libactivator.settings.photos" = "Open Instellingen op Foto's en Camera";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "Open Instellingen op Helderheid";
 "EVENT_TITLE_libactivator.menu.hold.long" = "Lang Vasthouden";
 "LISTENER_TITLE_toggle_SSH" = "SSH";
 "EVENT_DESCRIPTION_libactivator.application-launch_FORMAT" = "%@ applicatie is geopend";
@@ -156,7 +151,6 @@
 "LISTENER_DESCRIPTION_libactivator.phone.favorites" = "Opent Telefoon op de Favorieten-tab";
 "ENABLED" = "Ingeschakeld";
 "MAIL_ANY_SUBJECT" = "(elk onderwerp)";
-"LISTENER_TITLE_libactivator.settings.twitter" = "Twitter";
 "EVENT_TITLE_libactivator.three-finger.spread" = "Drie-Vinger Spreid";
 "Very Precise" = "Erg Precies";
 "ADD_NEW_MENU" = "Voeg Menu Toe";
@@ -197,7 +191,6 @@
 "DONATE" = "Doneer";
 "EVENT_DESCRIPTION_libactivator.volume.display-tap" = "Tap op de volume heads-up display";
 "EVENT_TITLE_libactivator.slide-in.top-right" = "Van Boven-Rechts Scherm";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness-and-wallpaper" = "Open Instellingen op Helderheid/Achtergrond pagina";
 "MODE_DESCRIPTION_lockscreen" = "Als vergrendelscherm zichtbaar is";
 "ADD_ACTION" = "Voeg Actie Toe";
 "DISABLED" = "Uitgeschakeld";
@@ -258,7 +251,6 @@
 "EVENT_TITLE_libactivator.statusbar.tap.single" = "Enkele Tap";
 "LISTENER_DESCRIPTION_libactivator.phone.voicemail" = "Opent Telefoon op de Voicemail-tab";
 "LISTENER_DESCRIPTION_libactivator.system.safemode" = "Herstart SpringBoard in de veilige modus";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "Open Instellingen op Gebruik";
 "LISTENER_TITLE_libactivator.system.activate-switcher" = "Activeer Switcher";
 "EVENT_GROUP_TITLE_Headset" = "Bekabelde Headset";
 "LISTENER_TITLE_libactivator.weibo.compose-post" = "Stel Weibo Post Op";
@@ -336,7 +328,6 @@
 "LISTENER_TITLE_toggle_Location" = "Locatie";
 "EVENT_TITLE_libactivator.menu.press.at-springboard" = "Enkele Druk bij SpringBoard";
 "LOCALIZATION_ABOUT" = "";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "Open Instellingen op Equalizer";
 "FAILED_TO_WRITE_SETTINGS_FILE" = "Schrijven naar instellingsbestand mislukt: ";
 "EVENT_TITLE_libactivator.statusbar.swipe.down" = "Van Boven Scherm";
 "New Event" = "Nieuwe Actie";
@@ -356,7 +347,6 @@
 "EVENT_DESCRIPTION_libactivator.icon.flick.left_FORMAT" = "Veeg %@ icoon naar links";
 "EVENT_DESCRIPTION_libactivator.volume.up.press" = "Druk volume omhoog knop";
 "LISTENER_TITLE_libactivator.ipod.next-track" = "Volgende Nummer";
-"LISTENER_TITLE_libactivator.settings.brightness" = "Helderheid";
 "EVENT_TITLE_libactivator.slide-in.top-left" = "Van Boven-Links Scherm";
 "EVENT_TITLE_libactivator.volume.toggle-mute-twice" = "Schakel Muteknop Tweemaal";
 "RESET_SETTINGS_DETAIL" = "Standaardinstellingen terugzetten";
@@ -376,7 +366,6 @@
 "LISTENER_TITLE_com.rpetrich.superscroller.down" = "Omlaag";
 "MODE_DESCRIPTION_springboard" = "Als SpringBoard iconen zichtbaar zijn";
 "EVENT_DESCRIPTION_libactivator.menu.hold.short" = "Druk en houd thuisknop ingedrukt";
-"LISTENER_TITLE_libactivator.settings.usage" = "Gebruik";
 "EVENT_TITLE_libactivator.statusbar.hold" = "Houd Vast";
 "EVENT_TITLE_libactivator.statusbar.tap.single.right" = "Enkele Tap Rechts";
 "EVENT_DESCRIPTION_libactivator.volume.up-down" = "Druk volume omhoog, daarna omlaag";
@@ -461,7 +450,6 @@
 "BOOKMARK_URL" = "Bladwijzer Adres";
 "LISTENER_TITLE_libactivator.settings.facetime" = "FaceTime";
 "LISTENER_DESCRIPTION_libactivator.ipod.toggle-playback" = "Schakelt afspelen iPod";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "Equalizer";
 "EVENT_DESCRIPTION_libactivator.slide-in.left-top" = "Sleep naar scherm van links-boven";
 "EVENT_TITLE_libactivator.statusbar.tap.single.left" = "Enkele Tap Links";
 "EVENT_TITLE_libactivator.statusbar.hold.right" = "Houd Rechts Van";

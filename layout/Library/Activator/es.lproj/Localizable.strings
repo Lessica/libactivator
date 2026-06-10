@@ -47,7 +47,6 @@
 "MODE_DESCRIPTION_springboard" = "Cuando veas los iconos del SpringBoard";
 "LISTENER_TITLE_libactivator.speech.synthesize_FORMAT" = "Decir \"%@\"";
 "EVENT_DESCRIPTION_libactivator.volume.down-up" = "Pulsa volumen abajo, luego arriba";
-"LISTENER_TITLE_libactivator.settings.usage" = "Uso";
 "LISTENER_TITLE_libactivator.settings.virtual-assistant" = "Asistente virtual";
 "EVENT_GROUP_TITLE_Switches (Deactivate)" = "Interruptores (Deactivate)";
 "LISTENER_DESCRIPTION_libactivator.settings.virtual-assistant" = "Abre ajustes en Asistente virtual";
@@ -87,7 +86,6 @@
 "LISTENER_DESCRIPTION_libactivator.phone.contacts" = "Muestra la pestaña Contactos";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.single.with-slide-in" = "Toca el sensor de huella y desliza hacia la pantalla";
 "LISTENER_GROUP_TITLE_Switches" = "Interruptores";
-"LISTENER_TITLE_libactivator.settings.brightness-and-wallpaper" = "Brillo y fondo de pantalla";
 "NEW_EVENT_TITLE_libactivator.mail-received_SENDER_FORMAT" = "De %@";
 "EVENT_TITLE_libactivator.five-finger.spread" = "Separar con cinco dedos";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.right" = "Toca 2 veces la parte derecha";
@@ -132,9 +130,7 @@
 "EVENT_GROUP_TITLE_Bluetooth Devices" = "Dispositivos bluetooth";
 "EVENT_TITLE_libactivator.icon.flick.down_FORMAT" = "Deslizar icono %@ abajo";
 "EVENT_DESCRIPTION_libactivator.drag-off.right" = "Arrastra la pantalla hacia la derecha";
-"LISTENER_DESCRIPTION_libactivator.settings.facebook" = "Abre ajustes en Facebook";
 "EVENT_DESCRIPTION_libactivator.lockscreen.clock.swipe-left" = "Desliza a la izquierda sobre el reloj";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "Abre ajustes en Twitter";
 "EVENT_TITLE_libactivator.four-finger.tap" = "Tocar con cuatro dedos";
 "LISTENER_DESCRIPTION_toggle_disable" = "Desactiva la función";
 "LISTENER_GROUP_TITLE_Audio" = "Audio";
@@ -200,7 +196,6 @@
 "LISTENER_TITLE_libactivator.phone.voicemail" = "Buzón de voz";
 "NEW_EVENT_DESCRIPTION_libactivator.message-received_MESSAGE_FORMAT" = "El mensaje contiene \"%@\"";
 "TOO_NEW_MESSAGE" = "Activator no ha sido probado en esta versión de iOS.\nAlgunas funciones podrían no funcionar correctamente.";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "Abre ajustes en Brillo";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-bottom.right-to-left" = "Arrastra a lo largo de la pantalla de der. a izq.";
 "LISTENER_TITLE_com.rpetrich.videopane.destroy-pane" = "Destruir video";
 "EVENT_DESCRIPTION_libactivator.power.connected" = "Enchufa el cargador al dispositivo";
@@ -251,14 +246,12 @@
 "N_ACTIONS" = "%d acciones";
 "EVENT_DESCRIPTION_libactivator.three-finger.spread" = "Separa con tres dedos sobre la pantalla";
 "CANCEL" = "Cancelar";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "Abre ajustes en Uso";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_AND_SENDER_FORMAT" = "El asunto contiene \"%2$@\", el remitente es %1$@";
 "MULTIPLE_ASSIGNMENTS_TITLE" = "Múltiples asignamientos";
 "EVENT_DESCRIPTION_libactivator.statusbar.hold.right" = "Mantén presionada la parte derecha";
 "LISTENER_TITLE_toggle_3G" = "3G";
 "MORE" = "Más";
 "EVENT_TITLE_libactivator.volume.mute" = "Silenciar dispositivo";
-"LISTENER_TITLE_libactivator.settings.facebook" = "Facebook";
 "EVENT_TITLE_libactivator.volume.both.press" = "Pulsar ambos";
 "LISTENER_TITLE_libactivator.settings.facetime" = "FaceTime";
 "LISTENER_GROUP_TITLE_Profiles" = "Perfiles";
@@ -266,7 +259,6 @@
 "EVENT_TITLE_libactivator.three-finger.spread" = "Separar con tres dedos";
 "LISTENER_TITLE_libactivator.system.safemode" = "Modo seguro";
 "LISTENER_TITLE_libactivator.settings.vpn" = "VPN";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness-and-wallpaper" = "Abre ajustes en Brillo y fondo";
 "SET_VOLUME_TO_FORMAT" = "Establecer volumen en %@%%";
 "EVENT_DESCRIPTION_libactivator.three-finger.tap" = "Toca la pantalla con tres dedos";
 "EVENT_TITLE_libactivator.motion.shake" = "Agitar dispositivo";
@@ -334,7 +326,6 @@
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SENDER_FORMAT" = "El remitente es %@";
 "LISTENER_TITLE_libactivator.phone.contacts" = "Contactos";
 "LISTENER_TITLE_libactivator.system.powerdown" = "Apagar";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "Abre ajustes en Red";
 "LISTENER_TITLE_com.rpetrich.superscroller.up" = "Arriba";
 "EVENT_DESCRIPTION_libactivator.slide-in.left-bottom" = "Arrastra a la pantalla desde la izq-abajo";
 "LISTENER_TITLE_libactivator.sms.compose-message" = "Escribir texto";
@@ -405,7 +396,6 @@
 "LISTENER_TITLE_libactivator.phone.keypad" = "Teclado";
 "EVENT_TITLE_libactivator.statusbar.hold.left" = "Toque corto izquierda";
 "EVENT_DESCRIPTION_libactivator.volume.up.press.with-menu" = "Pulsa ambos botones a la vez";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "Ecualizador";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-left.top-to-bottom" = "Arrastra a lo largo de la pantalla de arriba hacia abajo";
 "CURRENTLY_ASSIGNED_TO" = "Actualmente asignado a:";
 "SET_MEDIA_VOLUME_TO_FORMAT" = "Establecer volumen multimedia en %@%%";
@@ -424,7 +414,6 @@
 "EVENT_DESCRIPTION_libactivator.lock.hold.short" = "Mantén pulsado el botón reposo";
 "EVENT_TITLE_libactivator.icon.flick.up" = "Deslizar icono arriba";
 "EVENT_DESCRIPTION_libactivator.five-finger.tap" = "Toca la pantalla con cinco dedos";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "Abre ajustes en Ecualizador";
 "LISTENER_DESCRIPTION_com.rpetrich.superscroller.autodown" = " Deslizado continuo hacia abajo";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.left" = "Toca 2 veces la parte izquierda";
 "LISTENER_DESCRIPTION_libactivator.settings.keyboard" = "Abre ajustes en Teclado";
@@ -448,7 +437,6 @@
 "LISTENER_DESCRIPTION_com.rpetrich.activoice.search" = "Activa la búsqueda de texto de Google";
 "EVENT_DESCRIPTION_libactivator.menu.press.single" = "Pulsa una vez el botón inicio";
 "EVENT_DESCRIPTION_libactivator.headset.disconnected" = "Desconecta los auriculares del dispositivo";
-"LISTENER_TITLE_libactivator.settings.network" = "Red";
 "NEW_EVENT_TITLE_libactivator.scheduled" = "Programado";
 "EVENT_GROUP_TITLE_Application Launched" = "Aplicación ejecutada";
 "LISTENER_TITLE_libactivator.ipod.music-controls" = "Controles iPod";
@@ -570,7 +558,6 @@
 "EVENT_TITLE_libactivator.slide-in.left-top" = "Desde la izquierda arriba";
 "NEW_EVENT_DESCRIPTION_libactivator.icon.tap.double" = "Toca dos veces sobre un icono específico";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.twice" = "Toca el sensor de huella dos veces";
-"LISTENER_TITLE_libactivator.settings.brightness" = "Brillo";
 "PROFILES_DETAIL" = "Configura la asignación de perfiles";
 "EVENT_GROUP_TITLE_Scheduled" = "Programado";
 "EVENT_DESCRIPTION_libactivator.motion.shake" = "¡Agita y mueve!";
@@ -604,7 +591,6 @@
 "LISTENER_DESCRIPTION_libactivator.lockscreen.show" = "Muestra la pantalla de bloqueo";
 "LISTENER_DESCRIPTION_libactivator.settings.date-time" = "Abre ajustes en Fecha y hora";
 "EVENT_DESCRIPTION_libactivator.icon.flick.up" = "Desliza sobre un icono hacia arriba";
-"LISTENER_TITLE_libactivator.settings.twitter" = "Twitter";
 "EVENT_DESCRIPTION_libactivator.three-finger.pinch" = "Pellizca la pantalla con tres dedos";
 "EVENT_TITLE_libactivator.statusbar.tap.double" = "Doble toque";
 "BOOKMARKS_DETAIL" = "Administra acciones de marcadores";

@@ -143,29 +143,6 @@
 		<key>url</key>
 		<string>clock-alarm:default</string>
 	</dict>
-	<key>libactivator.clock.bedtime</key>
-	<dict>
-		<key>apply-rounded-corners</key>
-		<string>1</string>
-		<key>description</key>
-		<string>Open Clock app to Bedtime page</string>
-		<key>exclusive-assignment-groups</key>
-		<array>
-			<string>application-launch</string>
-		</array>
-		<key>group</key>
-		<string>Clock</string>
-		<key>selector</key>
-		<string>openURLWithActivator:event:listenerName:</string>
-		<key>small-icons</key>
-		<array>
-			<string>/Applications/MobileTimer.app/icon-about.png</string>
-		</array>
-		<key>title</key>
-		<string>Bedtime</string>
-		<key>url</key>
-		<string>clock-sleep-alarm:default</string>
-	</dict>
 	<key>libactivator.clock.stopwatch</key>
 	<dict>
 		<key>apply-rounded-corners</key>
@@ -748,7 +725,7 @@
 		<key>title</key>
 		<string>Accessibility</string>
 		<key>url</key>
-		<string>prefs:root=General&amp;path=ACCESSIBILITY</string>
+		<string>prefs:root=ACCESSIBILITY</string>
 	</dict>
 	<key>libactivator.settings.auto-lock</key>
 	<dict>
@@ -869,64 +846,6 @@
 			<string>700</string>
 			<string>prefs:root=Bluetooth</string>
 		</array>
-	</dict>
-	<key>libactivator.settings.brightness</key>
-	<dict>
-		<key>apply-rounded-corners</key>
-		<string>1</string>
-		<key>compatible-modes</key>
-		<array>
-			<string>springboard</string>
-			<string>application</string>
-		</array>
-		<key>description</key>
-		<string>Open Settings to Brightness page</string>
-		<key>exclusive-assignment-groups</key>
-		<array>
-			<string>application-launch</string>
-		</array>
-		<key>group</key>
-		<string>Settings</string>
-		<key>selector</key>
-		<string>openURLWithActivator:event:listenerName:</string>
-		<key>small-icons</key>
-		<array>
-			<string>/Applications/Preferences.app/icon-table.png</string>
-			<string>/Applications/Preferences.app/Settings.png</string>
-		</array>
-		<key>title</key>
-		<string>Brightness</string>
-		<key>url</key>
-		<string>prefs:root=Brightness</string>
-	</dict>
-	<key>libactivator.settings.brightness-and-wallpaper</key>
-	<dict>
-		<key>apply-rounded-corners</key>
-		<string>1</string>
-		<key>compatible-modes</key>
-		<array>
-			<string>springboard</string>
-			<string>application</string>
-		</array>
-		<key>description</key>
-		<string>Open Settings to Brightness/Wallpaper page</string>
-		<key>exclusive-assignment-groups</key>
-		<array>
-			<string>application-launch</string>
-		</array>
-		<key>group</key>
-		<string>Settings</string>
-		<key>selector</key>
-		<string>openURLWithActivator:event:listenerName:</string>
-		<key>small-icons</key>
-		<array>
-			<string>/Applications/Preferences.app/icon-table.png</string>
-			<string>/Applications/Preferences.app/Settings.png</string>
-		</array>
-		<key>title</key>
-		<string>Brightness &amp; Wallpaper</string>
-		<key>url</key>
-		<string>prefs:root=Wallpaper</string>
 	</dict>
 	<key>libactivator.settings.carplay</key>
 	<dict>
@@ -1105,64 +1024,6 @@
 		<string>Do Not Disturb</string>
 		<key>url</key>
 		<string>prefs:root=DO_NOT_DISTURB</string>
-	</dict>
-	<key>libactivator.settings.equalizer</key>
-	<dict>
-		<key>apply-rounded-corners</key>
-		<string>1</string>
-		<key>compatible-modes</key>
-		<array>
-			<string>springboard</string>
-			<string>application</string>
-		</array>
-		<key>description</key>
-		<string>Open Settings to Equalizer page</string>
-		<key>exclusive-assignment-groups</key>
-		<array>
-			<string>application-launch</string>
-		</array>
-		<key>group</key>
-		<string>Settings</string>
-		<key>selector</key>
-		<string>openURLWithActivator:event:listenerName:</string>
-		<key>small-icons</key>
-		<array>
-			<string>/Applications/Preferences.app/icon-table.png</string>
-			<string>/Applications/Preferences.app/Settings.png</string>
-		</array>
-		<key>title</key>
-		<string>Equalizer</string>
-		<key>url</key>
-		<string>prefs:root=MUSIC&amp;path=EQ</string>
-	</dict>
-	<key>libactivator.settings.facebook</key>
-	<dict>
-		<key>apply-rounded-corners</key>
-		<string>1</string>
-		<key>compatible-modes</key>
-		<array>
-			<string>springboard</string>
-			<string>application</string>
-		</array>
-		<key>description</key>
-		<string>Open Settings to Facebook page</string>
-		<key>exclusive-assignment-groups</key>
-		<array>
-			<string>application-launch</string>
-		</array>
-		<key>group</key>
-		<string>Settings</string>
-		<key>selector</key>
-		<string>openURLWithActivator:event:listenerName:</string>
-		<key>small-icons</key>
-		<array>
-			<string>/Applications/Preferences.app/icon-table.png</string>
-			<string>/Applications/Preferences.app/Settings.png</string>
-		</array>
-		<key>title</key>
-		<string>Facebook</string>
-		<key>url</key>
-		<string>prefs:root=FACEBOOK</string>
 	</dict>
 	<key>libactivator.settings.facetime</key>
 	<dict>
@@ -1541,35 +1402,6 @@
 		<key>url</key>
 		<string>prefs:root=MUSIC</string>
 	</dict>
-	<key>libactivator.settings.network</key>
-	<dict>
-		<key>apply-rounded-corners</key>
-		<string>1</string>
-		<key>compatible-modes</key>
-		<array>
-			<string>springboard</string>
-			<string>application</string>
-		</array>
-		<key>description</key>
-		<string>Open Settings to Network page</string>
-		<key>exclusive-assignment-groups</key>
-		<array>
-			<string>application-launch</string>
-		</array>
-		<key>group</key>
-		<string>Settings</string>
-		<key>selector</key>
-		<string>openURLWithActivator:event:listenerName:</string>
-		<key>small-icons</key>
-		<array>
-			<string>/Applications/Preferences.app/icon-table.png</string>
-			<string>/Applications/Preferences.app/Settings.png</string>
-		</array>
-		<key>title</key>
-		<string>Network</string>
-		<key>url</key>
-		<string>prefs:root=General&amp;path=Network</string>
-	</dict>
 	<key>libactivator.settings.notes</key>
 	<dict>
 		<key>apply-rounded-corners</key>
@@ -1893,68 +1725,6 @@
 		<key>url</key>
 		<string>prefs:root=INTERNET_TETHERING</string>
 	</dict>
-	<key>libactivator.settings.twitter</key>
-	<dict>
-		<key>apply-rounded-corners</key>
-		<string>1</string>
-		<key>compatible-modes</key>
-		<array>
-			<string>springboard</string>
-			<string>application</string>
-		</array>
-		<key>description</key>
-		<string>Open Settings to Twitter page</string>
-		<key>exclusive-assignment-groups</key>
-		<array>
-			<string>application-launch</string>
-		</array>
-		<key>group</key>
-		<string>Settings</string>
-		<key>selector</key>
-		<string>openURLWithActivator:event:listenerName:</string>
-		<key>small-icons</key>
-		<array>
-			<string>/Applications/Preferences.app/icon-table.png</string>
-			<string>/Applications/Preferences.app/Settings.png</string>
-		</array>
-		<key>title</key>
-		<string>Twitter</string>
-		<key>url</key>
-		<string>prefs:root=TWITTER</string>
-	</dict>
-	<key>libactivator.settings.usage</key>
-	<dict>
-		<key>apply-rounded-corners</key>
-		<string>1</string>
-		<key>compatible-modes</key>
-		<array>
-			<string>springboard</string>
-			<string>application</string>
-		</array>
-		<key>description</key>
-		<string>Open Settings to Usage page</string>
-		<key>exclusive-assignment-groups</key>
-		<array>
-			<string>application-launch</string>
-		</array>
-		<key>group</key>
-		<string>Settings</string>
-		<key>selector</key>
-		<string>openURLWithActivator:event:listenerName:</string>
-		<key>small-icons</key>
-		<array>
-			<string>/Applications/Preferences.app/icon-table.png</string>
-			<string>/Applications/Preferences.app/Settings.png</string>
-		</array>
-		<key>title</key>
-		<string>Usage</string>
-		<key>urls</key>
-		<array>
-			<string>prefs:root=General&amp;path=USAGE</string>
-			<string>1240</string>
-			<string>prefs:root=General&amp;path=STORAGE_ICLOUD_USAGE</string>
-		</array>
-	</dict>
 	<key>libactivator.settings.virtual-assistant</key>
 	<dict>
 		<key>apply-rounded-corners</key>
@@ -2015,7 +1785,7 @@
 		<key>title</key>
 		<string>VPN</string>
 		<key>url</key>
-		<string>prefs:root=General&amp;path=VPN</string>
+		<string>prefs:root=VPN</string>
 	</dict>
 	<key>libactivator.settings.wallpaper</key>
 	<dict>

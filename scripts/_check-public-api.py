@@ -86,8 +86,12 @@ def strip_line_comment(line: str) -> str:
     return line.split("//", 1)[0].strip()
 
 
+def strip_declaration_attributes(line: str) -> str:
+    return re.sub(r"\s+LA_DEPRECATED\s*\([^)]*\)", "", line).strip()
+
+
 def selector_from_method(line: str) -> str | None:
-    line = strip_line_comment(line).rstrip(";").strip()
+    line = strip_declaration_attributes(strip_line_comment(line).rstrip(";").strip())
     match = re.match(r"^[+-]\s*\([^)]*\)\s*(.+)$", line)
     if not match:
         return None
@@ -101,7 +105,7 @@ def selector_from_method(line: str) -> str | None:
 
 
 def property_name(line: str) -> str | None:
-    line = strip_line_comment(line).rstrip(";").strip()
+    line = strip_declaration_attributes(strip_line_comment(line).rstrip(";").strip())
     match = re.match(r"^@property\s*(?:\(([^)]*)\))?\s*(.+)$", line)
     if not match:
         return None
@@ -587,7 +591,7 @@ def validate_resource_catalog(project_root: Path) -> None:
     check(isinstance(events, dict), "Event resource catalog is not a dictionary")
     check(isinstance(listeners, dict), "Listener resource catalog is not a dictionary")
     check(len(events) == 121, f"Unexpected event resource count: {len(events)}")
-    check(len(listeners) == 114, f"Unexpected listener resource count: {len(listeners)}")
+    check(len(listeners) == 106, f"Unexpected listener resource count: {len(listeners)}")
 
     excluded_listeners = {
         "libactivator.twitter.compose-tweet",
@@ -640,7 +644,7 @@ def main() -> int:
         f"{checked_metadata} Objective-C metadata entries, "
         f"{checked_properties} properties"
     )
-    log("Resource catalog validation: 121 events, 114 listeners.")
+    log("Resource catalog validation: 121 events, 106 listeners.")
     log("Metadata check passed.")
     return 0
 

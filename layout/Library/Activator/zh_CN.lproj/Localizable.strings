@@ -71,7 +71,6 @@
 "LISTENER_TITLE_libactivator.speech.synthesize_FORMAT" = "朗读“%@”";
 "EVENT_DESCRIPTION_libactivator.volume.down-up" = "先按下音量按钮，再按上音量按钮";
 "EVENT_TITLE_com.rpetrich.riker.center" = "中间按钮";
-"LISTENER_TITLE_libactivator.settings.usage" = "用量";
 "LISTENER_TITLE_libactivator.settings.virtual-assistant" = "Siri";
 "LISTENER_GROUP_TITLE_Clock" = "时钟";
 "LISTENER_DESCRIPTION_ch.ringwald.mouse.middle" = "蓝牙鼠标点击中键";
@@ -130,7 +129,6 @@
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.single.with-slide-in" = "按一下指纹识别传感器后向屏幕滑动";
 "LISTENER_GROUP_TITLE_Switches" = "开关";
 "NEW_EVENT_TITLE_libactivator.mail-received_SENDER_FORMAT" = "来自 %@";
-"LISTENER_TITLE_libactivator.settings.brightness-and-wallpaper" = "亮度与墙纸";
 "EVENT_TITLE_libactivator.five-finger.spread" = "张开五指";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.right" = "按两下状态栏右侧区域";
 "EVENT_TITLE_libactivator.drag-along.screen-right.bottom-to-top" = "从下向上拖动";
@@ -192,8 +190,6 @@
 "EVENT_DESCRIPTION_libactivator.drag-off.right" = "滑出屏幕右侧";
 "EVENT_DESCRIPTION_libactivator.lockscreen.clock.swipe-left" = "向左拖动时钟/日期区域";
 "LISTENER_DESCRIPTION_com.mathieubolard.killbackground" = "退出全部后台运行的应用程序";
-"LISTENER_DESCRIPTION_libactivator.settings.facebook" = "打开设置的“Facebook”页面";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "打开设置的“Twitter”页面";
 "EVENT_TITLE_libactivator.four-finger.tap" = "四指按一下";
 "LISTENER_DESCRIPTION_toggle_disable" = "关闭该开关";
 "LISTENER_GROUP_TITLE_Audio" = "音频";
@@ -285,7 +281,6 @@
 "NEW_EVENT_DESCRIPTION_libactivator.message-received_MESSAGE_FORMAT" = "信息内容包含“%@”";
 "TOO_NEW_MESSAGE" = "Activator 未在该版本的 iOS 上测试过。\n某些功能可能无法正常使用。";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-bottom.right-to-left" = "在屏幕底部边缘从右向左拖动";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "打开设置的“亮度”页面";
 "API_ACCESS_WARNING_FORMAT" = "%@ 正请求发送动作及修改事件分配的权限。";
 "LISTENER_TITLE_com.rpetrich.videopane.destroy-pane" = "停止视频";
 "EVENT_DESCRIPTION_libactivator.power.connected" = "连接上外部电源";
@@ -357,7 +352,6 @@
 "N_ACTIONS" = "展开 %d 个项目";
 "EVENT_DESCRIPTION_libactivator.three-finger.spread" = "在屏幕用三指按一下";
 "CANCEL" = "取消";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "打开设置的“用量”页面";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_AND_SENDER_FORMAT" = "发件人是 %1$@ 且邮件标题包含“%2$@”";
 "MULTIPLE_ASSIGNMENTS_TITLE" = "多重分配";
 "EVENT_DESCRIPTION_libactivator.statusbar.hold.right" = "按住状态栏右侧区域";
@@ -368,7 +362,6 @@
 "LISTENER_DESCRIPTION_libactivator.audio.reset-ringer-state" = "将响铃设为与硬件开关相匹配的状态";
 "EVENT_TITLE_libactivator.volume.mute" = "关闭响铃/静音开关";
 "EVENT_TITLE_com.rpetrich.riker.left" = "左侧按钮";
-"LISTENER_TITLE_libactivator.settings.facebook" = "Facebook";
 "EVENT_TITLE_libactivator.volume.both.press" = "同时按";
 "EVENT_DESCRIPTION_libactivator.now-playing.info-changed" = "接收到更新的曲目信息";
 "LISTENER_TITLE_libactivator.settings.facetime" = "FaceTime";
@@ -382,7 +375,6 @@
 "EVENT_DESCRIPTION_libactivator.three-finger.tap" = "在屏幕用三指按一下";
 "LISTENER_DESCRIPTION_com.dapetcu21.MultiCleaner_quitAllApps" = "退出全部应用程序";
 "SET_VOLUME_TO_FORMAT" = "设置音量到 %@%%";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness-and-wallpaper" = "打开设置的“亮度与墙纸”页面";
 "EVENT_DESCRIPTION_libactivator.car.connected" = "连接到 CarPlay 配件";
 "EVENT_TITLE_libactivator.motion.shake" = "晃动设备";
 "EVENT_DESCRIPTION_libactivator.lockscreen.clock.tap-hold" = "按住时钟/日期区域";
@@ -477,7 +469,6 @@
 "LISTENER_TITLE_libactivator.phone.contacts" = "显示通讯录";
 "LISTENER_TITLE_libactivator.system.powerdown" = "关机";
 "BUY" = "购买";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "打开设置的“网络”页面";
 "LISTENER_TITLE_com.rpetrich.superscroller.up" = "向上";
 "EVENT_DESCRIPTION_libactivator.slide-in.left-bottom" = "由屏幕左下向中心拖动";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.hold-long" = "长按指纹识别传感器";
@@ -540,7 +531,6 @@
 "LISTENER_TITLE_com.rpetrich.videopane.toggle-playback" = "播放/暂停";
 "LISTENER_DESCRIPTION_com.intelliborn.messagesplus" = "Messages+ 编写新信息";
 "LISTENER_DESCRIPTION_libactivator.settings.control-center" = "打开设置的“控制中心”页面";
-"LISTENER_TITLE_libactivator.clock.bedtime" = "就寝";
 "LISTENER_TITLE_libactivator.audio.launch-playing-app" = "启动正在播放应用";
 "ADD" = "添加";
 "LISTENER_DESCRIPTION_libactivator.system.reboot" = "重新启动设备";
@@ -584,7 +574,6 @@
 "EVENT_TITLE_libactivator.statusbar.hold.left" = "按住左侧";
 "EVENT_DESCRIPTION_libactivator.volume.up.press.with-menu" = "同时按下两个按钮";
 "LISTENER_TITLE_libactivator.clock.timer" = "计时器";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "均衡器";
 "REMOVE" = "移除";
 "EVENT_TITLE_libactivator.force-touch.screen-right" = "屏幕右侧边缘";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-left.top-to-bottom" = "在屏幕左侧边缘从顶部向底部拖动";
@@ -612,7 +601,6 @@
 "EVENT_TITLE_libactivator.icon.flick.up" = "向上拖图标";
 "EVENT_DESCRIPTION_libactivator.five-finger.tap" = "在屏幕用五指按一下";
 "LISTENER_TITLE_com.ashman.lockinfo.infoshade" = "LockInfo - 信息遮罩";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "打开设置的“均衡器”页面";
 "LISTENER_DESCRIPTION_com.rpetrich.superscroller.autodown" = "屏幕持续向下滚动";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.left" = "按两下状态栏左侧区域";
 "LISTENER_DESCRIPTION_libactivator.settings.keyboard" = "打开设置的“键盘”页面";
@@ -646,7 +634,6 @@
 "EVENT_GROUP_TITLE_Application Launched" = "启动应用程序";
 "LISTENER_TITLE_libactivator.ipod.music-controls" = "iPod 控制";
 "LISTENER_TITLE_libactivator.settings.handoff" = "Handoff";
-"LISTENER_TITLE_libactivator.settings.network" = "网络";
 "LISTENER_DESCRIPTION_com.rpetrich.videopane.detach-pane" = "移动当前视频到面板中";
 "NEW_EVENT_DESCRIPTION_libactivator.application-launch" = "启动某个应用程序";
 "NEW_LISTENER_DESCRIPTION_libactivator.message.show" = "显示自定义提示信息";
@@ -818,7 +805,6 @@
 "EVENT_TITLE_libactivator.slide-in.left-top" = "从屏幕左上";
 "NEW_EVENT_DESCRIPTION_libactivator.icon.tap.double" = "按两下某个应用程序的图标";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.twice" = "按两下指纹识别传感器";
-"LISTENER_TITLE_libactivator.settings.brightness" = "亮度";
 "GRANT ACCESS" = "允许访问";
 "PROFILES_DETAIL" = "设置自定义分配档案";
 "EVENT_GROUP_TITLE_Scheduled" = "计划事件";
@@ -872,7 +858,6 @@
 "LISTENER_TITLE_libactivator.settings.photos" = "照片";
 "BOOKMARKS_DETAIL" = "管理自定义书签动作";
 "LISTENER_TITLE_libactivator.settings.reminders" = "提醒事项";
-"LISTENER_TITLE_libactivator.settings.twitter" = "Twitter";
 "VERSION_PROMPT_MORE_INFO" = "更多信息";
 "EVENT_DESCRIPTION_libactivator.scheduled" = "%@的该时刻";
 "LISTENER_TITLE_ch.ringwald.mouse.middle" = "中键点击";
@@ -962,7 +947,6 @@
 "EVENT_TITLE_libactivator.menu.hold.short" = "按住";
 "ACTIVATOR_CORRUPT_MESSAGE" = "可能因为 Activator 程序以及资源文件损坏，Activator 大部分功能已被禁用。请尝试使用 Cydia 重新安装 Activator 以修复损坏文件。";
 "NEW_EVENT_TITLE_libactivator.power.charge-past" = "电池充电";
-"LISTENER_DESCRIPTION_libactivator.clock.bedtime" = "打开时钟的就寝页面";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_FORMAT" = "邮件标题包含“%@”";
 "LISTENER_TITLE_toggle_Data" = "蜂窝数据";
 "EVENT_DESCRIPTION_libactivator.slide-in.right" = "由屏幕右侧向左拖动";

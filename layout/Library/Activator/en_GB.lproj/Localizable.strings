@@ -57,7 +57,6 @@
 "LISTENER_TITLE_libactivator.speech.synthesize_FORMAT" = "Say \"%@\"";
 "EVENT_DESCRIPTION_libactivator.volume.down-up" = "Press volume down, then up";
 "EVENT_TITLE_com.rpetrich.riker.center" = "Centre Button";
-"LISTENER_TITLE_libactivator.settings.usage" = "Usage";
 "LISTENER_TITLE_libactivator.settings.virtual-assistant" = "Siri";
 "LISTENER_GROUP_TITLE_Clock" = "Clock";
 "LISTENER_DESCRIPTION_libactivator.settings.virtual-assistant" = "Open Settings to Siri page";
@@ -104,7 +103,6 @@
 "LISTENER_DESCRIPTION_libactivator.phone.contacts" = "Launch Phone to the Contacts tab";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.single.with-slide-in" = "Touch fingerprint sensor and swipe onto screen";
 "LISTENER_GROUP_TITLE_Switches" = "Switches";
-"LISTENER_TITLE_libactivator.settings.brightness-and-wallpaper" = "Brightness & Wallpaper";
 "NEW_EVENT_TITLE_libactivator.mail-received_SENDER_FORMAT" = "From %@";
 "EVENT_TITLE_libactivator.five-finger.spread" = "Five Finger Spread";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.right" = "Double-tap on the right part of the statusbar";
@@ -157,8 +155,6 @@
 "EVENT_TITLE_libactivator.icon.flick.down_FORMAT" = "%@ Icon Flick Down";
 "EVENT_DESCRIPTION_libactivator.drag-off.right" = "Drag off screen to the right";
 "EVENT_DESCRIPTION_libactivator.lockscreen.clock.swipe-left" = "Swipe left on clock/date area";
-"LISTENER_DESCRIPTION_libactivator.settings.facebook" = "Open Settings to Facebook page";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "Open Settings to Twitter page";
 "EVENT_TITLE_libactivator.four-finger.tap" = "Four Finger Tap";
 "LISTENER_DESCRIPTION_toggle_disable" = "Deactivate toggle";
 "LISTENER_GROUP_TITLE_Audio" = "Audio";
@@ -237,7 +233,6 @@
 "NEW_EVENT_DESCRIPTION_libactivator.message-received_MESSAGE_FORMAT" = "Message contains \"%@\"";
 "TOO_NEW_MESSAGE" = "Activator has not been tested with this version of iOS.\nSome features may not work as designed.";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-bottom.right-to-left" = "Drag along screen edge from right to left";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "Open Settings to Brightness page";
 "API_ACCESS_WARNING_FORMAT" = "%@ is requesting permission to dispatch actions and modify event assignments.";
 "LISTENER_TITLE_com.rpetrich.videopane.destroy-pane" = "Destroy Video";
 "EVENT_DESCRIPTION_libactivator.power.connected" = "Begin receiving A/C power";
@@ -300,7 +295,6 @@
 "N_ACTIONS" = "%d actions";
 "EVENT_DESCRIPTION_libactivator.three-finger.spread" = "Spread screen with three fingers";
 "CANCEL" = "Cancel";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "Open Settings to Usage page";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_AND_SENDER_FORMAT" = "Subject contains \"%2$@\", sender is %1$@";
 "MULTIPLE_ASSIGNMENTS_TITLE" = "Multiple Assignments";
 "EVENT_DESCRIPTION_libactivator.statusbar.hold.right" = "Tap and hold on the right part of statusbar";
@@ -311,7 +305,6 @@
 "LISTENER_DESCRIPTION_libactivator.audio.reset-ringer-state" = "Set ringer state to match hardware switch";
 "EVENT_TITLE_libactivator.volume.mute" = "Toggle Ringer Off";
 "EVENT_TITLE_com.rpetrich.riker.left" = "Left Button";
-"LISTENER_TITLE_libactivator.settings.facebook" = "Facebook";
 "EVENT_TITLE_libactivator.volume.both.press" = "Both Press";
 "EVENT_DESCRIPTION_libactivator.now-playing.info-changed" = "Received updated track information";
 "LISTENER_TITLE_libactivator.settings.facetime" = "FaceTime";
@@ -320,7 +313,6 @@
 "NEW_EVENT_TITLE_libactivator.mail-received_SUBJECT_AND_SENDER_FORMAT" = "From %@, \"%@\" in Subject";
 "EVENT_TITLE_libactivator.three-finger.spread" = "Three Finger Spread";
 "LISTENER_TITLE_libactivator.system.safemode" = "Safe Mode";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness-and-wallpaper" = "Open Settings to Brightness/Wallpaper page";
 "EVENT_DESCRIPTION_libactivator.three-finger.tap" = "Tap screen with three fingers";
 "LISTENER_TITLE_libactivator.settings.vpn" = "VPN";
 "SET_VOLUME_TO_FORMAT" = "Set volume to %@%%";
@@ -402,7 +394,6 @@
 "LISTENER_TITLE_libactivator.phone.contacts" = "Show Contacts";
 "LISTENER_TITLE_libactivator.system.powerdown" = "Power Down";
 "BUY" = "Buy";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "Open Settings to Network page";
 "LISTENER_TITLE_com.rpetrich.superscroller.up" = "Up";
 "EVENT_DESCRIPTION_libactivator.slide-in.left-bottom" = "Drag onto screen from left-bottom";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.hold-long" = "Touch and long hold on fingerprint sensor";
@@ -453,7 +444,6 @@
 "LISTENER_TITLE_com.rpetrich.videopane.toggle-playback" = "Play/Pause";
 "LISTENER_DESCRIPTION_libactivator.system.haptic.quirk" = "Triggers taptic engine quirk";
 "LISTENER_DESCRIPTION_libactivator.settings.control-center" = "Open Settings to Control Centre page";
-"LISTENER_TITLE_libactivator.clock.bedtime" = "Bedtime";
 "LISTENER_TITLE_libactivator.audio.launch-playing-app" = "Launch Playing App";
 "ADD" = "Add";
 "LISTENER_DESCRIPTION_libactivator.system.reboot" = "Immediately reboots the device";
@@ -493,7 +483,6 @@
 "LISTENER_TITLE_libactivator.settings.international" = "International";
 "EVENT_TITLE_libactivator.statusbar.hold.left" = "Hold Left";
 "EVENT_DESCRIPTION_libactivator.volume.up.press.with-menu" = "Press both buttons simultaneously";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "Equaliser";
 "LISTENER_TITLE_libactivator.clock.timer" = "Timer";
 "REMOVE" = "Remove";
 "EVENT_TITLE_libactivator.force-touch.screen-right" = "Screen Right Edge";
@@ -518,7 +507,6 @@
 "NEW_LISTENER_TITLE_libactivator.command.run" = "Run Command";
 "EVENT_TITLE_libactivator.icon.flick.up" = "Icon Flick Up";
 "EVENT_DESCRIPTION_libactivator.five-finger.tap" = "Tap screen with five fingers";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "Open Settings to Equaliser page";
 "LISTENER_DESCRIPTION_com.rpetrich.superscroller.autodown" = "Continuous scroll downwards";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.left" = "Double-tap on the left part of the statusbar";
 "LISTENER_DESCRIPTION_libactivator.settings.keyboard" = "Open Settings to Keyboard page";
@@ -551,7 +539,6 @@
 "NEW_EVENT_TITLE_libactivator.scheduled" = "Scheduled";
 "EVENT_GROUP_TITLE_Application Launched" = "Application Launched";
 "LISTENER_TITLE_libactivator.ipod.music-controls" = "iPod Controls";
-"LISTENER_TITLE_libactivator.settings.network" = "Network";
 "LISTENER_DESCRIPTION_libactivator.screen.brightness.increase" = "Increase screen brightness by one step";
 "LISTENER_DESCRIPTION_com.rpetrich.videopane.detach-pane" = "Detaches current video into a pane";
 "NEW_EVENT_DESCRIPTION_libactivator.application-launch" = "A specific application is launched";
@@ -701,7 +688,6 @@
 "EVENT_TITLE_libactivator.slide-in.left-top" = "From Screen Left-Top";
 "NEW_EVENT_DESCRIPTION_libactivator.icon.tap.double" = "A specific icon is double tapped";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.twice" = "Touch fingerprint sensor twice";
-"LISTENER_TITLE_libactivator.settings.brightness" = "Brightness";
 "GRANT ACCESS" = "Grant Access";
 "PROFILES_DETAIL" = "Setup custom assignment profiles";
 "EVENT_GROUP_TITLE_Scheduled" = "Scheduled";
@@ -748,7 +734,6 @@
 "LISTENER_DESCRIPTION_libactivator.settings.date-time" = "Open Settings to Date & Time page";
 "EVENT_DESCRIPTION_libactivator.three-finger.pinch" = "Pinch screen with three fingers";
 "EVENT_TITLE_libactivator.statusbar.tap.double" = "Double Tap";
-"LISTENER_TITLE_libactivator.settings.twitter" = "Twitter";
 "BOOKMARKS_DETAIL" = "Manage custom bookmark actions";
 "VERSION_PROMPT_MORE_INFO" = "More Info";
 "EVENT_DESCRIPTION_libactivator.scheduled" = "Time passes on %@";
@@ -828,7 +813,6 @@
 "EVENT_TITLE_libactivator.menu.hold.short" = "Short Hold";
 "ACTIVATOR_CORRUPT_MESSAGE" = "Most features of Activator are currently disabled because Activator's internal files seem to be incorrect. Try going into Cydia and reinstalling Activator.";
 "NEW_EVENT_TITLE_libactivator.power.charge-past" = "Battery Charges";
-"LISTENER_DESCRIPTION_libactivator.clock.bedtime" = "Open Clock app to Bedtime page";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_FORMAT" = "Subject contains \"%@\"";
 "LISTENER_TITLE_toggle_Data" = "Data";
 "EVENT_DESCRIPTION_libactivator.slide-in.right" = "Drag onto screen from right";

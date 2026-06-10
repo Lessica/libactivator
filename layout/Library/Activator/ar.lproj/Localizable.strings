@@ -57,7 +57,6 @@
 "MODE_DESCRIPTION_springboard" = "عندما تكون أيقونات واجهة النظام مرئية";
 "EVENT_DESCRIPTION_libactivator.volume.down-up" = "الضغط على زر خفض مستوى الصوت، ثم زر رفعه";
 "EVENT_TITLE_com.rpetrich.riker.center" = "زر الوسط";
-"LISTENER_TITLE_libactivator.settings.usage" = "الاستخدام";
 "LISTENER_TITLE_libactivator.settings.virtual-assistant" = "Siri";
 "LISTENER_GROUP_TITLE_Clock" = "الساعة";
 "LISTENER_DESCRIPTION_libactivator.settings.virtual-assistant" = "فتح الإعدادات لصفحة Siri";
@@ -104,7 +103,6 @@
 "LISTENER_DESCRIPTION_libactivator.phone.contacts" = "تشغيل تطبيق الهاتف على تبويب جهات الاتصال";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.single.with-slide-in" = "لمس مستشعر بصمات الأصابع والسحب على الشاشة";
 "LISTENER_GROUP_TITLE_Switches" = "مفاتيح التبديل";
-"LISTENER_TITLE_libactivator.settings.brightness-and-wallpaper" = "السطوع والخلفية";
 "NEW_EVENT_TITLE_libactivator.mail-received_SENDER_FORMAT" = "من %@";
 "EVENT_TITLE_libactivator.five-finger.spread" = "التفريق بخمس أصابع";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.right" = "النقر مرتين على الجزء الأيمن من شريط الحالة";
@@ -156,9 +154,7 @@
 "EVENT_GROUP_TITLE_Bluetooth Devices" = "أجهزة الـ Bluetooth";
 "EVENT_TITLE_libactivator.icon.flick.down_FORMAT" = "تمرير أيقونة %@ لأسفل";
 "EVENT_DESCRIPTION_libactivator.drag-off.right" = "السحب من خارج الشاشة إلى اليمين";
-"LISTENER_DESCRIPTION_libactivator.settings.facebook" = "فتح الإعدادات لصفحة فيسبوك";
 "EVENT_DESCRIPTION_libactivator.lockscreen.clock.swipe-left" = "السحب لليسار على منطقة الوقت/التاريخ";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "فتح الإعدادات لصفحة تويتر";
 "EVENT_TITLE_libactivator.four-finger.tap" = "الضغط بأربع أصابع";
 "LISTENER_DESCRIPTION_toggle_disable" = "إلغاء تنشيط المبدل";
 "LISTENER_GROUP_TITLE_Audio" = "الصوت";
@@ -236,7 +232,6 @@
 "LISTENER_TITLE_libactivator.phone.voicemail" = "إظهار البريد الصوتي";
 "NEW_EVENT_DESCRIPTION_libactivator.message-received_MESSAGE_FORMAT" = "احتواء الرسالة على \"%@\"";
 "TOO_NEW_MESSAGE" = "لم يتم اختبار Activator بعد على هذا الإصدار من iOS.\nبعض المميزات لن تعمل على النحو المطلوب.";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "فتح الإعدادات لصفحة الإضاءة";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-bottom.right-to-left" = "السحب على طول حافة الشاشة من اليمين لليسار";
 "API_ACCESS_WARNING_FORMAT" = "يطلب %@ الإذن لإرسال الإجراءات وتعديل تعيينات الأحداث.";
 "LISTENER_TITLE_com.rpetrich.videopane.destroy-pane" = "إنهاء الفيديو";
@@ -300,7 +295,6 @@
 "N_ACTIONS" = "%d إجراء";
 "EVENT_DESCRIPTION_libactivator.three-finger.spread" = "التفريق على الشاشة بثلاث أصابع";
 "CANCEL" = "إلغاء";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "فتح الإعدادات لصفحة مساحة التخزين";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_AND_SENDER_FORMAT" = "احتواء الموضوع على \"%2$@\"، المرسل هو %1$@";
 "MULTIPLE_ASSIGNMENTS_TITLE" = "تعيينات متعددة";
 "EVENT_DESCRIPTION_libactivator.statusbar.hold.right" = "الضغط مع الاستمرار على الجزء الأيمن من شريط الحالة";
@@ -311,7 +305,6 @@
 "LISTENER_DESCRIPTION_libactivator.audio.reset-ringer-state" = "تعيين حالة الرنين إلى مطابقة زر المبدل";
 "EVENT_TITLE_libactivator.volume.mute" = "إيقاف مبدل الرنين";
 "EVENT_TITLE_com.rpetrich.riker.left" = "الزر الأيسر";
-"LISTENER_TITLE_libactivator.settings.facebook" = "فيسبوك";
 "EVENT_TITLE_libactivator.volume.both.press" = "الضغط على الاثنين";
 "EVENT_DESCRIPTION_libactivator.now-playing.info-changed" = "استلام معلومات المسار المحدثة";
 "LISTENER_TITLE_libactivator.settings.facetime" = "FaceTime";
@@ -320,7 +313,6 @@
 "NEW_EVENT_TITLE_libactivator.mail-received_SUBJECT_AND_SENDER_FORMAT" = "من %@، \"%@\" في الموضوع";
 "EVENT_TITLE_libactivator.three-finger.spread" = "التفريق بثلاث أصابع";
 "LISTENER_TITLE_libactivator.system.safemode" = "الوضع الآمن";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness-and-wallpaper" = "فتح الإعدادات لصفحة خلفية الشاشة";
 "EVENT_DESCRIPTION_libactivator.three-finger.tap" = "الضغط على الشاشة بثلاث أصابع";
 "LISTENER_TITLE_libactivator.settings.vpn" = "VPN";
 "SET_VOLUME_TO_FORMAT" = "تعيين مستوى الصوت إلى %@%%";
@@ -402,7 +394,6 @@
 "LISTENER_TITLE_libactivator.phone.contacts" = "إظهار جهات الاتصال";
 "LISTENER_TITLE_libactivator.system.powerdown" = "إيقاف التشغيل";
 "BUY" = "شراء";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "فتح الإعدادات لصفحة الشبكة";
 "LISTENER_TITLE_com.rpetrich.superscroller.up" = "أعلى";
 "EVENT_DESCRIPTION_libactivator.slide-in.left-bottom" = "السحب إلى الشاشة من أسفل اليسار";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.hold-long" = "اللمس مطولًا على مستشعر بصمات الأصابع";
@@ -453,7 +444,6 @@
 "LISTENER_TITLE_com.rpetrich.videopane.toggle-playback" = "تشغيل/إيقاف مؤقت";
 "LISTENER_DESCRIPTION_libactivator.system.haptic.quirk" = "تبديل حدة Taptic Engine";
 "LISTENER_DESCRIPTION_libactivator.settings.control-center" = "فتح الإعدادات لصفحة مركز التحكم";
-"LISTENER_TITLE_libactivator.clock.bedtime" = "وقت النوم";
 "LISTENER_TITLE_libactivator.audio.launch-playing-app" = "تشغيل التطبيق المُشغل";
 "BACKUP_RESTORE_ASSIGNMENT_FOOTER" = "يتم تخزين النسخة الاحتياطية التي تم تصديرها في %@، ويتم نسخها احتياطيًا عند المزامنة مع الـ iTunes أو الـ iCloud.";
 "ADD" = "إضافة";
@@ -494,7 +484,6 @@
 "EVENT_TITLE_libactivator.statusbar.hold.left" = "الضغط يسارًا";
 "LISTENER_TITLE_libactivator.clock.timer" = "المؤقت";
 "EVENT_DESCRIPTION_libactivator.volume.up.press.with-menu" = "الضغط على الزرين في نفس الوقت";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "الموازن";
 "REMOVE" = "إزالة";
 "EVENT_TITLE_libactivator.force-touch.screen-right" = "حافة يمين الشاشة";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-left.top-to-bottom" = "السحب على طول حافة الشاشة من الأعلى للأسفل";
@@ -519,7 +508,6 @@
 "LISTENER_DESCRIPTION_com.rpetrich.superscroller.autodown" = "التمرير المستمر للأسفل";
 "EVENT_TITLE_libactivator.icon.flick.up" = "تمرير الأيقونة لأعلى";
 "EVENT_DESCRIPTION_libactivator.five-finger.tap" = "الضغط على الشاشة بخمس أصابع";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "فتح الإعدادات لصفحة الموازن";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.left" = "النقر مرتين على الجزء الأيسر من شريط الحالة";
 "LISTENER_DESCRIPTION_libactivator.settings.keyboard" = "فتح الإعدادات لصفحة لوحة المفاتيح";
 "LISTENER_DESCRIPTION_libactivator.settings.reminders" = "فتح الإعدادات لصفحة التذكيرات";
@@ -547,7 +535,6 @@
 "LISTENER_DESCRIPTION_libactivator.screen.brightness.increase" = "زيادة سطوع الشاشة بخطوة واحدة";
 "LISTENER_TITLE_libactivator.settings.handoff" = "Handoff";
 "EVENT_DESCRIPTION_libactivator.headset.disconnected" = "فصل سماعة الرأس من الجهاز";
-"LISTENER_TITLE_libactivator.settings.network" = "الشبكة";
 "EVENT_DESCRIPTION_libactivator.menu.press.single" = "الضغط على زر الرئيسية مرة واحدة";
 "EVENT_GROUP_TITLE_Application Launched" = "التطبيقات المشغلة";
 "LISTENER_TITLE_libactivator.ipod.music-controls" = "تحكمات iPod";
@@ -701,7 +688,6 @@
 "EVENT_TITLE_libactivator.slide-in.left-top" = "من أعلى يسار الشاشة";
 "NEW_EVENT_DESCRIPTION_libactivator.icon.tap.double" = "النقر مرتين على أيقونة معينة";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.twice" = "لمس مستشعر بصمات الأصابع مرتين";
-"LISTENER_TITLE_libactivator.settings.brightness" = "السطوع";
 "GRANT ACCESS" = "منح الوصول";
 "PROFILES_DETAIL" = "إعداد ملف تعريف تعيين مخصص";
 "EVENT_GROUP_TITLE_Scheduled" = "مجدول";
@@ -748,7 +734,6 @@
 "EVENT_DESCRIPTION_libactivator.icon.flick.up" = "تمرير أيقونات واجهة النظام للأعلى";
 "EVENT_DESCRIPTION_libactivator.three-finger.pinch" = "التجميع على الشاشة بثلاث أصابع";
 "EVENT_TITLE_libactivator.statusbar.tap.double" = "النقر مرتين";
-"LISTENER_TITLE_libactivator.settings.twitter" = "تويتر";
 "BOOKMARKS_DETAIL" = "إدارة إجراءات إشارة مرجعية مخصصة";
 "VERSION_PROMPT_MORE_INFO" = "المزيد من المعلومات";
 "EVENT_DESCRIPTION_libactivator.scheduled" = "مرور الوقت على %@";
@@ -826,7 +811,6 @@
 "EVENT_TITLE_libactivator.slide-in.top-right" = "من أعلى يمين الشاشة";
 "LISTENER_TITLE_libactivator.audio.reset-ringer-state" = "إعادة تعيين الرنين";
 "EVENT_TITLE_libactivator.menu.hold.short" = "الضغط لفترة قصيرة";
-"LISTENER_DESCRIPTION_libactivator.clock.bedtime" = "فتح تطبيق الساعة على صفحة وقت النوم";
 "ACTIVATOR_CORRUPT_MESSAGE" = "معظم مميزات Activator معطلة حاليًا لأن ملفات Activator الداخلية تبدو غير سليمة. جرب الذهاب إلى Cydia وإعادة تثبيت Activator.";
 "LISTENER_TITLE_toggle_Data" = "البيانات";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_FORMAT" = "احتواء الموضوع على \"%@\"";

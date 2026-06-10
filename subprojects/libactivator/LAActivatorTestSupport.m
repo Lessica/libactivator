@@ -1087,7 +1087,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     NSString *eventName = @"libactivator.test.built-in.nothing";
     NSString *nothingName = @"libactivator.system.nothing";
     NSString *urlName = @"libactivator.clock.timer";
-    NSString *urlsName = @"libactivator.settings.usage";
+    NSString *urlsName = @"libactivator.settings.bluetooth";
     NSString *metadataOnlyName = @"libactivator.ipod.toggle-playback";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
 
@@ -1135,7 +1135,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
     NSString *eventName = @"libactivator.test.built-in.url";
     NSString *singleURLName = @"libactivator.clock.timer";
-    NSString *versionedURLName = @"libactivator.settings.usage";
+    NSString *versionedURLName = @"libactivator.settings.bluetooth";
     NSString *missingURLName = @"libactivator.test.url.missing";
     NSString *invalidURLName = @"libactivator.test.url.invalid";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
@@ -1166,7 +1166,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:versionedURLEvent.handled && openCount == 2
             caseName:@"versioned-url-handles-event"
               reason:@"URL action with versioned urls metadata did not handle the event"];
-    [recorder expect:[[versionedURL absoluteString] isEqualToString:@"prefs:root=General&path=STORAGE_ICLOUD_USAGE"]
+    [recorder expect:[[versionedURL absoluteString] isEqualToString:@"prefs:root=Bluetooth"]
             caseName:@"versioned-url-selection"
               reason:@"URL action did not select the current CoreFoundation URL"];
 

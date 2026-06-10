@@ -57,7 +57,6 @@
 "MODE_DESCRIPTION_springboard" = "เมื่อไอคอนใน SpringBoard แสดงอยู่";
 "EVENT_DESCRIPTION_libactivator.volume.down-up" = "กดปุ่มลดเสียง แล้วปุ่มเพิ่มเสียง";
 "EVENT_TITLE_com.rpetrich.riker.center" = "ปุ่มกลาง";
-"LISTENER_TITLE_libactivator.settings.usage" = "การใช้งาน";
 "LISTENER_TITLE_libactivator.settings.virtual-assistant" = "สิริ";
 "LISTENER_GROUP_TITLE_Clock" = "นาฬิกา";
 "LISTENER_DESCRIPTION_libactivator.settings.virtual-assistant" = "ไปยังการตั้งค่าสิริ";
@@ -104,7 +103,6 @@
 "LISTENER_DESCRIPTION_libactivator.phone.contacts" = "เปิดโทรศัพท์ไปแท็ปรายชื่อ";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.single.with-slide-in" = "แตะที่เซนเซอร์ลายนิ้วมือและปัดเข้าหน้าจอ";
 "LISTENER_GROUP_TITLE_Switches" = "สวิตซ์";
-"LISTENER_TITLE_libactivator.settings.brightness-and-wallpaper" = "ความสว่างและภาพพื้นหลัง";
 "NEW_EVENT_TITLE_libactivator.mail-received_SENDER_FORMAT" = "จาก %@";
 "EVENT_TITLE_libactivator.five-finger.spread" = "5 นิ้วกระจายออก";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.right" = "แตะฝั่งขวาของแถบสถานะ 2 ครั้ง";
@@ -156,9 +154,7 @@
 "EVENT_GROUP_TITLE_Bluetooth Devices" = "อุปกรณ์บลูทูธ";
 "EVENT_TITLE_libactivator.icon.flick.down_FORMAT" = "%@ ตวัดไอคอนลง";
 "EVENT_DESCRIPTION_libactivator.drag-off.right" = "ปัดออกขอบหน้าจอทางขวา";
-"LISTENER_DESCRIPTION_libactivator.settings.facebook" = "ไปยังการตั้งค่า Facebook";
 "EVENT_DESCRIPTION_libactivator.lockscreen.clock.swipe-left" = "ปัดซ้ายที่ี่บริเวณนาฬิกา/วันที่";
-"LISTENER_DESCRIPTION_libactivator.settings.twitter" = "ไปยังการตั้งค่า Twitter";
 "EVENT_TITLE_libactivator.four-finger.tap" = "4 นิ้วแตะ";
 "LISTENER_DESCRIPTION_toggle_disable" = "ปิดตัวเปิด/ปิด";
 "LISTENER_GROUP_TITLE_Audio" = "เสียง";
@@ -236,7 +232,6 @@
 "LISTENER_TITLE_libactivator.phone.voicemail" = "แสดง Voicemail";
 "NEW_EVENT_DESCRIPTION_libactivator.message-received_MESSAGE_FORMAT" = "ข้อความมี \"%@\"";
 "TOO_NEW_MESSAGE" = "Activator ยังไม่ถูกทดสอบใน iOS เวอร์ชั่นนี้\nคำสั่งบางอย่างอาจทำงานไม่ถูกต้อง";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness" = "ไปยังการตั้งค่าความสว่าง";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-bottom.right-to-left" = "ปัดที่ขอบหน้าจอล่าง ขวาไปซ้าย";
 "API_ACCESS_WARNING_FORMAT" = "%@ กำลังร้องขอการกระทำและแก้ไขเหตุการณ์ที่กำหนดไว้";
 "LISTENER_TITLE_com.rpetrich.videopane.destroy-pane" = "ทำลายวีดีโอ";
@@ -300,7 +295,6 @@
 "N_ACTIONS" = "%d การกระทำ";
 "EVENT_DESCRIPTION_libactivator.three-finger.spread" = "กระจายออกที่หน้าจอด้วย 3 นิ้ว";
 "CANCEL" = "ยกเลิก";
-"LISTENER_DESCRIPTION_libactivator.settings.usage" = "ไปยังหน้าการใช้งาน";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_AND_SENDER_FORMAT" = "หัวข้อมี \"%2$@\", ผู้ส่งคือ %1$@";
 "MULTIPLE_ASSIGNMENTS_TITLE" = "การกำหนดหลายตัว";
 "EVENT_DESCRIPTION_libactivator.statusbar.hold.right" = "แตะค้างที่ฝั่งขวาของแถบสถานะ";
@@ -310,7 +304,6 @@
 "LISTENER_TITLE_libactivator.system.power-menu" = "หน้าจอปิดเครื่อง";
 "EVENT_TITLE_libactivator.volume.mute" = "ปรับกริ่งปิด";
 "EVENT_TITLE_com.rpetrich.riker.left" = "ปุ่มซ้าย";
-"LISTENER_TITLE_libactivator.settings.facebook" = "Facebook";
 "EVENT_TITLE_libactivator.volume.both.press" = "กดทั้งคู่";
 "EVENT_DESCRIPTION_libactivator.now-playing.info-changed" = "ได้รับข้อมูลล่าสุดจากแทรค";
 "LISTENER_TITLE_libactivator.settings.facetime" = "FaceTime";
@@ -319,7 +312,6 @@
 "NEW_EVENT_TITLE_libactivator.mail-received_SUBJECT_AND_SENDER_FORMAT" = "จาก %@, \"%@\" ในหัวข้อ";
 "EVENT_TITLE_libactivator.three-finger.spread" = "3 นิ้วกระจายออก";
 "LISTENER_TITLE_libactivator.system.safemode" = "โหมดปลอดภัย";
-"LISTENER_DESCRIPTION_libactivator.settings.brightness-and-wallpaper" = "ไปยังการตั้งค่าความสว่างและภาพพื้นหลัง";
 "EVENT_DESCRIPTION_libactivator.three-finger.tap" = "แตะหน้าจอด้วย 3 นิ้ว";
 "LISTENER_TITLE_libactivator.settings.vpn" = "VPN";
 "SET_VOLUME_TO_FORMAT" = "ปรับความดังที่ %@%%";
@@ -401,7 +393,6 @@
 "LISTENER_TITLE_libactivator.phone.contacts" = "แสดงรายชื่อ";
 "LISTENER_TITLE_libactivator.system.powerdown" = "ปิดเครื่อง";
 "BUY" = "ซื้อ";
-"LISTENER_DESCRIPTION_libactivator.settings.network" = "ไปยังการตั้งค่าเครือข่าย";
 "LISTENER_TITLE_com.rpetrich.superscroller.up" = "ขึ้น";
 "EVENT_DESCRIPTION_libactivator.slide-in.left-bottom" = "ปัดเข้าหน้าจอจากด้านซ้ายล่าง";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.hold-long" = "แตะค้างยาวที่เซนเซอร์ลายนิ้วมือ";
@@ -452,7 +443,6 @@
 "LISTENER_TITLE_com.rpetrich.videopane.toggle-playback" = "เล่น/หยุด";
 "LISTENER_DESCRIPTION_libactivator.system.haptic.quirk" = "ใช้การพลิกใน taptic engine";
 "LISTENER_DESCRIPTION_libactivator.settings.control-center" = "ไปยังการตั้งค่าศูนย์ควบคุม";
-"LISTENER_TITLE_libactivator.clock.bedtime" = "เวลานอน";
 "LISTENER_TITLE_libactivator.audio.launch-playing-app" = "เปิดแอพที่กำลังเล่นเพลง";
 "BACKUP_RESTORE_ASSIGNMENT_FOOTER" = "ข้อมูลการสำรองถูกเก็บไว้ที่ %@ และจะถูกสำรองเมื่อท่านเชื่อมข้อมูลกับ iTunes หรือ iCloud";
 "ADD" = "เพิ่ม";
@@ -493,7 +483,6 @@
 "EVENT_TITLE_libactivator.statusbar.hold.left" = "แตะค้างทางซ้าย";
 "LISTENER_TITLE_libactivator.clock.timer" = "นาฬิกาจับเวลา";
 "EVENT_DESCRIPTION_libactivator.volume.up.press.with-menu" = "กด 2 ปุ่มพร้อมกัน";
-"LISTENER_TITLE_libactivator.settings.equalizer" = "Equalizer";
 "REMOVE" = "ลบ";
 "EVENT_TITLE_libactivator.force-touch.screen-right" = "ขอบหน้าจอขวา";
 "EVENT_DESCRIPTION_libactivator.drag-along.screen-left.top-to-bottom" = "ปัดที่ขอบหน้าจอซ้าย บนลงล่าง";
@@ -518,7 +507,6 @@
 "LISTENER_DESCRIPTION_com.rpetrich.superscroller.autodown" = "เลื่อนลงต่อเนื่อง";
 "EVENT_TITLE_libactivator.icon.flick.up" = "ตวัดไอคอนทางขึ้น";
 "EVENT_DESCRIPTION_libactivator.five-finger.tap" = "แตะหน้าจอด้วย 5 นิ้ว";
-"LISTENER_DESCRIPTION_libactivator.settings.equalizer" = "ไปยังการตั้งค่า Equalizer";
 "EVENT_DESCRIPTION_libactivator.statusbar.tap.double.left" = "แตะฝั่งซ้ายของแถบสถานะ 2 ครั้ง";
 "LISTENER_DESCRIPTION_libactivator.settings.keyboard" = "ไปยังการตั้งค่าแป้นพิมพ์";
 "LISTENER_DESCRIPTION_libactivator.settings.reminders" = "ไปยังการตั้งค่าเตือนความจำ";
@@ -546,7 +534,6 @@
 "LISTENER_DESCRIPTION_libactivator.screen.brightness.increase" = "เพิ่มความสว่างหน้าจอ 1 ระดับ";
 "LISTENER_TITLE_libactivator.settings.handoff" = "Handoff";
 "EVENT_DESCRIPTION_libactivator.headset.disconnected" = "หูฟังตัดการเชื่อมต่อกับอุปกรณ์";
-"LISTENER_TITLE_libactivator.settings.network" = "เครือข่าย";
 "EVENT_DESCRIPTION_libactivator.menu.press.single" = "กดปุ่มโฮมครั้งเดียว";
 "EVENT_GROUP_TITLE_Application Launched" = "แอพพลิเคชั่นถูกเรียกใช้";
 "LISTENER_TITLE_libactivator.ipod.music-controls" = "ตัวควบคุมเพลง";
@@ -700,7 +687,6 @@
 "EVENT_TITLE_libactivator.slide-in.left-top" = "จากขอบหน้าจอซ้ายบน";
 "NEW_EVENT_DESCRIPTION_libactivator.icon.tap.double" = "ไอคอนที่กำหนดถูกแตะ 2 ครั้ง";
 "EVENT_DESCRIPTION_libactivator.fingerprint-sensor.press.twice" = "แตะที่เซนเซอร์ลายนิ้วมือ 2 ครั้ง";
-"LISTENER_TITLE_libactivator.settings.brightness" = "Brightness";
 "GRANT ACCESS" = "ให้สิทธิ์";
 "PROFILES_DETAIL" = "ตั้งค่าโปรไฟล์สำหรับการกำหนดปรับแต่ง";
 "EVENT_GROUP_TITLE_Scheduled" = "กำหนดลงตารางเวลา";
@@ -747,7 +733,6 @@
 "EVENT_DESCRIPTION_libactivator.icon.flick.up" = "ตวัดขึ้นที่ไอคอนใน SpringBoard";
 "EVENT_DESCRIPTION_libactivator.three-finger.pinch" = "ขยุ้มเข้าที่หน้าจอด้วย 3 นิ้ว";
 "EVENT_TITLE_libactivator.statusbar.tap.double" = "แตะ 2 ครั้ง";
-"LISTENER_TITLE_libactivator.settings.twitter" = "Twitter";
 "BOOKMARKS_DETAIL" = "จัดการตัวคั่นหน้าเว็บสำหรับการกระทำ";
 "VERSION_PROMPT_MORE_INFO" = "ข้อมูลเพิ่มเติม";
 "EVENT_DESCRIPTION_libactivator.scheduled" = "เวลาผ่านไปตอน %@";
@@ -825,7 +810,6 @@
 "EVENT_TITLE_libactivator.slide-in.top-right" = "จากขอบหน้าจอบนขวา";
 "ACTIVATOR_CORRUPT_MESSAGE" = "คำสั่งส่วนมากใน Activator ถูกปิดใช้งานอยู่ในขณะนี้เนื่องจากไฟล์ภายในไม่ถูกต้อง ให้ลองติดตั้ง Activator ใหม่อีกครั้งใน Cydia";
 "EVENT_TITLE_libactivator.menu.hold.short" = "ค้างสั้น";
-"LISTENER_DESCRIPTION_libactivator.clock.bedtime" = "เปิดแอพนาฬิกาไปแท็บเวลานอน";
 "LISTENER_TITLE_toggle_Data" = "Data";
 "NEW_EVENT_TITLE_libactivator.power.charge-past" = "แบตเตอร์รี่ชาร์จ";
 "NEW_EVENT_DESCRIPTION_libactivator.mail-received_SUBJECT_FORMAT" = "หัวข้อมี \"%@\"";
