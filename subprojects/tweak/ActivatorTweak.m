@@ -11,6 +11,7 @@
 #import "LAActivator+Private.h"
 #import "LATBuiltInListenerRegistry.h"
 #import "LATMediaActionListener.h"
+#import "LATRingerActionListener.h"
 
 #import <CaptainHook/CaptainHook.h>
 #import <UIKit/UIKit.h>
@@ -168,7 +169,7 @@ CHOptimizedMethod4(self, id, SBVolumeControl, initWithHUDController, id, hudCont
     id instance = CHSuper4(SBVolumeControl, initWithHUDController, hudController, ringerControl, ringerControl,
                            telephonyManager, telephonyManager, conferenceManager, conferenceManager);
     [LATMediaActionListener noteVolumeControlInstance:instance];
-    [LATMediaActionListener noteRingerControlInstance:ringerControl];
+    [LATRingerActionListener noteRingerControlInstance:ringerControl];
     return instance;
 }
 

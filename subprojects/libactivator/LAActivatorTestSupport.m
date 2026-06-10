@@ -390,6 +390,12 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (void)resetTestingState;
 @end
 
+@interface NSObject (LATestRingerActionListenerTesting)
++ (void)setTestingActionHandler:(BOOL (^)(NSString *listenerName, NSString *phase))handler;
++ (NSString *)testingLastActionListenerName;
++ (NSString *)testingLastActionPhase;
+@end
+
 @interface LAActivatorTestSupport ()
 + (NSDictionary *)okReplyWithValue:(id)value;
 + (NSDictionary *)failureReply;
@@ -406,6 +412,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (void)runBuiltInActionRegistryTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runBuiltInURLActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runBuiltInMediaActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
++ (void)runBuiltInRingerActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runRuntimeInputTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runRuntimeDeviceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)cleanActivator:(LAActivator *)activator;
@@ -518,6 +525,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [self runBuiltInActionRegistryTestsWithRecorder:recorder activator:activator];
     [self runBuiltInURLActionTestsWithRecorder:recorder activator:activator];
     [self runBuiltInMediaActionTestsWithRecorder:recorder activator:activator];
+    [self runBuiltInRingerActionTestsWithRecorder:recorder activator:activator];
     [self cleanActivator:activator];
     return [recorder resultDictionary];
 }
@@ -1103,6 +1111,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     NSString *urlName = @"libactivator.clock.timer";
     NSString *urlsName = @"libactivator.settings.bluetooth";
     NSString *mediaName = @"libactivator.ipod.toggle-playback";
+    NSString *ringerName = @"libactivator.audio.reset-ringer-state";
     NSString *metadataOnlyName = @"libactivator.audio.launch-playing-app";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
 
@@ -1132,6 +1141,13 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:[activator hasSeenListenerWithName:mediaName]
             caseName:@"media-action-seen"
               reason:@"Built-in media action listener was not recorded as seen"];
+    [recorder expect:[[activator availableListenerNames] containsObject:ringerName] &&
+                     [activator hasListenerWithName:ringerName]
+            caseName:@"ringer-action-registered"
+              reason:@"Built-in ringer action listener was not registered"];
+    [recorder expect:[activator hasSeenListenerWithName:ringerName]
+            caseName:@"ringer-action-seen"
+              reason:@"Built-in ringer action listener was not recorded as seen"];
     [recorder expect:![activator hasListenerWithName:metadataOnlyName]
             caseName:@"metadata-only-not-registered"
               reason:@"Staged metadata registered a listener without an implementation"];
@@ -1248,10 +1264,6 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     };
     NSDictionary<NSString *, NSString *> *expectedNonHIDSelectors = @{
         @"libactivator.audio.show-volume-bar" : @"showVolumeBar",
-        @"libactivator.audio.reset-ringer-state" : @"resetRingerState",
-        @"libactivator.audio.mute-ringer" : @"muteRinger",
-        @"libactivator.audio.unmute-ringer" : @"unmuteRinger",
-        @"libactivator.audio.toggle-ringer-mute" : @"toggleRingerMute",
     };
     NSSet<NSString *> *supportedNames = [NSSet setWithArray:[(id)mediaActionClass supportedListenerNames]];
 
@@ -1281,14 +1293,6 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:[activator hasListenerWithName:@"libactivator.audio.show-volume-bar"]
             caseName:@"media-volume-hud-action-registered"
               reason:@"Volume HUD media action was not registered"];
-    [recorder expect:[activator hasListenerWithName:@"libactivator.audio.reset-ringer-state"]
-            caseName:@"media-ringer-reset-action-registered"
-              reason:@"Ringer reset media action was not registered"];
-    [recorder expect:[activator hasListenerWithName:@"libactivator.audio.mute-ringer"] &&
-                     [activator hasListenerWithName:@"libactivator.audio.unmute-ringer"] &&
-                     [activator hasListenerWithName:@"libactivator.audio.toggle-ringer-mute"]
-            caseName:@"media-ringer-mute-actions-registered"
-              reason:@"Ringer mute media actions were not registered"];
     [recorder expect:![activator hasListenerWithName:@"libactivator.ipod.music-controls"] &&
                      ![activator hasListenerWithName:@"libactivator.audio.launch-playing-app"]
             caseName:@"media-ui-actions-not-registered"
@@ -1297,12 +1301,6 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     NSString *eventName = @"libactivator.test.built-in.media";
     NSString *toggleName = @"libactivator.ipod.toggle-playback";
     NSString *showVolumeBarName = @"libactivator.audio.show-volume-bar";
-    NSString *resetRingerStateName = @"libactivator.audio.reset-ringer-state";
-    NSDictionary<NSString *, NSString *> *ringerMutePhaseByListenerName = @{
-        @"libactivator.audio.mute-ringer" : @"ringer-mute",
-        @"libactivator.audio.unmute-ringer" : @"ringer-unmute",
-        @"libactivator.audio.toggle-ringer-mute" : @"ringer-toggle",
-    };
     NSString *unknownName = @"libactivator.test.media.unknown";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
     [activator registerEventDataSource:dataSource forEventName:eventName];
@@ -1358,40 +1356,6 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
     [(id)mediaActionClass resetTestingState];
     [(id)mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
-        return YES;
-    }];
-    LAEvent *resetRingerStateEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
-    [activator sendEvent:resetRingerStateEvent toListenerWithName:resetRingerStateName];
-    NSArray<NSString *> *resetRingerStatePhases = [(id)mediaActionClass testingSentPhases];
-    [recorder expect:resetRingerStateEvent.handled &&
-                     [[(id)mediaActionClass testingLastSentListenerName] isEqualToString:resetRingerStateName] &&
-                     [(id)mediaActionClass testingLastSentPage] == 0 &&
-                     [(id)mediaActionClass testingLastSentUsage] == 0 &&
-                     resetRingerStatePhases.count == 1 &&
-                     [resetRingerStatePhases.firstObject isEqualToString:@"ringer-reset"]
-            caseName:@"media-ringer-reset-action-handles"
-              reason:@"Ringer reset media action did not use the resetter path"];
-
-    for (NSString *listenerName in ringerMutePhaseByListenerName) {
-        [(id)mediaActionClass resetTestingState];
-        [(id)mediaActionClass setTestingSendHandler:^BOOL(NSString *name, uint32_t page, uint32_t usage) {
-            return YES;
-        }];
-        LAEvent *ringerMuteEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
-        [activator sendEvent:ringerMuteEvent toListenerWithName:listenerName];
-        NSArray<NSString *> *ringerMutePhases = [(id)mediaActionClass testingSentPhases];
-        [recorder expect:ringerMuteEvent.handled &&
-                         [[(id)mediaActionClass testingLastSentListenerName] isEqualToString:listenerName] &&
-                         [(id)mediaActionClass testingLastSentPage] == 0 &&
-                         [(id)mediaActionClass testingLastSentUsage] == 0 &&
-                         ringerMutePhases.count == 1 &&
-                         [ringerMutePhases.firstObject isEqualToString:ringerMutePhaseByListenerName[listenerName]]
-                caseName:[NSString stringWithFormat:@"media-ringer-mute-action-handles-%@", listenerName]
-                  reason:@"Ringer mute media action did not use the ringer control path"];
-    }
-
-    [(id)mediaActionClass resetTestingState];
-    [(id)mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
         return NO;
     }];
     LAEvent *failureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
@@ -1409,26 +1373,6 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [recorder expect:!showVolumeBarFailureEvent.handled
             caseName:@"media-volume-hud-action-failure-unhandled"
               reason:@"Volume HUD media action marked the event handled when presenter failed"];
-
-    [(id)mediaActionClass resetTestingState];
-    [(id)mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
-        return NO;
-    }];
-    LAEvent *resetRingerStateFailureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
-    [activator sendEvent:resetRingerStateFailureEvent toListenerWithName:resetRingerStateName];
-    [recorder expect:!resetRingerStateFailureEvent.handled
-            caseName:@"media-ringer-reset-action-failure-unhandled"
-              reason:@"Ringer reset media action marked the event handled when resetter failed"];
-
-    [(id)mediaActionClass resetTestingState];
-    [(id)mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
-        return NO;
-    }];
-    LAEvent *ringerMuteFailureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
-    [activator sendEvent:ringerMuteFailureEvent toListenerWithName:@"libactivator.audio.toggle-ringer-mute"];
-    [recorder expect:!ringerMuteFailureEvent.handled
-            caseName:@"media-ringer-mute-action-failure-unhandled"
-              reason:@"Ringer mute media action marked the event handled when controller failed"];
 
     [(id)mediaActionClass resetTestingState];
     [(id)mediaActionClass setTestingSelector:@"wrongSelector" forListenerName:toggleName];
@@ -1454,6 +1398,112 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
               reason:@"Media action handled an unknown listener name"];
 
     [(id)mediaActionClass resetTestingState];
+}
+
++ (void)runBuiltInRingerActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"BuiltInRingerActions"];
+
+    Class ringerActionClass = NSClassFromString(@"LATRingerActionListener");
+    [recorder expect:ringerActionClass != Nil
+            caseName:@"ringer-action-class-available"
+              reason:@"LATRingerActionListener class was not loaded in SpringBoard"];
+    if (!ringerActionClass) {
+        return;
+    }
+
+    NSDictionary<NSString *, NSDictionary<NSString *, NSString *> *> *expectedActions = @{
+        @"libactivator.audio.reset-ringer-state" : @{
+            @"selector" : @"resetRingerState",
+            @"phase" : @"ringer-reset",
+        },
+        @"libactivator.audio.mute-ringer" : @{
+            @"selector" : @"muteRinger",
+            @"phase" : @"ringer-mute",
+        },
+        @"libactivator.audio.unmute-ringer" : @{
+            @"selector" : @"unmuteRinger",
+            @"phase" : @"ringer-unmute",
+        },
+        @"libactivator.audio.toggle-ringer-mute" : @{
+            @"selector" : @"toggleRingerMute",
+            @"phase" : @"ringer-toggle",
+        },
+    };
+    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[(id)ringerActionClass supportedListenerNames]];
+
+    [recorder expect:supportedNames.count == expectedActions.count
+            caseName:@"ringer-action-allowlist-count"
+              reason:@"Ringer action allowlist did not match the expected command count"];
+    for (NSString *listenerName in expectedActions) {
+        NSDictionary<NSString *, NSString *> *expectedAction = expectedActions[listenerName];
+        [recorder expect:[supportedNames containsObject:listenerName]
+                caseName:[NSString stringWithFormat:@"ringer-action-allowlist-%@", listenerName]
+                  reason:@"Ringer action allowlist is missing an expected listener name"];
+        [recorder expect:[[(id)ringerActionClass expectedSelectorForListenerName:listenerName]
+                             isEqualToString:expectedAction[@"selector"]]
+                caseName:[NSString stringWithFormat:@"ringer-action-selector-%@", listenerName]
+                  reason:@"Ringer action selector mapping did not match bundled metadata"];
+        [recorder expect:[activator hasListenerWithName:listenerName]
+                caseName:[NSString stringWithFormat:@"ringer-action-registered-%@", listenerName]
+                  reason:@"Ringer action was not registered"];
+    }
+
+    NSString *eventName = @"libactivator.test.built-in.ringer";
+    NSString *toggleRingerName = @"libactivator.audio.toggle-ringer-mute";
+    NSString *unknownName = @"libactivator.test.ringer.unknown";
+    LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+    [activator registerEventDataSource:dataSource forEventName:eventName];
+
+    for (NSString *listenerName in expectedActions) {
+        NSDictionary<NSString *, NSString *> *expectedAction = expectedActions[listenerName];
+        [(id)ringerActionClass resetTestingState];
+        [(id)ringerActionClass setTestingActionHandler:^BOOL(NSString *name, NSString *phase) {
+            return YES;
+        }];
+        LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+        [activator sendEvent:event toListenerWithName:listenerName];
+        [recorder expect:event.handled &&
+                         [[(id)ringerActionClass testingLastActionListenerName] isEqualToString:listenerName] &&
+                         [[(id)ringerActionClass testingLastActionPhase] isEqualToString:expectedAction[@"phase"]]
+                caseName:[NSString stringWithFormat:@"ringer-action-handles-%@", listenerName]
+                  reason:@"Ringer action did not use the expected command path"];
+    }
+
+    [(id)ringerActionClass resetTestingState];
+    [(id)ringerActionClass setTestingActionHandler:^BOOL(NSString *listenerName, NSString *phase) {
+        return NO;
+    }];
+    LAEvent *failureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:failureEvent toListenerWithName:toggleRingerName];
+    [recorder expect:!failureEvent.handled
+            caseName:@"ringer-action-failure-unhandled"
+              reason:@"Ringer action marked the event handled when the controller failed"];
+
+    [(id)ringerActionClass resetTestingState];
+    [(id)ringerActionClass setTestingSelector:@"wrongSelector" forListenerName:toggleRingerName];
+    [(id)ringerActionClass setTestingActionHandler:^BOOL(NSString *listenerName, NSString *phase) {
+        return YES;
+    }];
+    LAEvent *mismatchedSelectorEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:mismatchedSelectorEvent toListenerWithName:toggleRingerName];
+    [recorder expect:!mismatchedSelectorEvent.handled &&
+                     [(id)ringerActionClass testingLastActionListenerName] == nil
+            caseName:@"ringer-action-selector-mismatch-unhandled"
+              reason:@"Ringer action handled an event with mismatched selector metadata"];
+
+    id unknownRingerListener = [[ringerActionClass alloc] init];
+    [activator registerListener:unknownRingerListener forName:unknownName];
+    [(id)ringerActionClass resetTestingState];
+    [(id)ringerActionClass setTestingActionHandler:^BOOL(NSString *listenerName, NSString *phase) {
+        return YES;
+    }];
+    LAEvent *unknownEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:unknownEvent toListenerWithName:unknownName];
+    [recorder expect:!unknownEvent.handled && [(id)ringerActionClass testingLastActionListenerName] == nil
+            caseName:@"ringer-action-unknown-name-unhandled"
+              reason:@"Ringer action handled an unknown listener name"];
+
+    [(id)ringerActionClass resetTestingState];
 }
 
 + (void)runRuntimeInputTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {

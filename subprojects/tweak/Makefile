@@ -9,6 +9,7 @@ ActivatorTweak_FILES += ActivatorTweak.m
 ActivatorTweak_FILES += LATBuiltInListenerRegistry.m
 ActivatorTweak_FILES += LATMediaActionListener.m
 ActivatorTweak_FILES += LATNothingListener.m
+ActivatorTweak_FILES += LATRingerActionListener.m
 ActivatorTweak_FILES += LATURLActionListener.m
 
 ActivatorTweak_CFLAGS += -fobjc-arc

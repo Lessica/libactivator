@@ -14,7 +14,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LATMediaActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
 + (void)noteVolumeControlInstance:(id)volumeControl;
-+ (void)noteRingerControlInstance:(id)ringerControl;
 @end
 
 #if LA_TESTING
