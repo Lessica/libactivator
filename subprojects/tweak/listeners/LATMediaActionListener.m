@@ -62,15 +62,15 @@ typedef NS_ENUM(NSUInteger, LATMediaActionKind) {
 + (id)volumeControlInstance;
 @end
 
-static __weak id LATCapturedVolumeControl = nil;
+static __weak id gCapturedVolumeControl = nil;
 
 #if LA_TESTING
-static LATMediaActionSendHandler LATTestingSendHandler = nil;
-static NSString *LATTestingLastSentListenerName = nil;
-static uint32_t LATTestingLastSentPage = 0;
-static uint32_t LATTestingLastSentUsage = 0;
-static NSMutableArray<NSString *> *LATTestingSentPhases = nil;
-static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
+static LATMediaActionSendHandler gTestingSendHandler = nil;
+static NSString *gTestingLastSentListenerName = nil;
+static uint32_t gTestingLastSentPage = 0;
+static uint32_t gTestingLastSentUsage = 0;
+static NSMutableArray<NSString *> *gTestingSentPhases = nil;
+static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
 #endif
 
 @implementation LATMediaActionCommand
@@ -121,16 +121,16 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
 
 - (BOOL)sendCommand:(LATMediaActionCommand *)command listenerName:(NSString *)listenerName {
 #if LA_TESTING
-    LATTestingLastSentListenerName = [listenerName copy];
-    LATTestingLastSentPage = command.page;
-    LATTestingLastSentUsage = command.usage;
-    if (!LATTestingSentPhases) {
-        LATTestingSentPhases = [[NSMutableArray alloc] init];
+    gTestingLastSentListenerName = [listenerName copy];
+    gTestingLastSentPage = command.page;
+    gTestingLastSentUsage = command.usage;
+    if (!gTestingSentPhases) {
+        gTestingSentPhases = [[NSMutableArray alloc] init];
     }
-    [LATTestingSentPhases addObject:@"down"];
-    [LATTestingSentPhases addObject:@"up"];
-    if (LATTestingSendHandler) {
-        return LATTestingSendHandler(listenerName ?: @"", command.page, command.usage);
+    [gTestingSentPhases addObject:@"down"];
+    [gTestingSentPhases addObject:@"up"];
+    if (gTestingSendHandler) {
+        return gTestingSendHandler(listenerName ?: @"", command.page, command.usage);
     }
 #endif
 
@@ -184,15 +184,15 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
 
 - (BOOL)presentVolumeHUDForListenerName:(NSString *)listenerName {
 #if LA_TESTING
-    LATTestingLastSentListenerName = [listenerName copy];
-    LATTestingLastSentPage = 0;
-    LATTestingLastSentUsage = 0;
-    if (!LATTestingSentPhases) {
-        LATTestingSentPhases = [[NSMutableArray alloc] init];
+    gTestingLastSentListenerName = [listenerName copy];
+    gTestingLastSentPage = 0;
+    gTestingLastSentUsage = 0;
+    if (!gTestingSentPhases) {
+        gTestingSentPhases = [[NSMutableArray alloc] init];
     }
-    [LATTestingSentPhases addObject:@"volume-hud"];
-    if (LATTestingSendHandler) {
-        return LATTestingSendHandler(listenerName ?: @"", 0, 0);
+    [gTestingSentPhases addObject:@"volume-hud"];
+    if (gTestingSendHandler) {
+        return gTestingSendHandler(listenerName ?: @"", 0, 0);
     }
 #endif
 
@@ -293,7 +293,7 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
 
 - (BOOL)listenerSelectorMatchesCommand:(LATMediaActionCommand *)command activator:(LAActivator *)activator {
 #if LA_TESTING
-    NSString *testingSelector = LATTestingSelectors[command.listenerName];
+    NSString *testingSelector = gTestingSelectors[command.listenerName];
     if (testingSelector) {
         return [testingSelector isEqualToString:command.selectorName];
     }
@@ -304,9 +304,9 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
 }
 
 + (NSDictionary<NSString *, LATMediaActionCommand *> *)commandsByListenerName {
-    static NSDictionary<NSString *, LATMediaActionCommand *> *commands;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    static NSDictionary<NSString *, LATMediaActionCommand *> *sCommands;
+    static dispatch_once_t sOnceToken;
+    dispatch_once(&sOnceToken, ^{
         NSArray<LATMediaActionCommand *> *commandList = @[
             [[LATMediaActionCommand alloc] initWithListenerName:@"libactivator.ipod.toggle-playback"
                                                    selectorName:@"togglePlayback"
@@ -345,63 +345,63 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
         for (LATMediaActionCommand *command in commandList) {
             mutableCommands[command.listenerName] = command;
         }
-        commands = [mutableCommands copy];
+        sCommands = [mutableCommands copy];
     });
-    return commands;
+    return sCommands;
 }
 
 + (void)noteVolumeControlInstance:(id)volumeControl {
     if (volumeControl) {
-        LATCapturedVolumeControl = volumeControl;
+        gCapturedVolumeControl = volumeControl;
     }
 }
 
 + (id)volumeControlInstance {
-    return LATCapturedVolumeControl;
+    return gCapturedVolumeControl;
 }
 
 #if LA_TESTING
 + (void)setTestingSendHandler:(LATMediaActionSendHandler)handler {
-    LATTestingSendHandler = [handler copy];
+    gTestingSendHandler = [handler copy];
 }
 
 + (void)setTestingSelector:(NSString *)selector forListenerName:(NSString *)listenerName {
     if (listenerName.length == 0) {
         return;
     }
-    if (!LATTestingSelectors) {
-        LATTestingSelectors = [[NSMutableDictionary alloc] init];
+    if (!gTestingSelectors) {
+        gTestingSelectors = [[NSMutableDictionary alloc] init];
     }
     if (selector) {
-        LATTestingSelectors[listenerName] = selector;
+        gTestingSelectors[listenerName] = selector;
     } else {
-        [LATTestingSelectors removeObjectForKey:listenerName];
+        [gTestingSelectors removeObjectForKey:listenerName];
     }
 }
 
 + (NSString *)testingLastSentListenerName {
-    return LATTestingLastSentListenerName;
+    return gTestingLastSentListenerName;
 }
 
 + (uint32_t)testingLastSentPage {
-    return LATTestingLastSentPage;
+    return gTestingLastSentPage;
 }
 
 + (uint32_t)testingLastSentUsage {
-    return LATTestingLastSentUsage;
+    return gTestingLastSentUsage;
 }
 
 + (NSArray<NSString *> *)testingSentPhases {
-    return [LATTestingSentPhases copy] ?: @[];
+    return [gTestingSentPhases copy] ?: @[];
 }
 
 + (void)resetTestingState {
-    LATTestingSendHandler = nil;
-    LATTestingLastSentListenerName = nil;
-    LATTestingLastSentPage = 0;
-    LATTestingLastSentUsage = 0;
-    [LATTestingSentPhases removeAllObjects];
-    [LATTestingSelectors removeAllObjects];
+    gTestingSendHandler = nil;
+    gTestingLastSentListenerName = nil;
+    gTestingLastSentPage = 0;
+    gTestingLastSentUsage = 0;
+    [gTestingSentPhases removeAllObjects];
+    [gTestingSelectors removeAllObjects];
 }
 #endif
 

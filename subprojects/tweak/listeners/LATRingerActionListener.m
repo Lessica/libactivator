@@ -44,13 +44,13 @@ typedef NS_ENUM(NSUInteger, LATRingerActionKind) {
 + (id)ringerControlInstance;
 @end
 
-static __weak id LATCapturedRingerControl = nil;
+static __weak id gCapturedRingerControl = nil;
 
 #if LA_TESTING
-static LATRingerActionHandler LATTestingActionHandler = nil;
-static NSString *LATTestingLastActionListenerName = nil;
-static NSString *LATTestingLastActionPhase = nil;
-static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
+static LATRingerActionHandler gTestingActionHandler = nil;
+static NSString *gTestingLastActionListenerName = nil;
+static NSString *gTestingLastActionPhase = nil;
+static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
 #endif
 
 @implementation LATRingerActionCommand
@@ -75,10 +75,10 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
 
 - (BOOL)resetRingerStateForListenerName:(NSString *)listenerName testingPhase:(NSString *)testingPhase {
 #if LA_TESTING
-    LATTestingLastActionListenerName = [listenerName copy];
-    LATTestingLastActionPhase = [testingPhase copy];
-    if (LATTestingActionHandler) {
-        return LATTestingActionHandler(listenerName ?: @"", testingPhase ?: @"");
+    gTestingLastActionListenerName = [listenerName copy];
+    gTestingLastActionPhase = [testingPhase copy];
+    if (gTestingActionHandler) {
+        return gTestingActionHandler(listenerName ?: @"", testingPhase ?: @"");
     }
 #endif
 
@@ -118,10 +118,10 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
 
 - (BOOL)applyCommand:(LATRingerActionCommand *)command {
 #if LA_TESTING
-    LATTestingLastActionListenerName = [command.listenerName copy];
-    LATTestingLastActionPhase = [command.testingPhase copy];
-    if (LATTestingActionHandler) {
-        return LATTestingActionHandler(command.listenerName ?: @"", command.testingPhase ?: @"");
+    gTestingLastActionListenerName = [command.listenerName copy];
+    gTestingLastActionPhase = [command.testingPhase copy];
+    if (gTestingActionHandler) {
+        return gTestingActionHandler(command.listenerName ?: @"", command.testingPhase ?: @"");
     }
 #endif
 
@@ -235,7 +235,7 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
 
 - (BOOL)listenerSelectorMatchesCommand:(LATRingerActionCommand *)command activator:(LAActivator *)activator {
 #if LA_TESTING
-    NSString *testingSelector = LATTestingSelectors[command.listenerName];
+    NSString *testingSelector = gTestingSelectors[command.listenerName];
     if (testingSelector) {
         return [testingSelector isEqualToString:command.selectorName];
     }
@@ -246,9 +246,9 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
 }
 
 + (NSDictionary<NSString *, LATRingerActionCommand *> *)commandsByListenerName {
-    static NSDictionary<NSString *, LATRingerActionCommand *> *commands;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    static NSDictionary<NSString *, LATRingerActionCommand *> *sCommands;
+    static dispatch_once_t sOnceToken;
+    dispatch_once(&sOnceToken, ^{
         NSArray<LATRingerActionCommand *> *commandList = @[
             [[LATRingerActionCommand alloc] initWithListenerName:@"libactivator.audio.reset-ringer-state"
                                                     selectorName:@"resetRingerState"
@@ -273,53 +273,53 @@ static NSMutableDictionary<NSString *, NSString *> *LATTestingSelectors = nil;
         for (LATRingerActionCommand *command in commandList) {
             mutableCommands[command.listenerName] = command;
         }
-        commands = [mutableCommands copy];
+        sCommands = [mutableCommands copy];
     });
-    return commands;
+    return sCommands;
 }
 
 + (void)noteRingerControlInstance:(id)ringerControl {
     if (ringerControl) {
-        LATCapturedRingerControl = ringerControl;
+        gCapturedRingerControl = ringerControl;
     }
 }
 
 + (id)ringerControlInstance {
-    return LATCapturedRingerControl;
+    return gCapturedRingerControl;
 }
 
 #if LA_TESTING
 + (void)setTestingActionHandler:(LATRingerActionHandler)handler {
-    LATTestingActionHandler = [handler copy];
+    gTestingActionHandler = [handler copy];
 }
 
 + (void)setTestingSelector:(NSString *)selector forListenerName:(NSString *)listenerName {
     if (listenerName.length == 0) {
         return;
     }
-    if (!LATTestingSelectors) {
-        LATTestingSelectors = [[NSMutableDictionary alloc] init];
+    if (!gTestingSelectors) {
+        gTestingSelectors = [[NSMutableDictionary alloc] init];
     }
     if (selector) {
-        LATTestingSelectors[listenerName] = selector;
+        gTestingSelectors[listenerName] = selector;
     } else {
-        [LATTestingSelectors removeObjectForKey:listenerName];
+        [gTestingSelectors removeObjectForKey:listenerName];
     }
 }
 
 + (NSString *)testingLastActionListenerName {
-    return LATTestingLastActionListenerName;
+    return gTestingLastActionListenerName;
 }
 
 + (NSString *)testingLastActionPhase {
-    return LATTestingLastActionPhase;
+    return gTestingLastActionPhase;
 }
 
 + (void)resetTestingState {
-    LATTestingActionHandler = nil;
-    LATTestingLastActionListenerName = nil;
-    LATTestingLastActionPhase = nil;
-    [LATTestingSelectors removeAllObjects];
+    gTestingActionHandler = nil;
+    gTestingLastActionListenerName = nil;
+    gTestingLastActionPhase = nil;
+    [gTestingSelectors removeAllObjects];
 }
 #endif
 

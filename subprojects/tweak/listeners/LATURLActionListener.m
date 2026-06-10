@@ -17,10 +17,10 @@
 @end
 
 #if LA_TESTING
-static LATURLActionOpenHandler LATTestingOpenHandler = nil;
-static NSURL *LATTestingLastOpenedURL = nil;
-static NSString *LATTestingLastOpenedListenerName = nil;
-static NSMutableDictionary *LATTestingURLMetadata = nil;
+static LATURLActionOpenHandler gTestingOpenHandler = nil;
+static NSURL *gTestingLastOpenedURL = nil;
+static NSString *gTestingLastOpenedListenerName = nil;
+static NSMutableDictionary *gTestingURLMetadata = nil;
 #endif
 
 @implementation LATURLActionListener
@@ -107,7 +107,7 @@ static NSMutableDictionary *LATTestingURLMetadata = nil;
     }
 
 #if LA_TESTING
-    NSDictionary *testingMetadata = LATTestingURLMetadata[listenerName];
+    NSDictionary *testingMetadata = gTestingURLMetadata[listenerName];
     if (testingMetadata) {
         id testingURL = testingMetadata[@"url"];
         if ([testingURL isKindOfClass:NSString.class] && [testingURL length] > 0) {
@@ -153,10 +153,10 @@ static NSMutableDictionary *LATTestingURLMetadata = nil;
 
 - (BOOL)openURL:(NSURL *)url listenerName:(NSString *)listenerName {
 #if LA_TESTING
-    LATTestingLastOpenedURL = url;
-    LATTestingLastOpenedListenerName = [listenerName copy];
-    if (LATTestingOpenHandler) {
-        return LATTestingOpenHandler(url, listenerName ?: @"");
+    gTestingLastOpenedURL = url;
+    gTestingLastOpenedListenerName = [listenerName copy];
+    if (gTestingOpenHandler) {
+        return gTestingOpenHandler(url, listenerName ?: @"");
     }
 #endif
 
@@ -184,46 +184,46 @@ static NSMutableDictionary *LATTestingURLMetadata = nil;
 }
 
 + (dispatch_queue_t)URLActionOpenQueue {
-    static dispatch_queue_t queue;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        queue = dispatch_queue_create("com.libactivator.url-actions.open", DISPATCH_QUEUE_SERIAL);
+    static dispatch_queue_t sQueue;
+    static dispatch_once_t sOnceToken;
+    dispatch_once(&sOnceToken, ^{
+        sQueue = dispatch_queue_create("com.libactivator.url-actions.open", DISPATCH_QUEUE_SERIAL);
     });
-    return queue;
+    return sQueue;
 }
 
 #if LA_TESTING
 + (void)setTestingOpenHandler:(LATURLActionOpenHandler)handler {
-    LATTestingOpenHandler = [handler copy];
+    gTestingOpenHandler = [handler copy];
 }
 
 + (void)setTestingURLMetadata:(NSDictionary *)metadata forListenerName:(NSString *)listenerName {
     if (listenerName.length == 0) {
         return;
     }
-    if (!LATTestingURLMetadata) {
-        LATTestingURLMetadata = [[NSMutableDictionary alloc] init];
+    if (!gTestingURLMetadata) {
+        gTestingURLMetadata = [[NSMutableDictionary alloc] init];
     }
     if (metadata) {
-        LATTestingURLMetadata[listenerName] = metadata;
+        gTestingURLMetadata[listenerName] = metadata;
     } else {
-        [LATTestingURLMetadata removeObjectForKey:listenerName];
+        [gTestingURLMetadata removeObjectForKey:listenerName];
     }
 }
 
 + (NSURL *)testingLastOpenedURL {
-    return LATTestingLastOpenedURL;
+    return gTestingLastOpenedURL;
 }
 
 + (NSString *)testingLastOpenedListenerName {
-    return LATTestingLastOpenedListenerName;
+    return gTestingLastOpenedListenerName;
 }
 
 + (void)resetTestingState {
-    LATTestingOpenHandler = nil;
-    LATTestingLastOpenedURL = nil;
-    LATTestingLastOpenedListenerName = nil;
-    [LATTestingURLMetadata removeAllObjects];
+    gTestingOpenHandler = nil;
+    gTestingLastOpenedURL = nil;
+    gTestingLastOpenedListenerName = nil;
+    [gTestingURLMetadata removeAllObjects];
 }
 #endif
 

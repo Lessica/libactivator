@@ -120,22 +120,22 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         CFRelease(finger);
     }
 
-    static IOHIDEventSystemClientRef client = nil;
-    static dispatch_once_t clientOnceToken;
-    dispatch_once(&clientOnceToken, ^{
-        client = IOHIDEventSystemClientCreate(kCFAllocatorDefault);
+    static IOHIDEventSystemClientRef sClient = nil;
+    static dispatch_once_t sClientOnceToken;
+    dispatch_once(&sClientOnceToken, ^{
+        sClient = IOHIDEventSystemClientCreate(kCFAllocatorDefault);
     });
 
-    static dispatch_queue_t queue = nil;
-    static dispatch_once_t queueOnceToken;
-    dispatch_once(&queueOnceToken, ^{
-        queue = dispatch_queue_create("libactivator.tests.hid-events", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+    static dispatch_queue_t sQueue = nil;
+    static dispatch_once_t sQueueOnceToken;
+    dispatch_once(&sQueueOnceToken, ^{
+        sQueue = dispatch_queue_create("libactivator.tests.hid-events", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
     });
 
     IOHIDEventRef eventToDispatch = (IOHIDEventRef)CFRetain(event);
-    dispatch_async(queue, ^{
+    dispatch_async(sQueue, ^{
         IOHIDEventSetSenderID(eventToDispatch, LATestHIDSenderID);
-        IOHIDEventSystemClientDispatchEvent(client, eventToDispatch);
+        IOHIDEventSystemClientDispatchEvent(sClient, eventToDispatch);
         CFRelease(eventToDispatch);
     });
     CFRelease(event);

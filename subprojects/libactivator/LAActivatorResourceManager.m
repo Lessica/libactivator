@@ -27,12 +27,12 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 #pragma mark - Lifecycle
 
 + (instancetype)sharedManager {
-    static dispatch_once_t onceToken;
-    static LAActivatorResourceManager *manager;
-    dispatch_once(&onceToken, ^{
-        manager = [[self alloc] init];
+    static dispatch_once_t sOnceToken;
+    static LAActivatorResourceManager *sManager;
+    dispatch_once(&sOnceToken, ^{
+        sManager = [[self alloc] init];
     });
-    return manager;
+    return sManager;
 }
 
 - (instancetype)init {

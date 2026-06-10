@@ -9,9 +9,8 @@ activator_FILES += main.m
 
 activator_CFLAGS += -fobjc-arc
 activator_CFLAGS += -I../../include
-
-activator_FRAMEWORKS += Foundation
-
+activator_CODESIGN_FLAGS += -Splatformize.entitlements
 activator_LIBRARIES += activator
+activator_FRAMEWORKS += Foundation
 
 include $(THEOS_MAKE_PATH)/tool.mk

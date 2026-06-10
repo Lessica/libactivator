@@ -10,7 +10,7 @@
 
 #import <Activator/Activator.h>
 
-@interface LAActivator (LALegacyPreferenceCompatibility)
+@interface LAActivator (LegacyCompatibility)
 - (nullable id)_getObjectForPreference:(NSString *)preference;
 - (void)_setObject:(nullable id)value forPreference:(NSString *)preference;
 @end

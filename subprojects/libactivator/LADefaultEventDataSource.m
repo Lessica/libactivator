@@ -17,12 +17,12 @@
 #pragma mark - Lifecycle
 
 + (instancetype)sharedDataSource {
-    static dispatch_once_t onceToken;
-    static LADefaultEventDataSource *dataSource;
-    dispatch_once(&onceToken, ^{
-        dataSource = [[self alloc] init];
+    static dispatch_once_t sOnceToken;
+    static LADefaultEventDataSource *sDataSource;
+    dispatch_once(&sOnceToken, ^{
+        sDataSource = [[self alloc] init];
     });
-    return dataSource;
+    return sDataSource;
 }
 
 - (void)registerAvailableEventsWithActivator:(LAActivator *)activator {

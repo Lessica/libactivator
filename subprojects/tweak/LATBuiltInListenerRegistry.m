@@ -54,8 +54,8 @@
 }
 
 + (void)registerWithActivator:(LAActivator *)activator {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    static dispatch_once_t sOnceToken;
+    dispatch_once(&sOnceToken, ^{
         LATNothingListener *nothingListener = [[LATNothingListener alloc] init];
         [activator registerListener:nothingListener forName:@"libactivator.system.nothing"];
 

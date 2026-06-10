@@ -31,24 +31,24 @@ static NSString *const LATRuntimeStateSourceCoverSheetTransition = @"cover-sheet
 static NSString *const LATRuntimeStateSourceIconManagerRootFolder = @"icon-manager-root-folder";
 static NSString *const LATRuntimeStateSourceMainSwitcher = @"main-switcher";
 
-static Class LATCoverSheetViewControllerClass = nil;
-static Class LATPosterSwitcherViewControllerClass = nil;
-static Class LATDashboardCameraPageViewControllerClass = nil;
-static Class LATInCallTransientOverlayViewControllerClass = nil;
-static Class LATLockScreenEmergencyCallViewControllerClass = nil;
-static Class LATIconControllerClass = nil;
+static Class gCoverSheetViewControllerClass = nil;
+static Class gPosterSwitcherViewControllerClass = nil;
+static Class gDashboardCameraPageViewControllerClass = nil;
+static Class gInCallTransientOverlayViewControllerClass = nil;
+static Class gLockScreenEmergencyCallViewControllerClass = nil;
+static Class gIconControllerClass = nil;
 
 static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
-    if ((LATCoverSheetViewControllerClass && [viewController isKindOfClass:LATCoverSheetViewControllerClass]) ||
-        (LATPosterSwitcherViewControllerClass && [viewController isKindOfClass:LATPosterSwitcherViewControllerClass]) ||
-        (LATDashboardCameraPageViewControllerClass &&
-         [viewController isKindOfClass:LATDashboardCameraPageViewControllerClass]) ||
-        (LATInCallTransientOverlayViewControllerClass &&
-         [viewController isKindOfClass:LATInCallTransientOverlayViewControllerClass]) ||
-        (LATLockScreenEmergencyCallViewControllerClass &&
-         [viewController isKindOfClass:LATLockScreenEmergencyCallViewControllerClass])) {
+    if ((gCoverSheetViewControllerClass && [viewController isKindOfClass:gCoverSheetViewControllerClass]) ||
+        (gPosterSwitcherViewControllerClass && [viewController isKindOfClass:gPosterSwitcherViewControllerClass]) ||
+        (gDashboardCameraPageViewControllerClass &&
+         [viewController isKindOfClass:gDashboardCameraPageViewControllerClass]) ||
+        (gInCallTransientOverlayViewControllerClass &&
+         [viewController isKindOfClass:gInCallTransientOverlayViewControllerClass]) ||
+        (gLockScreenEmergencyCallViewControllerClass &&
+         [viewController isKindOfClass:gLockScreenEmergencyCallViewControllerClass])) {
         [LASharedActivator la_noteLockScreenVisible:visible source:NSStringFromClass([viewController class])];
-    } else if (LATIconControllerClass && [viewController isKindOfClass:LATIconControllerClass]) {
+    } else if (gIconControllerClass && [viewController isKindOfClass:gIconControllerClass]) {
         [LASharedActivator la_noteHomeScreenVisible:visible source:NSStringFromClass([viewController class])];
     }
 }
@@ -203,13 +203,13 @@ CHOptimizedMethod1(self, void, SpringBoard, applicationDidFinishLaunching, id, a
 #pragma mark - Darwin Notifications
 
 static void LATRegisterDarwinNotifications(void) {
-    static int lockStateToken = 0;
-    static int blankedScreenToken = 0;
-    notify_register_dispatch("com.apple.springboard.lockstate", &lockStateToken, dispatch_get_main_queue(),
+    static int sLockStateToken = 0;
+    static int sBlankedScreenToken = 0;
+    notify_register_dispatch("com.apple.springboard.lockstate", &sLockStateToken, dispatch_get_main_queue(),
                              ^(int token) {
                                  [LASharedActivator la_noteRuntimeStateMayHaveChanged];
                              });
-    notify_register_dispatch("com.apple.springboard.hasBlankedScreen", &blankedScreenToken, dispatch_get_main_queue(),
+    notify_register_dispatch("com.apple.springboard.hasBlankedScreen", &sBlankedScreenToken, dispatch_get_main_queue(),
                              ^(int token) {
                                  uint64_t state = 0;
                                  notify_get_state(token, &state);
@@ -220,12 +220,12 @@ static void LATRegisterDarwinNotifications(void) {
 #pragma mark - Hook Installation
 
 static void LATLoadRuntimeStateClasses(void) {
-    LATCoverSheetViewControllerClass = NSClassFromString(@"CSCoverSheetViewController");
-    LATPosterSwitcherViewControllerClass = NSClassFromString(@"CSPosterSwitcherViewController");
-    LATDashboardCameraPageViewControllerClass = NSClassFromString(@"SBDashBoardCameraPageViewController");
-    LATInCallTransientOverlayViewControllerClass = NSClassFromString(@"SBInCallTransientOverlayViewController");
-    LATLockScreenEmergencyCallViewControllerClass = NSClassFromString(@"SBLockScreenEmergencyCallViewController");
-    LATIconControllerClass = NSClassFromString(@"SBIconController");
+    gCoverSheetViewControllerClass = NSClassFromString(@"CSCoverSheetViewController");
+    gPosterSwitcherViewControllerClass = NSClassFromString(@"CSPosterSwitcherViewController");
+    gDashboardCameraPageViewControllerClass = NSClassFromString(@"SBDashBoardCameraPageViewController");
+    gInCallTransientOverlayViewControllerClass = NSClassFromString(@"SBInCallTransientOverlayViewController");
+    gLockScreenEmergencyCallViewControllerClass = NSClassFromString(@"SBLockScreenEmergencyCallViewController");
+    gIconControllerClass = NSClassFromString(@"SBIconController");
 }
 
 static void LATLoadSpringBoardClasses(void) {
@@ -242,8 +242,8 @@ static void LATLoadSpringBoardClasses(void) {
 }
 
 static void LATInstallHooks(void) {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    static dispatch_once_t sOnceToken;
+    dispatch_once(&sOnceToken, ^{
         LATLoadRuntimeStateClasses();
         LATLoadSpringBoardClasses();
 
