@@ -13,10 +13,23 @@ NS_ASSUME_NONNULL_BEGIN
 @class UIEvent;
 
 @interface LAActivator (Private)
+
+#pragma mark - Lifecycle
+
 - (void)startIPCServerIfNeeded;
+
+#pragma mark - Legacy Preferences
+
 - (nullable id)_getObjectForPreference:(NSString *)preference;
 - (void)_setObject:(nullable id)value forPreference:(NSString *)preference;
+
+#pragma mark - Listener And Event Registration
+
 - (void)registerListener:(id<LAListener>)listener forName:(NSString *)name ignoreHasSeen:(BOOL)ignoreHasSeen;
+- (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
+
+#pragma mark - Runtime State
+
 - (void)la_noteHomeScreenVisible:(BOOL)visible;
 - (void)la_noteHomeScreenVisible:(BOOL)visible source:(NSString *)source;
 - (void)la_noteSpringBoardInterfaceVisible:(BOOL)visible source:(NSString *)source;
@@ -26,17 +39,26 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)la_noteRuntimeStateMayHaveChanged;
 - (void)la_noteSystemTouchEvent:(UIEvent *)event;
 #if LA_TESTING
-- (NSDictionary *)la_runtimeStateDebugDictionary;
+- (NSDictionary<NSString *, id> *)la_runtimeStateDebugDictionary;
 #endif
-- (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
-- (BOOL)la_assignEventAndNotifyIfChanged:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+
+#pragma mark - Assignment Model
+
+- (BOOL)la_assignEventAndNotifyIfChanged:(LAEvent *)event toListenersWithNames:(NSArray<NSString *> *)listenerNames;
 - (BOOL)la_addListenerAssignmentAndNotifyIfChanged:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (BOOL)la_removeListenerAssignmentAndNotifyIfChanged:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (BOOL)la_unassignEventAndNotifyIfChanged:(LAEvent *)event;
+
+#pragma mark - Profiles And Blacklist
+
 - (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
 - (BOOL)la_setCurrentProfileName:(nullable NSString *)currentProfileName;
-- (nullable NSData *)la_smallIconDataForListenerName:(NSString *)listenerName scale:(CGFloat *)scale;
+
+#pragma mark - Event Dispatch Helpers
+
+- (nullable NSData *)la_smallIconDataForListenerName:(NSString *)listenerName scale:(nullable CGFloat *)scale;
 - (void)la_sendEvent:(LAEvent *)event directlyToListenerWithName:(NSString *)listenerName abort:(BOOL)abort;
+
 @end
 
 NS_ASSUME_NONNULL_END

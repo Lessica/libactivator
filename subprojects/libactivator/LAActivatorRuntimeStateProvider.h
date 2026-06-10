@@ -12,6 +12,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((visibility("hidden")))
 @interface LAActivatorRuntimeStateProvider : NSObject
+
+#pragma mark - Runtime Updates
+
 - (void)noteHomeScreenVisible:(BOOL)visible;
 - (void)noteHomeScreenVisible:(BOOL)visible source:(NSString *)source;
 - (void)noteSpringBoardInterfaceVisible:(BOOL)visible source:(NSString *)source;
@@ -19,14 +22,21 @@ __attribute__((visibility("hidden")))
 - (void)noteLockScreenVisible:(BOOL)visible source:(NSString *)source;
 - (void)noteScreenBlanked:(BOOL)blanked;
 - (void)noteRuntimeStateMayHaveChanged;
+
+#pragma mark - State Queries
+
 - (void)setEventModeChangeHandler:(nullable void (^)(NSString *eventMode))handler;
 - (NSString *)currentEventMode;
 - (NSString *)currentEventModeUnderneathLockScreen;
 - (BOOL)supportsUnlockingDeviceToSendEvents;
 - (nullable NSString *)displayIdentifierForCurrentApplication;
+
+#pragma mark - Testing
+
 #if LA_TESTING
-- (NSDictionary *)testingDebugDictionary;
+- (NSDictionary<NSString *, id> *)testingDebugDictionary;
 #endif
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -11,10 +11,17 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+__attribute__((visibility("hidden")))
 @interface LAListenerMetadataCache : NSObject
 
+#pragma mark - Cache Management
+
 - (void)removeAllObjects;
-- (nullable UIImage *)smallIconForListenerName:(NSString *)listenerName resolver:(nullable UIImage *_Nullable (^)(void))resolver;
+
+#pragma mark - Listener Metadata
+
+- (nullable UIImage *)smallIconForListenerName:(NSString *)listenerName
+                                      resolver:(nullable UIImage *_Nullable (^)(void))resolver;
 - (nullable NSString *)localizedTitleForListenerName:(NSString *)listenerName
                                             resolver:(nullable NSString *_Nullable (^)(void))resolver;
 - (nullable NSString *)localizedGroupForListenerName:(NSString *)listenerName

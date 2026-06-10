@@ -24,32 +24,23 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
 @end
 
 @interface LAActivatorRuntimeStateProvider ()
-- (NSString *)foregroundDisplayIdentifierIgnoringLockState;
-- (NSString *)displayIdentifierForApplication:(id<LAActivatorSpringBoardApplication>)application;
-- (NSString *)eventModeWithScreenOn:(BOOL)screenOn uiLocked:(BOOL)uiLocked underneathMode:(NSString *)underneathMode;
-- (NSString *)eventModeUnderneathLockScreenWithHomeScreenVisible:(BOOL)homeScreenVisible
-                                     springBoardInterfaceVisible:(BOOL)springBoardInterfaceVisible
-                                     foregroundDisplayIdentifier:(NSString *)foregroundDisplayIdentifier;
-- (void)updateVisibilitySet:(NSMutableSet *)visibilitySet visible:(BOOL)visible source:(NSString *)source;
-- (void)updateStateWithBlock:(void (^)(void))block;
+@property(nonatomic, strong) NSMutableSet *homeScreenVisibilitySources;
+@property(nonatomic, strong) NSMutableSet *springBoardInterfaceVisibilitySources;
+@property(nonatomic, strong) NSMutableSet *lockScreenVisibilitySources;
+@property(nonatomic, assign) BOOL screenBlanked;
+@property(nonatomic, assign) BOOL cachedScreenOn;
+@property(nonatomic, assign) BOOL cachedUILocked;
+@property(nonatomic, assign) NSUInteger stateGeneration;
+@property(nonatomic, strong) dispatch_queue_t stateQueue;
+@property(nonatomic, copy) NSString *cachedEventMode;
+@property(nonatomic, copy) NSString *cachedEventModeUnderneathLockScreen;
+@property(nonatomic, copy, nullable) NSString *cachedDisplayIdentifier;
+@property(nonatomic, copy, nullable) NSString *cachedForegroundDisplayIdentifier;
+@property(nonatomic, copy, nullable) void (^eventModeChangeHandler)(NSString *eventMode);
+@property(nonatomic, strong) LAActivatorUnlockService *unlockService;
 @end
 
-@implementation LAActivatorRuntimeStateProvider {
-    NSMutableSet *_homeScreenVisibilitySources;
-    NSMutableSet *_springBoardInterfaceVisibilitySources;
-    NSMutableSet *_lockScreenVisibilitySources;
-    BOOL _screenBlanked;
-    BOOL _cachedScreenOn;
-    BOOL _cachedUILocked;
-    NSUInteger _stateGeneration;
-    dispatch_queue_t _stateQueue;
-    NSString *_cachedEventMode;
-    NSString *_cachedEventModeUnderneathLockScreen;
-    NSString *_cachedDisplayIdentifier;
-    NSString *_cachedForegroundDisplayIdentifier;
-    void (^_eventModeChangeHandler)(NSString *eventMode);
-    LAActivatorUnlockService *_unlockService;
-}
+@implementation LAActivatorRuntimeStateProvider
 
 #pragma mark - Lifecycle
 

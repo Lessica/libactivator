@@ -77,12 +77,6 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 @property(nonatomic, strong) NSMutableArray *suites;
 @property(nonatomic, strong) NSMutableArray *failures;
 @property(nonatomic, strong) NSMutableArray *skipped;
-- (void)beginSuite:(NSString *)suiteName;
-- (void)pass:(NSString *)caseName;
-- (void)fail:(NSString *)caseName reason:(NSString *)reason;
-- (void)skip:(NSString *)caseName reason:(NSString *)reason;
-- (void)expect:(BOOL)condition caseName:(NSString *)caseName reason:(NSString *)reason;
-- (NSDictionary *)resultDictionary;
 @end
 
 @interface LATestCountingPersistence : LAActivatorPersistence

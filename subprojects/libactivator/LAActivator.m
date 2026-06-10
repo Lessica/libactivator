@@ -32,33 +32,7 @@
 @property(nonatomic, strong) LATouchActivityTracker *touchActivityTracker;
 @property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
 @property(nonatomic, strong) LALegacyPreferenceBridge *legacyPreferenceBridge;
-- (BOOL)la_assignEventWithExplicitMode:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
-- (BOOL)la_addListenerAssignmentWithExplicitMode:(NSString *)listenerName toEvent:(LAEvent *)event;
-- (BOOL)la_removeListenerAssignmentWithExplicitMode:(NSString *)listenerName fromEvent:(LAEvent *)event;
-- (BOOL)la_unassignEventWithExplicitMode:(LAEvent *)event;
-- (BOOL)la_assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
-- (BOOL)la_addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event;
-- (BOOL)la_removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event;
-- (BOOL)la_unassignEvent:(LAEvent *)event;
-- (NSArray *)la_dispatchableListenerNames:(NSArray *)listenerNames forEvent:(LAEvent *)event;
-- (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames allowDeferral:(BOOL)allowDeferral;
-- (BOOL)la_sendUnlockingEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames eventMode:(NSString *)eventMode;
-- (BOOL)la_listenerWithNameRequiresNoTouchEvents:(NSString *)listenerName;
-- (void)la_sendAbortEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames;
-- (void)la_notifyEventModeChanged:(NSString *)eventMode;
-- (void)la_notifyListenersThatListener:(id<LAListener>)handlingListener handledEvent:(LAEvent *)event;
-- (void)la_rejectSpringBoardOnlySelector:(SEL)selector;
-- (NSString *)la_invalidSpringBoardOperationCulpritName;
-- (void)la_registerSystemNotificationBridgeIfNeeded;
-- (void)la_clearListenerMetadataCaches;
-- (void)la_didReceiveMemoryWarning:(NSNotification *)notification;
-- (UIImage *)la_resolveSmallIconForListenerName:(NSString *)listenerName;
-- (NSString *)la_resolveLocalizedTitleForListenerName:(NSString *)listenerName;
-- (NSString *)la_resolveLocalizedGroupForListenerName:(NSString *)listenerName;
-- (NSString *)la_resolveLocalizedDescriptionForListenerName:(NSString *)listenerName;
-- (id)la_ipcPropertyListValue:(id)value;
-- (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event;
-- (NSArray *)la_ipcUniqueStringArrayPreservingOrder:(NSArray *)array;
+- (void)la_handleSystemNotificationNamed:(NSString *)darwinName;
 @end
 
 static NSString *const LAActivatorDarwinAvailableListenersChangedNotification =
@@ -69,48 +43,10 @@ static NSString *const LAActivatorDarwinAssignmentsChangedNotification =
     @"libactivator.notification.assignments-changed";
 static NSString *const LAActivatorDarwinEventModeChangedNotification = @"libactivator.notification.event-mode-changed";
 
-static NSString *LAActivatorPublicNotificationNameForDarwinName(NSString *darwinName) {
-    if ([darwinName isEqualToString:LAActivatorDarwinAvailableListenersChangedNotification]) {
-        return LAActivatorAvailableListenersChangedNotification;
-    }
-    if ([darwinName isEqualToString:LAActivatorDarwinAvailableEventsChangedNotification]) {
-        return LAActivatorAvailableEventsChangedNotification;
-    }
-    if ([darwinName isEqualToString:LAActivatorDarwinAssignmentsChangedNotification]) {
-        return LAActivatorAssignmentsChangedNotification;
-    }
-    if ([darwinName isEqualToString:LAActivatorDarwinEventModeChangedNotification]) {
-        return LAActivatorEventModeChangedNotification;
-    }
-    return nil;
-}
-
-static NSString *LAActivatorDarwinNotificationNameForPublicName(NSString *publicName) {
-    if ([publicName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
-        return LAActivatorDarwinAvailableListenersChangedNotification;
-    }
-    if ([publicName isEqualToString:LAActivatorAvailableEventsChangedNotification]) {
-        return LAActivatorDarwinAvailableEventsChangedNotification;
-    }
-    if ([publicName isEqualToString:LAActivatorAssignmentsChangedNotification]) {
-        return LAActivatorDarwinAssignmentsChangedNotification;
-    }
-    if ([publicName isEqualToString:LAActivatorEventModeChangedNotification]) {
-        return LAActivatorDarwinEventModeChangedNotification;
-    }
-    return nil;
-}
-
 static void LAActivatorSystemNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name,
                                                   const void *object, CFDictionaryRef userInfo) {
     LAActivator *activator = (__bridge LAActivator *)observer;
-    NSString *notificationName = LAActivatorPublicNotificationNameForDarwinName((__bridge NSString *)name);
-    if (notificationName.length > 0) {
-        if ([notificationName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
-            [activator la_clearListenerMetadataCaches];
-        }
-        [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:activator];
-    }
+    [activator la_handleSystemNotificationNamed:(__bridge NSString *)name];
 }
 
 @implementation LAActivator
@@ -243,11 +179,54 @@ LAActivator *LASharedActivator;
     }
 }
 
+- (NSString *)la_publicNotificationNameForDarwinName:(NSString *)darwinName {
+    if ([darwinName isEqualToString:LAActivatorDarwinAvailableListenersChangedNotification]) {
+        return LAActivatorAvailableListenersChangedNotification;
+    }
+    if ([darwinName isEqualToString:LAActivatorDarwinAvailableEventsChangedNotification]) {
+        return LAActivatorAvailableEventsChangedNotification;
+    }
+    if ([darwinName isEqualToString:LAActivatorDarwinAssignmentsChangedNotification]) {
+        return LAActivatorAssignmentsChangedNotification;
+    }
+    if ([darwinName isEqualToString:LAActivatorDarwinEventModeChangedNotification]) {
+        return LAActivatorEventModeChangedNotification;
+    }
+    return nil;
+}
+
+- (NSString *)la_darwinNotificationNameForPublicName:(NSString *)publicName {
+    if ([publicName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
+        return LAActivatorDarwinAvailableListenersChangedNotification;
+    }
+    if ([publicName isEqualToString:LAActivatorAvailableEventsChangedNotification]) {
+        return LAActivatorDarwinAvailableEventsChangedNotification;
+    }
+    if ([publicName isEqualToString:LAActivatorAssignmentsChangedNotification]) {
+        return LAActivatorDarwinAssignmentsChangedNotification;
+    }
+    if ([publicName isEqualToString:LAActivatorEventModeChangedNotification]) {
+        return LAActivatorDarwinEventModeChangedNotification;
+    }
+    return nil;
+}
+
+- (void)la_handleSystemNotificationNamed:(NSString *)darwinName {
+    NSString *notificationName = [self la_publicNotificationNameForDarwinName:darwinName];
+    if (notificationName.length == 0) {
+        return;
+    }
+    if ([notificationName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
+        [self la_clearListenerMetadataCaches];
+    }
+    [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:self];
+}
+
 - (void)la_postSystemNotificationName:(NSString *)notificationName {
     if (!self.runningInsideSpringBoard) {
         return;
     }
-    NSString *darwinName = LAActivatorDarwinNotificationNameForPublicName(notificationName);
+    NSString *darwinName = [self la_darwinNotificationNameForPublicName:notificationName];
     if (darwinName.length == 0) {
         return;
     }

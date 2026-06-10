@@ -14,9 +14,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((visibility("hidden")))
 @interface LATouchActivityTracker : NSObject
+
+#pragma mark - State
+
 @property(nonatomic, readonly, getter=isTouchActive) BOOL touchActive;
+
+#pragma mark - Updates
+
 - (void)noteTouchEvent:(UIEvent *)event;
 - (void)performWhenTouchesEnd:(dispatch_block_t)block;
+
 @end
 
 NS_ASSUME_NONNULL_END

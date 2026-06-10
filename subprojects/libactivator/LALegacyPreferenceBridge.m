@@ -15,13 +15,10 @@ static NSString *const LALegacyBlacklistPrefix = @"LABlacklisted-";
 static NSString *const LALegacyHasSeenPrefix = @"LAHasSeenListener-";
 
 @interface LALegacyPreferenceBridge ()
-- (nullable NSDictionary *)assignmentComponentsForKey:(NSString *)key;
-- (BOOL)isTruthyObject:(id)object;
+@property(nonatomic, strong) LAActivatorBackend *backend;
 @end
 
-@implementation LALegacyPreferenceBridge {
-    LAActivatorBackend *_backend;
-}
+@implementation LALegacyPreferenceBridge
 
 - (instancetype)initWithBackend:(LAActivatorBackend *)backend {
     self = [super init];
@@ -38,22 +35,22 @@ static NSString *const LALegacyHasSeenPrefix = @"LAHasSeenListener-";
 
     NSDictionary *assignment = [self assignmentComponentsForKey:key];
     if (assignment) {
-        NSArray *listenerNames = [_backend assignedListenerNamesForEventName:assignment[@"EventName"]
-                                                                        mode:assignment[@"EventMode"]];
+        NSArray *listenerNames = [self.backend assignedListenerNamesForEventName:assignment[@"EventName"]
+                                                                            mode:assignment[@"EventMode"]];
         return listenerNames.count > 0 ? listenerNames[0] : nil;
     }
 
     if ([key hasPrefix:LALegacyBlacklistPrefix]) {
         NSString *displayIdentifier = [key substringFromIndex:LALegacyBlacklistPrefix.length];
-        return [_backend applicationWithDisplayIdentifierIsBlacklisted:displayIdentifier] ? @YES : nil;
+        return [self.backend applicationWithDisplayIdentifierIsBlacklisted:displayIdentifier] ? @YES : nil;
     }
 
     if ([key hasPrefix:LALegacyHasSeenPrefix]) {
         NSString *listenerName = [key substringFromIndex:LALegacyHasSeenPrefix.length];
-        return [_backend hasSeenListenerWithName:listenerName] ? @YES : nil;
+        return [self.backend hasSeenListenerWithName:listenerName] ? @YES : nil;
     }
 
-    return [_backend objectForLegacyPreferenceKey:key];
+    return [self.backend objectForLegacyPreferenceKey:key];
 }
 
 - (BOOL)setObject:(id)object forPreferenceKey:(NSString *)key {
@@ -64,26 +61,26 @@ static NSString *const LALegacyHasSeenPrefix = @"LAHasSeenListener-";
     NSDictionary *assignment = [self assignmentComponentsForKey:key];
     if (assignment) {
         NSString *listenerName = [object isKindOfClass:NSString.class] && [object length] > 0 ? object : nil;
-        return [_backend assignEventName:assignment[@"EventName"]
-                                    mode:assignment[@"EventMode"]
-                         toListenerNames:listenerName ? @[ listenerName ] : @[]];
+        return [self.backend assignEventName:assignment[@"EventName"]
+                                        mode:assignment[@"EventMode"]
+                             toListenerNames:listenerName ? @[ listenerName ] : @[]];
     }
 
     if ([key hasPrefix:LALegacyBlacklistPrefix]) {
         NSString *displayIdentifier = [key substringFromIndex:LALegacyBlacklistPrefix.length];
-        return [_backend setApplicationWithDisplayIdentifier:displayIdentifier
-                                               isBlacklisted:[self isTruthyObject:object]];
+        return [self.backend setApplicationWithDisplayIdentifier:displayIdentifier
+                                                   isBlacklisted:[self isTruthyObject:object]];
     }
 
     if ([key hasPrefix:LALegacyHasSeenPrefix]) {
         NSString *listenerName = [key substringFromIndex:LALegacyHasSeenPrefix.length];
-        return [_backend setListenerName:listenerName seen:[self isTruthyObject:object]];
+        return [self.backend setListenerName:listenerName seen:[self isTruthyObject:object]];
     }
 
     if (object && ![NSPropertyListSerialization propertyList:object isValidForFormat:NSPropertyListBinaryFormat_v1_0]) {
         return NO;
     }
-    return [_backend setObject:object forLegacyPreferenceKey:key];
+    return [self.backend setObject:object forLegacyPreferenceKey:key];
 }
 
 - (NSDictionary *)assignmentComponentsForKey:(NSString *)key {

@@ -14,9 +14,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((visibility("hidden")))
 @interface LALegacyPreferenceBridge : NSObject
+
+#pragma mark - Lifecycle
+
 - (instancetype)initWithBackend:(LAActivatorBackend *)backend;
+
+#pragma mark - Preference Bridge
+
 - (nullable id)objectForPreferenceKey:(NSString *)key;
 - (BOOL)setObject:(nullable id)object forPreferenceKey:(NSString *)key;
+
 @end
 
 NS_ASSUME_NONNULL_END

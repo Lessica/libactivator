@@ -12,9 +12,11 @@
 #import <Activator/Activator.h>
 #import <AppSupport/CPDistributedMessagingCenter.h>
 
-@implementation LAActivatorIPCClient {
-    CPDistributedMessagingCenter *_center;
-}
+@interface LAActivatorIPCClient ()
+@property(nonatomic, strong) CPDistributedMessagingCenter *center;
+@end
+
+@implementation LAActivatorIPCClient
 
 #pragma mark - Lifecycle
 
@@ -29,7 +31,7 @@
 #pragma mark - Requests
 
 - (NSDictionary *)replyForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo {
-    NSDictionary *reply = [_center sendMessageAndReceiveReplyName:messageName userInfo:userInfo ?: @{}];
+    NSDictionary *reply = [self.center sendMessageAndReceiveReplyName:messageName userInfo:userInfo ?: @{}];
     if (![reply isKindOfClass:NSDictionary.class] || ![reply[LAActivatorIPCKeyOK] boolValue]) {
         return nil;
     }

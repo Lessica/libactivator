@@ -28,12 +28,6 @@
 - (void)turnOnScreenFullyWithBacklightSource:(NSInteger)source;
 @end
 
-@interface LAActivatorUnlockService ()
-- (void)performOnMainThreadSynchronously:(dispatch_block_t)block;
-- (id<LAActivatorLockScreenManager>)lockScreenManager;
-- (id<LAActivatorBacklightController>)backlightController;
-@end
-
 @implementation LAActivatorUnlockService
 
 #pragma mark - State

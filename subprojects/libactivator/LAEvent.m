@@ -10,11 +10,6 @@
 
 @implementation LAEvent
 
-@synthesize name = _name;
-@synthesize mode = _mode;
-@synthesize handled = _handled;
-@synthesize userInfo = _userInfo;
-
 + (instancetype)eventWithName:(NSString *)name {
     return [[self alloc] initWithName:name];
 }

@@ -15,9 +15,11 @@ NS_ASSUME_NONNULL_BEGIN
 __attribute__((visibility("hidden")))
 @interface LAActivatorBackend : NSObject
 
-@property(nonatomic, copy) NSString *currentProfileName;
+#pragma mark - Lifecycle
 
 - (instancetype)initWithPersistence:(nullable LAActivatorPersistence *)persistence;
+
+#pragma mark - Listener Registry
 
 - (nullable id<LAListener>)listenerForName:(NSString *)name;
 - (BOOL)hasListenerWithName:(NSString *)name;
@@ -25,35 +27,52 @@ __attribute__((visibility("hidden")))
 - (BOOL)registerListener:(id<LAListener>)listener forName:(NSString *)name;
 - (BOOL)registerListener:(id<LAListener>)listener forName:(NSString *)name markSeen:(BOOL)markSeen;
 - (BOOL)unregisterListenerWithName:(NSString *)name;
-- (NSArray *)availableListenerNames;
-- (NSArray *)registeredListeners;
+- (NSArray<NSString *> *)availableListenerNames;
+- (NSArray<id<LAListener>> *)registeredListeners;
+
+#pragma mark - Event Registry
 
 - (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
 - (BOOL)registerEventDataSource:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName;
 - (BOOL)unregisterEventDataSourceWithEventName:(NSString *)eventName;
-- (NSArray *)availableEventNames;
+- (NSArray<NSString *> *)availableEventNames;
 - (BOOL)hasEventWithName:(NSString *)name;
 
-- (BOOL)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
-- (BOOL)assignEventName:(NSString *)eventName mode:(nullable NSString *)mode toListenerNames:(NSArray *)listenerNames;
+#pragma mark - Assignment Model
+
+- (BOOL)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray<NSString *> *)listenerNames;
+- (BOOL)assignEventName:(NSString *)eventName
+                   mode:(nullable NSString *)mode
+        toListenerNames:(NSArray<NSString *> *)listenerNames;
 - (BOOL)addListenerName:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (BOOL)removeListenerName:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (BOOL)unassignEvent:(LAEvent *)event;
-- (NSArray *)assignedListenerNamesForEvent:(LAEvent *)event;
-- (NSArray *)assignedListenerNamesForEventName:(NSString *)eventName mode:(nullable NSString *)mode;
-- (NSArray *)eventsAssignedToListenerWithName:(NSString *)listenerName;
+- (NSArray<NSString *> *)assignedListenerNamesForEvent:(LAEvent *)event;
+- (NSArray<NSString *> *)assignedListenerNamesForEventName:(NSString *)eventName mode:(nullable NSString *)mode;
+- (NSArray<LAEvent *> *)eventsAssignedToListenerWithName:(NSString *)listenerName;
+
+#pragma mark - Blacklist And Legacy Preferences
 
 - (BOOL)applicationWithDisplayIdentifierIsBlacklisted:(NSString *)displayIdentifier;
 - (BOOL)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
 - (BOOL)setListenerName:(NSString *)listenerName seen:(BOOL)seen;
 - (nullable id)objectForLegacyPreferenceKey:(NSString *)key;
 - (BOOL)setObject:(nullable id)object forLegacyPreferenceKey:(NSString *)key;
-- (NSArray *)availableProfileNames;
+
+#pragma mark - Profiles
+
+@property(nonatomic, copy) NSString *currentProfileName;
+
+- (NSArray<NSString *> *)availableProfileNames;
 - (BOOL)setCurrentProfileNameIfChanged:(nullable NSString *)currentProfileName;
+
+#pragma mark - Persistence
 
 - (BOOL)flushPendingPersistentState;
 
-+ (NSArray *)normalizedStringArray:(NSArray *)array;
+#pragma mark - Utilities
+
++ (NSArray<NSString *> *)normalizedStringArray:(NSArray *)array;
 
 @end
 

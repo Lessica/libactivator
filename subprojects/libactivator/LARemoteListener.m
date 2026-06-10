@@ -15,12 +15,6 @@
 
 @interface LARemoteListener ()
 @property(nonatomic, strong) LAActivatorIPCClient *ipcClient;
-- (id)propertyListValue:(id)value;
-- (NSDictionary *)userInfoForEvent:(LAEvent *)event listenerName:(NSString *)listenerName;
-- (CGFloat)scaleInReply:(NSDictionary *)reply defaultScale:(CGFloat)defaultScale;
-- (NSData *)dataValueForMessageName:(NSString *)messageName
-                       listenerName:(NSString *)listenerName
-                              scale:(CGFloat *)scale;
 @end
 
 @implementation LARemoteListener

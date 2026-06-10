@@ -35,12 +35,11 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 @property(nonatomic, strong) LAActivatorPersistence *persistence;
 @property(nonatomic, assign) BOOL persistentStateDirty;
 @property(nonatomic, assign) BOOL persistentSaveScheduled;
+@property(nonatomic, copy) NSString *storedCurrentProfileName;
+@property(nonatomic, assign) CFRunLoopObserverRef persistentSaveObserver;
 @end
 
-@implementation LAActivatorBackend {
-    NSString *_currentProfileName;
-    CFRunLoopObserverRef _persistentSaveObserver;
-}
+@implementation LAActivatorBackend
 
 #pragma mark - Lifecycle
 
@@ -64,15 +63,15 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 }
 
 - (void)dealloc {
-    if (_persistentSaveObserver) {
-        CFRunLoopObserverInvalidate(_persistentSaveObserver);
-        CFRelease(_persistentSaveObserver);
-        _persistentSaveObserver = NULL;
+    if (self.persistentSaveObserver) {
+        CFRunLoopObserverInvalidate(self.persistentSaveObserver);
+        CFRelease(self.persistentSaveObserver);
+        self.persistentSaveObserver = NULL;
     }
 }
 
 - (void)resetRuntimeState {
-    _currentProfileName = LAActivatorDefaultProfileName;
+    self.storedCurrentProfileName = LAActivatorDefaultProfileName;
     self.profiles[LAActivatorDefaultProfileName] =
         [@{LAActivatorAssignmentsKey : [[NSMutableDictionary alloc] init]} mutableCopy];
     [self.legacyPreferences removeAllObjects];
@@ -95,10 +94,10 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 }
 
 - (NSMutableDictionary *)assignmentsForCurrentProfile {
-    NSMutableDictionary *profile = self.profiles[_currentProfileName];
+    NSMutableDictionary *profile = self.profiles[self.storedCurrentProfileName];
     if (!profile) {
         profile = [@{LAActivatorAssignmentsKey : [[NSMutableDictionary alloc] init]} mutableCopy];
-        self.profiles[_currentProfileName] = profile;
+        self.profiles[self.storedCurrentProfileName] = profile;
     }
 
     NSMutableDictionary *assignments = profile[LAActivatorAssignmentsKey];
@@ -172,7 +171,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
     NSDictionary *dictionary = @{
         LAActivatorSchemaVersionKey : @1,
-        LAActivatorCurrentProfileNameKey : _currentProfileName ?: LAActivatorDefaultProfileName,
+        LAActivatorCurrentProfileNameKey : self.storedCurrentProfileName ?: LAActivatorDefaultProfileName,
         LAActivatorProfilesKey : serializedProfiles,
         LAActivatorBlacklistedDisplayIdentifiersKey :
             [self.blacklistedDisplayIdentifiers.allObjects sortedArrayUsingSelector:@selector(compare:)],
@@ -190,7 +189,8 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 - (void)installPersistentSaveObserverIfNeeded {
     __block BOOL shouldInstall = NO;
     dispatch_sync(self.stateQueue, ^{
-        shouldInstall = self.persistentStateDirty && self.persistentSaveScheduled && _persistentSaveObserver == NULL;
+        shouldInstall =
+            self.persistentStateDirty && self.persistentSaveScheduled && self.persistentSaveObserver == NULL;
     });
     if (!shouldInstall) {
         return;
@@ -204,10 +204,10 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
                                                if (!strongSelf) {
                                                    return;
                                                }
-                                               if (strongSelf->_persistentSaveObserver) {
-                                                   CFRunLoopObserverInvalidate(strongSelf->_persistentSaveObserver);
-                                                   CFRelease(strongSelf->_persistentSaveObserver);
-                                                   strongSelf->_persistentSaveObserver = NULL;
+                                               if (strongSelf.persistentSaveObserver) {
+                                                   CFRunLoopObserverInvalidate(strongSelf.persistentSaveObserver);
+                                                   CFRelease(strongSelf.persistentSaveObserver);
+                                                   strongSelf.persistentSaveObserver = NULL;
                                                }
                                                [strongSelf flushPendingPersistentState];
                                            });
@@ -216,7 +216,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return;
     }
 
-    _persistentSaveObserver = observer;
+    self.persistentSaveObserver = observer;
     CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
 }
 
@@ -296,7 +296,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     self.seenListenerNames = [NSMutableSet setWithArray:seenListenerNames];
     self.legacyPreferences = [legacyPreferences isKindOfClass:NSDictionary.class] ? [legacyPreferences mutableCopy]
                                                                                   : [[NSMutableDictionary alloc] init];
-    _currentProfileName = [currentProfileName copy];
+    self.storedCurrentProfileName = [currentProfileName copy];
 }
 
 #pragma mark - Listener Registry
@@ -687,7 +687,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 - (NSString *)currentProfileName {
     __block NSString *profileName = nil;
     dispatch_sync(self.stateQueue, ^{
-        profileName = _currentProfileName;
+        profileName = self.storedCurrentProfileName;
     });
     return profileName;
 }
@@ -701,11 +701,11 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     __block BOOL changed = NO;
     dispatch_sync(self.stateQueue, ^{
         BOOL profileExists = self.profiles[profileName] != nil;
-        changed = ![_currentProfileName isEqualToString:profileName] || !profileExists;
+        changed = ![self.storedCurrentProfileName isEqualToString:profileName] || !profileExists;
         if (!changed) {
             return;
         }
-        _currentProfileName = profileName;
+        self.storedCurrentProfileName = profileName;
         [self assignmentsForCurrentProfile];
         [self savePersistentState];
     });

@@ -16,7 +16,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((visibility("hidden")))
 @interface LAActivatorTestSupport : NSObject
-+ (NSDictionary *)handleCommandWithUserInfo:(NSDictionary *)userInfo activator:(LAActivator *)activator;
+
+#pragma mark - Command Handling
+
++ (NSDictionary<NSString *, id> *)handleCommandWithUserInfo:(NSDictionary<NSString *, id> *)userInfo
+                                                  activator:(LAActivator *)activator;
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -10,11 +10,13 @@
 
 #import <UIKit/UIKit.h>
 
-@implementation LATouchActivityTracker {
-    dispatch_queue_t _queue;
-    NSHashTable *_activeTouches;
-    NSMutableArray *_pendingBlocks;
-}
+@interface LATouchActivityTracker ()
+@property(nonatomic, strong) dispatch_queue_t queue;
+@property(nonatomic, strong) NSHashTable *activeTouches;
+@property(nonatomic, strong) NSMutableArray *pendingBlocks;
+@end
+
+@implementation LATouchActivityTracker
 
 #pragma mark - Lifecycle
 
@@ -34,8 +36,8 @@
 
 - (BOOL)isTouchActive {
     __block BOOL touchActive = NO;
-    dispatch_sync(_queue, ^{
-        touchActive = self->_activeTouches.count > 0;
+    dispatch_sync(self.queue, ^{
+        touchActive = self.activeTouches.count > 0;
     });
     return touchActive;
 }
@@ -46,20 +48,20 @@
     }
 
     NSMutableArray *blocksToRun = [NSMutableArray array];
-    dispatch_sync(_queue, ^{
+    dispatch_sync(self.queue, ^{
         for (UITouch *touch in event.allTouches) {
             if (![touch isKindOfClass:UITouch.class]) {
                 continue;
             }
             if (touch.phase == UITouchPhaseEnded || touch.phase == UITouchPhaseCancelled) {
-                [self->_activeTouches removeObject:touch];
+                [self.activeTouches removeObject:touch];
             } else {
-                [self->_activeTouches addObject:touch];
+                [self.activeTouches addObject:touch];
             }
         }
-        if (self->_activeTouches.count == 0 && self->_pendingBlocks.count > 0) {
-            [blocksToRun addObjectsFromArray:self->_pendingBlocks];
-            [self->_pendingBlocks removeAllObjects];
+        if (self.activeTouches.count == 0 && self.pendingBlocks.count > 0) {
+            [blocksToRun addObjectsFromArray:self.pendingBlocks];
+            [self.pendingBlocks removeAllObjects];
         }
     });
 
@@ -74,11 +76,11 @@
     }
 
     __block BOOL shouldRunNow = NO;
-    dispatch_sync(_queue, ^{
-        if (self->_activeTouches.count == 0) {
+    dispatch_sync(self.queue, ^{
+        if (self.activeTouches.count == 0) {
             shouldRunNow = YES;
         } else {
-            [self->_pendingBlocks addObject:[block copy]];
+            [self.pendingBlocks addObject:[block copy]];
         }
     });
     if (shouldRunNow) {

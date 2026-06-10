@@ -16,24 +16,12 @@
 #import <AppSupport/CPDistributedMessagingCenter.h>
 
 @interface LAActivatorIPCServer ()
-- (NSArray *)registeredMessageNames;
-- (nullable NSDictionary *)handleTestingMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
-- (nullable NSDictionary *)handleRegistryMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
-- (nullable NSDictionary *)handleAssignmentMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
-- (nullable NSDictionary *)handleRuntimeMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
-- (nullable NSDictionary *)handleDispatchMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
-- (nullable NSDictionary *)handleEventMetadataMessageNamed:(NSString *)messageName
-                                              withUserInfo:(NSDictionary *)userInfo;
-- (nullable NSDictionary *)handleListenerMetadataMessageNamed:(NSString *)messageName
-                                                 withUserInfo:(NSDictionary *)userInfo;
-- (nullable NSDictionary *)handleLocalizationMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
+@property(nonatomic, strong) LAActivator *activator;
+@property(nonatomic, strong) CPDistributedMessagingCenter *center;
+@property(nonatomic, assign, getter=isStarted) BOOL started;
 @end
 
-@implementation LAActivatorIPCServer {
-    LAActivator *_activator;
-    CPDistributedMessagingCenter *_center;
-    BOOL _started;
-}
+@implementation LAActivatorIPCServer
 
 #pragma mark - Lifecycle
 
@@ -49,15 +37,17 @@
 #pragma mark - Server
 
 - (void)start {
-    if (_started) {
+    if (self.started) {
         return;
     }
 
     for (NSString *messageName in [self registeredMessageNames]) {
-        [_center registerForMessageName:messageName target:self selector:@selector(handleMessageNamed:withUserInfo:)];
+        [self.center registerForMessageName:messageName
+                                     target:self
+                                   selector:@selector(handleMessageNamed:withUserInfo:)];
     }
-    [_center runServerOnCurrentThread];
-    _started = YES;
+    [self.center runServerOnCurrentThread];
+    self.started = YES;
 }
 
 - (NSArray *)registeredMessageNames {
