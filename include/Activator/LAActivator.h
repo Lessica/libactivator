@@ -25,24 +25,30 @@ NS_ASSUME_NONNULL_BEGIN
 @interface LAActivator : NSObject
 LA_PRIVATE_IVARS(LAActivator)
 
+#pragma mark - Lifecycle
+
 + (LAActivator *)sharedInstance;
+
+#pragma mark - Runtime
 
 @property(nonatomic, readonly) LAActivatorVersion version;
 @property(nonatomic, readonly, getter=isRunningInsideSpringBoard) BOOL runningInsideSpringBoard;
-@property(nonatomic, readonly, getter=isDangerousToSendEvents) BOOL dangerousToSendEvents
-    __attribute__((deprecated("dangerousToSendEvents is obsolete and always returns NO in libactivator 2.x")));
+@property(nonatomic, readonly, getter=isDangerousToSendEvents) BOOL dangerousToSendEvents LA_DEPRECATED(
+    "dangerousToSendEvents is obsolete and always returns NO in libactivator 2.x");
 
-// Listeners
+#pragma mark - Listener Dispatch
 
 - (nullable id<LAListener>)listenerForEvent:(LAEvent *)event;
 - (void)sendEventToListener:(LAEvent *)event;
 - (void)sendEvent:(LAEvent *)event toListenerWithName:(NSString *)listenerName;
-- (void)sendEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (void)sendEvent:(LAEvent *)event toListenersWithNames:(NSArray<NSString *> *)listenerNames;
 - (void)sendAbortToListener:(LAEvent *)event;
 - (void)sendAbortEvent:(LAEvent *)event toListenerWithName:(NSString *)listenerName;
-- (void)sendAbortEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (void)sendAbortEvent:(LAEvent *)event toListenersWithNames:(NSArray<NSString *> *)listenerNames;
 - (void)sendPreviewEventToListenerWithName:(NSString *)listenerName;
 - (void)sendDeactivateEventToListeners:(LAEvent *)event;
+
+#pragma mark - Listener Registry
 
 - (nullable id<LAListener>)listenerForName:(NSString *)name;
 - (BOOL)hasListenerWithName:(NSString *)name;
@@ -51,29 +57,31 @@ LA_PRIVATE_IVARS(LAActivator)
 
 - (BOOL)hasSeenListenerWithName:(NSString *)name;
 
-// Assignments
+#pragma mark - Assignments
+
 // In this section, the LAEvent parameter is used as an assignment key: event.name plus event.mode selects the binding
 // slot. When event.mode is nil, mutating APIs apply to all compatible modes, while query APIs resolve using the current
 // event mode where appropriate.
 
 - (void)assignEvent:(LAEvent *)event toListenerWithName:(NSString *)listenerName;
-- (void)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray *)listenerNames;
+- (void)assignEvent:(LAEvent *)event toListenersWithNames:(NSArray<NSString *> *)listenerNames;
 - (void)addListenerAssignment:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (void)removeListenerAssignment:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (void)unassignEvent:(LAEvent *)event;
 - (nullable NSString *)assignedListenerNameForEvent:(LAEvent *)event;
-- (NSArray *)assignedListenerNamesForEvent:(LAEvent *)event;
-- (NSArray *)eventsAssignedToListenerWithName:(NSString *)listenerName;
+- (NSArray<NSString *> *)assignedListenerNamesForEvent:(LAEvent *)event;
+- (NSArray<LAEvent *> *)eventsAssignedToListenerWithName:(NSString *)listenerName;
 
-// Events
+#pragma mark - Event Registry
+
 // These APIs deal with event definitions, not dispatched LAEvent instances. An event definition is addressed by its
 // NSString event name and is backed in SpringBoard by an LAEventDataSource that supplies metadata and capabilities.
 
-@property(nonatomic, readonly) NSArray *availableEventNames;
+@property(nonatomic, readonly) NSArray<NSString *> *availableEventNames;
 - (BOOL)hasEventWithName:(NSString *)name;
 - (BOOL)eventWithNameIsHidden:(NSString *)name;
 - (BOOL)eventWithNameRequiresAssignment:(NSString *)name;
-- (NSArray *)compatibleModesForEventWithName:(NSString *)name;
+- (NSArray<NSString *> *)compatibleModesForEventWithName:(NSString *)name;
 - (BOOL)eventWithName:(NSString *)eventName isCompatibleWithMode:(nullable NSString *)eventMode;
 - (BOOL)eventWithNameSupportsUnlockingDeviceToSend:(NSString *)eventName;
 - (nullable NSString *)assignmentWarningForEventWithName:(NSString *)eventName;
@@ -87,19 +95,19 @@ LA_PRIVATE_IVARS(LAActivator)
 - (BOOL)eventWithNameSupportsConfiguration:(NSString *)eventName;
 - (nullable LAEventConfigurationViewController *)configurationViewControllerForEventWithName:(NSString *)eventName;
 
-// Listener Metadata
+#pragma mark - Listener Metadata
 
-@property(nonatomic, readonly) NSArray *availableListenerNames;
+@property(nonatomic, readonly) NSArray<NSString *> *availableListenerNames;
 - (nullable id)infoDictionaryValueOfKey:(NSString *)key forListenerWithName:(NSString *)name;
 - (BOOL)listenerWithNameRequiresAssignment:(NSString *)name;
-- (NSArray *)compatibleEventModesForListenerWithName:(NSString *)name;
+- (NSArray<NSString *> *)compatibleEventModesForListenerWithName:(NSString *)name;
 - (BOOL)listenerWithName:(NSString *)listenerName isCompatibleWithMode:(nullable NSString *)eventMode;
 - (BOOL)listenerWithName:(NSString *)listenerName isCompatibleWithEventName:(NSString *)eventName;
 - (BOOL)listenerWithNameNeedsPoweredDisplay:(NSString *)listenerName;
-- (NSArray *)exclusiveAssignmentGroupsForListenerName:(NSString *)listenerName;
-- (BOOL)listenerNamesAreMutuallyCompatible:(NSArray *)listenerNames;
+- (NSArray<NSString *> *)exclusiveAssignmentGroupsForListenerName:(NSString *)listenerName;
+- (BOOL)listenerNamesAreMutuallyCompatible:(NSArray<NSString *> *)listenerNames;
 - (nullable UIImage *)iconForListenerName:(NSString *)listenerName
-    __attribute__((deprecated("Large listener icons are not supported.")));
+    LA_DEPRECATED("Large listener icons are not supported.");
 - (nullable UIImage *)smallIconForListenerName:(NSString *)listenerName;
 - (nullable UIImage *)imageForListenerName:(NSString *)listenerName usingTemplate:(NSBundle *)templateBundle;
 - (BOOL)listenerWithNameSupportsRemoval:(NSString *)listenerName;
@@ -109,41 +117,44 @@ LA_PRIVATE_IVARS(LAActivator)
 - (nullable LAListenerConfigurationViewController *)configurationViewControllerForListenerWithName:
     (NSString *)listenerName;
 
-// Event Modes
+#pragma mark - Event Modes
 
-@property(nonatomic, readonly) NSArray *availableEventModes;
+@property(nonatomic, readonly) NSArray<NSString *> *availableEventModes;
 @property(nonatomic, readonly) NSString *currentEventMode;
 @property(nonatomic, readonly) NSString *currentEventModeUnderneathLockScreen;
 @property(nonatomic, readonly) BOOL supportsUnlockingDeviceToSendEvents;
 
-// Blacklisting
+#pragma mark - Blacklisting
 
 @property(nonatomic, readonly, nullable) NSString *displayIdentifierForCurrentApplication;
 - (BOOL)applicationWithDisplayIdentifierIsBlacklisted:(NSString *)displayIdentifier;
 - (void)setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
 
-// Profiles
+#pragma mark - Profiles
 
-@property(nonatomic, readonly) NSArray *availableProfileNames;
+@property(nonatomic, readonly) NSArray<NSString *> *availableProfileNames;
 @property(nonatomic, copy) NSString *currentProfileName;
 
-// Authorization
+#pragma mark - Authorization
 
-@property(nonatomic, readonly) LAAuthorizationStatus authorizationStatus
-    __attribute__((deprecated("Legacy authorization is not implemented.")));
-- (void)requestAuthorization __attribute__((deprecated("Legacy authorization is not implemented.")));
+@property(nonatomic, readonly)
+    LAAuthorizationStatus authorizationStatus LA_DEPRECATED("Legacy authorization is not implemented.");
+- (void)requestAuthorization LA_DEPRECATED("Legacy authorization is not implemented.");
 
 @end
 
 extern LAActivator *LASharedActivator;
 
 @interface LAActivator (Localization)
+
+#pragma mark - Localization
+
 - (NSString *)localizedStringForKey:(NSString *)key value:(nullable NSString *)value;
 
 - (NSString *)localizedTitleForEventMode:(NSString *)eventMode;
 - (NSString *)localizedTitleForEventName:(NSString *)eventName;
 - (NSString *)localizedTitleForListenerName:(NSString *)listenerName;
-- (NSString *)localizedTitleForListenerNames:(NSArray *)listenerNames;
+- (NSString *)localizedTitleForListenerNames:(NSArray<NSString *> *)listenerNames;
 
 - (NSString *)localizedGroupForEventName:(NSString *)eventName;
 - (NSString *)localizedGroupForListenerName:(NSString *)listenerName;
@@ -151,6 +162,7 @@ extern LAActivator *LASharedActivator;
 - (NSString *)localizedDescriptionForEventMode:(NSString *)eventMode;
 - (NSString *)localizedDescriptionForEventName:(NSString *)eventName;
 - (NSString *)localizedDescriptionForListenerName:(NSString *)listenerName;
+
 @end
 
 extern NSString *const LAEventModeSpringBoard;

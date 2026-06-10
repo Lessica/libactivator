@@ -16,11 +16,17 @@ NS_ASSUME_NONNULL_BEGIN
 @protocol LAEventDataSource <NSObject>
 
 @required
+
+#pragma mark - Required Metadata
+
 - (NSString *)localizedTitleForEventName:(NSString *)eventName;
 - (NSString *)localizedGroupForEventName:(NSString *)eventName;
 - (NSString *)localizedDescriptionForEventName:(NSString *)eventName;
 
 @optional
+
+#pragma mark - Visibility And Compatibility
+
 - (BOOL)eventWithNameIsHidden:(NSString *)eventName;
 - (BOOL)eventWithNameRequiresAssignment:(NSString *)eventName;
 - (BOOL)eventWithName:(NSString *)eventName isCompatibleWithMode:(nullable NSString *)eventMode;
@@ -28,10 +34,14 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable NSString *)assignmentWarningForEventWithName:(NSString *)eventName;
 - (BOOL)eventWithNameIsUnprotected:(NSString *)eventName;
 
+#pragma mark - Removal
+
 - (BOOL)eventWithNameSupportsRemoval:(NSString *)eventName;
 - (void)removeEventWithName:(NSString *)eventName;
 
 // LAEventConfigurationViewController
+#pragma mark - Configuration
+
 - (nullable NSString *)configurationViewControllerClassNameForEventWithName:(NSString *)eventName
                                                                      bundle:(NSBundle *_Nullable *_Nullable)bundle;
 

@@ -19,13 +19,16 @@ NS_ASSUME_NONNULL_BEGIN
 @protocol LAListener <NSObject>
 @optional
 
+#pragma mark - Runtime Notifications
+
 - (void)activator:(LAActivator *)activator didChangeToEventMode:(NSString *)eventMode;
 
-// Incoming events
+#pragma mark - Incoming Events
+
 // Normal assigned events
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName;
 
-// Sent when a chorded event gets escalated (short hold becoems a long hold, for example)
+// Sent when a chorded event gets escalated (short hold becomes a long hold, for example)
 - (void)activator:(LAActivator *)activator abortEvent:(LAEvent *)event forListenerName:(NSString *)listenerName;
 
 // Sent at the lock screen when listener is not compatible with event, but potentially is able to unlock the screen to
@@ -47,7 +50,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event;
 - (void)activator:(LAActivator *)activator abortEvent:(LAEvent *)event;
 
-// Metadata (may be cached)
+#pragma mark - Metadata (May Be Cached)
+
 - (nullable NSString *)activator:(LAActivator *)activator
     requiresLocalizedTitleForListenerName:(NSString *)listenerName;
 - (nullable NSString *)activator:(LAActivator *)activator
@@ -56,19 +60,20 @@ NS_ASSUME_NONNULL_BEGIN
     requiresLocalizedGroupForListenerName:(NSString *)listenerName;
 - (nullable NSNumber *)activator:(LAActivator *)activator
     requiresRequiresAssignmentForListenerName:(NSString *)listenerName;
-- (nullable NSArray *)activator:(LAActivator *)activator
+- (nullable NSArray<NSString *> *)activator:(LAActivator *)activator
     requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName;
 - (nullable NSNumber *)activator:(LAActivator *)activator
     requiresIsCompatibleWithEventName:(NSString *)eventName
                          listenerName:(NSString *)listenerName;
-- (nullable NSArray *)activator:(LAActivator *)activator
+- (nullable NSArray<NSString *> *)activator:(LAActivator *)activator
     requiresExclusiveAssignmentGroupsForListenerName:(NSString *)listenerName;
 - (nullable id)activator:(LAActivator *)activator
     requiresInfoDictionaryValueOfKey:(NSString *)key
                  forListenerWithName:(NSString *)listenerName;
 - (BOOL)activator:(LAActivator *)activator requiresNeedsPoweredDisplayForListenerName:(NSString *)listenerName;
 
-// Icons
+#pragma mark - Icons
+
 // Fast path that supports scale
 - (nullable NSData *)activator:(LAActivator *)activator
     requiresSmallIconDataForListenerName:(NSString *)listenerName
@@ -87,6 +92,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)activator:(LAActivator *)activator requestsRemovalForListenerWithName:(NSString *)listenerName;
 
 // LAListenerConfigurationViewController
+#pragma mark - Configuration
+
 - (nullable NSString *)activator:(LAActivator *)activator
     requiresConfigurationViewControllerClassNameForListenerWithName:(NSString *)listenerName
                                                              bundle:(NSBundle *_Nullable *_Nullable)outBundle;

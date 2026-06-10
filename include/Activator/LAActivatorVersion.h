@@ -10,6 +10,18 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+#ifndef LA_DEPRECATED
+#if defined(__has_attribute)
+#if __has_attribute(deprecated)
+#define LA_DEPRECATED(message) __attribute__((deprecated(message)))
+#else
+#define LA_DEPRECATED(message)
+#endif
+#else
+#define LA_DEPRECATED(message) __attribute__((deprecated(message)))
+#endif
+#endif
+
 typedef enum {
     LAActivatorVersion_1_3 = 1030000,
     LAActivatorVersion_1_4 = 1040000,
@@ -53,7 +65,7 @@ typedef enum {
     LAAuthorizationStatusNotDetermined = -1,
     LAAuthorizationStatusDenied = 0,
     LAAuthorizationStatusAuthorized = 1,
-} LAAuthorizationStatus __attribute__((deprecated("Legacy authorization is not implemented.")));
+} LAAuthorizationStatus LA_DEPRECATED("Legacy authorization is not implemented.");
 
 #ifndef LA_PRIVATE_IVARS
 #define LA_PRIVATE_IVARS(class)

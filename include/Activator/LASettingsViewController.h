@@ -19,8 +19,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LASettingsViewController
 LA_SETTINGS_CONTROLLER(UIViewController)
+
+#pragma mark - Lifecycle
+
 + (instancetype)controller;
 - (instancetype)init;
+
 @end
 
 @interface LARootSettingsController
@@ -34,28 +38,39 @@ LA_SETTINGS_CONTROLLER(LASettingsViewController)
 
 @interface LAEventSettingsController
 LA_SETTINGS_CONTROLLER(LASettingsViewController)
-- (instancetype)initWithModes:(NSArray *)modes eventName:(NSString *)eventName;
+- (instancetype)initWithModes:(NSArray<NSString *> *)modes eventName:(NSString *)eventName;
 @end
 
 @interface LAListenerSettingsViewController
 LA_SETTINGS_CONTROLLER(LASettingsViewController)
+
+#pragma mark - Listener
+
 @property(nonatomic, copy) NSString *listenerName;
 @end
 
 @interface LAEventConfigurationViewController
 LA_SETTINGS_CONTROLLER(LASettingsViewController)
+
+#pragma mark - Event Configuration
+
 - (instancetype)initWithEventName:(NSString *)eventName;
 @property(nonatomic, readonly, copy) NSString *eventName;
 @property(nonatomic, assign) BOOL showsSaveButton;
 - (BOOL)performSave;
+
 @end
 
 @interface LAListenerConfigurationViewController
 LA_SETTINGS_CONTROLLER(LASettingsViewController)
+
+#pragma mark - Listener Configuration
+
 - (instancetype)initWithListenerName:(NSString *)listenerName;
 @property(nonatomic, readonly, copy) NSString *listenerName;
 @property(nonatomic, assign) BOOL showsSaveButton;
 - (BOOL)performSave;
+
 @end
 
 NS_ASSUME_NONNULL_END

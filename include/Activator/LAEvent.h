@@ -18,15 +18,19 @@ NS_ASSUME_NONNULL_BEGIN
 @interface LAEvent : NSObject <NSCoding>
 LA_PRIVATE_IVARS(LAEvent)
 
+#pragma mark - Lifecycle
+
 + (instancetype)eventWithName:(NSString *)name;
 + (instancetype)eventWithName:(NSString *)name mode:(nullable NSString *)mode;
 - (instancetype)initWithName:(NSString *)name;
 - (instancetype)initWithName:(NSString *)name mode:(nullable NSString *)mode;
 
+#pragma mark - Event Payload
+
 @property(nonatomic, readonly) NSString *name;
 @property(nonatomic, readonly, nullable) NSString *mode;
 @property(nonatomic, getter=isHandled) BOOL handled;
-@property(nonatomic, copy, nullable) NSDictionary *userInfo;
+@property(nonatomic, copy, nullable) NSDictionary<NSString *, id> *userInfo;
 
 @end
 
