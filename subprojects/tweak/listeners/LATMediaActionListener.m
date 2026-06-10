@@ -10,6 +10,7 @@
 
 #import <CoreFoundation/CoreFoundation.h>
 #import <HBLog.h>
+#import <UIKit/UIKit.h>
 #import <mach/mach_time.h>
 
 typedef const struct __IOHIDEvent *IOHIDEventRef;
@@ -35,6 +36,7 @@ static const uint64_t LATMediaHIDSenderID = 0x8000000817319371;
 typedef NS_ENUM(NSUInteger, LATMediaActionKind) {
     LATMediaActionKindHID,
     LATMediaActionKindVolumeHUD,
+    LATMediaActionKindNowPlayingApplication,
 };
 
 @interface LATMediaActionCommand : NSObject
@@ -48,6 +50,8 @@ typedef NS_ENUM(NSUInteger, LATMediaActionKind) {
                                 page:(uint32_t)page
                                usage:(uint32_t)usage;
 - (instancetype)initWithVolumeHUDListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName;
+- (instancetype)initWithNowPlayingApplicationListenerName:(NSString *)listenerName;
+- (BOOL)requiresSelectorMetadata;
 @end
 
 @interface LATMediaHIDEventSender : NSObject
@@ -56,6 +60,10 @@ typedef NS_ENUM(NSUInteger, LATMediaActionKind) {
 
 @interface LATMediaVolumeHUDPresenter : NSObject
 - (BOOL)presentVolumeHUDForListenerName:(NSString *)listenerName;
+@end
+
+@interface LATMediaNowPlayingApplicationLauncher : NSObject
+- (BOOL)launchNowPlayingApplicationForListenerName:(NSString *)listenerName;
 @end
 
 @interface LATMediaActionListener ()
@@ -71,6 +79,8 @@ static uint32_t gTestingLastSentPage = 0;
 static uint32_t gTestingLastSentUsage = 0;
 static NSMutableArray<NSString *> *gTestingSentPhases = nil;
 static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
+static BOOL gTestingNowPlayingApplicationIdentifierSet = NO;
+static NSString *gTestingNowPlayingApplicationIdentifier = nil;
 #endif
 
 @implementation LATMediaActionCommand
@@ -100,6 +110,22 @@ static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
         _usage = 0;
     }
     return self;
+}
+
+- (instancetype)initWithNowPlayingApplicationListenerName:(NSString *)listenerName {
+    self = [super init];
+    if (self) {
+        _listenerName = [listenerName copy];
+        _selectorName = nil;
+        _kind = LATMediaActionKindNowPlayingApplication;
+        _page = 0;
+        _usage = 0;
+    }
+    return self;
+}
+
+- (BOOL)requiresSelectorMetadata {
+    return _selectorName.length > 0;
 }
 
 @end
@@ -233,9 +259,149 @@ static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
 
 @end
 
+@implementation LATMediaNowPlayingApplicationLauncher
+
+- (BOOL)launchNowPlayingApplicationForListenerName:(NSString *)listenerName {
+#if LA_TESTING
+    if (gTestingNowPlayingApplicationIdentifierSet && gTestingNowPlayingApplicationIdentifier.length == 0) {
+        return NO;
+    }
+
+    gTestingLastSentListenerName = [listenerName copy];
+    gTestingLastSentPage = 0;
+    gTestingLastSentUsage = 0;
+    if (!gTestingSentPhases) {
+        gTestingSentPhases = [[NSMutableArray alloc] init];
+    }
+    [gTestingSentPhases addObject:@"launch-application"];
+    if (gTestingSendHandler) {
+        return gTestingSendHandler(listenerName ?: @"", 0, 0);
+    }
+    return YES;
+#endif
+
+    if (![NSThread isMainThread]) {
+        __block BOOL launched = NO;
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            launched = [self launchNowPlayingApplicationForListenerName:listenerName];
+        });
+        return launched;
+    }
+
+    id application = [self nowPlayingApplication];
+    if (!application) {
+        HBLogWarn(@"Unable to launch now-playing application for media action %@ because no now-playing application "
+                  @"was found",
+                  listenerName ?: @"");
+        return NO;
+    }
+
+    NSString *displayIdentifier = [self displayIdentifierForApplication:application];
+    if (displayIdentifier.length == 0) {
+        HBLogError(
+            @"Unable to launch now-playing application for media action %@ because application has no identifier",
+            listenerName ?: @"");
+        return NO;
+    }
+
+    if ([self launchApplicationWithIdentifier:displayIdentifier]) {
+        return YES;
+    }
+
+    if ([self activateApplication:application]) {
+        return YES;
+    }
+
+    HBLogError(@"Unable to launch now-playing application %@ for media action %@", displayIdentifier,
+               listenerName ?: @"");
+    return NO;
+}
+
+- (id)nowPlayingApplication {
+    Class mediaControllerClass = NSClassFromString(@"SBMediaController");
+    if (![mediaControllerClass respondsToSelector:@selector(sharedInstance)]) {
+        HBLogError(@"SBMediaController is unavailable");
+        return nil;
+    }
+
+    id mediaController = [mediaControllerClass sharedInstance];
+    SEL nowPlayingApplicationSelector = NSSelectorFromString(@"nowPlayingApplication");
+    if (![mediaController respondsToSelector:nowPlayingApplicationSelector]) {
+        HBLogError(@"SBMediaController does not support nowPlayingApplication");
+        return nil;
+    }
+
+    id (*nowPlayingApplication)(id, SEL) =
+        (id(*)(id, SEL))[mediaController methodForSelector:nowPlayingApplicationSelector];
+    return nowPlayingApplication(mediaController, nowPlayingApplicationSelector);
+}
+
+- (NSString *)displayIdentifierForApplication:(id)application {
+    SEL displayIdentifierSelector = NSSelectorFromString(@"displayIdentifier");
+    if ([application respondsToSelector:displayIdentifierSelector]) {
+        NSString *displayIdentifier =
+            ((NSString * (*)(id, SEL))[application methodForSelector:displayIdentifierSelector])(
+                application, displayIdentifierSelector);
+        if ([displayIdentifier isKindOfClass:NSString.class] && displayIdentifier.length > 0) {
+            return displayIdentifier;
+        }
+    }
+
+    SEL bundleIdentifierSelector = NSSelectorFromString(@"bundleIdentifier");
+    if ([application respondsToSelector:bundleIdentifierSelector]) {
+        NSString *bundleIdentifier =
+            ((NSString * (*)(id, SEL))[application methodForSelector:bundleIdentifierSelector])(
+                application, bundleIdentifierSelector);
+        if ([bundleIdentifier isKindOfClass:NSString.class] && bundleIdentifier.length > 0) {
+            return bundleIdentifier;
+        }
+    }
+
+    return nil;
+}
+
+- (BOOL)launchApplicationWithIdentifier:(NSString *)displayIdentifier {
+    Class springBoardClass = NSClassFromString(@"SpringBoard");
+    id springBoard = [springBoardClass respondsToSelector:@selector(sharedApplication)]
+                         ? [springBoardClass sharedApplication]
+                         : UIApplication.sharedApplication;
+    SEL launchSelector = NSSelectorFromString(@"launchApplicationWithIdentifier:suspended:");
+    if (![springBoard respondsToSelector:launchSelector]) {
+        return NO;
+    }
+
+    void (*launchApplication)(id, SEL, NSString *, BOOL) =
+        (void (*)(id, SEL, NSString *, BOOL))[springBoard methodForSelector:launchSelector];
+    launchApplication(springBoard, launchSelector, displayIdentifier, NO);
+    return YES;
+}
+
+- (BOOL)activateApplication:(id)application {
+    Class uiControllerClass = NSClassFromString(@"SBUIController");
+    if (![uiControllerClass respondsToSelector:@selector(sharedInstance)]) {
+        return NO;
+    }
+
+    id uiController = [uiControllerClass sharedInstance];
+    SEL activateSelector = NSSelectorFromString(@"activateApplicationAnimated:");
+    if (![uiController respondsToSelector:activateSelector]) {
+        activateSelector = NSSelectorFromString(@"activateApplicationFromSwitcher:");
+        if (![uiController respondsToSelector:activateSelector]) {
+            return NO;
+        }
+    }
+
+    void (*activateApplication)(id, SEL, id) = (void (*)(id, SEL, id))[uiController methodForSelector:activateSelector];
+    activateApplication(uiController, activateSelector, application);
+    return YES;
+}
+
+@end
+
 @implementation LATMediaActionListener {
     LATMediaHIDEventSender *_sender;
     LATMediaVolumeHUDPresenter *_volumeHUDPresenter;
+    LATMediaNowPlayingApplicationLauncher *_nowPlayingApplicationLauncher;
 }
 
 - (instancetype)init {
@@ -243,6 +409,7 @@ static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
     if (self) {
         _sender = [[LATMediaHIDEventSender alloc] init];
         _volumeHUDPresenter = [[LATMediaVolumeHUDPresenter alloc] init];
+        _nowPlayingApplicationLauncher = [[LATMediaNowPlayingApplicationLauncher alloc] init];
     }
     return self;
 }
@@ -257,10 +424,17 @@ static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
 }
 
 + (BOOL)listenerNameHasRequiredMetadata:(NSString *)listenerName activator:(LAActivator *)activator {
-    NSString *expectedSelector = [self expectedSelectorForListenerName:listenerName];
-    if (listenerName.length == 0 || expectedSelector.length == 0) {
+    LATMediaActionCommand *command = [self commandsByListenerName][listenerName ?: @""];
+    if (listenerName.length == 0 || !command) {
         return NO;
     }
+
+    if (![command requiresSelectorMetadata]) {
+        id title = [activator infoDictionaryValueOfKey:@"title" forListenerWithName:listenerName];
+        return [title isKindOfClass:NSString.class] && [title length] > 0;
+    }
+
+    NSString *expectedSelector = command.selectorName;
     id selector = [activator infoDictionaryValueOfKey:@"selector" forListenerWithName:listenerName];
     return [selector isKindOfClass:NSString.class] && [selector isEqualToString:expectedSelector];
 }
@@ -272,26 +446,32 @@ static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
         return;
     }
 
-    if (![self listenerSelectorMatchesCommand:command activator:activator]) {
-        HBLogWarn(@"Media action %@ metadata selector does not match %@", listenerName ?: @"", command.selectorName);
+    event.handled = YES;
+
+    if (![self listenerMetadataMatchesCommand:command activator:activator]) {
+        HBLogWarn(@"Media action %@ metadata does not match expected command", listenerName ?: @"");
         return;
     }
 
-    BOOL sent = NO;
     switch (command.kind) {
     case LATMediaActionKindHID:
-        sent = [_sender sendCommand:command listenerName:listenerName];
+        [_sender sendCommand:command listenerName:listenerName];
         break;
     case LATMediaActionKindVolumeHUD:
-        sent = [_volumeHUDPresenter presentVolumeHUDForListenerName:listenerName];
+        [_volumeHUDPresenter presentVolumeHUDForListenerName:listenerName];
         break;
-    }
-    if (sent) {
-        event.handled = YES;
+    case LATMediaActionKindNowPlayingApplication:
+        [_nowPlayingApplicationLauncher launchNowPlayingApplicationForListenerName:listenerName];
+        break;
     }
 }
 
-- (BOOL)listenerSelectorMatchesCommand:(LATMediaActionCommand *)command activator:(LAActivator *)activator {
+- (BOOL)listenerMetadataMatchesCommand:(LATMediaActionCommand *)command activator:(LAActivator *)activator {
+    if (![command requiresSelectorMetadata]) {
+        id title = [activator infoDictionaryValueOfKey:@"title" forListenerWithName:command.listenerName];
+        return [title isKindOfClass:NSString.class] && [title length] > 0;
+    }
+
 #if LA_TESTING
     NSString *testingSelector = gTestingSelectors[command.listenerName];
     if (testingSelector) {
@@ -338,6 +518,8 @@ static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
                                                           usage:LATMediaHIDUsageVolumeDecrement],
             [[LATMediaActionCommand alloc] initWithVolumeHUDListenerName:@"libactivator.audio.show-volume-bar"
                                                             selectorName:@"showVolumeBar"],
+            [[LATMediaActionCommand alloc]
+                initWithNowPlayingApplicationListenerName:@"libactivator.audio.launch-playing-app"],
         ];
 
         NSMutableDictionary<NSString *, LATMediaActionCommand *> *mutableCommands =
@@ -379,6 +561,11 @@ static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
     }
 }
 
++ (void)setTestingNowPlayingApplicationIdentifier:(NSString *)identifier {
+    gTestingNowPlayingApplicationIdentifierSet = YES;
+    gTestingNowPlayingApplicationIdentifier = [identifier copy];
+}
+
 + (NSString *)testingLastSentListenerName {
     return gTestingLastSentListenerName;
 }
@@ -400,6 +587,8 @@ static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
     gTestingLastSentListenerName = nil;
     gTestingLastSentPage = 0;
     gTestingLastSentUsage = 0;
+    gTestingNowPlayingApplicationIdentifierSet = NO;
+    gTestingNowPlayingApplicationIdentifier = nil;
     [gTestingSentPhases removeAllObjects];
     [gTestingSelectors removeAllObjects];
 }

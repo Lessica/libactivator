@@ -22,6 +22,7 @@ typedef BOOL (^LATMediaActionSendHandler)(NSString *listenerName, uint32_t page,
 @interface LATMediaActionListener (Testing)
 + (void)setTestingSendHandler:(nullable LATMediaActionSendHandler)handler;
 + (void)setTestingSelector:(nullable NSString *)selector forListenerName:(NSString *)listenerName;
++ (void)setTestingNowPlayingApplicationIdentifier:(nullable NSString *)identifier;
 + (nullable NSString *)testingLastSentListenerName;
 + (uint32_t)testingLastSentPage;
 + (uint32_t)testingLastSentUsage;

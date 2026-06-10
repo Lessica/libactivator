@@ -39,9 +39,10 @@
     NSDictionary<NSString *, NSString *> *expectedNonHIDSelectors = @{
         @"libactivator.audio.show-volume-bar" : @"showVolumeBar",
     };
+    NSString *launchPlayingAppName = @"libactivator.audio.launch-playing-app";
     NSSet<NSString *> *supportedNames = [NSSet setWithArray:[mediaActionClass supportedListenerNames]];
 
-    [recorder expect:supportedNames.count == expectedCommands.count + expectedNonHIDSelectors.count
+    [recorder expect:supportedNames.count == expectedCommands.count + expectedNonHIDSelectors.count + 1
             caseName:@"media-action-allowlist-count"
               reason:@"Media action allowlist did not match the expected command count"];
     for (NSString *listenerName in expectedCommands) {
@@ -63,14 +64,22 @@
                 caseName:[NSString stringWithFormat:@"media-action-selector-%@", listenerName]
                   reason:@"Media action selector mapping did not match bundled metadata"];
     }
+    [recorder expect:[supportedNames containsObject:launchPlayingAppName]
+            caseName:@"media-action-allowlist-now-playing-application"
+              reason:@"Media action allowlist is missing the now-playing application listener name"];
+    [recorder expect:[mediaActionClass expectedSelectorForListenerName:launchPlayingAppName] == nil
+            caseName:@"media-action-selector-now-playing-application"
+              reason:@"Now-playing application action should not require selector metadata"];
 
     [recorder expect:[activator hasListenerWithName:@"libactivator.audio.show-volume-bar"]
             caseName:@"media-volume-hud-action-registered"
               reason:@"Volume HUD media action was not registered"];
-    [recorder expect:![activator hasListenerWithName:@"libactivator.ipod.music-controls"] &&
-                     ![activator hasListenerWithName:@"libactivator.audio.launch-playing-app"]
+    [recorder expect:[activator hasListenerWithName:launchPlayingAppName]
+            caseName:@"media-now-playing-application-action-registered"
+              reason:@"Now-playing application media action was not registered"];
+    [recorder expect:![activator hasListenerWithName:@"libactivator.ipod.music-controls"]
             caseName:@"media-ui-actions-not-registered"
-              reason:@"Unsupported media UI or now-playing actions were registered"];
+              reason:@"Unsupported media UI actions were registered"];
 
     NSString *eventName = @"libactivator.test.built-in.media";
     NSString *toggleName = @"libactivator.ipod.toggle-playback";
@@ -118,13 +127,28 @@
     LAEvent *showVolumeBarEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendEvent:showVolumeBarEvent toListenerWithName:showVolumeBarName];
     NSArray<NSString *> *showVolumeBarPhases = [mediaActionClass testingSentPhases];
-    [recorder
-          expect:showVolumeBarEvent.handled &&
-                 [[mediaActionClass testingLastSentListenerName] isEqualToString:showVolumeBarName] &&
-                 [mediaActionClass testingLastSentPage] == 0 && [mediaActionClass testingLastSentUsage] == 0 &&
-                 showVolumeBarPhases.count == 1 && [showVolumeBarPhases.firstObject isEqualToString:@"volume-hud"]
-        caseName:@"media-volume-hud-action-handles"
-          reason:@"Volume HUD media action did not use the presenter path"];
+    [recorder expect:showVolumeBarEvent.handled &&
+                     [[mediaActionClass testingLastSentListenerName] isEqualToString:showVolumeBarName] &&
+                     [mediaActionClass testingLastSentPage] == 0 && [mediaActionClass testingLastSentUsage] == 0 &&
+                     showVolumeBarPhases.count == 1 && [showVolumeBarPhases.firstObject isEqualToString:@"volume-hud"]
+            caseName:@"media-volume-hud-action-handles"
+              reason:@"Volume HUD media action did not use the presenter path"];
+
+    [mediaActionClass resetTestingState];
+    [mediaActionClass setTestingNowPlayingApplicationIdentifier:@"com.apple.Music"];
+    [mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
+        return YES;
+    }];
+    LAEvent *launchPlayingAppEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:launchPlayingAppEvent toListenerWithName:launchPlayingAppName];
+    NSArray<NSString *> *launchPlayingAppPhases = [mediaActionClass testingSentPhases];
+    [recorder expect:launchPlayingAppEvent.handled &&
+                     [[mediaActionClass testingLastSentListenerName] isEqualToString:launchPlayingAppName] &&
+                     [mediaActionClass testingLastSentPage] == 0 && [mediaActionClass testingLastSentUsage] == 0 &&
+                     launchPlayingAppPhases.count == 1 &&
+                     [launchPlayingAppPhases.firstObject isEqualToString:@"launch-application"]
+            caseName:@"media-now-playing-application-action-handles"
+              reason:@"Now-playing application media action did not use the launcher path"];
 
     [mediaActionClass resetTestingState];
     [mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
@@ -132,9 +156,9 @@
     }];
     LAEvent *failureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendEvent:failureEvent toListenerWithName:toggleName];
-    [recorder expect:!failureEvent.handled
-            caseName:@"media-action-send-failure-unhandled"
-              reason:@"Media action marked the event handled when HID sender failed"];
+    [recorder expect:failureEvent.handled
+            caseName:@"media-action-send-failure-handled"
+              reason:@"Media action did not consume the event when HID sender failed"];
 
     [mediaActionClass resetTestingState];
     [mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
@@ -142,9 +166,31 @@
     }];
     LAEvent *showVolumeBarFailureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendEvent:showVolumeBarFailureEvent toListenerWithName:showVolumeBarName];
-    [recorder expect:!showVolumeBarFailureEvent.handled
-            caseName:@"media-volume-hud-action-failure-unhandled"
-              reason:@"Volume HUD media action marked the event handled when presenter failed"];
+    [recorder expect:showVolumeBarFailureEvent.handled
+            caseName:@"media-volume-hud-action-failure-handled"
+              reason:@"Volume HUD media action did not consume the event when presenter failed"];
+
+    [mediaActionClass resetTestingState];
+    [mediaActionClass setTestingNowPlayingApplicationIdentifier:@"com.apple.Music"];
+    [mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
+        return NO;
+    }];
+    LAEvent *launchPlayingAppFailureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:launchPlayingAppFailureEvent toListenerWithName:launchPlayingAppName];
+    [recorder expect:launchPlayingAppFailureEvent.handled
+            caseName:@"media-now-playing-application-action-failure-handled"
+              reason:@"Now-playing application media action did not consume the event when launcher failed"];
+
+    [mediaActionClass resetTestingState];
+    [mediaActionClass setTestingNowPlayingApplicationIdentifier:@""];
+    [mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
+        return YES;
+    }];
+    LAEvent *missingNowPlayingAppEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:missingNowPlayingAppEvent toListenerWithName:launchPlayingAppName];
+    [recorder expect:missingNowPlayingAppEvent.handled && [mediaActionClass testingLastSentListenerName] == nil
+            caseName:@"media-now-playing-application-missing-handled"
+              reason:@"Now-playing application media action did not consume the event without now-playing identity"];
 
     [mediaActionClass resetTestingState];
     [mediaActionClass setTestingSelector:@"wrongSelector" forListenerName:toggleName];
@@ -153,9 +199,9 @@
     }];
     LAEvent *mismatchedSelectorEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendEvent:mismatchedSelectorEvent toListenerWithName:toggleName];
-    [recorder expect:!mismatchedSelectorEvent.handled && [mediaActionClass testingLastSentListenerName] == nil
-            caseName:@"media-action-selector-mismatch-unhandled"
-              reason:@"Media action handled an event with mismatched selector metadata"];
+    [recorder expect:mismatchedSelectorEvent.handled && [mediaActionClass testingLastSentListenerName] == nil
+            caseName:@"media-action-selector-mismatch-handled"
+              reason:@"Media action did not consume the event with mismatched selector metadata"];
 
     id unknownMediaListener = [[(Class)mediaActionClass alloc] init];
     [activator registerListener:unknownMediaListener forName:unknownName];
@@ -173,4 +219,3 @@
 }
 
 @end
-

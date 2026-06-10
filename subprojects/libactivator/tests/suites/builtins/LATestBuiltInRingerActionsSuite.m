@@ -88,9 +88,9 @@
     }];
     LAEvent *failureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendEvent:failureEvent toListenerWithName:toggleRingerName];
-    [recorder expect:!failureEvent.handled
-            caseName:@"ringer-action-failure-unhandled"
-              reason:@"Ringer action marked the event handled when the controller failed"];
+    [recorder expect:failureEvent.handled
+            caseName:@"ringer-action-failure-handled"
+              reason:@"Ringer action did not consume the event when the controller failed"];
 
     [ringerActionClass resetTestingState];
     [ringerActionClass setTestingSelector:@"wrongSelector" forListenerName:toggleRingerName];
@@ -99,9 +99,9 @@
     }];
     LAEvent *mismatchedSelectorEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendEvent:mismatchedSelectorEvent toListenerWithName:toggleRingerName];
-    [recorder expect:!mismatchedSelectorEvent.handled && [ringerActionClass testingLastActionListenerName] == nil
-            caseName:@"ringer-action-selector-mismatch-unhandled"
-              reason:@"Ringer action handled an event with mismatched selector metadata"];
+    [recorder expect:mismatchedSelectorEvent.handled && [ringerActionClass testingLastActionListenerName] == nil
+            caseName:@"ringer-action-selector-mismatch-handled"
+              reason:@"Ringer action did not consume the event with mismatched selector metadata"];
 
     id unknownRingerListener = [[(Class)ringerActionClass alloc] init];
     [activator registerListener:unknownRingerListener forName:unknownName];
@@ -119,4 +119,3 @@
 }
 
 @end
-

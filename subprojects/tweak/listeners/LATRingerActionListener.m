@@ -212,24 +212,22 @@ static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
         return;
     }
 
+    event.handled = YES;
+
     if (![self listenerSelectorMatchesCommand:command activator:activator]) {
         HBLogWarn(@"Ringer action %@ metadata selector does not match %@", listenerName ?: @"", command.selectorName);
         return;
     }
 
-    BOOL applied = NO;
     switch (command.kind) {
     case LATRingerActionKindReset:
-        applied = [_stateResetter resetRingerStateForListenerName:listenerName testingPhase:command.testingPhase];
+        [_stateResetter resetRingerStateForListenerName:listenerName testingPhase:command.testingPhase];
         break;
     case LATRingerActionKindMute:
     case LATRingerActionKindUnmute:
     case LATRingerActionKindToggle:
-        applied = [_muteController applyCommand:command];
+        [_muteController applyCommand:command];
         break;
-    }
-    if (applied) {
-        event.handled = YES;
     }
 }
 

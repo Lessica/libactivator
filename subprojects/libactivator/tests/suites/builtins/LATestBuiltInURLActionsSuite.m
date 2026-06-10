@@ -27,8 +27,7 @@
     NSString *eventName = @"libactivator.test.built-in.url";
     NSString *singleURLName = @"libactivator.clock.timer";
     NSString *versionedURLName = @"libactivator.settings.bluetooth";
-    NSString *missingURLName = @"libactivator.test.url.missing";
-    NSString *invalidURLName = @"libactivator.test.url.invalid";
+    NSString *unknownURLName = @"libactivator.test.url.unknown";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
     __block NSInteger openCount = 0;
     [activator registerEventDataSource:dataSource forEventName:eventName];
@@ -67,33 +66,36 @@
     }];
     LAEvent *openFailureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator sendEvent:openFailureEvent toListenerWithName:singleURLName];
-    [recorder expect:!openFailureEvent.handled && openCount == 3
-            caseName:@"url-open-failure-unhandled"
-              reason:@"URL action marked the event handled when the opener failed"];
+    [recorder expect:openFailureEvent.handled && openCount == 3
+            caseName:@"url-open-failure-handled"
+              reason:@"URL action did not consume the event when the opener failed"];
 
     id testURLListener = [[(Class)urlActionClass alloc] init];
-    [activator registerListener:testURLListener forName:missingURLName];
     [urlActionClass resetTestingState];
-    [urlActionClass setTestingOpenHandler:^BOOL(NSURL *url, NSString *listenerName) {
-        openCount += 1;
-        return YES;
-    }];
+    [urlActionClass setTestingURLMetadata:@{} forListenerName:singleURLName];
     LAEvent *missingURLEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
-    [activator sendEvent:missingURLEvent toListenerWithName:missingURLName];
-    [recorder expect:!missingURLEvent.handled && [urlActionClass testingLastOpenedURL] == nil
-            caseName:@"missing-url-metadata-unhandled"
-              reason:@"URL action handled an event with no URL metadata"];
+    [activator sendEvent:missingURLEvent toListenerWithName:singleURLName];
+    [recorder expect:missingURLEvent.handled && [urlActionClass testingLastOpenedURL] == nil
+            caseName:@"missing-url-metadata-handled"
+              reason:@"URL action did not consume the event with no URL metadata"];
 
-    [activator registerListener:testURLListener forName:invalidURLName];
-    [urlActionClass setTestingURLMetadata:@{@"url" : @"not a valid absolute URL"} forListenerName:invalidURLName];
+    [urlActionClass resetTestingState];
+    [urlActionClass setTestingURLMetadata:@{@"url" : @"not a valid absolute URL"} forListenerName:singleURLName];
     LAEvent *invalidURLEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
-    [activator sendEvent:invalidURLEvent toListenerWithName:invalidURLName];
-    [recorder expect:!invalidURLEvent.handled && [urlActionClass testingLastOpenedURL] == nil
-            caseName:@"invalid-url-metadata-unhandled"
-              reason:@"URL action handled an event with invalid URL metadata"];
+    [activator sendEvent:invalidURLEvent toListenerWithName:singleURLName];
+    [recorder expect:invalidURLEvent.handled && [urlActionClass testingLastOpenedURL] == nil
+            caseName:@"invalid-url-metadata-handled"
+              reason:@"URL action did not consume the event with invalid URL metadata"];
+
+    [activator registerListener:testURLListener forName:unknownURLName];
+    [urlActionClass resetTestingState];
+    LAEvent *unknownURLEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:unknownURLEvent toListenerWithName:unknownURLName];
+    [recorder expect:!unknownURLEvent.handled && [urlActionClass testingLastOpenedURL] == nil
+            caseName:@"unknown-url-action-unhandled"
+              reason:@"URL action handled an unsupported listener name"];
 
     [urlActionClass resetTestingState];
 }
 
 @end
-

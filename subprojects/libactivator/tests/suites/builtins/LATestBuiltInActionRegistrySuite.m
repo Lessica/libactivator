@@ -20,8 +20,9 @@
     NSString *urlName = @"libactivator.clock.timer";
     NSString *urlsName = @"libactivator.settings.bluetooth";
     NSString *mediaName = @"libactivator.ipod.toggle-playback";
+    NSString *nowPlayingName = @"libactivator.audio.launch-playing-app";
     NSString *ringerName = @"libactivator.audio.reset-ringer-state";
-    NSString *metadataOnlyName = @"libactivator.audio.launch-playing-app";
+    NSString *metadataOnlyName = @"libactivator.ipod.music-controls";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
 
     [activator registerEventDataSource:dataSource forEventName:eventName];
@@ -50,6 +51,13 @@
     [recorder expect:[activator hasSeenListenerWithName:mediaName]
             caseName:@"media-action-seen"
               reason:@"Built-in media action listener was not recorded as seen"];
+    [recorder expect:[[activator availableListenerNames] containsObject:nowPlayingName] &&
+                     [activator hasListenerWithName:nowPlayingName]
+            caseName:@"media-now-playing-action-registered"
+              reason:@"Built-in now-playing application action listener was not registered"];
+    [recorder expect:[activator hasSeenListenerWithName:nowPlayingName]
+            caseName:@"media-now-playing-action-seen"
+              reason:@"Built-in now-playing application action listener was not recorded as seen"];
     [recorder expect:[[activator availableListenerNames] containsObject:ringerName] &&
                      [activator hasListenerWithName:ringerName]
             caseName:@"ringer-action-registered"
@@ -70,4 +78,3 @@
 }
 
 @end
-

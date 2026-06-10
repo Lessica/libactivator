@@ -16,7 +16,7 @@ URL actions / listener family 已完成。当前 `Listeners/bundled.plist` 中�
 
 URL family 的实现边界已固定：注册 name 仍由代码 allowlist 决定；metadata lookup 同时支持 `Listeners/bundled.plist` 和目录式 `Listeners/<name>/Info.plist`；真实打开通过 `LSApplicationWorkspace openSensitiveURL:withOptions:error:` 在专用非主队列提交，`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示目标 App 已完成打开。这与旧 master 中 `applicationOpenURL:publicURLsOnly:` 后立即返回 `YES` 的语义一致。
 
-Audio / Media actions / listener family 已完成第一批。当前 `Listeners/bundled.plist` 中 7 个可由 HID Consumer page 表达的播放与音量动作、1 个现代 SpringBoard volume HUD 动作，由 `LATMediaActionListener` 通过 `LATBuiltInListenerRegistry` 注册。实现边界已固定：注册 name 仍由代码 allowlist 决定；metadata lookup 仅用于注册前 selector 校验和展示属性；HID 动作通过 `IOHIDEventCreateKeyboardEvent` 与 `IOHIDEventSystemClientDispatchEvent` 提交，volume HUD 动作通过 tweak hook 捕获 `SBVolumeControl` 实例后调用 `-_presentVolumeHUDWithVolume:`；`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示媒体应用或系统 UI 已完成状态变化。
+Audio / Media actions / listener family 已完成第一批。当前 `Listeners/bundled.plist` 中 7 个可由 HID Consumer page 表达的播放与音量动作、1 个现代 SpringBoard volume HUD 动作、1 个 now-playing application launch 动作，由 `LATMediaActionListener` 通过 `LATBuiltInListenerRegistry` 注册。实现边界已固定：注册 name 仍由代码 allowlist 决定；metadata lookup 用于注册前 selector 或 title metadata 校验和展示属性；HID 动作通过 `IOHIDEventCreateKeyboardEvent` 与 `IOHIDEventSystemClientDispatchEvent` 提交，volume HUD 动作通过 tweak hook 捕获 `SBVolumeControl` 实例后调用 `-_presentVolumeHUDWithVolume:`，now-playing launch 动作只使用 `SBMediaController nowPlayingApplication` 返回的真实 application 并交给 SpringBoard 私有打开路径；`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示媒体应用或系统 UI 已完成状态变化。旧 music controls 依赖 `SBNowPlayingAlertItem` modal，在现代 iOS 上视为 obsolete。
 
 Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。当前包含 1 个 ringer state 同步动作和 3 个现代 ringer mute 动作：ringer reset 按 1.9.13 旧实现通过 `BKSHIDServicesGetRingerState` 读取硬件开关状态并调用 SpringBoard `-_updateRingerState:withVisuals:updatePreferenceRegister:` 同步；ringer mute 动作通过 `SBVolumeControl` init hook 捕获 `SBRingerControl` 后调用 `setRingerMuted:` 并触发 ringer HUD。注意 `libactivator.volume.mute`、`libactivator.volume.unmute`、`libactivator.volume.toggle-mute-twice` 仍是 Events，不复用为 listener name。
 
@@ -28,7 +28,7 @@ Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。
 | --- | --- | --- | --- | --- | --- |
 | `libactivator.system.nothing` | 不执行操作，吞掉原始动作 | `LATNothingListener` | 1.9.13 `Listeners/bundled.plist`；旧 master `LASimpleListener -doNothing` | `implemented` | 已由 `LATBuiltInListenerRegistry` 注册，stable `BuiltInActionRegistry` 覆盖 dispatch 后 `event.handled = YES`。 |
 | URL actions family | Clock 和 Settings URL actions | `LATURLActionListener` | 1.9.13 `Listeners/bundled.plist` 中保留的 `url` / `urls` metadata；旧 master `LASimpleListener -openURLWithActivator:event:listenerName:` | `implemented` | 44 个保留项已注册；obsolete 项已从资源移除；stable `BuiltInURLActions` 覆盖 metadata 选择、无效 metadata、opener hook 和 handled 语义。 |
-| Audio / Media actions family | 播放控制、切歌、音量增减、显示音量 HUD | `LATMediaActionListener` | 1.9.13 `Listeners/bundled.plist` 中的 selector metadata；`STHIDEventGenerator.mm` 的 HID Consumer event 发送方式；真机 Frida 验证的 `SBVolumeControl -_presentVolumeHUDWithVolume:` | `implemented` | 7 个 HID command 项和 1 个 SpringBoard volume HUD 项已注册；now-playing/modal 项保持未注册；stable `BuiltInMediaActions` 覆盖 allowlist、selector metadata、sender/presenter hook 和 handled 语义。 |
+| Audio / Media actions family | 播放控制、切歌、音量增减、显示音量 HUD、打开当前播放应用 | `LATMediaActionListener` | 1.9.13 `Listeners/bundled.plist` 中的 selector/title metadata；`STHIDEventGenerator.mm` 的 HID Consumer event 发送方式；真机 Frida 验证的 `SBVolumeControl -_presentVolumeHUDWithVolume:`；1.9.13 `_LANowPlayingApplicationListener -applicationForListenerName:` 逆向结论 | `implemented` | 7 个 HID command 项、1 个 SpringBoard volume HUD 项和 1 个 now-playing application launch 项已注册；music controls 保持未注册；stable `BuiltInMediaActions` 覆盖 allowlist、metadata、sender/presenter/launcher hook 和 handled 语义。 |
 | Ringer actions family | 重置响铃状态、设置响铃静音 | `LATRingerActionListener` | 1.9.13 `ActivatorSpringBoard` 中 `_LASimpleListener -resetRingerState` 的实现；`DeviceConfigurator.mm` 中 `SBRingerControl` 的现代 ringer mute 写入路径 | `implemented` | 1 个 ringer state sync 项和 3 个 ringer mute 项已注册；stable `BuiltInRingerActions` 覆盖 allowlist、selector metadata、resetter/controller hook 和 handled 语义。 |
 
 ## URL Actions 完成清单
@@ -92,8 +92,8 @@ Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。
 | `libactivator.audio.increase-volume` | Volume Up | `increaseVolume` | `implemented` | HID Consumer `VolumeIncrement`；metadata 的 exclusive assignment group 继续由 resource lookup 提供。 |
 | `libactivator.audio.decrease-volume` | Volume Down | `decreaseVolume` | `implemented` | HID Consumer `VolumeDecrement`；metadata 的 exclusive assignment group 继续由 resource lookup 提供。 |
 | `libactivator.audio.show-volume-bar` | Show Volume Bar | `showVolumeBar` | `implemented` | 现代实现不再使用旧 App Switcher 音量滑块；通过 hook `SBVolumeControl` init 捕获实例，并调用 `-_presentVolumeHUDWithVolume:` 显示系统音量 HUD。 |
-| `libactivator.audio.launch-playing-app` | Launch Playing App | 无 selector metadata | `blocked` | 需要先确认 now-playing app identity 和打开路径；不要用静态 Music fallback 代替。 |
-| `libactivator.ipod.music-controls` | Music Controls | `musicControls` | `blocked` | 属于 modal/system UI，不应作为第一批 media command 混入。 |
+| `libactivator.audio.launch-playing-app` | Launch Playing App | 无 selector metadata | `implemented` | 按 1.9.13 `_LANowPlayingApplicationListener -applicationForListenerName:` 的主要路径实现：取 `SBMediaController nowPlayingApplication` 并用 SpringBoard 私有打开路径启动其 display identifier / bundle identifier；现代实现故意不复刻旧版 `com.apple.Music` fallback，缺少 now-playing application 时仍消费事件并记录诊断。详见 `LEGACY_REVERSE_ENGINEERING.md`。 |
+| `libactivator.ipod.music-controls` | Music Controls | `musicControls` | `obsolete` | 1.9.13 通过 `SBNowPlayingAlertItem` / `SBAlertItemsController` 显示或关闭旧式 now-playing modal；现代 iOS 没有等价 UI，若要打开 Control Center 应作为新的系统 UI action family 决策，不复刻为本 listener。详见 `LEGACY_REVERSE_ENGINEERING.md`。 |
 
 ## Ringer Actions 完成清单
 
@@ -139,5 +139,5 @@ Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。
 
 - 新增 family 必须有独立 listener class，代码层面显式 allowlist 注册，不扫描 metadata 自动生成 runtime listener。
 - 每个 family 至少拆出一个 stable suite，延续 `BuiltInActionRegistry` / `BuiltInURLActions` 的风格，不把新阶段测试继续塞进旧 URL suite。
-- stable tests 覆盖 registration、`hasSeen`、metadata-only 不注册、sender hook 成功/失败和 `event.handled` 语义；真实系统状态变化进入设备手工 checklist。
+- stable tests 覆盖 registration、`hasSeen`、metadata-only 不注册、sender hook 成功/失败和 `event.handled` 语义；`event.handled` 表示 listener 消费事件，不表示系统动作最终成功；真实系统状态变化进入设备手工 checklist。
 - 实现前先记录现代 SPI 选择；如果接口不确定，先标 `blocked` 并和 owner 确认，不用 public API fallback 掩盖行为差异。

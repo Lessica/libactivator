@@ -84,6 +84,13 @@ static NSMutableDictionary *gTestingURLMetadata = nil;
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
+    if (![[self.class supportedListenerNames] containsObject:listenerName ?: @""]) {
+        HBLogWarn(@"URL action %@ is not supported by this listener", listenerName ?: @"");
+        return;
+    }
+
+    event.handled = YES;
+
     NSString *urlString = [self urlStringForListenerName:listenerName activator:activator];
     if (urlString.length == 0) {
         HBLogWarn(@"URL action %@ has no URL metadata", listenerName ?: @"");
@@ -96,9 +103,7 @@ static NSMutableDictionary *gTestingURLMetadata = nil;
         return;
     }
 
-    if ([self openURL:url listenerName:listenerName]) {
-        event.handled = YES;
-    }
+    [self openURL:url listenerName:listenerName];
 }
 
 - (NSString *)urlStringForListenerName:(NSString *)listenerName activator:(LAActivator *)activator {

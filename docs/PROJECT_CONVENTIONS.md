@@ -88,6 +88,7 @@
 - `requires-no-touch-events` 是 listener-level deferral：触摸活跃时原 event 立即标记 handled，延迟事件冻结 listener name 和 event mode，触摸结束后直接投递给原 listener，不重新跑 blacklist/mode/compat 过滤。
 - `unlock-to-send` 当前只实现 callback 兼容路径，不实现 passcode submit 或完整主动解锁流程。
 - `otherListenerDidHandleEvent:` 是全局 handled-edge notification：事件从未处理变成已处理时发送一次，通知除当前处理者以外的已注册 listener；不从当前待分发列表中移除后续 listener。
+- `LAEvent.handled` 表示事件已被 listener 消费，不表示 action 最终执行成功。built-in action listener 收到自己 allowlist 内的合法 listener name 后，应在 runtime 层消费事件；缺少目标状态、私有 SPI 不存在、系统调用失败、metadata 运行时失配等执行失败应记录英文诊断，但不应把原始事件继续泄漏出去。只有 unknown listener name、未注册能力、dispatch 前兼容性过滤失败这类“不属于该 listener 处理范围”的情况才保持 unhandled。
 
 ## Settings UI 边界
 

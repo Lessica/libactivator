@@ -19,7 +19,7 @@ internal-stage::
 
 ifeq ($(LA_TESTING),1)
 after-stage::
-	$(ECHO_NOTHING)$(MAKE) -C tests commands stage LA_TESTING=1$(ECHO_END)
+	$(ECHO_NOTHING)$(MAKE) -C tests all stage LA_TESTING=1$(ECHO_END)
 endif
 
 include $(THEOS_MAKE_PATH)/package.mk

@@ -29,9 +29,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol LATestMediaActionListenerTesting <NSObject>
 + (NSArray<NSString *> *)supportedListenerNames;
-+ (NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
++ (nullable NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
 + (void)setTestingSendHandler:(BOOL (^)(NSString *listenerName, uint32_t page, uint32_t usage))handler;
 + (void)setTestingSelector:(NSString *)selector forListenerName:(NSString *)listenerName;
++ (void)setTestingNowPlayingApplicationIdentifier:(nullable NSString *)identifier;
 + (nullable NSString *)testingLastSentListenerName;
 + (uint32_t)testingLastSentPage;
 + (uint32_t)testingLastSentUsage;
@@ -46,4 +47,3 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
-
