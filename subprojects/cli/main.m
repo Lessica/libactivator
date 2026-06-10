@@ -100,17 +100,24 @@
     if ([command isEqualToString:@"activate"]) {
         LAEvent *event = [self eventWithCurrentModeNamed:argument];
         [_activator sendEventToListener:event];
-        return [self exitStatusForEvent:event];
+        return [self exitStatusForEvent:event failureMessage:[NSString stringWithFormat:@"Event was not handled: %@",
+                                                                                        argument ?: @""]];
     }
     if ([command isEqualToString:@"send"]) {
+        if (![self validateListenerName:argument]) {
+            return 1;
+        }
         LAEvent *event = [self eventWithCurrentModeNamed:@"libactivator"];
         [_activator sendEvent:event toListenerWithName:argument];
-        return [self exitStatusForEvent:event];
+        return [self exitStatusForEvent:event failureMessage:[NSString stringWithFormat:@"Listener did not handle event: %@",
+                                                                                        argument ?: @""]];
     }
     if ([command isEqualToString:@"deactivate"]) {
         LAEvent *event = [self eventWithCurrentModeNamed:argument];
         [_activator sendDeactivateEventToListeners:event];
-        return [self exitStatusForEvent:event];
+        return [self exitStatusForEvent:event
+                         failureMessage:[NSString stringWithFormat:@"Deactivate event was not handled: %@",
+                                                                    argument ?: @""]];
     }
 
     [self printUsage];
@@ -124,9 +131,14 @@
         return [self runSetCommandWithKey:firstArgument value:secondArgument];
     }
     if ([command isEqualToString:@"activate"]) {
+        if (![self validateListenerName:secondArgument]) {
+            return 1;
+        }
         LAEvent *event = [self eventWithCurrentModeNamed:firstArgument];
         [_activator sendEvent:event toListenerWithName:secondArgument];
-        return [self exitStatusForEvent:event];
+        return [self exitStatusForEvent:event
+                         failureMessage:[NSString stringWithFormat:@"Listener did not handle event: %@ for %@",
+                                                                    secondArgument ?: @"", firstArgument ?: @""]];
     }
 
     [self printUsage];
@@ -150,12 +162,24 @@
     return 0;
 }
 
+- (BOOL)validateListenerName:(NSString *)listenerName {
+    if ([self.activator hasListenerWithName:listenerName]) {
+        return YES;
+    }
+    fprintf(stderr, "Unknown listener: %s\n", [listenerName UTF8String]);
+    return NO;
+}
+
 - (LAEvent *)eventWithCurrentModeNamed:(NSString *)eventName {
     return [LAEvent eventWithName:eventName mode:self.activator.currentEventMode];
 }
 
-- (int)exitStatusForEvent:(LAEvent *)event {
-    return event.handled ? 0 : 1;
+- (int)exitStatusForEvent:(LAEvent *)event failureMessage:(NSString *)failureMessage {
+    if (event.handled) {
+        return 0;
+    }
+    fprintf(stderr, "%s\n", [failureMessage UTF8String]);
+    return 1;
 }
 
 - (NSString *)argumentAtIndex:(NSUInteger)index {

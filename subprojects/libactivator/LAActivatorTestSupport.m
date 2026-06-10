@@ -378,6 +378,18 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (void)resetTestingState;
 @end
 
+@interface NSObject (LATestMediaActionListenerTesting)
++ (NSArray<NSString *> *)supportedListenerNames;
++ (NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
++ (void)setTestingSendHandler:(BOOL (^)(NSString *listenerName, uint32_t page, uint32_t usage))handler;
++ (void)setTestingSelector:(NSString *)selector forListenerName:(NSString *)listenerName;
++ (NSString *)testingLastSentListenerName;
++ (uint32_t)testingLastSentPage;
++ (uint32_t)testingLastSentUsage;
++ (NSArray<NSString *> *)testingSentPhases;
++ (void)resetTestingState;
+@end
+
 @interface LAActivatorTestSupport ()
 + (NSDictionary *)okReplyWithValue:(id)value;
 + (NSDictionary *)failureReply;
@@ -393,6 +405,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (void)runDispatchTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runBuiltInActionRegistryTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runBuiltInURLActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
++ (void)runBuiltInMediaActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runRuntimeInputTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)runRuntimeDeviceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 + (void)cleanActivator:(LAActivator *)activator;
@@ -504,6 +517,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [self runDispatchTestsWithRecorder:recorder activator:activator];
     [self runBuiltInActionRegistryTestsWithRecorder:recorder activator:activator];
     [self runBuiltInURLActionTestsWithRecorder:recorder activator:activator];
+    [self runBuiltInMediaActionTestsWithRecorder:recorder activator:activator];
     [self cleanActivator:activator];
     return [recorder resultDictionary];
 }
@@ -1088,7 +1102,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     NSString *nothingName = @"libactivator.system.nothing";
     NSString *urlName = @"libactivator.clock.timer";
     NSString *urlsName = @"libactivator.settings.bluetooth";
-    NSString *metadataOnlyName = @"libactivator.ipod.toggle-playback";
+    NSString *mediaName = @"libactivator.ipod.toggle-playback";
+    NSString *metadataOnlyName = @"libactivator.audio.launch-playing-app";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
 
     [activator registerEventDataSource:dataSource forEventName:eventName];
@@ -1110,9 +1125,16 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
                      [activator hasListenerWithName:urlsName]
             caseName:@"urls-action-registered"
               reason:@"Built-in URL action with versioned metadata was not registered"];
+    [recorder expect:[[activator availableListenerNames] containsObject:mediaName] &&
+                     [activator hasListenerWithName:mediaName]
+            caseName:@"media-action-registered"
+              reason:@"Built-in media action listener was not registered"];
+    [recorder expect:[activator hasSeenListenerWithName:mediaName]
+            caseName:@"media-action-seen"
+              reason:@"Built-in media action listener was not recorded as seen"];
     [recorder expect:![activator hasListenerWithName:metadataOnlyName]
             caseName:@"metadata-only-not-registered"
-              reason:@"Non-URL staged metadata registered a listener without an implementation"];
+              reason:@"Staged metadata registered a listener without an implementation"];
 
     LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator assignEvent:event toListenerWithName:nothingName];
@@ -1202,6 +1224,123 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
               reason:@"URL action handled an event with invalid URL metadata"];
 
     [(id)urlActionClass resetTestingState];
+}
+
++ (void)runBuiltInMediaActionTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"BuiltInMediaActions"];
+
+    Class mediaActionClass = NSClassFromString(@"LATMediaActionListener");
+    [recorder expect:mediaActionClass != Nil
+            caseName:@"media-action-class-available"
+              reason:@"LATMediaActionListener class was not loaded in SpringBoard"];
+    if (!mediaActionClass) {
+        return;
+    }
+
+    NSDictionary<NSString *, NSDictionary<NSString *, id> *> *expectedCommands = @{
+        @"libactivator.ipod.toggle-playback" : @{@"selector" : @"togglePlayback", @"page" : @(0x0C), @"usage" : @(0xCD)},
+        @"libactivator.ipod.pause-playback" : @{@"selector" : @"pauseMedia", @"page" : @(0x0C), @"usage" : @(0xB1)},
+        @"libactivator.ipod.resume-playback" : @{@"selector" : @"playMedia", @"page" : @(0x0C), @"usage" : @(0xB0)},
+        @"libactivator.ipod.next-track" : @{@"selector" : @"nextTrack", @"page" : @(0x0C), @"usage" : @(0xB5)},
+        @"libactivator.ipod.previous-track" : @{@"selector" : @"previousTrack", @"page" : @(0x0C), @"usage" : @(0xB6)},
+        @"libactivator.audio.increase-volume" : @{@"selector" : @"increaseVolume", @"page" : @(0x0C), @"usage" : @(0xE9)},
+        @"libactivator.audio.decrease-volume" : @{@"selector" : @"decreaseVolume", @"page" : @(0x0C), @"usage" : @(0xEA)},
+    };
+    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[(id)mediaActionClass supportedListenerNames]];
+
+    [recorder expect:supportedNames.count == expectedCommands.count
+            caseName:@"media-action-allowlist-count"
+              reason:@"Media action allowlist did not match the expected command count"];
+    for (NSString *listenerName in expectedCommands) {
+        NSDictionary *expectedCommand = expectedCommands[listenerName];
+        [recorder expect:[supportedNames containsObject:listenerName]
+                caseName:[NSString stringWithFormat:@"media-action-allowlist-%@", listenerName]
+                  reason:@"Media action allowlist is missing an expected listener name"];
+        [recorder expect:[[(id)mediaActionClass expectedSelectorForListenerName:listenerName]
+                             isEqualToString:expectedCommand[@"selector"]]
+                caseName:[NSString stringWithFormat:@"media-action-selector-%@", listenerName]
+                  reason:@"Media action selector mapping did not match bundled metadata"];
+    }
+
+    [recorder expect:![activator hasListenerWithName:@"libactivator.audio.show-volume-bar"] &&
+                     ![activator hasListenerWithName:@"libactivator.ipod.music-controls"] &&
+                     ![activator hasListenerWithName:@"libactivator.audio.launch-playing-app"]
+            caseName:@"media-ui-actions-not-registered"
+              reason:@"Media UI or now-playing actions were registered in the HID media family"];
+
+    NSString *eventName = @"libactivator.test.built-in.media";
+    NSString *toggleName = @"libactivator.ipod.toggle-playback";
+    NSString *unknownName = @"libactivator.test.media.unknown";
+    LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+    [activator registerEventDataSource:dataSource forEventName:eventName];
+
+    __block NSInteger sendCount = 0;
+    [(id)mediaActionClass resetTestingState];
+    [(id)mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
+        sendCount += 1;
+        return YES;
+    }];
+
+    for (NSString *listenerName in expectedCommands) {
+        NSDictionary *expectedCommand = expectedCommands[listenerName];
+        LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+        [activator sendEvent:event toListenerWithName:listenerName];
+        [recorder expect:event.handled
+                caseName:[NSString stringWithFormat:@"media-action-handles-%@", listenerName]
+                  reason:@"Media action did not mark a successfully sent event handled"];
+        [recorder expect:[[(id)mediaActionClass testingLastSentListenerName] isEqualToString:listenerName] &&
+                         [(id)mediaActionClass testingLastSentPage] == [expectedCommand[@"page"] unsignedIntValue] &&
+                         [(id)mediaActionClass testingLastSentUsage] == [expectedCommand[@"usage"] unsignedIntValue]
+                caseName:[NSString stringWithFormat:@"media-action-command-%@", listenerName]
+                  reason:@"Media action sent the wrong HID page or usage"];
+    }
+    [recorder expect:sendCount == (NSInteger)expectedCommands.count
+            caseName:@"media-action-send-count"
+              reason:@"Media action sender was not called once per expected command"];
+    NSArray<NSString *> *sentPhases = [(id)mediaActionClass testingSentPhases];
+    BOOL sentDownUpPairs = sentPhases.count == expectedCommands.count * 2;
+    for (NSUInteger index = 0; sentDownUpPairs && index < sentPhases.count; index += 2) {
+        sentDownUpPairs = [sentPhases[index] isEqualToString:@"down"] &&
+                          [sentPhases[index + 1] isEqualToString:@"up"];
+    }
+    [recorder expect:sentDownUpPairs
+            caseName:@"media-action-down-up-order"
+              reason:@"Media action did not send a down/up HID event pair"];
+
+    [(id)mediaActionClass resetTestingState];
+    [(id)mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
+        return NO;
+    }];
+    LAEvent *failureEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:failureEvent toListenerWithName:toggleName];
+    [recorder expect:!failureEvent.handled
+            caseName:@"media-action-send-failure-unhandled"
+              reason:@"Media action marked the event handled when HID sender failed"];
+
+    [(id)mediaActionClass resetTestingState];
+    [(id)mediaActionClass setTestingSelector:@"wrongSelector" forListenerName:toggleName];
+    [(id)mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
+        return YES;
+    }];
+    LAEvent *mismatchedSelectorEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:mismatchedSelectorEvent toListenerWithName:toggleName];
+    [recorder expect:!mismatchedSelectorEvent.handled && [(id)mediaActionClass testingLastSentListenerName] == nil
+            caseName:@"media-action-selector-mismatch-unhandled"
+              reason:@"Media action handled an event with mismatched selector metadata"];
+
+    id unknownMediaListener = [[mediaActionClass alloc] init];
+    [activator registerListener:unknownMediaListener forName:unknownName];
+    [(id)mediaActionClass resetTestingState];
+    [(id)mediaActionClass setTestingSendHandler:^BOOL(NSString *listenerName, uint32_t page, uint32_t usage) {
+        return YES;
+    }];
+    LAEvent *unknownEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    [activator sendEvent:unknownEvent toListenerWithName:unknownName];
+    [recorder expect:!unknownEvent.handled && [(id)mediaActionClass testingLastSentListenerName] == nil
+            caseName:@"media-action-unknown-name-unhandled"
+              reason:@"Media action handled an unknown listener name"];
+
+    [(id)mediaActionClass resetTestingState];
 }
 
 + (void)runRuntimeInputTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {

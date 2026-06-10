@@ -8,9 +8,11 @@
 
 #import <Activator/Activator.h>
 
+#import "LATBuiltInListenerRegistrant.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATURLActionListener : NSObject <LAListener>
+@interface LATURLActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
 @end
 
 #if LA_TESTING

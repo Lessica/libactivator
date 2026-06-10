@@ -10,20 +10,29 @@
 - 1.9.13 资源 catalog 是当前内置动作范围的主要依据；旧 master 只用于证明历史承载方式和语义，不用于照搬实现。
 - 状态值：`metadata-only` 表示只有资源；`candidate` 表示可进入当前阶段评估；`in-progress` 表示正在实现；`implemented` 表示已有行为和测试；`blocked` 表示需要 owner 或 SPI 决策；`obsolete` 表示不计划恢复。
 
+## 阶段结论
+
+URL actions / listener family 已完成。当前 `Listeners/bundled.plist` 中保留 44 个带 `url` 或 `urls` metadata 的 URL action，全部由 `LATURLActionListener` 通过 `LATBuiltInListenerRegistry` 注册。8 个经真机验证失效、重复或只打开错误页面的旧 URL action 已从资源和 allowlist 移除：`libactivator.clock.bedtime`、`libactivator.settings.brightness`、`libactivator.settings.brightness-and-wallpaper`、`libactivator.settings.equalizer`、`libactivator.settings.facebook`、`libactivator.settings.network`、`libactivator.settings.twitter`、`libactivator.settings.usage`。
+
+URL family 的实现边界已固定：注册 name 仍由代码 allowlist 决定；metadata lookup 同时支持 `Listeners/bundled.plist` 和目录式 `Listeners/<name>/Info.plist`；真实打开通过 `LSApplicationWorkspace openSensitiveURL:withOptions:error:` 在专用非主队列提交，`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示目标 App 已完成打开。这与旧 master 中 `applicationOpenURL:publicURLsOnly:` 后立即返回 `YES` 的语义一致。
+
+Audio / Media HID actions / listener family 已完成。当前 `Listeners/bundled.plist` 中 7 个可由 HID Consumer page 表达的播放与音量动作由 `LATMediaActionListener` 通过 `LATBuiltInListenerRegistry` 注册。实现边界已固定：注册 name 仍由代码 allowlist 决定；metadata lookup 仅用于注册前 selector 校验和展示属性；真实动作通过 `IOHIDEventCreateKeyboardEvent` 与 `IOHIDEventSystemClientDispatchEvent` 提交，`event.handled = YES` 表示 HID command 已被 listener 接受并提交，不表示媒体应用已完成状态变化。
+
+下一阶段应进入 Phone tab URL subfamily 或低风险 system selector actions。不要把没有 `url`/`urls` metadata 的旧 selector action 继续塞进 `LATURLActionListener`；即使旧实现内部也是打开 URL，也应按新的 family 单独建 listener class、allowlist、测试和手工验证清单。
+
 ## 已实现动作
 
-| Listener name | 动作 | 承载实体 | 依据 | 状态 | 说明 |
+| Listener name / family | 动作 | 承载实体 | 依据 | 状态 | 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `libactivator.system.nothing` | 不执行操作，吞掉原始动作 | `LATNothingListener` | 1.9.13 `Listeners/bundled.plist`；旧 master `LASimpleListener -doNothing` | `implemented` | 已由 `LATBuiltInListenerRegistry` 注册，stable `BuiltInActions` 覆盖 dispatch 后 `event.handled = YES`。 |
+| `libactivator.system.nothing` | 不执行操作，吞掉原始动作 | `LATNothingListener` | 1.9.13 `Listeners/bundled.plist`；旧 master `LASimpleListener -doNothing` | `implemented` | 已由 `LATBuiltInListenerRegistry` 注册，stable `BuiltInActionRegistry` 覆盖 dispatch 后 `event.handled = YES`。 |
+| URL actions family | Clock 和 Settings URL actions | `LATURLActionListener` | 1.9.13 `Listeners/bundled.plist` 中保留的 `url` / `urls` metadata；旧 master `LASimpleListener -openURLWithActivator:event:listenerName:` | `implemented` | 44 个保留项已注册；obsolete 项已从资源移除；stable `BuiltInURLActions` 覆盖 metadata 选择、无效 metadata、opener hook 和 handled 语义。 |
+| Audio / Media HID actions family | 播放控制、切歌、音量增减 | `LATMediaActionListener` | 1.9.13 `Listeners/bundled.plist` 中的 selector metadata；`STHIDEventGenerator.mm` 的 HID Consumer event 发送方式 | `implemented` | 7 个 HID command 项已注册；UI/now-playing/ringer 项保持未注册；stable `BuiltInMediaActions` 覆盖 allowlist、selector metadata、sender hook 和 handled 语义。 |
 
-## URL actions 候选
+## URL Actions 完成清单
 
-URL actions 的范围来自 1.9.13 `layout/Library/Activator/Listeners/bundled.plist` 中带 `url` 或 `urls` 的条目，共 52 项。旧 master 中这些条目通常通过 `LASimpleListener openURLWithActivator:event:listenerName:` 承载；重写中建议由共享的 `LATURLActionListener` 承载，并由 `LATBuiltInListenerRegistry` 批量注册到不同 listener name。
-
-| Listener name | 分组 | 标题 | 当前阶段 | URL metadata | 首次验证 |
+| Listener name | 分组 | 标题 | 状态 | URL metadata | 验证 |
 | --- | --- | --- | --- | --- | --- |
 | `libactivator.clock.alarm` | Clock | Alarm | `implemented` | `clock-alarm:default` | ✅ |
-| `libactivator.clock.bedtime` | Clock | Bedtime | `obsolete` | `clock-sleep-alarm:default` | 已失效 |
 | `libactivator.clock.stopwatch` | Clock | Stopwatch | `implemented` | `clock-stopwatch:default` | ✅ |
 | `libactivator.clock.timer` | Clock | Timer | `implemented` | `clock-timer:default` | ✅ |
 | `libactivator.clock.world-clock` | Clock | World Clock | `implemented` | `clock-worldclock:default` | ✅ |
@@ -33,16 +42,12 @@ URL actions 的范围来自 1.9.13 `layout/Library/Activator/Listeners/bundled.p
 | `libactivator.settings.background-app-refresh` | Settings | Background App Refresh | `implemented` | `prefs:root=General&path=AUTO_CONTENT_DOWNLOAD` | ✅ |
 | `libactivator.settings.battery` | Settings | Battery | `implemented` | `prefs:root=BATTERY_USAGE` | ✅ |
 | `libactivator.settings.bluetooth` | Settings | Bluetooth | `implemented` | `prefs:root=General&path=Bluetooth`<br>`700`<br>`prefs:root=Bluetooth` | ✅ |
-| `libactivator.settings.brightness` | Settings | Brightness | `obsolete` | `prefs:root=Brightness` | 和 `libactivator.settings.display` 重复 |
-| `libactivator.settings.brightness-and-wallpaper` | Settings | Brightness & Wallpaper | `obsolete` | `prefs:root=Wallpaper` | 和 `libactivator.settings.wallpaper` 重复 |
 | `libactivator.settings.carplay` | Settings | Carplay | `implemented` | `prefs:root=General&path=CARPLAY` | ✅ |
 | `libactivator.settings.cellular` | Settings | Cellular | `implemented` | `prefs:root=General&path=MOBILE_DATA_SETTINGS_ID`<br>`1000`<br>`prefs:root=MOBILE_DATA_SETTINGS_ID` | ✅ |
 | `libactivator.settings.control-center` | Settings | Control Center | `implemented` | `prefs:root=ControlCenter` | ✅ |
 | `libactivator.settings.date-time` | Settings | Date & Time | `implemented` | `prefs:root=General&path=DATE_AND_TIME` | ✅ |
 | `libactivator.settings.display` | Settings | Display & Brightness | `implemented` | `prefs:root=DISPLAY` | ✅ |
 | `libactivator.settings.do-not-disturb` | Settings | Do Not Disturb | `implemented` | `prefs:root=DO_NOT_DISTURB` | ✅ |
-| `libactivator.settings.equalizer` | Settings | Equalizer | `obsolete` | `prefs:root=MUSIC&path=EQ` | 只能打开音乐设置 |
-| `libactivator.settings.facebook` | Settings | Facebook | `obsolete` | `prefs:root=FACEBOOK` | 已失效 |
 | `libactivator.settings.facetime` | Settings | FaceTime | `implemented` | `prefs:root=FACETIME` | ✅ |
 | `libactivator.settings.game-center` | Settings | Game Center | `implemented` | `prefs:root=GAMECENTER` | ✅ |
 | `libactivator.settings.general` | Settings | General | `implemented` | `prefs:root=General` | ✅ |
@@ -56,7 +61,6 @@ URL actions 的范围来自 1.9.13 `layout/Library/Activator/Listeners/bundled.p
 | `libactivator.settings.maps` | Settings | Maps | `implemented` | `prefs:root=MAPS` | ✅ |
 | `libactivator.settings.messages` | Settings | Messages | `implemented` | `prefs:root=MESSAGES` | ✅ |
 | `libactivator.settings.music` | Settings | Music | `implemented` | `prefs:root=MUSIC` | ✅ |
-| `libactivator.settings.network` | Settings | Network | `obsolete` | `prefs:root=General&path=Network` | 已失效 |
 | `libactivator.settings.notes` | Settings | Notes | `implemented` | `prefs:root=NOTES` | ✅ |
 | `libactivator.settings.notifications` | Settings | Notifications | `implemented` | `prefs:root=NOTIFICATIONS_ID` | ✅ |
 | `libactivator.settings.passcode` | Settings | Touch ID & Passcode | `implemented` | `prefs:root=PASSCODE` | ✅ |
@@ -68,9 +72,61 @@ URL actions 的范围来自 1.9.13 `layout/Library/Activator/Listeners/bundled.p
 | `libactivator.settings.sounds` | Settings | Sounds | `implemented` | `prefs:root=Sounds` | ✅ |
 | `libactivator.settings.store` | Settings | Store | `implemented` | `prefs:root=STORE` | ✅ |
 | `libactivator.settings.tethering` | Settings | Personal Hotspot | `implemented` | `prefs:root=INTERNET_TETHERING` | ✅ |
-| `libactivator.settings.twitter` | Settings | Twitter | `obsolete` | `prefs:root=TWITTER` | 已失效 |
-| `libactivator.settings.usage` | Settings | Usage | `obsolete` | `prefs:root=General&path=USAGE`<br>`1240`<br>`prefs:root=General&path=STORAGE_ICLOUD_USAGE` | 已失效 |
 | `libactivator.settings.virtual-assistant` | Settings | Siri | `implemented` | `prefs:root=General&path=Assistant`<br>`1240`<br>`prefs:root=General&path=SIRI` | ✅ |
 | `libactivator.settings.vpn` | Settings | VPN | `implemented` | `prefs:root=VPN` | ✅ |
 | `libactivator.settings.wallpaper` | Settings | Wallpaper | `implemented` | `prefs:root=Wallpaper` | ✅ |
 | `libactivator.settings.wifi` | Settings | Wi-Fi | `implemented` | `prefs:root=WIFI` | ✅ |
+
+## Media Actions 完成清单
+
+| Listener name | 标题 | 旧 selector / 语义 | 状态 | 实施备注 |
+| --- | --- | --- | --- | --- |
+| `libactivator.ipod.toggle-playback` | Play/Pause | `togglePlayback` | `implemented` | HID Consumer `PlayOrPause`。 |
+| `libactivator.ipod.pause-playback` | Pause | `pauseMedia` | `implemented` | HID Consumer `Pause`。 |
+| `libactivator.ipod.resume-playback` | Play | `playMedia` | `implemented` | HID Consumer `Play`。 |
+| `libactivator.ipod.next-track` | Next Track | `nextTrack` | `implemented` | HID Consumer `ScanNextTrack`。 |
+| `libactivator.ipod.previous-track` | Previous Track | `previousTrack` | `implemented` | HID Consumer `ScanPreviousTrack`。 |
+| `libactivator.audio.increase-volume` | Volume Up | `increaseVolume` | `implemented` | HID Consumer `VolumeIncrement`；metadata 的 exclusive assignment group 继续由 resource lookup 提供。 |
+| `libactivator.audio.decrease-volume` | Volume Down | `decreaseVolume` | `implemented` | HID Consumer `VolumeDecrement`；metadata 的 exclusive assignment group 继续由 resource lookup 提供。 |
+| `libactivator.audio.show-volume-bar` | Show Volume Bar | `showVolumeBar` | `blocked` | 属于系统 UI，不属于 HID media command family。 |
+| `libactivator.audio.reset-ringer-state` | Reset Ringer | `resetRingerState` | `blocked` | 需要先确认现代 ringer switch state 写入/同步接口。 |
+| `libactivator.audio.launch-playing-app` | Launch Playing App | 无 selector metadata | `blocked` | 需要先确认 now-playing app identity 和打开路径；不要用静态 Music fallback 代替。 |
+| `libactivator.ipod.music-controls` | Music Controls | `musicControls` | `blocked` | 属于 modal/system UI，不应作为第一批 media command 混入。 |
+
+## 下一阶段建议
+
+### 1. Phone Tab URL Subfamily
+
+这些旧动作没有 `url` metadata，但旧 master 内部通过 URL 打开 Phone 的具体 tab。它们应作为独立 `LATPhoneActionListener` 评估，而不是扩大 URL metadata family 的职责。
+
+| Listener name | 标题 | 旧 selector | 建议状态 | 实施备注 |
+| --- | --- | --- | --- | --- |
+| `libactivator.phone.favorites` | Show Favorites | `showPhoneFavorites` | `candidate` | 验证 `mobilephone-recents:favorites` 在当前设备/iOS 上是否可用。 |
+| `libactivator.phone.recents` | Show Recents | `showPhoneRecents` | `candidate` | 验证 `mobilephone-recents:`。 |
+| `libactivator.phone.contacts` | Show Contacts | `showPhoneContacts` | `candidate` | 验证 `mobilephone-recents:contacts`。 |
+| `libactivator.phone.keypad` | Show Keypad | `showPhoneKeypad` | `candidate` | 验证 `mobilephone-recents:keypad`。 |
+| `libactivator.phone.voicemail` | Show Voicemail | `showPhoneVoicemail` | `candidate` | 验证 `vmshow:`。 |
+| `libactivator.phone.answer-call` | Answer Call | `answerCall` | `blocked` | 旧 metadata 看起来与 disconnect-call 共用 selector，必须逆向确认，不可猜。 |
+| `libactivator.phone.disconnect-call` | Disconnect Call | `answerCall` | `blocked` | 需要 call control SPI 决策。 |
+
+### 2. Low-Risk System Actions Candidates
+
+这些动作可并行调研，但不建议抢在 media command family 之前批量实现。
+
+| Listener name | 标题 | 建议状态 | 实施备注 |
+| --- | --- | --- | --- |
+| `libactivator.system.vibrate` | Vibrate | `candidate` | 可先确认 `AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)` 或现代 haptic fallback；注意无 Taptic 设备兼容性。 |
+| `libactivator.system.take-screenshot` | Take Screenshot | `candidate` | 需要 SpringBoard 截图 SPI probe；真实截图进手工 checklist。 |
+| `libactivator.system.first-springboard-page` | First SpringBoard Page | `candidate` | 需要确认 Home Screen controller 现代入口。 |
+| `libactivator.system.spotlight` | Spotlight | `candidate` | 需要确认 Spotlight/Search UI 现代入口。 |
+
+### 3. 暂缓或高风险
+
+以下 action family 暂不作为下一阶段默认目标：Control Center、Notification Center、Switcher、Power UI、Siri/Voice Control、Wallet、rotation、lock screen show/dismiss/toggle、Safe Mode、watch haptics、camera shutter、compose mail/SMS/notes、screen brightness。它们不是不能做，而是需要 owner-assisted SPI probe、真实 UI checklist 或明确产品决策后再进入 `candidate`。
+
+## 下一阶段验收要求
+
+- 新增 family 必须有独立 listener class，代码层面显式 allowlist 注册，不扫描 metadata 自动生成 runtime listener。
+- 每个 family 至少拆出一个 stable suite，延续 `BuiltInActionRegistry` / `BuiltInURLActions` 的风格，不把新阶段测试继续塞进旧 URL suite。
+- stable tests 覆盖 registration、`hasSeen`、metadata-only 不注册、sender hook 成功/失败和 `event.handled` 语义；真实系统状态变化进入设备手工 checklist。
+- 实现前先记录现代 SPI 选择；如果接口不确定，先标 `blocked` 并和 owner 确认，不用 public API fallback 掩盖行为差异。

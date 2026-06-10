@@ -11,7 +11,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATBuiltInListenerRegistry : NSObject
-+ (void)registerBuiltInListenersWithActivator:(LAActivator *)activator;
++ (void)registerWithActivator:(LAActivator *)activator;
 @end
 
 NS_ASSUME_NONNULL_END
