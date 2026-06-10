@@ -10,8 +10,8 @@
 
 #import <CoreFoundation/CoreFoundation.h>
 #import <HBLog.h>
-#import <UIKit/UIKit.h>
 #import <mach/mach_time.h>
+#import <sys/types.h>
 
 typedef const struct __IOHIDEvent *IOHIDEventRef;
 typedef const struct __IOHIDEventSystemClient *IOHIDEventSystemClientRef;
@@ -21,6 +21,14 @@ extern IOHIDEventRef IOHIDEventCreateKeyboardEvent(CFAllocatorRef allocator, uin
 extern IOHIDEventSystemClientRef IOHIDEventSystemClientCreate(CFAllocatorRef allocator);
 extern void IOHIDEventSystemClientDispatchEvent(IOHIDEventSystemClientRef client, IOHIDEventRef event);
 extern void IOHIDEventSetSenderID(IOHIDEventRef event, uint64_t senderID);
+
+extern void MRMediaRemoteSetWantsNowPlayingNotifications(Boolean wantsNotifications) __attribute__((weak_import));
+extern void MRMediaRemoteGetNowPlayingApplicationDisplayID(dispatch_queue_t queue,
+                                                           void (^completion)(CFStringRef displayID))
+    __attribute__((weak_import));
+extern void MRMediaRemoteGetNowPlayingApplicationPID(dispatch_queue_t queue, void (^completion)(int PID))
+    __attribute__((weak_import));
+extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__((weak_import));
 
 static const uint32_t LATMediaHIDPageConsumer = 0x0C;
 static const uint32_t LATMediaHIDUsagePlay = 0xB0;
@@ -71,17 +79,6 @@ typedef NS_ENUM(NSUInteger, LATMediaActionKind) {
 @end
 
 static __weak id gCapturedVolumeControl = nil;
-
-#if LA_TESTING
-static LATMediaActionSendHandler gTestingSendHandler = nil;
-static NSString *gTestingLastSentListenerName = nil;
-static uint32_t gTestingLastSentPage = 0;
-static uint32_t gTestingLastSentUsage = 0;
-static NSMutableArray<NSString *> *gTestingSentPhases = nil;
-static NSMutableDictionary<NSString *, NSString *> *gTestingSelectors = nil;
-static BOOL gTestingNowPlayingApplicationIdentifierSet = NO;
-static NSString *gTestingNowPlayingApplicationIdentifier = nil;
-#endif
 
 @implementation LATMediaActionCommand
 
@@ -146,20 +143,6 @@ static NSString *gTestingNowPlayingApplicationIdentifier = nil;
 }
 
 - (BOOL)sendCommand:(LATMediaActionCommand *)command listenerName:(NSString *)listenerName {
-#if LA_TESTING
-    gTestingLastSentListenerName = [listenerName copy];
-    gTestingLastSentPage = command.page;
-    gTestingLastSentUsage = command.usage;
-    if (!gTestingSentPhases) {
-        gTestingSentPhases = [[NSMutableArray alloc] init];
-    }
-    [gTestingSentPhases addObject:@"down"];
-    [gTestingSentPhases addObject:@"up"];
-    if (gTestingSendHandler) {
-        return gTestingSendHandler(listenerName ?: @"", command.page, command.usage);
-    }
-#endif
-
     IOHIDEventSystemClientRef client = [self eventSystemClient];
     if (!client) {
         HBLogError(@"Unable to create IOHID event system client for media action %@", listenerName ?: @"");
@@ -209,19 +192,6 @@ static NSString *gTestingNowPlayingApplicationIdentifier = nil;
 @implementation LATMediaVolumeHUDPresenter
 
 - (BOOL)presentVolumeHUDForListenerName:(NSString *)listenerName {
-#if LA_TESTING
-    gTestingLastSentListenerName = [listenerName copy];
-    gTestingLastSentPage = 0;
-    gTestingLastSentUsage = 0;
-    if (!gTestingSentPhases) {
-        gTestingSentPhases = [[NSMutableArray alloc] init];
-    }
-    [gTestingSentPhases addObject:@"volume-hud"];
-    if (gTestingSendHandler) {
-        return gTestingSendHandler(listenerName ?: @"", 0, 0);
-    }
-#endif
-
     if (![NSThread isMainThread]) {
         __block BOOL presented = NO;
         dispatch_sync(dispatch_get_main_queue(), ^{
@@ -259,112 +229,105 @@ static NSString *gTestingNowPlayingApplicationIdentifier = nil;
 
 @end
 
-@implementation LATMediaNowPlayingApplicationLauncher
+@implementation LATMediaNowPlayingApplicationLauncher {
+    dispatch_queue_t _queue;
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(
+            DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL, QOS_CLASS_USER_INITIATED, 0);
+        _queue = dispatch_queue_create("com.libactivator.media-actions.now-playing-launch", attr);
+    }
+    return self;
+}
 
 - (BOOL)launchNowPlayingApplicationForListenerName:(NSString *)listenerName {
-#if LA_TESTING
-    if (gTestingNowPlayingApplicationIdentifierSet && gTestingNowPlayingApplicationIdentifier.length == 0) {
-        return NO;
+    if (MRMediaRemoteSetWantsNowPlayingNotifications) {
+        MRMediaRemoteSetWantsNowPlayingNotifications(true);
     }
 
-    gTestingLastSentListenerName = [listenerName copy];
-    gTestingLastSentPage = 0;
-    gTestingLastSentUsage = 0;
-    if (!gTestingSentPhases) {
-        gTestingSentPhases = [[NSMutableArray alloc] init];
-    }
-    [gTestingSentPhases addObject:@"launch-application"];
-    if (gTestingSendHandler) {
-        return gTestingSendHandler(listenerName ?: @"", 0, 0);
-    }
-    return YES;
-#endif
-
-    if (![NSThread isMainThread]) {
-        __block BOOL launched = NO;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            launched = [self launchNowPlayingApplicationForListenerName:listenerName];
-        });
-        return launched;
-    }
-
-    id application = [self nowPlayingApplication];
-    if (!application) {
-        HBLogWarn(@"Unable to launch now-playing application for media action %@ because no now-playing application "
-                  @"was found",
-                  listenerName ?: @"");
-        return NO;
-    }
-
-    NSString *displayIdentifier = [self displayIdentifierForApplication:application];
-    if (displayIdentifier.length == 0) {
-        HBLogError(
-            @"Unable to launch now-playing application for media action %@ because application has no identifier",
-            listenerName ?: @"");
-        return NO;
-    }
-
-    if ([self launchApplicationWithIdentifier:displayIdentifier]) {
+    if (MRMediaRemoteGetNowPlayingApplicationDisplayID) {
+        [self requestNowPlayingApplicationDisplayIdentifierForListenerName:listenerName ?: @""];
         return YES;
     }
 
-    if ([self activateApplication:application]) {
+    if (MRMediaRemoteGetNowPlayingApplicationPID && SBSCopyDisplayIdentifierForProcessID) {
+        [self requestNowPlayingApplicationProcessIdentifierForListenerName:listenerName ?: @""];
         return YES;
     }
 
-    HBLogError(@"Unable to launch now-playing application %@ for media action %@", displayIdentifier,
+    HBLogError(@"Unable to launch now-playing application for media action %@ because MediaRemote identity APIs are "
+               @"unavailable",
                listenerName ?: @"");
     return NO;
 }
 
-- (id)nowPlayingApplication {
-    Class mediaControllerClass = NSClassFromString(@"SBMediaController");
-    if (![mediaControllerClass respondsToSelector:@selector(sharedInstance)]) {
-        HBLogError(@"SBMediaController is unavailable");
-        return nil;
-    }
+- (void)requestNowPlayingApplicationDisplayIdentifierForListenerName:(NSString *)listenerName {
+    MRMediaRemoteGetNowPlayingApplicationDisplayID(_queue, ^(CFStringRef displayID) {
+        NSString *identifier = [(__bridge NSString *)displayID copy];
+        if (identifier.length > 0) {
+            [self launchApplicationWithIdentifier:identifier listenerName:listenerName];
+            return;
+        }
 
-    id mediaController = [mediaControllerClass sharedInstance];
-    SEL nowPlayingApplicationSelector = NSSelectorFromString(@"nowPlayingApplication");
-    if (![mediaController respondsToSelector:nowPlayingApplicationSelector]) {
-        HBLogError(@"SBMediaController does not support nowPlayingApplication");
-        return nil;
-    }
-
-    id (*nowPlayingApplication)(id, SEL) =
-        (id(*)(id, SEL))[mediaController methodForSelector:nowPlayingApplicationSelector];
-    return nowPlayingApplication(mediaController, nowPlayingApplicationSelector);
+        HBLogWarn(@"MediaRemote returned no now-playing application display identifier for media action %@",
+                  listenerName ?: @"");
+        if (MRMediaRemoteGetNowPlayingApplicationPID && SBSCopyDisplayIdentifierForProcessID) {
+            [self requestNowPlayingApplicationProcessIdentifierForListenerName:listenerName];
+        }
+    });
 }
 
-- (NSString *)displayIdentifierForApplication:(id)application {
-    SEL displayIdentifierSelector = NSSelectorFromString(@"displayIdentifier");
-    if ([application respondsToSelector:displayIdentifierSelector]) {
-        NSString *displayIdentifier =
-            ((NSString * (*)(id, SEL))[application methodForSelector:displayIdentifierSelector])(
-                application, displayIdentifierSelector);
-        if ([displayIdentifier isKindOfClass:NSString.class] && displayIdentifier.length > 0) {
-            return displayIdentifier;
+- (void)requestNowPlayingApplicationProcessIdentifierForListenerName:(NSString *)listenerName {
+    MRMediaRemoteGetNowPlayingApplicationPID(_queue, ^(int PID) {
+        if (PID <= 0) {
+            HBLogWarn(@"MediaRemote returned no now-playing application process identifier for media action %@",
+                      listenerName ?: @"");
+            return;
         }
+
+        CFStringRef displayID = SBSCopyDisplayIdentifierForProcessID((pid_t)PID);
+        NSString *identifier = displayID ? CFBridgingRelease(displayID) : nil;
+        if (identifier.length == 0) {
+            HBLogError(@"Unable to resolve now-playing application display identifier for process %d", PID);
+            return;
+        }
+
+        [self launchApplicationWithIdentifier:identifier listenerName:listenerName];
+    });
+}
+
+- (void)launchApplicationWithIdentifier:(NSString *)displayIdentifier listenerName:(NSString *)listenerName {
+    if (displayIdentifier.length == 0) {
+        return;
     }
 
-    SEL bundleIdentifierSelector = NSSelectorFromString(@"bundleIdentifier");
-    if ([application respondsToSelector:bundleIdentifierSelector]) {
-        NSString *bundleIdentifier =
-            ((NSString * (*)(id, SEL))[application methodForSelector:bundleIdentifierSelector])(
-                application, bundleIdentifierSelector);
-        if ([bundleIdentifier isKindOfClass:NSString.class] && bundleIdentifier.length > 0) {
-            return bundleIdentifier;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (![self launchApplicationWithIdentifier:displayIdentifier]) {
+            HBLogError(@"Unable to launch now-playing application %@ for media action %@", displayIdentifier,
+                       listenerName ?: @"");
         }
-    }
-
-    return nil;
+    });
 }
 
 - (BOOL)launchApplicationWithIdentifier:(NSString *)displayIdentifier {
+    if (![NSThread isMainThread]) {
+        __block BOOL launched = NO;
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            launched = [self launchApplicationWithIdentifier:displayIdentifier];
+        });
+        return launched;
+    }
+
     Class springBoardClass = NSClassFromString(@"SpringBoard");
-    id springBoard = [springBoardClass respondsToSelector:@selector(sharedApplication)]
-                         ? [springBoardClass sharedApplication]
-                         : UIApplication.sharedApplication;
+    if (![springBoardClass respondsToSelector:@selector(sharedApplication)]) {
+        HBLogError(@"SpringBoard shared application is unavailable");
+        return NO;
+    }
+
+    id springBoard = [springBoardClass sharedApplication];
     SEL launchSelector = NSSelectorFromString(@"launchApplicationWithIdentifier:suspended:");
     if (![springBoard respondsToSelector:launchSelector]) {
         return NO;
@@ -373,26 +336,6 @@ static NSString *gTestingNowPlayingApplicationIdentifier = nil;
     void (*launchApplication)(id, SEL, NSString *, BOOL) =
         (void (*)(id, SEL, NSString *, BOOL))[springBoard methodForSelector:launchSelector];
     launchApplication(springBoard, launchSelector, displayIdentifier, NO);
-    return YES;
-}
-
-- (BOOL)activateApplication:(id)application {
-    Class uiControllerClass = NSClassFromString(@"SBUIController");
-    if (![uiControllerClass respondsToSelector:@selector(sharedInstance)]) {
-        return NO;
-    }
-
-    id uiController = [uiControllerClass sharedInstance];
-    SEL activateSelector = NSSelectorFromString(@"activateApplicationAnimated:");
-    if (![uiController respondsToSelector:activateSelector]) {
-        activateSelector = NSSelectorFromString(@"activateApplicationFromSwitcher:");
-        if (![uiController respondsToSelector:activateSelector]) {
-            return NO;
-        }
-    }
-
-    void (*activateApplication)(id, SEL, id) = (void (*)(id, SEL, id))[uiController methodForSelector:activateSelector];
-    activateApplication(uiController, activateSelector, application);
     return YES;
 }
 
@@ -472,13 +415,6 @@ static NSString *gTestingNowPlayingApplicationIdentifier = nil;
         return [title isKindOfClass:NSString.class] && [title length] > 0;
     }
 
-#if LA_TESTING
-    NSString *testingSelector = gTestingSelectors[command.listenerName];
-    if (testingSelector) {
-        return [testingSelector isEqualToString:command.selectorName];
-    }
-#endif
-
     id selector = [activator infoDictionaryValueOfKey:@"selector" forListenerWithName:command.listenerName];
     return [selector isKindOfClass:NSString.class] && [selector isEqualToString:command.selectorName];
 }
@@ -541,57 +477,5 @@ static NSString *gTestingNowPlayingApplicationIdentifier = nil;
 + (id)volumeControlInstance {
     return gCapturedVolumeControl;
 }
-
-#if LA_TESTING
-+ (void)setTestingSendHandler:(LATMediaActionSendHandler)handler {
-    gTestingSendHandler = [handler copy];
-}
-
-+ (void)setTestingSelector:(NSString *)selector forListenerName:(NSString *)listenerName {
-    if (listenerName.length == 0) {
-        return;
-    }
-    if (!gTestingSelectors) {
-        gTestingSelectors = [[NSMutableDictionary alloc] init];
-    }
-    if (selector) {
-        gTestingSelectors[listenerName] = selector;
-    } else {
-        [gTestingSelectors removeObjectForKey:listenerName];
-    }
-}
-
-+ (void)setTestingNowPlayingApplicationIdentifier:(NSString *)identifier {
-    gTestingNowPlayingApplicationIdentifierSet = YES;
-    gTestingNowPlayingApplicationIdentifier = [identifier copy];
-}
-
-+ (NSString *)testingLastSentListenerName {
-    return gTestingLastSentListenerName;
-}
-
-+ (uint32_t)testingLastSentPage {
-    return gTestingLastSentPage;
-}
-
-+ (uint32_t)testingLastSentUsage {
-    return gTestingLastSentUsage;
-}
-
-+ (NSArray<NSString *> *)testingSentPhases {
-    return [gTestingSentPhases copy] ?: @[];
-}
-
-+ (void)resetTestingState {
-    gTestingSendHandler = nil;
-    gTestingLastSentListenerName = nil;
-    gTestingLastSentPage = 0;
-    gTestingLastSentUsage = 0;
-    gTestingNowPlayingApplicationIdentifierSet = NO;
-    gTestingNowPlayingApplicationIdentifier = nil;
-    [gTestingSentPhases removeAllObjects];
-    [gTestingSelectors removeAllObjects];
-}
-#endif
 
 @end

@@ -16,13 +16,6 @@
 - (BOOL)openSensitiveURL:(NSURL *)url withOptions:(NSDictionary *)options error:(NSError **)error;
 @end
 
-#if LA_TESTING
-static LATURLActionOpenHandler gTestingOpenHandler = nil;
-static NSURL *gTestingLastOpenedURL = nil;
-static NSString *gTestingLastOpenedListenerName = nil;
-static NSMutableDictionary *gTestingURLMetadata = nil;
-#endif
-
 @implementation LATURLActionListener
 
 + (NSArray<NSString *> *)supportedListenerNames {
@@ -111,17 +104,6 @@ static NSMutableDictionary *gTestingURLMetadata = nil;
         return nil;
     }
 
-#if LA_TESTING
-    NSDictionary *testingMetadata = gTestingURLMetadata[listenerName];
-    if (testingMetadata) {
-        id testingURL = testingMetadata[@"url"];
-        if ([testingURL isKindOfClass:NSString.class] && [testingURL length] > 0) {
-            return testingURL;
-        }
-        return [self urlStringInURLsValue:testingMetadata[@"urls"]];
-    }
-#endif
-
     id url = [activator infoDictionaryValueOfKey:@"url" forListenerWithName:listenerName];
     if ([url isKindOfClass:NSString.class] && [url length] > 0) {
         return url;
@@ -157,14 +139,6 @@ static NSMutableDictionary *gTestingURLMetadata = nil;
 }
 
 - (BOOL)openURL:(NSURL *)url listenerName:(NSString *)listenerName {
-#if LA_TESTING
-    gTestingLastOpenedURL = url;
-    gTestingLastOpenedListenerName = [listenerName copy];
-    if (gTestingOpenHandler) {
-        return gTestingOpenHandler(url, listenerName ?: @"");
-    }
-#endif
-
     Class workspaceClass = NSClassFromString(@"LSApplicationWorkspace");
     if (![workspaceClass respondsToSelector:@selector(defaultWorkspace)]) {
         HBLogError(@"LSApplicationWorkspace is unavailable");
@@ -196,40 +170,5 @@ static NSMutableDictionary *gTestingURLMetadata = nil;
     });
     return sQueue;
 }
-
-#if LA_TESTING
-+ (void)setTestingOpenHandler:(LATURLActionOpenHandler)handler {
-    gTestingOpenHandler = [handler copy];
-}
-
-+ (void)setTestingURLMetadata:(NSDictionary *)metadata forListenerName:(NSString *)listenerName {
-    if (listenerName.length == 0) {
-        return;
-    }
-    if (!gTestingURLMetadata) {
-        gTestingURLMetadata = [[NSMutableDictionary alloc] init];
-    }
-    if (metadata) {
-        gTestingURLMetadata[listenerName] = metadata;
-    } else {
-        [gTestingURLMetadata removeObjectForKey:listenerName];
-    }
-}
-
-+ (NSURL *)testingLastOpenedURL {
-    return gTestingLastOpenedURL;
-}
-
-+ (NSString *)testingLastOpenedListenerName {
-    return gTestingLastOpenedListenerName;
-}
-
-+ (void)resetTestingState {
-    gTestingOpenHandler = nil;
-    gTestingLastOpenedURL = nil;
-    gTestingLastOpenedListenerName = nil;
-    [gTestingURLMetadata removeAllObjects];
-}
-#endif
 
 @end

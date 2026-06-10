@@ -45,11 +45,13 @@ watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail �
 - 清理逻辑只能恢复为空或安全状态，不能为了“方便测试”制造 `home visible YES`、`lock visible YES` 这类状态。
 - 不要把多个 suite 混在一起复用脏状态。需要设备场景、输入模型、核心逻辑时，拆成独立 suite、独立准备、独立清理。
 - 不要用 skip 绕过不稳定问题。真实瞬时抖动应通过合理重试、放宽动作后时延或修正自动化流程处理。
+- stable tests 不得为了验证 built-in action 效果，在 production listener 内增加 fake opener、fake HID sender、fake ringer controller、fake now-playing launcher、last-action recorder 或类似 `setTesting...` 执行替身。这类测试会验证测试 seam 本身，而不是验证真实 SpringBoard/SPI 链路，风险高于收益。
 
 ## 新增测试放置规则
 
 - 纯模型、序列化、assignment、profile、blacklist、resource manager、cache、IPC codec 这类不依赖 SpringBoard UI 的测试优先放入 stable。
 - 需要真实 listener object、data source、dispatch 回调、built-in action 对象、touch tracker drain 的测试，如果行为由 SpringBoard runtime owner 承载，应放入 SpringBoard-owned stable suite。
+- built-in action stable suite 只覆盖代码 allowlist、metadata/selector gate、runtime registration、obsolete/unsupported name 不注册，以及不产生设备副作用的纯 dispatch 语义。会打开 URL、启动 App、投递 HID、显示系统 UI、修改 ringer/audio 状态的行为不进入 stable fake path；应通过 Frida probe、`run-device-runtime` 或手工真机清单验证。
 - 需要打开 App、回主屏幕、锁屏、解锁、App Switcher、强杀 App 的测试默认不进 stable，先放 `run-device-runtime` 或手工观察。
 - 为测试而新增 production 入口必须先证明必要性，并用 `LA_TESTING` 宏隔离。普通构建不能包含 testing IPC、testing path 或测试自动化接口。
 

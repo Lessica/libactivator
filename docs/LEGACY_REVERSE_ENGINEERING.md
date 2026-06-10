@@ -36,7 +36,7 @@ for (uint64_t offset = rangeStart; offset < rangeEnd; offset++) {
 
 旧实现语义是先取 `SBMediaController.sharedInstance`，如果它能响应并返回 `nowPlayingApplication`，则使用这个 now-playing application。若没有可用 now-playing application，则 fallback 到 `SBApplicationController.sharedInstance`，按 CoreFoundation 版本选择 `applicationWithDisplayIdentifier:` 或 `applicationWithBundleIdentifier:`，传入固定 bundle id `com.apple.Music`。
 
-现代实现不能把这个 fallback 直接当成目标语义照搬。旧 fallback 是“无法确认 now-playing app 时打开 Music”的兼容行为，但当前项目的设计边界是不使用静态 Music fallback 伪装 now-playing identity。当前实现只使用 `SBMediaController nowPlayingApplication` 返回的真实 application，提取其 display identifier / bundle identifier 后交给 SpringBoard 私有打开路径；如果没有 now-playing application，listener 仍消费事件并记录诊断，但不打开静态 fallback。
+现代实现不能把这个 fallback 直接当成目标语义照搬。旧 fallback 是“无法确认 now-playing app 时打开 Music”的兼容行为，但当前项目的设计边界是不使用静态 Music fallback 伪装 now-playing identity。真机 Frida 验证显示，现代 iOS 上 `SBMediaController nowPlayingApplication` 可以返回 `nil`，但 `MRMediaRemoteGetNowPlayingApplicationDisplayID` 能回调真实 display identifier，例如 `com.apple.Music`；`MRMediaRemoteGetNowPlayingApplicationPID` 也能返回 now-playing PID，并可用 `SBSCopyDisplayIdentifierForProcessID` 转换为 display identifier。因此当前实现不保留 `SBMediaController` 路径，改用 MediaRemote display id 优先、PID + SpringBoardServices fallback 的 identity provider，再交给 SpringBoard 私有打开路径；如果没有 now-playing identity，listener 仍消费事件并记录诊断，但不打开静态 fallback。
 
 ## `libactivator.ipod.music-controls`
 

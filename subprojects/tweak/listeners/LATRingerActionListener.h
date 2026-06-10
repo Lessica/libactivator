@@ -16,16 +16,4 @@ NS_ASSUME_NONNULL_BEGIN
 + (void)noteRingerControlInstance:(id)ringerControl;
 @end
 
-#if LA_TESTING
-typedef BOOL (^LATRingerActionHandler)(NSString *listenerName, NSString *phase);
-
-@interface LATRingerActionListener (Testing)
-+ (void)setTestingActionHandler:(nullable LATRingerActionHandler)handler;
-+ (void)setTestingSelector:(nullable NSString *)selector forListenerName:(NSString *)listenerName;
-+ (nullable NSString *)testingLastActionListenerName;
-+ (nullable NSString *)testingLastActionPhase;
-+ (void)resetTestingState;
-@end
-#endif
-
 NS_ASSUME_NONNULL_END

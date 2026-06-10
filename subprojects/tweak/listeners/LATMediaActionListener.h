@@ -16,19 +16,4 @@ NS_ASSUME_NONNULL_BEGIN
 + (void)noteVolumeControlInstance:(id)volumeControl;
 @end
 
-#if LA_TESTING
-typedef BOOL (^LATMediaActionSendHandler)(NSString *listenerName, uint32_t page, uint32_t usage);
-
-@interface LATMediaActionListener (Testing)
-+ (void)setTestingSendHandler:(nullable LATMediaActionSendHandler)handler;
-+ (void)setTestingSelector:(nullable NSString *)selector forListenerName:(NSString *)listenerName;
-+ (void)setTestingNowPlayingApplicationIdentifier:(nullable NSString *)identifier;
-+ (nullable NSString *)testingLastSentListenerName;
-+ (uint32_t)testingLastSentPage;
-+ (uint32_t)testingLastSentUsage;
-+ (NSArray<NSString *> *)testingSentPhases;
-+ (void)resetTestingState;
-@end
-#endif
-
 NS_ASSUME_NONNULL_END

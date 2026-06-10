@@ -28,5 +28,7 @@ ActivatorTweak_FRAMEWORKS += UIKit
 ActivatorTweak_LIBRARIES += activator
 
 ActivatorTweak_PRIVATE_FRAMEWORKS += IOKit
+ActivatorTweak_PRIVATE_FRAMEWORKS += MediaRemote
+ActivatorTweak_PRIVATE_FRAMEWORKS += SpringBoardServices
 
 include $(THEOS_MAKE_PATH)/tweak.mk
