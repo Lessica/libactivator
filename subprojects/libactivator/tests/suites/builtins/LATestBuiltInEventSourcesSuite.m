@@ -22,6 +22,9 @@
     [recorder expect:NSClassFromString(@"LATMediaEventSource") != Nil
             caseName:@"media-event-source-loaded"
               reason:@"LATMediaEventSource class was not loaded in SpringBoard"];
+    [recorder expect:NSClassFromString(@"LATRuntimeStateSource") != Nil
+            caseName:@"runtime-state-source-loaded"
+              reason:@"LATRuntimeStateSource class was not loaded in SpringBoard"];
     [recorder expect:[[activator availableEventNames] containsObject:LAEventNameDeviceLocked]
             caseName:@"device-locked-event-available"
               reason:@"Device locked event metadata was not available"];

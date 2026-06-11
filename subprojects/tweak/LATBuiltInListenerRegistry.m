@@ -16,6 +16,7 @@
 #import "LATHardwareActionListener.h"
 #import "LATMediaEventSource.h"
 #import "LATNothingListener.h"
+#import "LATRuntimeStateSource.h"
 #import "LATSystemActionListener.h"
 #import "LATTelephonyActionListener.h"
 #import "LATURLActionListener.h"
@@ -26,6 +27,7 @@ static __weak SBVolumeControl *gCapturedVolumeControl = nil;
 static __weak SBRingerControl *gCapturedRingerControl = nil;
 static __weak CSCoverSheetViewController *gCapturedCoverSheetViewController = nil;
 static __weak LATMediaEventSource *gMediaEventSource = nil;
+static __weak LATRuntimeStateSource *gRuntimeStateSource = nil;
 
 @implementation LATBuiltInListenerRegistry
 
@@ -59,6 +61,14 @@ static __weak LATMediaEventSource *gMediaEventSource = nil;
 
 + (void)setMediaEventSource:(LATMediaEventSource *)mediaEventSource {
     gMediaEventSource = mediaEventSource;
+}
+
++ (LATRuntimeStateSource *)runtimeStateSource {
+    return gRuntimeStateSource;
+}
+
++ (void)setRuntimeStateSource:(LATRuntimeStateSource *)runtimeStateSource {
+    gRuntimeStateSource = runtimeStateSource;
 }
 
 + (NSArray<NSDictionary<NSString *, id> *> *)la_builtInListenerFactoryConfigurations {

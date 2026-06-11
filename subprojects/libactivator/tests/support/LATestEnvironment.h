@@ -19,7 +19,6 @@
 #import "LATestTestingProtocols.h"
 #import "LATestTouch.h"
 #import "LATestTouchEvent.h"
-#import "LATouchActivityTracker.h"
 
 #import <Activator/Activator.h>
 #import <Foundation/Foundation.h>

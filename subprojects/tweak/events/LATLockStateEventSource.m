@@ -1,6 +1,6 @@
 //
 //  LATLockStateEventSource.m
-//  libactivator
+//  ActivatorTweak
 //
 //  Created by Lessica on 6/11/26.
 //  Copyright © 2026 Lessica. All rights reserved.
@@ -9,6 +9,7 @@
 #import "LATLockStateEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LATRuntimeStateSource.h"
 
 #import <HBLog.h>
 #import <notify.h>
@@ -21,6 +22,7 @@
 @end
 
 @interface LATLockStateEventSource ()
+@property(nonatomic, strong) LATRuntimeStateSource *runtimeStateSource;
 @property(nonatomic, assign) BOOL started;
 @property(nonatomic, assign) BOOL hasKnownLockState;
 @property(nonatomic, assign, getter=isUILocked) BOOL uiLocked;
@@ -30,6 +32,14 @@
 @implementation LATLockStateEventSource
 
 #pragma mark - Lifecycle
+
+- (instancetype)initWithRuntimeStateSource:(LATRuntimeStateSource *)runtimeStateSource {
+    self = [super init];
+    if (self) {
+        _runtimeStateSource = runtimeStateSource;
+    }
+    return self;
+}
 
 - (void)start {
     NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
@@ -52,13 +62,12 @@
 
 - (void)handleLockStateNotification {
     NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
-    [LASharedActivator la_noteRuntimeStateMayHaveChanged];
-
     BOOL locked = NO;
     if (![self readUILocked:&locked]) {
         HBLogDebug(@"Unable to read lock state for device lock event source");
         return;
     }
+    [self.runtimeStateSource noteUILocked:locked];
 
     if (!self.hasKnownLockState) {
         self.hasKnownLockState = YES;
@@ -82,6 +91,7 @@
     }
     self.hasKnownLockState = YES;
     self.uiLocked = locked;
+    [self.runtimeStateSource noteUILocked:locked];
 }
 
 #pragma mark - State

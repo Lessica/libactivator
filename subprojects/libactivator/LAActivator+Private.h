@@ -10,8 +10,6 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class UIEvent;
-
 @interface LAActivator (Private)
 
 #pragma mark - Lifecycle
@@ -30,16 +28,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Runtime State
 
-- (void)la_noteHomeScreenVisible:(BOOL)visible;
-- (void)la_noteHomeScreenVisible:(BOOL)visible source:(NSString *)source;
-- (void)la_noteSpringBoardInterfaceVisible:(BOOL)visible source:(NSString *)source;
-- (void)la_noteLockScreenVisible:(BOOL)visible;
-- (void)la_noteLockScreenVisible:(BOOL)visible source:(NSString *)source;
-- (void)la_noteScreenBlanked:(BOOL)blanked;
-- (void)la_noteRuntimeStateMayHaveChanged;
-- (void)la_noteSystemTouchEvent:(UIEvent *)event;
-- (BOOL)la_screenIsOn;
-- (BOOL)la_wakeScreenForReason:(NSString *)reason completion:(dispatch_block_t)completion;
+- (void)la_updateRuntimeEventMode:(NSString *)eventMode
+             underneathLockScreen:(NSString *)underneathMode
+                displayIdentifier:(nullable NSString *)displayIdentifier
+                         screenOn:(BOOL)screenOn;
+- (void)la_setSystemTouchActivityProvider:(nullable BOOL (^)(void))touchActiveProvider
+                    touchesEndedPerformer:(nullable void (^)(dispatch_block_t block))touchesEndedPerformer;
 #if LA_TESTING
 - (NSDictionary<NSString *, id> *)la_runtimeStateDebugDictionary;
 #endif

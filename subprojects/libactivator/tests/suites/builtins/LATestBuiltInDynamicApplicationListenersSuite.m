@@ -49,6 +49,12 @@
               reason:@"No visible System or User application was available for dynamic listener verification"];
     if (representativeDescriptor) {
         NSString *listenerName = representativeDescriptor.identifier;
+        NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:5.0];
+        while (![activator hasListenerWithName:listenerName] && [deadline timeIntervalSinceNow] > 0) {
+            [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.1];
+            [LATestEnvironment waitForMainQueue];
+        }
+
         [recorder expect:[activator hasListenerWithName:listenerName]
                 caseName:@"dynamic-application-representative-registered"
                   reason:@"Visible application was not registered as a dynamic listener"];

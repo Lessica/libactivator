@@ -30,9 +30,9 @@ watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail �
 
 ## 测试类别
 
-`run` 是默认稳定套件，允许包含 runner-owned tests 和 SpringBoard-owned tests，但必须稳定、可重复、不能污染用户配置或 SpringBoard runtime state。它覆盖 `ClientFacade`、`LAEvent`、`Persistence`、`SpringBoardCore`、`Dispatch`、`Resources`、`TouchActivity`、`BuiltInActions` 等核心能力。
+`run` 是默认稳定套件，允许包含 runner-owned tests 和 SpringBoard-owned tests，但必须稳定、可重复、不能污染用户配置或 SpringBoard runtime state。它覆盖 `ClientFacade`、`LAEvent`、`Persistence`、`SpringBoardCore`、`Dispatch`、`Resources`、`BuiltInActions` 等核心能力。已经迁到 tweak runtime layer 的内部采集组件不应为了早期单元测试继续留在 lib target；风险低的内部状态机测试可以移除，改由 dispatch 或 device runtime 行为覆盖。
 
-`run-runtime-input` 只测试 `LARuntimeStateProvider` 的输入模型，允许调用 `la_noteHomeScreenVisible:`、`la_noteLockScreenVisible:`、`la_noteScreenBlanked:` 等注入入口，但前后必须清空状态，并且不能和真实设备场景连跑。
+`run-runtime-input` 只测试 libactivator core 接收 runtime snapshot 后的 Public API 和 dispatch 条件效果，例如 mode、锁屏下层 mode、当前 app display identifier、screen-on gate。它不测试 tweak-side `LATRuntimeStateSource` 的内部 source set、reducer、touch drain 或 screen wake 细节；这些细节应通过真实 hook、手工观察或后续 tweak-owned 测试覆盖。
 
 `run-device-runtime` 只测试真实 SpringBoard hook 和真实设备状态，严禁调用任何 `la_note*` 注入入口。它不属于默认提交门槛，失败说明设备自动化流程、当前设备状态或 hook 场景需要单独调查。
 
@@ -40,7 +40,7 @@ watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail �
 
 ## 禁止混用
 
-- stable tests 不得调用 `la_noteHomeScreenVisible:`、`la_noteLockScreenVisible:`、`la_noteScreenBlanked:` 或其他 runtime state 注入入口。
+- stable tests 不得调用 tweak-side acquisition source 的 `noteHomeScreenVisible:`、`noteLockScreenVisible:`、`noteScreenBlanked:` 或其他 acquisition 注入入口；需要验证 lib dispatch core 时，只能通过核心 snapshot testing 入口注入最小状态。
 - `RuntimeDevice` 不得调用任何 `la_note*` 注入状态。
 - 清理逻辑只能恢复为空或安全状态，不能为了“方便测试”制造 `home visible YES`、`lock visible YES` 这类状态。
 - 不要把多个 suite 混在一起复用脏状态。需要设备场景、输入模型、核心逻辑时，拆成独立 suite、独立准备、独立清理。
@@ -50,7 +50,7 @@ watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail �
 ## 新增测试放置规则
 
 - 纯模型、序列化、assignment、profile、blacklist、resource manager、cache、IPC codec 这类不依赖 SpringBoard UI 的测试优先放入 stable。
-- 需要真实 listener object、data source、dispatch 回调、built-in action 对象、touch tracker drain 的测试，如果行为由 SpringBoard runtime owner 承载，应放入 SpringBoard-owned stable suite。
+- 需要真实 listener object、data source、dispatch 回调、built-in action 对象、touch drain 的测试，如果行为由 SpringBoard runtime owner 承载，应放入 SpringBoard-owned stable suite，并优先验证外层 dispatch 行为，不把 tweak 内部 tracker 作为 libactivator 单元测试对象。
 - built-in action stable suite 只覆盖代码 allowlist、metadata/selector gate、runtime registration、obsolete/unsupported name 不注册，以及不产生设备副作用的纯 dispatch 语义。会打开 URL、启动 App、投递 HID、显示系统 UI、修改 ringer/audio 状态的行为不进入 stable fake path；应通过 Frida probe、`run-device-runtime` 或手工真机清单验证。
 - 需要打开 App、回主屏幕、锁屏、解锁、App Switcher、强杀 App 的测试默认不进 stable，先放 `run-device-runtime` 或手工观察。
 - 为测试而新增 production 入口必须先证明必要性，并用 `LA_TESTING` 宏隔离。普通构建不能包含 testing IPC、testing path 或测试自动化接口。

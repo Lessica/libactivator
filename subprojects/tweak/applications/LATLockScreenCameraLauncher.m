@@ -8,8 +8,8 @@
 
 #import "LATLockScreenCameraLauncher.h"
 
-#import "LAActivator+Private.h"
 #import "LATBuiltInListenerRegistry.h"
+#import "LATRuntimeStateSource.h"
 
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
@@ -37,7 +37,8 @@
     }
 
     __weak CSCoverSheetViewController *weakCoverSheetViewController = coverSheetViewController;
-    BOOL screenIsOn = [[LAActivator sharedInstance] la_screenIsOn];
+    LATRuntimeStateSource *runtimeStateSource = LATBuiltInListenerRegistry.runtimeStateSource;
+    BOOL screenIsOn = runtimeStateSource ? runtimeStateSource.screenIsOn : YES;
     dispatch_async(dispatch_get_main_queue(), ^{
         CSCoverSheetViewController *strongCoverSheetViewController = weakCoverSheetViewController;
         if (!strongCoverSheetViewController) {
@@ -45,13 +46,12 @@
             return;
         }
 
-        if (!screenIsOn) {
-            [LAActivator.sharedInstance
-                la_wakeScreenForReason:@"lock screen camera"
-                            completion:^{
-                                [self activateLockScreenCameraIfNeededWithCoverSheetViewController:
-                                          strongCoverSheetViewController];
-                            }];
+        if (!screenIsOn && runtimeStateSource) {
+            [runtimeStateSource wakeScreenForReason:@"lock screen camera"
+                                         completion:^{
+                                             [self activateLockScreenCameraIfNeededWithCoverSheetViewController:
+                                                       strongCoverSheetViewController];
+                                         }];
             return;
         }
 

@@ -8,7 +8,6 @@
 
 #import "LATMediaEventSource.h"
 
-#import "AVSystemController.h"
 #import "LAActivator+Private.h"
 #import "MediaRemote+Private.h"
 

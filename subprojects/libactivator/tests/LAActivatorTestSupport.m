@@ -25,7 +25,6 @@
 #import "LATestRuntimeDeviceSuite.h"
 #import "LATestRuntimeInputSuite.h"
 #import "LATestSpringBoardCoreSuite.h"
-#import "LATestTouchActivitySuite.h"
 
 @implementation LAActivatorTestSupport
 
@@ -105,7 +104,6 @@
     [LATestEventSuite runWithRecorder:recorder];
     [LATestPersistenceSuite runWithRecorder:recorder];
     [LATestResourceSuite runWithRecorder:recorder];
-    [LATestTouchActivitySuite runWithRecorder:recorder];
     [LATestSpringBoardCoreSuite runWithRecorder:recorder activator:activator];
     [LATestDispatchSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInActionRegistrySuite runWithRecorder:recorder activator:activator];

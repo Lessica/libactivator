@@ -21,12 +21,15 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
 };
 
 @interface LATSystemActionCommand : NSObject
+
 @property(nonatomic, copy, readonly) NSString *listenerName;
 @property(nonatomic, copy, readonly) NSString *selectorName;
 @property(nonatomic, assign, readonly) LATSystemActionKind kind;
+
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
                                 kind:(LATSystemActionKind)kind;
+
 @end
 
 NS_ASSUME_NONNULL_END

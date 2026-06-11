@@ -16,16 +16,19 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
 };
 
 @interface LATHardwareActionCommand : NSObject
+
 @property(nonatomic, copy, readonly) NSString *listenerName;
 @property(nonatomic, copy, readonly) NSString *selectorName;
 @property(nonatomic, assign, readonly) LATHardwareActionKind kind;
 @property(nonatomic, assign, readonly) uint32_t page;
 @property(nonatomic, assign, readonly) uint32_t usage;
+
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
                                 page:(uint32_t)page
                                usage:(uint32_t)usage;
 - (instancetype)initWithVibrateListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName;
+
 @end
 
 NS_ASSUME_NONNULL_END

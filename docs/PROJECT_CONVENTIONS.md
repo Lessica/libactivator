@@ -90,14 +90,15 @@
 ## Runtime 规则
 
 - runtime state 应采用事件驱动缓存模型，而不是在热路径反复同步主线程查询 UI/SpringBoard 状态。
+- `libactivator.dylib` 是 dispatch / assignment owner，并只持有 dispatch 所需的 runtime snapshot：当前 mode、锁屏下层 mode、当前 app display identifier、screen-on 状态，以及 listener dispatch gate 所需的触摸条件入口。SpringBoard hook、Darwin notification、runtime reducer、触摸状态机和私有系统能力调用应收敛在 `ActivatorTweak.dylib` 的 acquisition/capability layer；当前这些职责统一由 tweak-side `LATRuntimeStateSource` 承接，再通过 `LAActivator+Private` 向核心提交完整 runtime snapshot 或注册触摸条件 block。不要在 `LAActivator` facade 上新增逐项镜像 acquisition source 的 `la_note...` 转发方法，也不要让 libactivator 直接持有 tweak-side source/reducer/tracker/coordinator。
 - 前台 App、主屏幕、App Switcher、锁屏、screen blank 等状态源应来自 SpringBoard 自身 hook 和已验证信号；不要引入 `BKSApplicationStateMonitor` 这类偏重的全局观察者来观察 SpringBoard 自身。
-- screen blank 的生产信号源只使用 `LAScreenWakeCoordinator` 中的 `com.apple.springboard.hasBlankedScreen` Darwin notification；不要在 tweak 中重复注册该通知，也不要再 hook `SBBacklightController` 的背光动画方法来更新同一状态。
+- screen blank 的生产信号源只使用 tweak-side `LATRuntimeStateSource` 中的 `com.apple.springboard.hasBlankedScreen` Darwin notification；不要在其他 helper 或 event source 中重复注册该通知，也不要再 hook `SBBacklightController` 的背光动画方法来更新同一状态。
 - 当前 runtime mode 语义：锁屏优先；App Switcher 属于 SpringBoard UI；锁屏下的 underneath mode 按底下真实状态；覆盖层原则上按 underneath mode。
-- `_accessibilityFrontMostApplication` 是 SpringBoard 内可用的前台应用来源。display identifier 语义优先使用 `displayIdentifier`，再 fallback 到 `bundleIdentifier`。
-- `requires-no-touch-events` 是 listener-level deferral：触摸活跃时原 event 立即标记 handled，延迟事件冻结 listener name 和 event mode，触摸结束后直接投递给原 listener，不重新跑 blacklist/mode/compat 过滤。
+- `_accessibilityFrontMostApplication` 是 SpringBoard 内可用的前台应用来源，但只能由 tweak-side runtime acquisition source 读取。display identifier 语义优先使用 `displayIdentifier`，再 fallback 到 `bundleIdentifier`。
+- `requires-no-touch-events` 是 listener-level deferral：触摸活跃时原 event 立即标记 handled，延迟事件冻结 listener name 和 event mode，触摸结束后直接投递给原 listener，不重新跑 blacklist/mode/compat 过滤。触摸采集和 drain 状态机属于 tweak-side runtime layer，libactivator dispatch core 只通过已注册的触摸条件 block 查询和排队。
 - `needs-powered-display` 是 listener-level dispatch gate：listener metadata 或 listener callback 声明需要亮屏时，只有当前缓存的 screen-on 状态为真才进入正常 dispatch。亮屏锁屏仍可 dispatch；熄屏状态下跳过该 listener，不由具体 action listener 重复判断。
 - `unlock-to-send` 当前只实现 callback 兼容路径，不实现 passcode submit 或完整主动解锁流程。
-- 需要操作 SpringBoard / CoverSheet UI 层级的 SPI 必须在主队列执行；不能因为服务类 SPI 需要避开主队列，就把 UI 控制器方法也放到后台队列。动态应用中的 `com.apple.camera` 锁屏 special case 只表达“打开锁屏相机”，不表达 toggle 或返回锁屏；熄屏时应通过 `LAActivator` private facade 进入 `LAScreenWakeCoordinator`，由它发送 Power HID 短按并等待 `com.apple.springboard.hasBlankedScreen` 状态变为未 blank 后再提交锁屏相机 UI 切换，不直接调用 `SBBacklightController -turnOnScreenFullyWithBacklightSource:`。
+- 需要操作 SpringBoard / CoverSheet UI 层级的 SPI 必须在主队列执行；不能因为服务类 SPI 需要避开主队列，就把 UI 控制器方法也放到后台队列。动态应用中的 `com.apple.camera` 锁屏 special case 只表达“打开锁屏相机”，不表达 toggle 或返回锁屏；熄屏时应通过 tweak-side `LATRuntimeStateSource` 发送 Power HID 短按，并等待它接收到 screen-on runtime state 后再提交锁屏相机 UI 切换，不直接调用 `SBBacklightController -turnOnScreenFullyWithBacklightSource:`，也不通过 `LAActivator` facade 承接 screen wake command。
 - HID key down/up 事件应使用不同 timestamp 表达短按间隔；投递层仍连续 dispatch down/up，不要同时再用 `dispatch_after` 表达同一段按键时长。
 - `otherListenerDidHandleEvent:` 是全局 handled-edge notification：事件从未处理变成已处理时发送一次，通知除当前处理者以外的已注册 listener；不从当前待分发列表中移除后续 listener。
 - `LAEvent.handled` 表示事件已被 listener 消费，不表示 action 最终执行成功。built-in action listener 收到自己 allowlist 内的合法 listener name 后，应在 runtime 层消费事件；缺少目标状态、私有 SPI 不存在、系统调用失败、metadata 运行时失配等执行失败应记录英文诊断，但不应把原始事件继续泄漏出去。只有 unknown listener name、未注册能力、dispatch 前兼容性过滤失败这类“不属于该 listener 处理范围”的情况才保持 unhandled。

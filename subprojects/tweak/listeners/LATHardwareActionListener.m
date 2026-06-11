@@ -8,10 +8,10 @@
 
 #import "LATHardwareActionListener.h"
 
+#import "LATHIDEventSender.h"
 #import "hardware/LATHardwareActionCommand.h"
-#import "hardware/LATHardwareHIDEventSender.h"
-#import "hardware/LATHardwareVibrator.h"
 
+#import <AudioToolbox/AudioToolbox.h>
 #import <HBLog.h>
 
 static const uint32_t LATHardwareHIDPageConsumer = 0x0C;
@@ -32,8 +32,7 @@ static const uint32_t LATHardwareHIDUsageALKeyboardLayout = 0x1AE;
 static const uint32_t LATHardwareHIDUsageACSearch = 0x221;
 
 @interface LATHardwareActionListener ()
-@property(nonatomic, strong) LATHardwareHIDEventSender *sender;
-@property(nonatomic, strong) LATHardwareVibrator *vibrator;
+@property(nonatomic, strong) LATHIDEventSender *sender;
 @end
 
 @implementation LATHardwareActionListener
@@ -41,8 +40,7 @@ static const uint32_t LATHardwareHIDUsageACSearch = 0x221;
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _sender = [[LATHardwareHIDEventSender alloc] init];
-        _vibrator = [[LATHardwareVibrator alloc] init];
+        _sender = [[LATHIDEventSender alloc] init];
     }
     return self;
 }
@@ -82,10 +80,10 @@ static const uint32_t LATHardwareHIDUsageACSearch = 0x221;
 
     switch (command.kind) {
     case LATHardwareActionKindHID:
-        [self.sender sendCommand:command listenerName:listenerName];
+        [self.sender sendKeyboardUsagePage:command.page usage:command.usage reason:listenerName];
         break;
     case LATHardwareActionKindVibrate:
-        [self.vibrator vibrateForListenerName:listenerName];
+        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
         break;
     }
 }

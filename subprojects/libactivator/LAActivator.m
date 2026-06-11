@@ -20,9 +20,6 @@
 #import "LARemoteListener.h"
 #import "LAResourceManager.h"
 #import "LARuntimeBackend.h"
-#import "LARuntimeStateProvider.h"
-#import "LAScreenWakeCoordinator.h"
-#import "LATouchActivityTracker.h"
 
 #pragma mark - Class Extension
 
@@ -30,14 +27,21 @@
 @property(nonatomic, strong) LARuntimeBackend *backend;
 @property(nonatomic, strong) LAIPCClient *ipcClient;
 @property(nonatomic, strong) LAIPCServer *ipcServer;
-@property(nonatomic, strong) LARuntimeStateProvider *runtimeStateProvider;
-@property(nonatomic, strong) LATouchActivityTracker *touchActivityTracker;
 @property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
 @property(nonatomic, strong) LALegacyPreferenceBridge *legacyPreferenceBridge;
-@property(nonatomic, strong) LAScreenWakeCoordinator *screenWakeCoordinator;
 @property(nonatomic, strong) LADefaultEventDataSource *defaultEventDataSource;
 @property(nonatomic, strong) LARemoteListener *remoteListener;
+@property(nonatomic, strong) dispatch_queue_t runtimeSnapshotQueue;
+@property(nonatomic, copy) NSString *cachedEventMode;
+@property(nonatomic, copy) NSString *cachedEventModeUnderneathLockScreen;
+@property(nonatomic, copy, nullable) NSString *cachedDisplayIdentifier;
+@property(nonatomic, assign) BOOL cachedScreenOn;
+@property(nonatomic, copy, nullable) BOOL (^touchActiveProvider)(void);
+@property(nonatomic, copy, nullable) void (^touchesEndedPerformer)(dispatch_block_t block);
 - (void)la_handleSystemNotificationNamed:(NSString *)darwinName;
+- (BOOL)la_runtimeSnapshotScreenIsOn;
+- (BOOL)la_systemTouchActive;
+- (void)la_performWhenSystemTouchesEnd:(dispatch_block_t)block;
 @end
 
 static NSString *const LAActivatorDarwinAvailableListenersChangedNotification =
@@ -84,18 +88,15 @@ LAActivator *LASharedActivator;
                                                selector:@selector(la_didReceiveMemoryWarning:)
                                                    name:UIApplicationDidReceiveMemoryWarningNotification
                                                  object:nil];
+        _runtimeSnapshotQueue =
+            dispatch_queue_create("libactivator.runtime-snapshot", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+        _cachedEventMode = LAEventModeSpringBoard;
+        _cachedEventModeUnderneathLockScreen = LAEventModeSpringBoard;
+        _cachedScreenOn = YES;
         if (self.runningInsideSpringBoard) {
-            _runtimeStateProvider = [[LARuntimeStateProvider alloc] init];
             _backend = [[LARuntimeBackend alloc] initWithPersistence:[self defaultPersistence]];
             _legacyPreferenceBridge = [[LALegacyPreferenceBridge alloc] initWithBackend:_backend];
-            _touchActivityTracker = [[LATouchActivityTracker alloc] init];
-            _screenWakeCoordinator = [[LAScreenWakeCoordinator alloc] init];
             _defaultEventDataSource = [[LADefaultEventDataSource alloc] init];
-            __weak typeof(self) weakSelf = self;
-            [_runtimeStateProvider setEventModeChangeHandler:^(NSString *eventMode) {
-                [weakSelf la_notifyEventModeChanged:eventMode];
-            }];
-            [_screenWakeCoordinator startObservingScreenStateWithActivator:self];
             [_defaultEventDataSource registerAvailableEventsWithActivator:self];
         } else {
             _ipcClient = [[LAIPCClient alloc] init];
@@ -246,77 +247,47 @@ LAActivator *LASharedActivator;
     notify_post(darwinName.UTF8String);
 }
 
-- (void)la_noteHomeScreenVisible:(BOOL)visible {
+- (void)la_updateRuntimeEventMode:(NSString *)eventMode
+             underneathLockScreen:(NSString *)underneathMode
+                displayIdentifier:(NSString *)displayIdentifier
+                         screenOn:(BOOL)screenOn {
     if (!self.runningInsideSpringBoard) {
         return;
     }
-    [self.runtimeStateProvider noteHomeScreenVisible:visible];
+
+    NSString *effectiveMode = eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;
+    NSString *effectiveUnderneathMode = underneathMode.length > 0 ? underneathMode : LAEventModeSpringBoard;
+    NSString *effectiveDisplayIdentifier = displayIdentifier.length > 0 ? displayIdentifier : nil;
+    __block NSString *previousMode = nil;
+    dispatch_sync(self.runtimeSnapshotQueue, ^{
+        previousMode = [self->_cachedEventMode copy];
+        self->_cachedEventMode = [effectiveMode copy];
+        self->_cachedEventModeUnderneathLockScreen = [effectiveUnderneathMode copy];
+        self->_cachedDisplayIdentifier = [effectiveDisplayIdentifier copy];
+        self->_cachedScreenOn = screenOn;
+    });
+
+    if ([effectiveMode isEqualToString:previousMode]) {
+        return;
+    }
+
+    dispatch_block_t notifyBlock = ^{
+        [self la_notifyEventModeChanged:effectiveMode];
+    };
+    if ([NSThread isMainThread]) {
+        notifyBlock();
+    } else {
+        dispatch_async(dispatch_get_main_queue(), notifyBlock);
+    }
 }
 
-- (void)la_noteHomeScreenVisible:(BOOL)visible source:(NSString *)source {
+- (void)la_setSystemTouchActivityProvider:(BOOL (^)(void))touchActiveProvider
+                    touchesEndedPerformer:(void (^)(dispatch_block_t block))touchesEndedPerformer {
     if (!self.runningInsideSpringBoard) {
         return;
     }
-    [self.runtimeStateProvider noteHomeScreenVisible:visible source:source];
-}
-
-- (void)la_noteSpringBoardInterfaceVisible:(BOOL)visible source:(NSString *)source {
-    if (!self.runningInsideSpringBoard) {
-        return;
-    }
-    [self.runtimeStateProvider noteSpringBoardInterfaceVisible:visible source:source];
-}
-
-- (void)la_noteLockScreenVisible:(BOOL)visible {
-    if (!self.runningInsideSpringBoard) {
-        return;
-    }
-    [self.runtimeStateProvider noteLockScreenVisible:visible];
-}
-
-- (void)la_noteLockScreenVisible:(BOOL)visible source:(NSString *)source {
-    if (!self.runningInsideSpringBoard) {
-        return;
-    }
-    [self.runtimeStateProvider noteLockScreenVisible:visible source:source];
-}
-
-- (void)la_noteScreenBlanked:(BOOL)blanked {
-    if (!self.runningInsideSpringBoard) {
-        return;
-    }
-    [self.runtimeStateProvider noteScreenBlanked:blanked];
-}
-
-- (void)la_noteRuntimeStateMayHaveChanged {
-    if (!self.runningInsideSpringBoard) {
-        return;
-    }
-    [self.runtimeStateProvider noteRuntimeStateMayHaveChanged];
-}
-
-- (void)la_noteSystemTouchEvent:(UIEvent *)event {
-    if (!self.runningInsideSpringBoard) {
-        return;
-    }
-    [self.touchActivityTracker noteTouchEvent:event];
-}
-
-- (BOOL)la_screenIsOn {
-    if (!self.runningInsideSpringBoard) {
-        return YES;
-    }
-    return self.runtimeStateProvider.screenIsOn;
-}
-
-- (BOOL)la_wakeScreenForReason:(NSString *)reason completion:(dispatch_block_t)completion {
-    if (!self.runningInsideSpringBoard) {
-        if (completion) {
-            dispatch_async(dispatch_get_main_queue(), completion);
-        }
-        return completion != nil;
-    }
-    return [self.screenWakeCoordinator wakeScreenForReason:reason completion:completion];
+    self.touchActiveProvider = [touchActiveProvider copy];
+    self.touchesEndedPerformer = [touchesEndedPerformer copy];
 }
 
 #if LA_TESTING
@@ -324,9 +295,60 @@ LAActivator *LASharedActivator;
     if (!self.runningInsideSpringBoard) {
         return @{};
     }
-    return [self.runtimeStateProvider testingDebugDictionary] ?: @{};
+    __block NSString *mode = nil;
+    __block NSString *underneathMode = nil;
+    __block NSString *displayIdentifier = nil;
+    __block BOOL screenOn = YES;
+    dispatch_sync(self.runtimeSnapshotQueue, ^{
+        mode = [self->_cachedEventMode copy];
+        underneathMode = [self->_cachedEventModeUnderneathLockScreen copy];
+        displayIdentifier = [self->_cachedDisplayIdentifier copy];
+        screenOn = self->_cachedScreenOn;
+    });
+    return @{
+        @"Mode" : mode ?: @"",
+        @"UnderneathMode" : underneathMode ?: @"",
+        @"DisplayIdentifier" : displayIdentifier ?: @"",
+        @"ScreenOn" : @(screenOn),
+        @"HomeSources" : @[],
+        @"SpringBoardInterfaceSources" : @[],
+        @"LockSources" : @[],
+        @"LockScreenVisible" : @([mode isEqualToString:LAEventModeLockScreen]),
+        @"SpringBoardInterfaceVisible" : @([mode isEqualToString:LAEventModeSpringBoard]),
+        @"InLockScreen" : @([mode isEqualToString:LAEventModeLockScreen]),
+        @"UILocked" : @([mode isEqualToString:LAEventModeLockScreen]),
+        @"FrontMost" : displayIdentifier ?: @"",
+    };
 }
 #endif
+
+- (BOOL)la_runtimeSnapshotScreenIsOn {
+    if (!self.runningInsideSpringBoard) {
+        return YES;
+    }
+    __block BOOL screenOn = YES;
+    dispatch_sync(self.runtimeSnapshotQueue, ^{
+        screenOn = self->_cachedScreenOn;
+    });
+    return screenOn;
+}
+
+- (BOOL)la_systemTouchActive {
+    BOOL (^provider)(void) = self.touchActiveProvider;
+    return provider ? provider() : NO;
+}
+
+- (void)la_performWhenSystemTouchesEnd:(dispatch_block_t)block {
+    if (!block) {
+        return;
+    }
+    void (^performer)(dispatch_block_t block) = self.touchesEndedPerformer;
+    if (performer) {
+        performer(block);
+        return;
+    }
+    dispatch_async(dispatch_get_main_queue(), block);
+}
 
 #pragma mark - Event Delivery
 
@@ -497,7 +519,7 @@ LAActivator *LASharedActivator;
         if (![self listenerWithName:listenerName isCompatibleWithEventName:event.name]) {
             continue;
         }
-        if ([self listenerWithNameNeedsPoweredDisplay:listenerName] && !self.runtimeStateProvider.screenIsOn) {
+        if ([self listenerWithNameNeedsPoweredDisplay:listenerName] && ![self la_runtimeSnapshotScreenIsOn]) {
             continue;
         }
         [dispatchableNames addObject:listenerName];
@@ -522,7 +544,7 @@ LAActivator *LASharedActivator;
         return;
     }
 
-    BOOL touchActive = allowDeferral && self.touchActivityTracker.touchActive;
+    BOOL touchActive = allowDeferral && [self la_systemTouchActive];
     for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
         id<LAListener> listener = [self listenerForName:listenerName];
         if (touchActive && [self la_listenerWithNameRequiresNoTouchEvents:listenerName]) {
@@ -534,7 +556,7 @@ LAActivator *LASharedActivator;
                 [self la_notifyListenersThatListener:listener handledEvent:event];
             }
             __weak typeof(self) weakSelf = self;
-            [self.touchActivityTracker performWhenTouchesEnd:^{
+            [self la_performWhenSystemTouchesEnd:^{
                 __strong typeof(weakSelf) strongSelf = weakSelf;
                 deferredEvent.handled = NO;
                 [strongSelf la_sendEvent:deferredEvent directlyToListenerWithName:listenerName abort:NO];
@@ -1541,7 +1563,11 @@ LAActivator *LASharedActivator;
         return [self.ipcClient stringValueForMessageName:LAIPCMessageCurrentEventMode userInfo:nil]
                    ?: LAEventModeSpringBoard;
     }
-    return [self.runtimeStateProvider currentEventMode] ?: LAEventModeSpringBoard;
+    __block NSString *eventMode = nil;
+    dispatch_sync(self.runtimeSnapshotQueue, ^{
+        eventMode = [self->_cachedEventMode copy];
+    });
+    return eventMode ?: LAEventModeSpringBoard;
 }
 
 - (NSString *)currentEventModeUnderneathLockScreen {
@@ -1549,7 +1575,11 @@ LAActivator *LASharedActivator;
         return [self.ipcClient stringValueForMessageName:LAIPCMessageCurrentEventModeUnderneathLockScreen userInfo:nil]
                    ?: LAEventModeSpringBoard;
     }
-    return [self.runtimeStateProvider currentEventModeUnderneathLockScreen] ?: LAEventModeSpringBoard;
+    __block NSString *eventMode = nil;
+    dispatch_sync(self.runtimeSnapshotQueue, ^{
+        eventMode = [self->_cachedEventModeUnderneathLockScreen copy];
+    });
+    return eventMode ?: LAEventModeSpringBoard;
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {
@@ -1558,7 +1588,7 @@ LAActivator *LASharedActivator;
                                               userInfo:nil
                                           defaultValue:NO];
     }
-    return [self.runtimeStateProvider supportsUnlockingDeviceToSendEvents];
+    return YES;
 }
 
 #pragma mark - Blacklist
@@ -1569,7 +1599,11 @@ LAActivator *LASharedActivator;
             [self.ipcClient stringValueForMessageName:LAIPCMessageCurrentApplicationDisplayIdentifier userInfo:nil];
         return displayIdentifier.length > 0 ? displayIdentifier : nil;
     }
-    return [self.runtimeStateProvider displayIdentifierForCurrentApplication];
+    __block NSString *displayIdentifier = nil;
+    dispatch_sync(self.runtimeSnapshotQueue, ^{
+        displayIdentifier = [self->_cachedDisplayIdentifier copy];
+    });
+    return displayIdentifier;
 }
 
 - (BOOL)applicationWithDisplayIdentifierIsBlacklisted:(NSString *)displayIdentifier {

@@ -137,9 +137,14 @@ typedef void (^MRMediaRemoteGetNowPlayingInfoCompletion)(CFDictionaryRef informa
 typedef void (^MRMediaRemoteGetNowPlayingApplicationPIDCompletion)(int PID);
 typedef void (^MRMediaRemoteGetNowPlayingApplicationIsPlayingCompletion)(Boolean isPlaying);
 
-FOUNDATION_EXPORT void MRMediaRemoteGetNowPlayingApplicationPID(dispatch_queue_t queue, MRMediaRemoteGetNowPlayingApplicationPIDCompletion completion);
-FOUNDATION_EXPORT void MRMediaRemoteGetNowPlayingInfo(dispatch_queue_t queue, MRMediaRemoteGetNowPlayingInfoCompletion completion);
-FOUNDATION_EXPORT void MRMediaRemoteGetNowPlayingApplicationIsPlaying(dispatch_queue_t queue, MRMediaRemoteGetNowPlayingApplicationIsPlayingCompletion completion);
+FOUNDATION_EXPORT void
+MRMediaRemoteGetNowPlayingApplicationPID(dispatch_queue_t queue,
+                                         MRMediaRemoteGetNowPlayingApplicationPIDCompletion completion);
+FOUNDATION_EXPORT void MRMediaRemoteGetNowPlayingInfo(dispatch_queue_t queue,
+                                                      MRMediaRemoteGetNowPlayingInfoCompletion completion);
+FOUNDATION_EXPORT void
+MRMediaRemoteGetNowPlayingApplicationIsPlaying(dispatch_queue_t queue,
+                                               MRMediaRemoteGetNowPlayingApplicationIsPlayingCompletion completion);
 
 FOUNDATION_EXPORT void MRMediaRemoteKeepAlive();
 FOUNDATION_EXPORT void MRMediaRemoteSetElapsedTime(double time);

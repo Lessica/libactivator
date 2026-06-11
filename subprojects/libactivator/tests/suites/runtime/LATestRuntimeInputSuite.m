@@ -16,61 +16,60 @@
     [recorder beginSuite:@"RuntimeInput"];
 
     [LATestEnvironment cleanRuntimeInputStateWithActivator:activator];
-    [activator la_noteHomeScreenVisible:YES source:@"test.home.a"];
-    [activator la_noteHomeScreenVisible:YES source:@"test.home.b"];
-    NSDictionary *homeAddedState = [activator la_runtimeStateDebugDictionary];
-    NSArray *homeAddedSources = homeAddedState[@"HomeSources"];
-    [recorder
-          expect:[homeAddedSources containsObject:@"test.home.a"] && [homeAddedSources containsObject:@"test.home.b"]
-        caseName:@"home-source-add"
-          reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Home sources were not tracked" activator:activator]];
-
-    [activator la_noteHomeScreenVisible:NO source:@"test.home.a"];
-    NSDictionary *homeRemovedState = [activator la_runtimeStateDebugDictionary];
-    NSArray *homeRemovedSources = homeRemovedState[@"HomeSources"];
-    [recorder expect:![homeRemovedSources containsObject:@"test.home.a"] &&
-                     [homeRemovedSources containsObject:@"test.home.b"]
-            caseName:@"home-source-remove"
-              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Home source removal failed"
+    [activator la_updateRuntimeEventMode:LAEventModeApplication
+                    underneathLockScreen:LAEventModeApplication
+                       displayIdentifier:@"com.apple.Preferences"
+                                screenOn:YES];
+    [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeApplication]
+            caseName:@"foreground-app-mode"
+              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Foreground app did not report application mode"
+                                                           activator:activator]];
+    [recorder expect:[activator.displayIdentifierForCurrentApplication isEqualToString:@"com.apple.Preferences"]
+            caseName:@"foreground-app-display-identifier"
+              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Foreground app display identifier was not cached"
                                                            activator:activator]];
 
-    [activator la_noteHomeScreenVisible:NO];
-    NSDictionary *homeClearedState = [activator la_runtimeStateDebugDictionary];
-    [recorder expect:[homeClearedState[@"HomeSources"] count] == 0
-            caseName:@"home-source-clear"
-              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Home source clear failed" activator:activator]];
-
-    [activator la_noteLockScreenVisible:YES source:@"test.lock.a"];
-    [activator la_noteLockScreenVisible:YES source:@"test.lock.b"];
-    NSDictionary *lockAddedState = [activator la_runtimeStateDebugDictionary];
-    NSArray *lockAddedSources = lockAddedState[@"LockSources"];
-    [recorder
-          expect:[lockAddedSources containsObject:@"test.lock.a"] && [lockAddedSources containsObject:@"test.lock.b"]
-        caseName:@"lock-source-add"
-          reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Lock sources were not tracked" activator:activator]];
-
-    [activator la_noteLockScreenVisible:NO source:@"test.lock.a"];
-    NSDictionary *lockRemovedState = [activator la_runtimeStateDebugDictionary];
-    NSArray *lockRemovedSources = lockRemovedState[@"LockSources"];
-    [recorder expect:![lockRemovedSources containsObject:@"test.lock.a"] &&
-                     [lockRemovedSources containsObject:@"test.lock.b"]
-            caseName:@"lock-source-remove"
-              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Lock source removal failed"
+    [activator la_updateRuntimeEventMode:LAEventModeLockScreen
+                    underneathLockScreen:LAEventModeApplication
+                       displayIdentifier:nil
+                                screenOn:YES];
+    [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeLockScreen] &&
+                     [activator.currentEventModeUnderneathLockScreen isEqualToString:LAEventModeApplication]
+            caseName:@"ui-locked-mode"
+              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"UI lock state did not report lockscreen mode"
+                                                           activator:activator]];
+    [activator la_updateRuntimeEventMode:LAEventModeApplication
+                    underneathLockScreen:LAEventModeApplication
+                       displayIdentifier:@"com.apple.Preferences"
+                                screenOn:YES];
+    [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeApplication]
+            caseName:@"ui-unlocked-underneath-mode"
+              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"UI unlock state did not restore underneath mode"
                                                            activator:activator]];
 
-    [activator la_noteLockScreenVisible:NO];
-    NSDictionary *lockClearedState = [activator la_runtimeStateDebugDictionary];
-    [recorder expect:[lockClearedState[@"LockSources"] count] == 0
-            caseName:@"lock-source-clear"
-              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Lock source clear failed" activator:activator]];
+    [activator la_updateRuntimeEventMode:LAEventModeSpringBoard
+                    underneathLockScreen:LAEventModeSpringBoard
+                       displayIdentifier:nil
+                                screenOn:YES];
+    [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeSpringBoard] &&
+                     activator.displayIdentifierForCurrentApplication == nil
+            caseName:@"foreground-app-clear"
+              reason:[LATestEnvironment
+                         runtimeDebugReasonWithPrefix:@"Cleared foreground app did not restore SpringBoard mode"
+                                            activator:activator]];
 
-    [activator la_noteScreenBlanked:YES];
+    [activator la_updateRuntimeEventMode:LAEventModeLockScreen
+                    underneathLockScreen:LAEventModeSpringBoard
+                       displayIdentifier:nil
+                                screenOn:NO];
     [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeLockScreen]
             caseName:@"screen-blanked-mode"
               reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Blank screen did not report lockscreen mode"
                                                            activator:activator]];
-    [activator la_noteScreenBlanked:NO];
-    [activator la_noteRuntimeStateMayHaveChanged];
+    [activator la_updateRuntimeEventMode:LAEventModeSpringBoard
+                    underneathLockScreen:LAEventModeSpringBoard
+                       displayIdentifier:nil
+                                screenOn:YES];
 
     NSString *eventName = @"libactivator.test.dispatch";
     NSString *unlockingListenerName = @"libactivator.test.dispatch.unlock";
@@ -84,8 +83,10 @@
     [activator registerEventDataSource:dataSource forEventName:eventName];
     [activator registerListener:unlockingListener forName:unlockingListenerName];
     [activator registerListener:lockScreenListener forName:lockScreenListenerName];
-    [activator la_noteHomeScreenVisible:YES];
-    [activator la_noteLockScreenVisible:YES];
+    [activator la_updateRuntimeEventMode:LAEventModeLockScreen
+                    underneathLockScreen:LAEventModeSpringBoard
+                       displayIdentifier:nil
+                                screenOn:YES];
     [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeLockScreen]
         toListenersWithNames:@[ unlockingListenerName, lockScreenListenerName ]];
     [recorder expect:unlockingListener.unlockingCount == 1

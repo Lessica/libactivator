@@ -83,10 +83,10 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 }
 
 + (void)cleanRuntimeInputStateWithActivator:(LAActivator *)activator {
-    [activator la_noteHomeScreenVisible:NO];
-    [activator la_noteLockScreenVisible:NO];
-    [activator la_noteScreenBlanked:NO];
-    [activator la_noteRuntimeStateMayHaveChanged];
+    [activator la_updateRuntimeEventMode:LAEventModeSpringBoard
+                    underneathLockScreen:LAEventModeSpringBoard
+                       displayIdentifier:nil
+                                screenOn:YES];
 }
 
 + (void)removeTestPlist {
@@ -262,15 +262,6 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     __block BOOL attempted = NO;
     NSString *passcodeToUse = [passcode copy] ?: @"";
     [self performOnMainThreadSynchronously:^{
-        if (![LAActivator.sharedInstance la_screenIsOn]) {
-            attempted = [LAActivator.sharedInstance
-                la_wakeScreenForReason:@"test unlock"
-                            completion:^{
-                                [self attemptUnlockOnMainThreadWithPasscode:passcodeToUse fallbackToHomeScreen:YES];
-                            }];
-            return;
-        }
-
         attempted = [self attemptUnlockOnMainThreadWithPasscode:passcodeToUse fallbackToHomeScreen:YES];
     }];
     return attempted;

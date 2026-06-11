@@ -13,6 +13,7 @@
 #import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
 #import "LATPowerStateEventSource.h"
+#import "LATRuntimeStateSource.h"
 
 #import <CaptainHook/CaptainHook.h>
 #import <UIKit/UIKit.h>
@@ -33,6 +34,7 @@ static NSString *const LATRuntimeStateSourceMainSwitcher = @"main-switcher";
 static LATLockStateEventSource *gLockStateEventSource = nil;
 static LATPowerStateEventSource *gPowerStateEventSource = nil;
 static LATMediaEventSource *gMediaEventSource = nil;
+static LATRuntimeStateSource *gRuntimeStateSource = nil;
 
 static Class gCoverSheetViewControllerClass = nil;
 static Class gPosterSwitcherViewControllerClass = nil;
@@ -40,6 +42,8 @@ static Class gDashboardCameraPageViewControllerClass = nil;
 static Class gInCallTransientOverlayViewControllerClass = nil;
 static Class gLockScreenEmergencyCallViewControllerClass = nil;
 static Class gIconControllerClass = nil;
+
+static void LATRefreshForegroundDisplayIdentifier(void) { [gRuntimeStateSource refreshForegroundDisplayIdentifier]; }
 
 static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
     if (gCoverSheetViewControllerClass && [viewController isKindOfClass:gCoverSheetViewControllerClass]) {
@@ -54,10 +58,11 @@ static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
          [viewController isKindOfClass:gInCallTransientOverlayViewControllerClass]) ||
         (gLockScreenEmergencyCallViewControllerClass &&
          [viewController isKindOfClass:gLockScreenEmergencyCallViewControllerClass])) {
-        [LASharedActivator la_noteLockScreenVisible:visible source:NSStringFromClass([viewController class])];
+        [gRuntimeStateSource noteLockScreenVisible:visible source:NSStringFromClass([viewController class])];
     } else if (gIconControllerClass && [viewController isKindOfClass:gIconControllerClass]) {
-        [LASharedActivator la_noteHomeScreenVisible:visible source:NSStringFromClass([viewController class])];
+        [gRuntimeStateSource noteHomeScreenVisible:visible source:NSStringFromClass([viewController class])];
     }
+    LATRefreshForegroundDisplayIdentifier();
 }
 
 @interface SBMainSwitcherViewController : UIViewController
@@ -73,8 +78,9 @@ static void LATUpdateMainSwitcherVisibility(SBMainSwitcherViewController *switch
         if (![switcher respondsToSelector:@selector(isMainSwitcherVisible)]) {
             return;
         }
-        [LASharedActivator la_noteSpringBoardInterfaceVisible:[switcher isMainSwitcherVisible]
-                                                       source:LATRuntimeStateSourceMainSwitcher];
+        [gRuntimeStateSource noteSpringBoardInterfaceVisible:[switcher isMainSwitcherVisible]
+                                                      source:LATRuntimeStateSourceMainSwitcher];
+        LATRefreshForegroundDisplayIdentifier();
     };
     if ([NSThread isMainThread]) {
         updateBlock();
@@ -86,11 +92,12 @@ static void LATUpdateMainSwitcherVisibility(SBMainSwitcherViewController *switch
 static void LATUpdateMainSwitcherCoordinatorVisibility(SBMainSwitcherControllerCoordinator *coordinator) {
     dispatch_block_t updateBlock = ^{
         if (![coordinator respondsToSelector:@selector(isAnySwitcherVisible)]) {
-            [LASharedActivator la_noteRuntimeStateMayHaveChanged];
+            LATRefreshForegroundDisplayIdentifier();
             return;
         }
-        [LASharedActivator la_noteSpringBoardInterfaceVisible:[coordinator isAnySwitcherVisible]
-                                                       source:LATRuntimeStateSourceMainSwitcher];
+        [gRuntimeStateSource noteSpringBoardInterfaceVisible:[coordinator isAnySwitcherVisible]
+                                                      source:LATRuntimeStateSourceMainSwitcher];
+        LATRefreshForegroundDisplayIdentifier();
     };
     if ([NSThread isMainThread]) {
         updateBlock();
@@ -115,12 +122,12 @@ CHOptimizedMethod1(self, void, UIViewController, viewDidDisappear, BOOL, animate
 
 CHOptimizedMethod1(self, void, SBCoverSheetPrimarySlidingViewController, _beginTransitionFromAppeared, BOOL, appeared) {
     CHSuper1(SBCoverSheetPrimarySlidingViewController, _beginTransitionFromAppeared, appeared);
-    [LASharedActivator la_noteLockScreenVisible:YES source:LATRuntimeStateSourceCoverSheetTransition];
+    [gRuntimeStateSource noteLockScreenVisible:YES source:LATRuntimeStateSourceCoverSheetTransition];
 }
 
 CHOptimizedMethod1(self, void, SBCoverSheetPrimarySlidingViewController, _endTransitionToAppeared, BOOL, appeared) {
     CHSuper1(SBCoverSheetPrimarySlidingViewController, _endTransitionToAppeared, appeared);
-    [LASharedActivator la_noteLockScreenVisible:NO source:LATRuntimeStateSourceCoverSheetTransition];
+    [gRuntimeStateSource noteLockScreenVisible:NO source:LATRuntimeStateSourceCoverSheetTransition];
 }
 
 #pragma mark - SBMainSwitcherViewController
@@ -172,26 +179,28 @@ CHOptimizedMethod4(self, id, SBVolumeControl, initWithHUDController, id, hudCont
 
 CHOptimizedMethod1(self, void, SBHIconManager, rootFolderControllerViewWillAppear, id, controller) {
     CHSuper1(SBHIconManager, rootFolderControllerViewWillAppear, controller);
-    [LASharedActivator la_noteHomeScreenVisible:YES source:LATRuntimeStateSourceIconManagerRootFolder];
+    [gRuntimeStateSource noteHomeScreenVisible:YES source:LATRuntimeStateSourceIconManagerRootFolder];
+    LATRefreshForegroundDisplayIdentifier();
 }
 
 CHOptimizedMethod1(self, void, SBHIconManager, rootFolderControllerViewDidDisappear, id, controller) {
     CHSuper1(SBHIconManager, rootFolderControllerViewDidDisappear, controller);
-    [LASharedActivator la_noteHomeScreenVisible:NO source:LATRuntimeStateSourceIconManagerRootFolder];
+    [gRuntimeStateSource noteHomeScreenVisible:NO source:LATRuntimeStateSourceIconManagerRootFolder];
+    LATRefreshForegroundDisplayIdentifier();
 }
 
 #pragma mark - _UISystemGestureWindow
 
 CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, event) {
     CHSuper1(_UISystemGestureWindow, sendEvent, event);
-    [LASharedActivator la_noteSystemTouchEvent:event];
+    [gRuntimeStateSource noteSystemTouchEvent:event];
 }
 
 #pragma mark - SpringBoard
 
 CHOptimizedMethod1(self, void, SpringBoard, applicationDidFinishLaunching, id, application) {
     CHSuper1(SpringBoard, applicationDidFinishLaunching, application);
-    [LASharedActivator la_noteRuntimeStateMayHaveChanged];
+    [gRuntimeStateSource start];
     [LASharedActivator startIPCServerIfNeeded];
     [gLockStateEventSource start];
     [gPowerStateEventSource start];
@@ -246,9 +255,11 @@ static void LATInstallHooks(void) {
         CHHook1(_UISystemGestureWindow, sendEvent);
         CHHook1(SpringBoard, applicationDidFinishLaunching);
 
-        gLockStateEventSource = [[LATLockStateEventSource alloc] init];
+        gRuntimeStateSource = [[LATRuntimeStateSource alloc] initWithActivator:LASharedActivator];
+        gLockStateEventSource = [[LATLockStateEventSource alloc] initWithRuntimeStateSource:gRuntimeStateSource];
         gPowerStateEventSource = [[LATPowerStateEventSource alloc] init];
         gMediaEventSource = [[LATMediaEventSource alloc] init];
+        LATBuiltInListenerRegistry.runtimeStateSource = gRuntimeStateSource;
         LATBuiltInListenerRegistry.mediaEventSource = gMediaEventSource;
     });
 }
