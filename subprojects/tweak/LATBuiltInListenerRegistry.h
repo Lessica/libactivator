@@ -11,6 +11,7 @@
 @class SBRingerControl;
 @class SBVolumeControl;
 @class CSCoverSheetViewController;
+@class LATMediaEventSource;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -18,6 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(class, nonatomic, weak, nullable) SBVolumeControl *volumeControlInstance;
 @property(class, nonatomic, weak, nullable) SBRingerControl *ringerControlInstance;
 @property(class, nonatomic, weak, nullable) CSCoverSheetViewController *coverSheetViewControllerInstance;
+@property(class, nonatomic, weak, nullable) LATMediaEventSource *mediaEventSource;
 + (void)registerWithActivator:(LAActivator *)activator;
 @end
 

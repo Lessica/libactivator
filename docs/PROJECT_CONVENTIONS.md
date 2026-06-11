@@ -83,7 +83,7 @@
 ## CLI 与安装后处理
 
 - `/usr/bin/activator` 是 production compatibility tool，不是测试入口；不得为了端到端测试增加 1.9.13 不存在的子命令。
-- CLI 应复刻 1.9.13 的命令面：`listeners`、`events`、`modes`、`current-mode`、`current-app`、`get <key>`、`set <key> <value>`、`activate <event> [<listener>]`、`send <listener>`、`deactivate <event>`，以及 package maintainer script 内部调用但 usage 不展示的 `postinst`。
+- CLI 应复刻 1.9.13 的命令面：`listeners`、`events`、`modes`、`current-mode`、`current-app`、`get <key>`、`set <key> <value>`、`activate <event> [<listener>]`、`send <listener>`、`deactivate <event>`，以及 package maintainer script 内部调用但 usage 不展示的 `postinst`。当前额外允许 DEBUG-only 便利子命令 `set-all <event> <listener>`，它只展开为三个 legacy assignment key：`springboard`、`application`、`lockscreen`。
 - CLI 的 `get` / `set` 语义通过 libactivator 私有 preference compatibility bridge 进入 SpringBoard authoritative backend；不要在 CLI 内解析或直接写 preference 文件。
 - `postinst` 当前保持 no-op 是有意取舍。1.9.13 的 `activator postinst` 只做安装后兼容清理：在 `kCFCoreFoundationVersionNumber < 1200.0` 时从 `/private/var/mobile/Library/BulletinBoard/SectionInfo.plist` 删除 `com.apple.springboard.notificationcenter.today` 和 `com.apple.springboard.notificationcenter.tomorrow`，删除对应 PushStore 文件，并始终尝试把 `SectionInfo.plist` chown 为 uid/gid `501`。现代 rootless/rootless-era 安装逻辑优先放在 shell maintainer script；只有遇到 shell 不适合表达的安装后操作时，才重新评估是否把逻辑放入 CLI `postinst`。
 

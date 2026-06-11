@@ -56,7 +56,6 @@
     if (self.arguments.count == 4) {
         return [self runCommand:command firstArgument:[self argumentAtIndex:2] secondArgument:[self argumentAtIndex:3]];
     }
-
     [self printUsage];
     return 0;
 }
@@ -131,6 +130,11 @@
     if ([command isEqualToString:@"set"]) {
         return [self runSetCommandWithKey:firstArgument value:secondArgument];
     }
+#if DEBUG
+    if ([command isEqualToString:@"set-all"]) {
+        return [self runSetAllModesCommandWithEventName:firstArgument listenerName:secondArgument];
+    }
+#endif
     if ([command isEqualToString:@"activate"]) {
         if (![self validateListenerName:secondArgument]) {
             return 1;
@@ -158,6 +162,21 @@
     [self.activator _setObject:value forPreference:key];
     return 0;
 }
+
+#if DEBUG
+- (int)runSetAllModesCommandWithEventName:(NSString *)eventName listenerName:(NSString *)listenerName {
+    if (eventName.length == 0 || listenerName.length == 0) {
+        [self printUsage];
+        return 1;
+    }
+
+    for (NSString *eventMode in [self allAssignmentModes]) {
+        NSString *key = [NSString stringWithFormat:@"LAEventListener(%@)-%@", eventMode, eventName];
+        [self.activator _setObject:listenerName forPreference:key];
+    }
+    return 0;
+}
+#endif
 
 - (int)runPostInstallCommand {
     return 0;
@@ -187,6 +206,12 @@
     return index < self.arguments.count ? self.arguments[index] : @"";
 }
 
+#if DEBUG
+- (NSArray<NSString *> *)allAssignmentModes {
+    return @[ LAEventModeSpringBoard, LAEventModeApplication, LAEventModeLockScreen ];
+}
+#endif
+
 - (void)printUsage {
     fprintf(stderr, "Activator version: %ld\n", (long)self.activator.version);
     fputs("Usage:\n", stderr);
@@ -197,6 +222,9 @@
     fputs("\tactivator current-app\n", stderr);
     fputs("\tactivator get <key>\n", stderr);
     fputs("\tactivator set <key> <value>\n", stderr);
+#if DEBUG
+    fputs("\tactivator set-all <event> <listener>\n", stderr);
+#endif
     fputs("\tactivator activate <event> [<listener>]\n", stderr);
     fputs("\tactivator send <listener>\n", stderr);
     fputs("\tactivator deactivate <event>\n", stderr);

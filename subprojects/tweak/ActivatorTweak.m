@@ -11,6 +11,7 @@
 #import "LAActivator+Private.h"
 #import "LATBuiltInListenerRegistry.h"
 #import "LATLockStateEventSource.h"
+#import "LATMediaEventSource.h"
 #import "LATPowerStateEventSource.h"
 
 #import <CaptainHook/CaptainHook.h>
@@ -31,6 +32,7 @@ static NSString *const LATRuntimeStateSourceMainSwitcher = @"main-switcher";
 
 static LATLockStateEventSource *gLockStateEventSource = nil;
 static LATPowerStateEventSource *gPowerStateEventSource = nil;
+static LATMediaEventSource *gMediaEventSource = nil;
 
 static Class gCoverSheetViewControllerClass = nil;
 static Class gPosterSwitcherViewControllerClass = nil;
@@ -193,6 +195,7 @@ CHOptimizedMethod1(self, void, SpringBoard, applicationDidFinishLaunching, id, a
     [LASharedActivator startIPCServerIfNeeded];
     [gLockStateEventSource start];
     [gPowerStateEventSource start];
+    [gMediaEventSource start];
 }
 
 #pragma mark - Hook Installation
@@ -245,10 +248,12 @@ static void LATInstallHooks(void) {
 
         gLockStateEventSource = [[LATLockStateEventSource alloc] init];
         gPowerStateEventSource = [[LATPowerStateEventSource alloc] init];
+        gMediaEventSource = [[LATMediaEventSource alloc] init];
+        LATBuiltInListenerRegistry.mediaEventSource = gMediaEventSource;
     });
 }
 
 __attribute__((constructor)) static void LATweakInitialize(void) {
-    [LATBuiltInListenerRegistry registerWithActivator:[LAActivator sharedInstance]];
     LATInstallHooks();
+    [LATBuiltInListenerRegistry registerWithActivator:[LAActivator sharedInstance]];
 }

@@ -47,13 +47,13 @@ Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使�
 
 建议进入低风险 event source family，而不是继续补零散 action。优先考虑不依赖复杂触摸识别、能通过系统通知或 SpringBoard 状态稳定采集的事件。
 
-当前 `device locked / unlocked` 已实现。`LATLockStateEventSource` 在 SpringBoard tweak 内承载 `com.apple.springboard.lockstate` Darwin notification，使用 `SBLockScreenManager isUILocked` 读取权威锁定状态，并只在锁定状态边沿变化时发送 `libactivator.device.locked` 或 `libactivator.device.unlocked`。adapter 在 `SpringBoard applicationDidFinishLaunching:` 后启动，启动时只 seed 当前锁定状态、不发送事件，避免在 tweak constructor 阶段提前创建 `SBLockScreenManager`；adapter 同时承接原先 `ActivatorTweak.m` 中 lockstate notification 触发 runtime state refresh 的职责，避免 tweak 入口重复注册同一通知。`power connected / disconnected` 也已实现，`LATPowerStateEventSource` 通过 `UIDeviceBatteryStateDidChangeNotification` 采集 `UIDeviceBatteryStateCharging` / `Full` 与 `Unplugged` 的边沿变化，`Unknown` 状态只忽略、不发送事件。
+当前 `device locked / unlocked` 已实现。`LATLockStateEventSource` 在 SpringBoard tweak 内承载 `com.apple.springboard.lockstate` Darwin notification，使用 `SBLockScreenManager isUILocked` 读取权威锁定状态，并只在锁定状态边沿变化时发送 `libactivator.device.locked` 或 `libactivator.device.unlocked`。adapter 在 `SpringBoard applicationDidFinishLaunching:` 后启动，启动时只 seed 当前锁定状态、不发送事件，避免在 tweak constructor 阶段提前创建 `SBLockScreenManager`；adapter 同时承接原先 `ActivatorTweak.m` 中 lockstate notification 触发 runtime state refresh 的职责，避免 tweak 入口重复注册同一通知。`power connected / disconnected` 也已实现，`LATPowerStateEventSource` 通过 `UIDeviceBatteryStateDidChangeNotification` 采集 `UIDeviceBatteryStateCharging` / `Full` 与 `Unplugged` 的边沿变化，`Unknown` 状态只忽略、不发送事件。`headset connected / disconnected` 已实现，`LATMediaEventSource` 监听 MediaRemote route notification、`AVSystemController_ActiveAudioRouteDidChangeNotification`、`AVSystemController_PickableRoutesDidChangeNotification` 和旧版 headset notification，然后使用 `AVSystemController_HeadphoneJackIsConnectedAttribute` 读取有线耳机连接状态；MediaRemote notification 的 object/userInfo 只作为诊断输出并触发一次 AVSystemController 状态重读。同一 source 也承接 `libactivator.audio.launch-playing-app` 所需的 MediaRemote now-playing app identity 查询，让 listener 只保留启动应用职责。
 
 优先候选：
 
 - device locked / unlocked：已实现，信号来源为 `com.apple.springboard.lockstate` + `SBLockScreenManager isUILocked`；仍需在真机 checklist 中覆盖手动锁定、自动锁定、回主屏幕解锁和回 App 解锁路径。
 - power connected / disconnected：已实现，信号来源为 `UIDeviceBatteryStateDidChangeNotification`；仍需在真机 checklist 中覆盖接入电源、断开电源、满电状态下重新接入等路径。
-- headset connected / disconnected：需要确认现代 route change / accessory 通知来源，并区分蓝牙、CarPlay、AirPods 等语义边界。
+- headset connected / disconnected：已实现，信号来源为 MediaRemote route notification 和 `AVSystemController` route/headset notifications；实际状态读取使用 `AVSystemController_HeadphoneJackIsConnectedAttribute`，MediaRemote notification payload 只作为诊断日志；当前语义限定为有线耳机，蓝牙、CarPlay、AirPods 等 route 不触发该事件。
 - Wi-Fi joined / left：需要确认 CaptiveNetwork / SystemConfiguration / Wi-Fi private notification 的现代可用性；不确定时先停在 probe 阶段。
 
 实施边界：

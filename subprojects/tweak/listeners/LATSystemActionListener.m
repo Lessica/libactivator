@@ -9,6 +9,7 @@
 #import "LATSystemActionListener.h"
 
 #import "LATApplicationLauncher.h"
+#import "LATMediaEventSource.h"
 #import "system/LATSystemActionCommand.h"
 #import "system/LATSystemHomeScreenController.h"
 #import "system/LATSystemNowPlayingApplicationLauncher.h"
@@ -33,11 +34,17 @@
 }
 
 - (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher {
+    return [self initWithApplicationLauncher:applicationLauncher mediaEventSource:nil];
+}
+
+- (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher
+                           mediaEventSource:(LATMediaEventSource *)mediaEventSource {
     self = [super init];
     if (self) {
         _volumeHUDPresenter = [[LATSystemVolumeHUDPresenter alloc] init];
         _nowPlayingApplicationLauncher =
-            [[LATSystemNowPlayingApplicationLauncher alloc] initWithApplicationLauncher:applicationLauncher];
+            [[LATSystemNowPlayingApplicationLauncher alloc] initWithApplicationLauncher:applicationLauncher
+                                                                       mediaEventSource:mediaEventSource];
         _ringerStateResetter = [[LATSystemRingerStateResetter alloc] init];
         _ringerMuteController = [[LATSystemRingerMuteController alloc] init];
         _homeScreenController = [[LATSystemHomeScreenController alloc] init];

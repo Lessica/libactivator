@@ -14,6 +14,7 @@
 #import "LATApplicationListenerProvider.h"
 #import "LATBuiltInListenerRegistrant.h"
 #import "LATHardwareActionListener.h"
+#import "LATMediaEventSource.h"
 #import "LATNothingListener.h"
 #import "LATSystemActionListener.h"
 #import "LATTelephonyActionListener.h"
@@ -24,6 +25,7 @@
 static __weak SBVolumeControl *gCapturedVolumeControl = nil;
 static __weak SBRingerControl *gCapturedRingerControl = nil;
 static __weak CSCoverSheetViewController *gCapturedCoverSheetViewController = nil;
+static __weak LATMediaEventSource *gMediaEventSource = nil;
 
 @implementation LATBuiltInListenerRegistry
 
@@ -49,6 +51,14 @@ static __weak CSCoverSheetViewController *gCapturedCoverSheetViewController = ni
 
 + (void)setCoverSheetViewControllerInstance:(CSCoverSheetViewController *)coverSheetViewControllerInstance {
     gCapturedCoverSheetViewController = coverSheetViewControllerInstance;
+}
+
++ (LATMediaEventSource *)mediaEventSource {
+    return gMediaEventSource;
+}
+
++ (void)setMediaEventSource:(LATMediaEventSource *)mediaEventSource {
+    gMediaEventSource = mediaEventSource;
 }
 
 + (NSArray<NSDictionary<NSString *, id> *> *)la_builtInListenerFactoryConfigurations {
@@ -79,7 +89,8 @@ static __weak CSCoverSheetViewController *gCapturedCoverSheetViewController = ni
 + (id<LAListener>)la_createListenerForRegistrantClass:(Class<LATBuiltInListenerRegistrant>)registrantClass
                                   applicationLauncher:(LATApplicationLauncher *)applicationLauncher {
     if (registrantClass == LATSystemActionListener.class && applicationLauncher) {
-        return [[LATSystemActionListener alloc] initWithApplicationLauncher:applicationLauncher];
+        return [[LATSystemActionListener alloc] initWithApplicationLauncher:applicationLauncher
+                                                           mediaEventSource:self.mediaEventSource];
     }
     return [[(Class)registrantClass alloc] init];
 }
