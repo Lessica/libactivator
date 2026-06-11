@@ -25,6 +25,8 @@
 
 @implementation LATDynamicApplicationListenerProvider
 
+#pragma mark - Lifecycle
+
 - (instancetype)initWithActivator:(LAActivator *)activator
                           catalog:(LATApplicationCatalog *)catalog
                          listener:(LATApplicationActionListener *)listener {
@@ -42,6 +44,8 @@
 - (void)dealloc {
     [self.catalog removeObserver:self];
 }
+
+#pragma mark - Public API
 
 - (void)start {
     [self.catalog addObserver:self];
@@ -73,9 +77,11 @@
     }
 }
 
-+ (NSArray *)visibleApplicationDescriptors {
++ (NSArray<LATApplicationDescriptor *> *)visibleApplicationDescriptors {
     return [[[LATApplicationCatalog alloc] init] visibleApplicationDescriptors];
 }
+
+#pragma mark - Application Catalog Notifications
 
 - (void)applicationsDidInstall:(id)applicationIdentifiers {
     HBLogDebug(@"Applications did install: %@", applicationIdentifiers);
@@ -86,6 +92,8 @@
     HBLogDebug(@"Applications did uninstall: %@", applicationIdentifiers);
     [self removeApplicationsWithIdentifiers:[self normalizedApplicationIdentifiers:applicationIdentifiers]];
 }
+
+#pragma mark - Application Registration
 
 - (void)updateInstalledApplicationsWithIdentifiers:(NSArray<NSString *> *)applicationIdentifiers {
     if (![NSThread isMainThread]) {
@@ -117,6 +125,8 @@
         [self unregisterApplicationWithIdentifier:identifier];
     }
 }
+
+#pragma mark - Helpers
 
 - (void)registerDescriptor:(LATApplicationDescriptor *)descriptor {
     if (descriptor.identifier.length == 0) {

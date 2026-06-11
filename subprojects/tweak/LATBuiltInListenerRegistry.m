@@ -23,7 +23,6 @@
 
 static __weak SBVolumeControl *gCapturedVolumeControl = nil;
 static __weak SBRingerControl *gCapturedRingerControl = nil;
-static LATDynamicApplicationListenerProvider *gDynamicApplicationListenerProvider = nil;
 
 @implementation LATBuiltInListenerRegistry
 
@@ -84,6 +83,7 @@ static LATDynamicApplicationListenerProvider *gDynamicApplicationListenerProvide
 
 + (void)registerWithActivator:(LAActivator *)activator {
     static dispatch_once_t sOnceToken;
+    static LATDynamicApplicationListenerProvider *sDynamicApplicationListenerProvider = nil;
     dispatch_once(&sOnceToken, ^{
         LATNothingListener *nothingListener = [[LATNothingListener alloc] init];
         [activator registerListener:nothingListener forName:@"libactivator.system.nothing"];
@@ -110,11 +110,12 @@ static LATDynamicApplicationListenerProvider *gDynamicApplicationListenerProvide
         LATApplicationActionListener *applicationListener =
             [[LATApplicationActionListener alloc] initWithLauncher:applicationLauncher];
         LATApplicationCatalog *applicationCatalog = [[LATApplicationCatalog alloc] init];
-        gDynamicApplicationListenerProvider =
+
+        sDynamicApplicationListenerProvider =
             [[LATDynamicApplicationListenerProvider alloc] initWithActivator:activator
                                                                      catalog:applicationCatalog
                                                                     listener:applicationListener];
-        [gDynamicApplicationListenerProvider start];
+        [sDynamicApplicationListenerProvider start];
     });
 }
 

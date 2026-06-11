@@ -11,6 +11,9 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATApplicationDescriptor : NSObject
+
+#pragma mark - Properties
+
 @property(nonatomic, copy, readonly) NSString *identifier;
 @property(nonatomic, copy, readonly) NSString *displayName;
 @property(nonatomic, copy, readonly) NSString *applicationType;
@@ -18,7 +21,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, copy, readonly) NSArray<NSString *> *recordAppTags;
 @property(nonatomic, copy, readonly) NSArray<NSString *> *bundleAppTags;
 @property(nonatomic, assign, readonly, getter=isLaunchProhibited) BOOL launchProhibited;
-+ (nullable instancetype)descriptorWithApplicationProxy:(id)applicationProxy;
+
+#pragma mark - Factories
+
++ (nullable instancetype)descriptorWithApplicationProxy:(nullable id)applicationProxy;
 + (instancetype)descriptorWithIdentifier:(NSString *)identifier
                              displayName:(NSString *)displayName
                          applicationType:(NSString *)applicationType
@@ -26,11 +32,15 @@ NS_ASSUME_NONNULL_BEGIN
                            recordAppTags:(NSArray<NSString *> *)recordAppTags
                            bundleAppTags:(NSArray<NSString *> *)bundleAppTags
                         launchProhibited:(BOOL)launchProhibited;
+
+#pragma mark - Classification
+
 - (BOOL)isVisibleApplication;
 - (BOOL)isSystemApplication;
 - (BOOL)isUserApplication;
 - (BOOL)isWebClip;
 - (nullable NSString *)applicationGroup;
+
 @end
 
 NS_ASSUME_NONNULL_END

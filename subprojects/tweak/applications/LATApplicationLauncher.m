@@ -21,6 +21,8 @@ extern CFStringRef SBSApplicationLaunchingErrorString(int errorCode);
 
 @implementation LATApplicationLauncher
 
+#pragma mark - Lifecycle
+
 - (instancetype)init {
     self = [super init];
     if (self) {
@@ -31,6 +33,8 @@ extern CFStringRef SBSApplicationLaunchingErrorString(int errorCode);
     }
     return self;
 }
+
+#pragma mark - Public API
 
 - (BOOL)launchApplicationWithIdentifier:(NSString *)identifier {
     if (identifier.length == 0) {
@@ -49,6 +53,8 @@ extern CFStringRef SBSApplicationLaunchingErrorString(int errorCode);
     return launched;
 }
 
+#pragma mark - Internal
+
 - (BOOL)launchApplicationOnQueueWithIdentifier:(NSString *)identifier {
     NSDictionary *launchOptions = @{SBSApplicationLaunchOptionUnlockDeviceKey : @YES};
     int result = SBSLaunchApplicationWithIdentifierAndLaunchOptions((__bridge CFStringRef)identifier,
@@ -59,8 +65,8 @@ extern CFStringRef SBSApplicationLaunchingErrorString(int errorCode);
 
     CFStringRef errorString = SBSApplicationLaunchingErrorString(result);
     NSString *errorDescription = errorString ? (__bridge NSString *)errorString : nil;
-    HBLogError(@"SBSLaunchApplicationWithIdentifierAndLaunchOptions failed for %@: %d %@",
-               identifier ?: @"", result, errorDescription ?: @"");
+    HBLogError(@"SBSLaunchApplicationWithIdentifierAndLaunchOptions failed for %@: %d %@", identifier ?: @"", result,
+               errorDescription ?: @"");
     return NO;
 }
 

@@ -10,6 +10,7 @@
 
 @class LATApplicationActionListener;
 @class LATApplicationCatalog;
+@class LATApplicationDescriptor;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -19,7 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
                          listener:(LATApplicationActionListener *)listener;
 - (void)start;
 - (void)refreshApplications;
-+ (NSArray *)visibleApplicationDescriptors;
++ (NSArray<LATApplicationDescriptor *> *)visibleApplicationDescriptors;
 @end
 
 NS_ASSUME_NONNULL_END

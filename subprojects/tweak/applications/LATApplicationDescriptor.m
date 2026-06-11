@@ -28,6 +28,8 @@
 
 @implementation LATApplicationDescriptor
 
+#pragma mark - Factories
+
 + (instancetype)descriptorWithApplicationProxy:(id)applicationProxy {
     if (!applicationProxy) {
         return nil;
@@ -101,6 +103,8 @@
                            launchProhibited:launchProhibited];
 }
 
+#pragma mark - Lifecycle
+
 - (instancetype)initWithIdentifier:(NSString *)identifier
                        displayName:(NSString *)displayName
                    applicationType:(NSString *)applicationType
@@ -120,6 +124,8 @@
     }
     return self;
 }
+
+#pragma mark - Classification
 
 - (BOOL)isVisibleApplication {
     return !self.launchProhibited && ![self containsHiddenTag] && ![self isWebClip] &&
@@ -151,11 +157,15 @@
     return nil;
 }
 
+#pragma mark - Internal
+
 - (BOOL)containsHiddenTag {
     return [self.class tagArray:self.appTags containsTag:@"hidden"] ||
            [self.class tagArray:self.recordAppTags containsTag:@"hidden"] ||
            [self.class tagArray:self.bundleAppTags containsTag:@"hidden"];
 }
+
+#pragma mark - Helpers
 
 + (NSArray<NSString *> *)normalizedStringArray:(id)value {
     if (![value isKindOfClass:NSArray.class]) {

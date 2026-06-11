@@ -15,8 +15,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface LATApplicationCatalog : NSObject
 - (NSArray<LATApplicationDescriptor *> *)visibleApplicationDescriptors;
 - (nullable LATApplicationDescriptor *)applicationDescriptorForIdentifier:(NSString *)identifier;
-- (void)addObserver:(id)observer;
-- (void)removeObserver:(id)observer;
+- (void)addObserver:(nullable id)observer;
+- (void)removeObserver:(nullable id)observer;
 @end
 
 NS_ASSUME_NONNULL_END
