@@ -197,7 +197,7 @@
     static dispatch_queue_t sQueue;
     static dispatch_once_t sOnceToken;
     dispatch_once(&sOnceToken, ^{
-        sQueue = dispatch_queue_create("com.libactivator.url-actions.open", DISPATCH_QUEUE_SERIAL);
+        sQueue = dispatch_queue_create("libactivator.url-actions.open", DISPATCH_QUEUE_SERIAL);
     });
     return sQueue;
 }

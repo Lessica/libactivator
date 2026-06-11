@@ -35,7 +35,7 @@
     LAActivator *activator = [LAActivator sharedInstance];
     NSString *nothingName = @"libactivator.system.nothing";
     NSString *eventName = LAEventNameVolumeDownPress;
-    NSString *displayIdentifier = @"com.libactivator.tests.client";
+    NSString *displayIdentifier = @"libactivator.tests.client";
     LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     LAEvent *allModesEvent = [LAEvent eventWithName:eventName];
 
@@ -80,8 +80,8 @@
     [self sendSelector:@selector(sendEvent:toListenerWithName:) toActivator:activator nilEventWithObject:nothingName];
     [self sendSelector:@selector(sendAbortToListener:) toActivator:activator nilEventWithObject:nil];
     [self sendSelector:@selector(sendAbortEvent:toListenerWithName:)
-           toActivator:activator
-    nilEventWithObject:nothingName];
+               toActivator:activator
+        nilEventWithObject:nothingName];
     [self sendSelector:@selector(sendDeactivateEventToListeners:) toActivator:activator nilEventWithObject:nil];
     [recorder expect:YES caseName:@"nil-event-dispatch-noop" reason:@"Nil event dispatch should not fail"];
 

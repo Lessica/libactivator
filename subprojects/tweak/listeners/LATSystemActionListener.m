@@ -24,8 +24,8 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 @interface UIApplication (LATSystemRingerPrivate)
 - (void)_updateRingerState:(int)ringerState
-               withVisuals:(BOOL)withVisuals
-  updatePreferenceRegister:(BOOL)updatePreferenceRegister;
+                 withVisuals:(BOOL)withVisuals
+    updatePreferenceRegister:(BOOL)updatePreferenceRegister;
 @end
 
 @interface SpringBoard : UIApplication
@@ -161,7 +161,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     if (self) {
         dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(
             DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL, QOS_CLASS_USER_INITIATED, 0);
-        _queue = dispatch_queue_create("com.libactivator.system-actions.now-playing-launch", attr);
+        _queue = dispatch_queue_create("libactivator.system-actions.now-playing-launch", attr);
     }
     return self;
 }
@@ -361,7 +361,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     static dispatch_queue_t sQueue;
     static dispatch_once_t sOnceToken;
     dispatch_once(&sOnceToken, ^{
-        sQueue = dispatch_queue_create("com.libactivator.system-actions.home-screen", DISPATCH_QUEUE_SERIAL);
+        sQueue = dispatch_queue_create("libactivator.system-actions.home-screen", DISPATCH_QUEUE_SERIAL);
     });
     return sQueue;
 }

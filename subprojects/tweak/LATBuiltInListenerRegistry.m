@@ -8,17 +8,22 @@
 
 #import "LATBuiltInListenerRegistry.h"
 
+#import "LATApplicationActionListener.h"
+#import "LATApplicationCatalog.h"
+#import "LATApplicationLauncher.h"
 #import "LATBuiltInListenerRegistrant.h"
+#import "LATDynamicApplicationListenerProvider.h"
 #import "LATHardwareActionListener.h"
 #import "LATNothingListener.h"
-#import "LATTelephonyActionListener.h"
 #import "LATSystemActionListener.h"
+#import "LATTelephonyActionListener.h"
 #import "LATURLActionListener.h"
 
 #import <HBLog.h>
 
 static __weak SBVolumeControl *gCapturedVolumeControl = nil;
 static __weak SBRingerControl *gCapturedRingerControl = nil;
+static LATDynamicApplicationListenerProvider *gDynamicApplicationListenerProvider = nil;
 
 @implementation LATBuiltInListenerRegistry
 
@@ -100,6 +105,16 @@ static __weak SBRingerControl *gCapturedRingerControl = nil;
                             activator:activator
                 missingMetadataReason:missingMetadataReason];
         }
+
+        LATApplicationLauncher *applicationLauncher = [[LATApplicationLauncher alloc] init];
+        LATApplicationActionListener *applicationListener =
+            [[LATApplicationActionListener alloc] initWithLauncher:applicationLauncher];
+        LATApplicationCatalog *applicationCatalog = [[LATApplicationCatalog alloc] init];
+        gDynamicApplicationListenerProvider =
+            [[LATDynamicApplicationListenerProvider alloc] initWithActivator:activator
+                                                                     catalog:applicationCatalog
+                                                                    listener:applicationListener];
+        [gDynamicApplicationListenerProvider start];
     });
 }
 

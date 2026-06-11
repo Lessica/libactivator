@@ -115,7 +115,7 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
     if (self) {
         dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(
             DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL, QOS_CLASS_USER_INTERACTIVE, 0);
-        _queue = dispatch_queue_create("com.libactivator.hardware-actions.hid", attr);
+        _queue = dispatch_queue_create("libactivator.hardware-actions.hid", attr);
     }
     return self;
 }
@@ -216,8 +216,7 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
     event.handled = YES;
 
     if (![self listenerSelectorMatchesCommand:command activator:activator]) {
-        HBLogWarn(@"Hardware action %@ metadata selector does not match %@", listenerName ?: @"",
-                  command.selectorName);
+        HBLogWarn(@"Hardware action %@ metadata selector does not match %@", listenerName ?: @"", command.selectorName);
         return;
     }
 
@@ -302,7 +301,7 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
                                                               page:LATHardwareHIDPageConsumer
                                                              usage:LATHardwareHIDUsageACSearch],
             [[LATHardwareActionCommand alloc] initWithVibrateListenerName:@"libactivator.system.vibrate"
-                                                              selectorName:@"vibrate"],
+                                                             selectorName:@"vibrate"],
         ];
 
         NSMutableDictionary<NSString *, LATHardwareActionCommand *> *mutableCommands =

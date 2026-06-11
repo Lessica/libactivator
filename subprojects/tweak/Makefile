@@ -7,6 +7,11 @@ TWEAK_NAME := ActivatorTweak
 
 ActivatorTweak_FILES += ActivatorTweak.m
 ActivatorTweak_FILES += LATBuiltInListenerRegistry.m
+ActivatorTweak_FILES += applications/LATApplicationCatalog.m
+ActivatorTweak_FILES += applications/LATApplicationDescriptor.m
+ActivatorTweak_FILES += applications/LATApplicationLauncher.m
+ActivatorTweak_FILES += applications/LATDynamicApplicationListenerProvider.m
+ActivatorTweak_FILES += listeners/LATApplicationActionListener.m
 ActivatorTweak_FILES += listeners/LATHardwareActionListener.m
 ActivatorTweak_FILES += listeners/LATNothingListener.m
 ActivatorTweak_FILES += listeners/LATTelephonyActionListener.m
@@ -15,6 +20,7 @@ ActivatorTweak_FILES += listeners/LATURLActionListener.m
 
 ActivatorTweak_CFLAGS += -fobjc-arc
 ActivatorTweak_CFLAGS += -I.
+ActivatorTweak_CFLAGS += -Iapplications
 ActivatorTweak_CFLAGS += -Ilisteners
 ActivatorTweak_CFLAGS += -Iprivate
 ActivatorTweak_CFLAGS += -I../../include
@@ -26,6 +32,7 @@ endif
 
 ActivatorTweak_FRAMEWORKS += Foundation
 ActivatorTweak_FRAMEWORKS += AudioToolbox
+ActivatorTweak_FRAMEWORKS += CoreServices
 ActivatorTweak_FRAMEWORKS += CoreTelephony
 ActivatorTweak_FRAMEWORKS += UIKit
 
