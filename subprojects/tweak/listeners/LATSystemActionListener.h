@@ -1,5 +1,5 @@
 //
-//  LATMediaActionListener.h
+//  LATSystemActionListener.h
 //  libactivator
 //
 //  Created by Lessica on 6/10/26.
@@ -12,7 +12,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATMediaActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
+@interface LATSystemActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
 @end
 
 NS_ASSUME_NONNULL_END

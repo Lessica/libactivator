@@ -1,5 +1,5 @@
 //
-//  LATestBuiltInRingerActionsSuite.h
+//  LATestBuiltInHardwareActionsSuite.h
 //  libactivator
 //
 //  Created by Lessica on 6/10/26.
@@ -13,9 +13,8 @@ NS_ASSUME_NONNULL_BEGIN
 @class LAActivator;
 @class LATestRecorder;
 
-@interface LATestBuiltInRingerActionsSuite : NSObject
+@interface LATestBuiltInHardwareActionsSuite : NSObject
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 @end
 
 NS_ASSUME_NONNULL_END
-

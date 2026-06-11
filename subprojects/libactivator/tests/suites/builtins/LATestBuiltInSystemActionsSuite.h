@@ -1,16 +1,20 @@
 //
-//  LATestBuiltInPhoneActionsSuite.h
+//  LATestBuiltInSystemActionsSuite.h
 //  libactivator
 //
-//  Created by Lessica on 6/11/26.
+//  Created by Lessica on 6/10/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import <Activator/Activator.h>
 #import <Foundation/Foundation.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
+@class LAActivator;
 @class LATestRecorder;
 
-@interface LATestBuiltInPhoneActionsSuite : NSObject
+@interface LATestBuiltInSystemActionsSuite : NSObject
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 @end
+
+NS_ASSUME_NONNULL_END

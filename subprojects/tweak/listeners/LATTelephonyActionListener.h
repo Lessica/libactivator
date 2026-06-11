@@ -1,8 +1,8 @@
 //
-//  LATRingerActionListener.h
+//  LATTelephonyActionListener.h
 //  libactivator
 //
-//  Created by Lessica on 6/10/26.
+//  Created by Lessica on 6/11/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
@@ -12,7 +12,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATRingerActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
+@interface LATTelephonyActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
 @end
 
 NS_ASSUME_NONNULL_END

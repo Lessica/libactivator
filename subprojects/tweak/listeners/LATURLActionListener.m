@@ -19,7 +19,7 @@
 @implementation LATURLActionListener
 
 + (NSArray<NSString *> *)supportedListenerNames {
-    return @[
+    NSMutableArray<NSString *> *listenerNames = [@[
         @"libactivator.clock.alarm",
         @"libactivator.clock.stopwatch",
         @"libactivator.clock.timer",
@@ -64,10 +64,18 @@
         @"libactivator.settings.vpn",
         @"libactivator.settings.wallpaper",
         @"libactivator.settings.wifi",
-    ];
+    ] mutableCopy];
+    [listenerNames addObjectsFromArray:[[self hardcodedURLStringsByListenerName] allKeys]];
+    return listenerNames;
 }
 
 + (BOOL)listenerNameHasRequiredMetadata:(NSString *)listenerName activator:(LAActivator *)activator {
+    NSString *expectedSelector = [self hardcodedSelectorsByListenerName][listenerName ?: @""];
+    if (expectedSelector.length > 0) {
+        id selector = [activator infoDictionaryValueOfKey:@"selector" forListenerWithName:listenerName];
+        return [selector isKindOfClass:NSString.class] && [selector isEqualToString:expectedSelector];
+    }
+
     id url = [activator infoDictionaryValueOfKey:@"url" forListenerWithName:listenerName];
     if ([url isKindOfClass:NSString.class] && [url length] > 0) {
         return YES;
@@ -104,6 +112,11 @@
         return nil;
     }
 
+    NSString *hardcodedURL = [self.class hardcodedURLStringsByListenerName][listenerName];
+    if (hardcodedURL.length > 0) {
+        return hardcodedURL;
+    }
+
     id url = [activator infoDictionaryValueOfKey:@"url" forListenerWithName:listenerName];
     if ([url isKindOfClass:NSString.class] && [url length] > 0) {
         return url;
@@ -136,6 +149,26 @@
         }
     }
     return selectedURL;
+}
+
++ (NSDictionary<NSString *, NSString *> *)hardcodedURLStringsByListenerName {
+    return @{
+        @"libactivator.phone.favorites" : @"mobilephone-favorites:",
+        @"libactivator.phone.recents" : @"mobilephone-recents:",
+        @"libactivator.phone.contacts" : @"mobilephone-contacts:",
+        @"libactivator.phone.keypad" : @"mobilephone-keypad:",
+        @"libactivator.phone.voicemail" : @"vmshow:",
+    };
+}
+
++ (NSDictionary<NSString *, NSString *> *)hardcodedSelectorsByListenerName {
+    return @{
+        @"libactivator.phone.favorites" : @"showPhoneFavorites",
+        @"libactivator.phone.recents" : @"showPhoneRecents",
+        @"libactivator.phone.contacts" : @"showPhoneContacts",
+        @"libactivator.phone.keypad" : @"showPhoneKeypad",
+        @"libactivator.phone.voicemail" : @"showPhoneVoicemail",
+    };
 }
 
 - (BOOL)openURL:(NSURL *)url listenerName:(NSString *)listenerName {

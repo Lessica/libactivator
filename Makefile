@@ -20,8 +20,14 @@ internal-stage::
 	$(ECHO_NOTHING)scripts/stage-public-headers.sh$(ECHO_END)
 
 ifeq ($(LA_TESTING),1)
+LA_TESTING_MAKE_GOALS := all stage
+ifneq ($(filter commands,$(MAKECMDGOALS)),)
+LA_TESTING_MAKE_GOALS := commands stage
+else ifneq ($(filter clean,$(MAKECMDGOALS)),)
+LA_TESTING_MAKE_GOALS := clean all stage
+endif
 after-stage::
-	$(ECHO_NOTHING)$(MAKE) -C tests THEOS_PROJECT_DIR=$(CURDIR)/tests $(MAKECMDGOALS) LA_TESTING=1$(ECHO_END)
+	$(ECHO_NOTHING)$(MAKE) -C tests THEOS_PROJECT_DIR=$(CURDIR)/tests $(LA_TESTING_MAKE_GOALS) LA_TESTING=1$(ECHO_END)
 endif
 
 include $(THEOS_MAKE_PATH)/package.mk

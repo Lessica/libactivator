@@ -9,10 +9,10 @@
 #import "LATBuiltInListenerRegistry.h"
 
 #import "LATBuiltInListenerRegistrant.h"
-#import "LATMediaActionListener.h"
+#import "LATHardwareActionListener.h"
 #import "LATNothingListener.h"
-#import "LATPhoneActionListener.h"
-#import "LATRingerActionListener.h"
+#import "LATTelephonyActionListener.h"
+#import "LATSystemActionListener.h"
 #import "LATURLActionListener.h"
 
 #import <HBLog.h>
@@ -45,15 +45,15 @@ static __weak SBRingerControl *gCapturedRingerControl = nil;
             @"MissingMetadataReason" : @"URL metadata is missing",
         },
         @{
-            @"RegistrantClass" : LATMediaActionListener.class,
+            @"RegistrantClass" : LATHardwareActionListener.class,
             @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
         },
         @{
-            @"RegistrantClass" : LATRingerActionListener.class,
+            @"RegistrantClass" : LATSystemActionListener.class,
             @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
         },
         @{
-            @"RegistrantClass" : LATPhoneActionListener.class,
+            @"RegistrantClass" : LATTelephonyActionListener.class,
             @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
         },
     ];

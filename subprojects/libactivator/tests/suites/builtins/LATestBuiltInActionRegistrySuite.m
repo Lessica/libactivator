@@ -19,10 +19,12 @@
     NSString *nothingName = @"libactivator.system.nothing";
     NSString *urlName = @"libactivator.clock.timer";
     NSString *urlsName = @"libactivator.settings.bluetooth";
-    NSString *mediaName = @"libactivator.ipod.toggle-playback";
+    NSString *phoneURLName = @"libactivator.phone.recents";
+    NSString *hardwareName = @"libactivator.ipod.toggle-playback";
+    NSString *hardwareSystemName = @"libactivator.system.spotlight";
     NSString *nowPlayingName = @"libactivator.audio.launch-playing-app";
     NSString *ringerName = @"libactivator.audio.reset-ringer-state";
-    NSString *phoneName = @"libactivator.phone.recents";
+    NSString *telephonyName = @"libactivator.phone.answer-call";
     NSString *metadataOnlyName = @"libactivator.ipod.music-controls";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
 
@@ -45,19 +47,27 @@
                      [activator hasListenerWithName:urlsName]
             caseName:@"urls-action-registered"
               reason:@"Built-in URL action with versioned metadata was not registered"];
-    [recorder expect:[[activator availableListenerNames] containsObject:mediaName] &&
-                     [activator hasListenerWithName:mediaName]
-            caseName:@"media-action-registered"
-              reason:@"Built-in media action listener was not registered"];
-    [recorder expect:[activator hasSeenListenerWithName:mediaName]
-            caseName:@"media-action-seen"
-              reason:@"Built-in media action listener was not recorded as seen"];
+    [recorder expect:[[activator availableListenerNames] containsObject:phoneURLName] &&
+                     [activator hasListenerWithName:phoneURLName]
+            caseName:@"phone-url-action-registered"
+              reason:@"Built-in Phone tab URL action listener was not registered"];
+    [recorder expect:[[activator availableListenerNames] containsObject:hardwareName] &&
+                     [activator hasListenerWithName:hardwareName]
+            caseName:@"hardware-action-registered"
+              reason:@"Built-in hardware action listener was not registered"];
+    [recorder expect:[activator hasSeenListenerWithName:hardwareName]
+            caseName:@"hardware-action-seen"
+              reason:@"Built-in hardware action listener was not recorded as seen"];
+    [recorder expect:[[activator availableListenerNames] containsObject:hardwareSystemName] &&
+                     [activator hasListenerWithName:hardwareSystemName]
+            caseName:@"hardware-system-action-registered"
+              reason:@"Built-in HID-backed system action listener was not registered"];
     [recorder expect:[[activator availableListenerNames] containsObject:nowPlayingName] &&
                      [activator hasListenerWithName:nowPlayingName]
-            caseName:@"media-now-playing-action-registered"
+            caseName:@"system-now-playing-action-registered"
               reason:@"Built-in now-playing application action listener was not registered"];
     [recorder expect:[activator hasSeenListenerWithName:nowPlayingName]
-            caseName:@"media-now-playing-action-seen"
+            caseName:@"system-now-playing-action-seen"
               reason:@"Built-in now-playing application action listener was not recorded as seen"];
     [recorder expect:[[activator availableListenerNames] containsObject:ringerName] &&
                      [activator hasListenerWithName:ringerName]
@@ -66,13 +76,13 @@
     [recorder expect:[activator hasSeenListenerWithName:ringerName]
             caseName:@"ringer-action-seen"
               reason:@"Built-in ringer action listener was not recorded as seen"];
-    [recorder expect:[[activator availableListenerNames] containsObject:phoneName] &&
-                     [activator hasListenerWithName:phoneName]
-            caseName:@"phone-action-registered"
-              reason:@"Built-in phone action listener was not registered"];
-    [recorder expect:[activator hasSeenListenerWithName:phoneName]
-            caseName:@"phone-action-seen"
-              reason:@"Built-in phone action listener was not recorded as seen"];
+    [recorder expect:[[activator availableListenerNames] containsObject:telephonyName] &&
+                     [activator hasListenerWithName:telephonyName]
+            caseName:@"telephony-action-registered"
+              reason:@"Built-in telephony action listener was not registered"];
+    [recorder expect:[activator hasSeenListenerWithName:telephonyName]
+            caseName:@"telephony-action-seen"
+              reason:@"Built-in telephony action listener was not recorded as seen"];
     [recorder expect:![activator hasListenerWithName:metadataOnlyName]
             caseName:@"metadata-only-not-registered"
               reason:@"Staged metadata registered a listener without an implementation"];

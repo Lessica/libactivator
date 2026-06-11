@@ -24,28 +24,41 @@
         return;
     }
 
+    NSSet<NSString *> *hardcodedPhoneURLNames = [NSSet setWithArray:@[
+        @"libactivator.phone.favorites",
+        @"libactivator.phone.recents",
+        @"libactivator.phone.contacts",
+        @"libactivator.phone.keypad",
+        @"libactivator.phone.voicemail",
+    ]];
     NSSet<NSString *> *supportedNames = [NSSet setWithArray:[urlActionClass supportedListenerNames]];
-    [recorder expect:supportedNames.count == 44
+    [recorder expect:supportedNames.count == 49
             caseName:@"url-action-allowlist-count"
               reason:@"URL action allowlist did not match the expected count"];
 
     BOOL allSupportedNamesRegistered = YES;
-    BOOL allSupportedNamesHaveURLMetadata = YES;
+    BOOL allSupportedNamesHaveRequiredMetadata = YES;
     for (NSString *listenerName in supportedNames) {
         allSupportedNamesRegistered = allSupportedNamesRegistered && [activator hasListenerWithName:listenerName];
 
-        id url = [activator infoDictionaryValueOfKey:@"url" forListenerWithName:listenerName];
-        id urls = [activator infoDictionaryValueOfKey:@"urls" forListenerWithName:listenerName];
-        BOOL hasURL = [url isKindOfClass:NSString.class] && [url length] > 0;
-        BOOL hasURLs = [urls isKindOfClass:NSArray.class] && [urls count] > 0;
-        allSupportedNamesHaveURLMetadata = allSupportedNamesHaveURLMetadata && (hasURL || hasURLs);
+        if ([hardcodedPhoneURLNames containsObject:listenerName]) {
+            id selector = [activator infoDictionaryValueOfKey:@"selector" forListenerWithName:listenerName];
+            allSupportedNamesHaveRequiredMetadata =
+                allSupportedNamesHaveRequiredMetadata && [selector isKindOfClass:NSString.class] && [selector length] > 0;
+        } else {
+            id url = [activator infoDictionaryValueOfKey:@"url" forListenerWithName:listenerName];
+            id urls = [activator infoDictionaryValueOfKey:@"urls" forListenerWithName:listenerName];
+            BOOL hasURL = [url isKindOfClass:NSString.class] && [url length] > 0;
+            BOOL hasURLs = [urls isKindOfClass:NSArray.class] && [urls count] > 0;
+            allSupportedNamesHaveRequiredMetadata = allSupportedNamesHaveRequiredMetadata && (hasURL || hasURLs);
+        }
     }
     [recorder expect:allSupportedNamesRegistered
             caseName:@"url-action-supported-names-registered"
               reason:@"At least one supported URL action was not registered"];
-    [recorder expect:allSupportedNamesHaveURLMetadata
-            caseName:@"url-action-supported-names-have-metadata"
-              reason:@"At least one supported URL action has no url or urls metadata"];
+    [recorder expect:allSupportedNamesHaveRequiredMetadata
+            caseName:@"url-action-supported-names-have-required-metadata"
+              reason:@"At least one supported URL action has no required metadata"];
 
     id timerURL = [activator infoDictionaryValueOfKey:@"url" forListenerWithName:@"libactivator.clock.timer"];
     [recorder expect:[timerURL isEqual:@"clock-timer:default"]
@@ -58,6 +71,11 @@
           expect:[bluetoothURLs isKindOfClass:NSArray.class] && [bluetoothURLs containsObject:@"prefs:root=Bluetooth"]
         caseName:@"url-action-representative-versioned-url-metadata"
           reason:@"Representative versioned URL action metadata did not match bundled resources"];
+
+    [recorder expect:[supportedNames containsObject:@"libactivator.phone.recents"] &&
+                     [activator hasListenerWithName:@"libactivator.phone.recents"]
+            caseName:@"url-action-phone-tab-registered"
+              reason:@"Phone tab URL action was not registered by LATURLActionListener"];
 
     [recorder expect:![activator hasListenerWithName:@"libactivator.settings.brightness"]
             caseName:@"url-action-obsolete-name-not-registered"
