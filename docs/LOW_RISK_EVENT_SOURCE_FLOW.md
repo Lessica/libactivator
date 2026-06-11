@@ -9,7 +9,7 @@ sequenceDiagram
     participant Client as LAActivator client facade
     participant IPC as CPDistributedMessagingCenter
     participant Server as SpringBoard LAIPCServer
-    participant Backend as LARuntimeBackend
+    participant Backend as LAServerBackend
     participant Tweak as ActivatorTweak
     participant Source as LATLockStateEventSource
     participant Runtime as LATRuntimeStateSource

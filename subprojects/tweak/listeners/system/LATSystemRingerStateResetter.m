@@ -13,7 +13,7 @@
 
 extern int BKSHIDServicesGetRingerState(void);
 
-@interface UIApplication (RingerPrivate)
+@interface UIApplication (RingerStateResetter)
 - (void)_updateRingerState:(int)ringerState
                  withVisuals:(BOOL)withVisuals
     updatePreferenceRegister:(BOOL)updatePreferenceRegister;

@@ -45,7 +45,7 @@
 
     LATestCountingPersistence *countingPersistence =
         [[LATestCountingPersistence alloc] initWithFilePath:@"libactivator-counting-tests.plist"];
-    LARuntimeBackend *backend = [[LARuntimeBackend alloc] initWithPersistence:countingPersistence];
+    LAServerBackend *backend = [[LAServerBackend alloc] initWithPersistence:countingPersistence];
     LAEvent *event = [LAEvent eventWithName:@"libactivator.test.persistence" mode:LAEventModeSpringBoard];
     [backend setCurrentProfileNameIfChanged:@"Testing"];
     [backend assignEvent:event toListenersWithNames:@[ @"libactivator.test.listener.one" ]];

@@ -1,19 +1,19 @@
 //
-//  LARuntimeBackend.m
+//  LAServerBackend.m
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LARuntimeBackend.h"
+#import "LAServerBackend.h"
 
 #import "LAPersistence.h"
 
 #import <HBLog.h>
 #import <dispatch/dispatch.h>
 
-static const void *LARuntimeBackendStateQueueKey = &LARuntimeBackendStateQueueKey;
+static const void *LAServerBackendStateQueueKey = &LAServerBackendStateQueueKey;
 
 static NSString *const LAActivatorDefaultProfileName = @"Default";
 static NSString *const LAActivatorSchemaVersionKey = @"SchemaVersion";
@@ -24,7 +24,7 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
 static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
-@interface LARuntimeBackend ()
+@interface LAServerBackend ()
 @property(nonatomic, strong) NSMutableDictionary *eventDataSources;
 @property(nonatomic, strong) NSMutableDictionary *listeners;
 @property(nonatomic, strong) NSMutableDictionary *profiles;
@@ -40,7 +40,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 @property(nonatomic, assign) CFRunLoopObserverRef persistentSaveObserver;
 @end
 
-@implementation LARuntimeBackend
+@implementation LAServerBackend
 
 #pragma mark - Lifecycle
 
@@ -55,7 +55,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         _seenListenerNames = [[NSMutableSet alloc] init];
         _legacyPreferences = [[NSMutableDictionary alloc] init];
         _stateQueue = dispatch_queue_create("libactivator.state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
-        dispatch_queue_set_specific(_stateQueue, LARuntimeBackendStateQueueKey, (void *)LARuntimeBackendStateQueueKey,
+        dispatch_queue_set_specific(_stateQueue, LAServerBackendStateQueueKey, (void *)LAServerBackendStateQueueKey,
                                     NULL);
         [self resetRuntimeState];
         [self loadPersistentState];
@@ -184,7 +184,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 }
 
 - (BOOL)isRunningOnStateQueue {
-    return dispatch_get_specific(LARuntimeBackendStateQueueKey) == LARuntimeBackendStateQueueKey;
+    return dispatch_get_specific(LAServerBackendStateQueueKey) == LAServerBackendStateQueueKey;
 }
 
 - (void)installPersistentSaveObserverIfNeeded {
@@ -262,7 +262,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
                     if (![mode isKindOfClass:NSString.class]) {
                         continue;
                     }
-                    NSArray *listenerNames = [LARuntimeBackend normalizedStringArray:modes[mode]];
+                    NSArray *listenerNames = [LAServerBackend normalizedStringArray:modes[mode]];
                     if (listenerNames.count > 0) {
                         loadedModes[mode] = listenerNames;
                     }
@@ -289,8 +289,8 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     }
 
     NSArray *blacklistedDisplayIdentifiers =
-        [LARuntimeBackend normalizedStringArray:dictionary[LAActivatorBlacklistedDisplayIdentifiersKey]];
-    NSArray *seenListenerNames = [LARuntimeBackend normalizedStringArray:dictionary[LAActivatorSeenListenerNamesKey]];
+        [LAServerBackend normalizedStringArray:dictionary[LAActivatorBlacklistedDisplayIdentifiersKey]];
+    NSArray *seenListenerNames = [LAServerBackend normalizedStringArray:dictionary[LAActivatorSeenListenerNamesKey]];
     NSDictionary *legacyPreferences = dictionary[LAActivatorLegacyPreferencesKey];
     self.profiles = loadedProfiles;
     self.blacklistedDisplayIdentifiers = [NSMutableSet setWithArray:blacklistedDisplayIdentifiers];
@@ -457,7 +457,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     }
 
     NSString *normalizedMode = mode ?: @"";
-    NSArray *normalizedNames = [LARuntimeBackend normalizedStringArray:listenerNames];
+    NSArray *normalizedNames = [LAServerBackend normalizedStringArray:listenerNames];
     __block BOOL changed = NO;
     dispatch_sync(self.stateQueue, ^{
         NSMutableDictionary *assignments = [self assignmentsForCurrentProfile];
@@ -506,7 +506,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         NSMutableArray *listenerNames = [eventAssignments[mode] mutableCopy] ?: [[NSMutableArray alloc] init];
         if (![listenerNames containsObject:listenerName]) {
             [listenerNames addObject:listenerName];
-            eventAssignments[mode] = [LARuntimeBackend normalizedStringArray:listenerNames];
+            eventAssignments[mode] = [LAServerBackend normalizedStringArray:listenerNames];
             changed = YES;
             [self savePersistentState];
         }
@@ -531,7 +531,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
         [listenerNames removeObject:listenerName];
         if (listenerNames.count > 0) {
-            eventAssignments[mode] = [LARuntimeBackend normalizedStringArray:listenerNames];
+            eventAssignments[mode] = [LAServerBackend normalizedStringArray:listenerNames];
         } else {
             [eventAssignments removeObjectForKey:mode];
             if (eventAssignments.count == 0) {

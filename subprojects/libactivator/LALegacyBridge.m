@@ -1,26 +1,26 @@
 //
-//  LALegacyPreferenceBridge.m
+//  LALegacyBridge.m
 //  libactivator
 //
 //  Created by Lessica on 6/10/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LALegacyPreferenceBridge.h"
+#import "LALegacyBridge.h"
 
-#import "LARuntimeBackend.h"
+#import "LAServerBackend.h"
 
 static NSString *const LALegacyAssignmentPrefix = @"LAEventListener(";
 static NSString *const LALegacyBlacklistPrefix = @"LABlacklisted-";
 static NSString *const LALegacyHasSeenPrefix = @"LAHasSeenListener-";
 
-@interface LALegacyPreferenceBridge ()
-@property(nonatomic, strong) LARuntimeBackend *backend;
+@interface LALegacyBridge ()
+@property(nonatomic, strong) LAServerBackend *backend;
 @end
 
-@implementation LALegacyPreferenceBridge
+@implementation LALegacyBridge
 
-- (instancetype)initWithBackend:(LARuntimeBackend *)backend {
+- (instancetype)initWithBackend:(LAServerBackend *)backend {
     self = [super init];
     if (self) {
         _backend = backend;

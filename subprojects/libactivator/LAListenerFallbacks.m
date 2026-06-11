@@ -10,7 +10,7 @@
 
 #import "LAResourceManager.h"
 
-@implementation NSObject (LAListener)
+@implementation NSObject (ListenerFallbacks)
 
 - (void)activator:(LAActivator *)activator didChangeToEventMode:(NSString *)eventMode {
 }

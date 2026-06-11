@@ -22,7 +22,7 @@ static const uint32_t LATRuntimeStateHIDPageConsumer = 0x0C;
 static const uint32_t LATRuntimeStateHIDUsagePower = 0x30;
 static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 
-@interface UIApplication (LATRuntimeStateSourceSpringBoard)
+@interface UIApplication (RuntimeStateSource)
 - (id)_accessibilityFrontMostApplication;
 @end
 
@@ -66,8 +66,8 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
         _homeScreenVisibilitySources = [[NSMutableSet alloc] init];
         _springBoardInterfaceVisibilitySources = [[NSMutableSet alloc] init];
         _lockScreenVisibilitySources = [[NSMutableSet alloc] init];
-        _stateQueue = dispatch_queue_create("libactivator.tweak.runtime-state",
-                                            DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+        _stateQueue =
+            dispatch_queue_create("libactivator.tweak.runtime-state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _cachedScreenOn = YES;
         _cachedEventMode = LAEventModeSpringBoard;
         _cachedEventModeUnderneathLockScreen = LAEventModeSpringBoard;
@@ -394,8 +394,8 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
     dispatch_async(dispatch_get_main_queue(), ^{
         [self.activator la_updateRuntimeEventMode:eventMode ?: LAEventModeSpringBoard
                              underneathLockScreen:underneathMode ?: LAEventModeSpringBoard
-                                 displayIdentifier:displayIdentifier
-                                          screenOn:screenOn];
+                                displayIdentifier:displayIdentifier
+                                         screenOn:screenOn];
     });
 }
 
@@ -406,8 +406,8 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 
     self.wakeRequestInFlight = YES;
     if (![self.hidEventSender sendKeyboardUsagePage:LATRuntimeStateHIDPageConsumer
-                                             usage:LATRuntimeStateHIDUsagePower
-                                            reason:reason]) {
+                                              usage:LATRuntimeStateHIDUsagePower
+                                             reason:reason]) {
         [self resetWakeRequest];
         [self.pendingScreenWakeCompletions removeAllObjects];
         HBLogWarn(@"Unable to press power button for screen wake: %@", reason ?: @"");

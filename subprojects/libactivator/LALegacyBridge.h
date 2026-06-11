@@ -1,5 +1,5 @@
 //
-//  LALegacyPreferenceBridge.h
+//  LALegacyBridge.h
 //  libactivator
 //
 //  Created by Lessica on 6/10/26.
@@ -10,14 +10,14 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class LARuntimeBackend;
+@class LAServerBackend;
 
 __attribute__((visibility("hidden")))
-@interface LALegacyPreferenceBridge : NSObject
+@interface LALegacyBridge : NSObject
 
 #pragma mark - Lifecycle
 
-- (instancetype)initWithBackend:(LARuntimeBackend *)backend;
+- (instancetype)initWithBackend:(LAServerBackend *)backend;
 
 #pragma mark - Preference Bridge
 

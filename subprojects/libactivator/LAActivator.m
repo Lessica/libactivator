@@ -14,34 +14,26 @@
 #import "LAActivator+Private.h"
 #import "LADefaultEventDataSource.h"
 #import "LAIPC.h"
-#import "LALegacyPreferenceBridge.h"
+#import "LALegacyBridge.h"
 #import "LAListenerMetadataCache.h"
 #import "LAPersistence.h"
 #import "LARemoteListener.h"
 #import "LAResourceManager.h"
-#import "LARuntimeBackend.h"
+#import "LARuntimeContext.h"
+#import "LAServerBackend.h"
 
 #pragma mark - Class Extension
 
 @interface LAActivator ()
-@property(nonatomic, strong) LARuntimeBackend *backend;
+@property(nonatomic, strong) LAServerBackend *backend;
 @property(nonatomic, strong) LAIPCClient *ipcClient;
 @property(nonatomic, strong) LAIPCServer *ipcServer;
 @property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
-@property(nonatomic, strong) LALegacyPreferenceBridge *legacyPreferenceBridge;
+@property(nonatomic, strong) LALegacyBridge *legacyPreferenceBridge;
 @property(nonatomic, strong) LADefaultEventDataSource *defaultEventDataSource;
 @property(nonatomic, strong) LARemoteListener *remoteListener;
-@property(nonatomic, strong) dispatch_queue_t runtimeSnapshotQueue;
-@property(nonatomic, copy) NSString *cachedEventMode;
-@property(nonatomic, copy) NSString *cachedEventModeUnderneathLockScreen;
-@property(nonatomic, copy, nullable) NSString *cachedDisplayIdentifier;
-@property(nonatomic, assign) BOOL cachedScreenOn;
-@property(nonatomic, copy, nullable) BOOL (^touchActiveProvider)(void);
-@property(nonatomic, copy, nullable) void (^touchesEndedPerformer)(dispatch_block_t block);
+@property(nonatomic, strong) LARuntimeContext *runtimeContext;
 - (void)la_handleSystemNotificationNamed:(NSString *)darwinName;
-- (BOOL)la_runtimeSnapshotScreenIsOn;
-- (BOOL)la_systemTouchActive;
-- (void)la_performWhenSystemTouchesEnd:(dispatch_block_t)block;
 @end
 
 static NSString *const LAActivatorDarwinAvailableListenersChangedNotification =
@@ -88,14 +80,10 @@ LAActivator *LASharedActivator;
                                                selector:@selector(la_didReceiveMemoryWarning:)
                                                    name:UIApplicationDidReceiveMemoryWarningNotification
                                                  object:nil];
-        _runtimeSnapshotQueue =
-            dispatch_queue_create("libactivator.runtime-snapshot", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
-        _cachedEventMode = LAEventModeSpringBoard;
-        _cachedEventModeUnderneathLockScreen = LAEventModeSpringBoard;
-        _cachedScreenOn = YES;
+        _runtimeContext = [[LARuntimeContext alloc] init];
         if (self.runningInsideSpringBoard) {
-            _backend = [[LARuntimeBackend alloc] initWithPersistence:[self defaultPersistence]];
-            _legacyPreferenceBridge = [[LALegacyPreferenceBridge alloc] initWithBackend:_backend];
+            _backend = [[LAServerBackend alloc] initWithPersistence:[self defaultPersistence]];
+            _legacyPreferenceBridge = [[LALegacyBridge alloc] initWithBackend:_backend];
             _defaultEventDataSource = [[LADefaultEventDataSource alloc] init];
             [_defaultEventDataSource registerAvailableEventsWithActivator:self];
         } else {
@@ -255,24 +243,16 @@ LAActivator *LASharedActivator;
         return;
     }
 
-    NSString *effectiveMode = eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;
-    NSString *effectiveUnderneathMode = underneathMode.length > 0 ? underneathMode : LAEventModeSpringBoard;
-    NSString *effectiveDisplayIdentifier = displayIdentifier.length > 0 ? displayIdentifier : nil;
-    __block NSString *previousMode = nil;
-    dispatch_sync(self.runtimeSnapshotQueue, ^{
-        previousMode = [self->_cachedEventMode copy];
-        self->_cachedEventMode = [effectiveMode copy];
-        self->_cachedEventModeUnderneathLockScreen = [effectiveUnderneathMode copy];
-        self->_cachedDisplayIdentifier = [effectiveDisplayIdentifier copy];
-        self->_cachedScreenOn = screenOn;
-    });
-
-    if ([effectiveMode isEqualToString:previousMode]) {
+    NSString *changedEventMode = [self.runtimeContext updateEventMode:eventMode
+                                                 underneathLockScreen:underneathMode
+                                                    displayIdentifier:displayIdentifier
+                                                             screenOn:screenOn];
+    if (changedEventMode.length == 0) {
         return;
     }
 
     dispatch_block_t notifyBlock = ^{
-        [self la_notifyEventModeChanged:effectiveMode];
+        [self la_notifyEventModeChanged:changedEventMode];
     };
     if ([NSThread isMainThread]) {
         notifyBlock();
@@ -286,8 +266,7 @@ LAActivator *LASharedActivator;
     if (!self.runningInsideSpringBoard) {
         return;
     }
-    self.touchActiveProvider = [touchActiveProvider copy];
-    self.touchesEndedPerformer = [touchesEndedPerformer copy];
+    [self.runtimeContext setTouchActivityProvider:touchActiveProvider touchesEndedPerformer:touchesEndedPerformer];
 }
 
 #if LA_TESTING
@@ -295,60 +274,9 @@ LAActivator *LASharedActivator;
     if (!self.runningInsideSpringBoard) {
         return @{};
     }
-    __block NSString *mode = nil;
-    __block NSString *underneathMode = nil;
-    __block NSString *displayIdentifier = nil;
-    __block BOOL screenOn = YES;
-    dispatch_sync(self.runtimeSnapshotQueue, ^{
-        mode = [self->_cachedEventMode copy];
-        underneathMode = [self->_cachedEventModeUnderneathLockScreen copy];
-        displayIdentifier = [self->_cachedDisplayIdentifier copy];
-        screenOn = self->_cachedScreenOn;
-    });
-    return @{
-        @"Mode" : mode ?: @"",
-        @"UnderneathMode" : underneathMode ?: @"",
-        @"DisplayIdentifier" : displayIdentifier ?: @"",
-        @"ScreenOn" : @(screenOn),
-        @"HomeSources" : @[],
-        @"SpringBoardInterfaceSources" : @[],
-        @"LockSources" : @[],
-        @"LockScreenVisible" : @([mode isEqualToString:LAEventModeLockScreen]),
-        @"SpringBoardInterfaceVisible" : @([mode isEqualToString:LAEventModeSpringBoard]),
-        @"InLockScreen" : @([mode isEqualToString:LAEventModeLockScreen]),
-        @"UILocked" : @([mode isEqualToString:LAEventModeLockScreen]),
-        @"FrontMost" : displayIdentifier ?: @"",
-    };
+    return [self.runtimeContext testingDebugDictionary];
 }
 #endif
-
-- (BOOL)la_runtimeSnapshotScreenIsOn {
-    if (!self.runningInsideSpringBoard) {
-        return YES;
-    }
-    __block BOOL screenOn = YES;
-    dispatch_sync(self.runtimeSnapshotQueue, ^{
-        screenOn = self->_cachedScreenOn;
-    });
-    return screenOn;
-}
-
-- (BOOL)la_systemTouchActive {
-    BOOL (^provider)(void) = self.touchActiveProvider;
-    return provider ? provider() : NO;
-}
-
-- (void)la_performWhenSystemTouchesEnd:(dispatch_block_t)block {
-    if (!block) {
-        return;
-    }
-    void (^performer)(dispatch_block_t block) = self.touchesEndedPerformer;
-    if (performer) {
-        performer(block);
-        return;
-    }
-    dispatch_async(dispatch_get_main_queue(), block);
-}
 
 #pragma mark - Event Delivery
 
@@ -519,7 +447,7 @@ LAActivator *LASharedActivator;
         if (![self listenerWithName:listenerName isCompatibleWithEventName:event.name]) {
             continue;
         }
-        if ([self listenerWithNameNeedsPoweredDisplay:listenerName] && ![self la_runtimeSnapshotScreenIsOn]) {
+        if ([self listenerWithNameNeedsPoweredDisplay:listenerName] && !self.runtimeContext.screenIsOn) {
             continue;
         }
         [dispatchableNames addObject:listenerName];
@@ -544,7 +472,7 @@ LAActivator *LASharedActivator;
         return;
     }
 
-    BOOL touchActive = allowDeferral && [self la_systemTouchActive];
+    BOOL touchActive = allowDeferral && self.runtimeContext.touchActive;
     for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
         id<LAListener> listener = [self listenerForName:listenerName];
         if (touchActive && [self la_listenerWithNameRequiresNoTouchEvents:listenerName]) {
@@ -556,7 +484,7 @@ LAActivator *LASharedActivator;
                 [self la_notifyListenersThatListener:listener handledEvent:event];
             }
             __weak typeof(self) weakSelf = self;
-            [self la_performWhenSystemTouchesEnd:^{
+            [self.runtimeContext performWhenTouchesEnd:^{
                 __strong typeof(weakSelf) strongSelf = weakSelf;
                 deferredEvent.handled = NO;
                 [strongSelf la_sendEvent:deferredEvent directlyToListenerWithName:listenerName abort:NO];
@@ -885,7 +813,7 @@ LAActivator *LASharedActivator;
     }
     if (!self.runningInsideSpringBoard) {
         NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAIPCKeyListenerNames] = [LARuntimeBackend normalizedStringArray:listenerNames];
+        userInfo[LAIPCKeyListenerNames] = [LAServerBackend normalizedStringArray:listenerNames];
         return [self.ipcClient boolValueForMessageName:LAIPCMessageAssignEvent userInfo:userInfo defaultValue:NO];
     }
     if (event.mode.length > 0) {
@@ -1325,13 +1253,13 @@ LAActivator *LASharedActivator;
     id<LAListener> listener = [self listenerForName:name];
     if (listener &&
         [listener respondsToSelector:@selector(activator:requiresCompatibleEventModesForListenerWithName:)]) {
-        NSArray *modes = [LARuntimeBackend
+        NSArray *modes = [LAServerBackend
             normalizedStringArray:[listener activator:self requiresCompatibleEventModesForListenerWithName:name]];
         if (modes.count > 0) {
             return modes;
         }
     }
-    NSArray *resourceModes = [LARuntimeBackend
+    NSArray *resourceModes = [LAServerBackend
         normalizedStringArray:[LAResourceManager.sharedManager infoDictionaryValueOfKey:@"compatible-modes"
                                                                         forListenerName:name]];
     if (resourceModes.count > 0) {
@@ -1412,26 +1340,26 @@ LAActivator *LASharedActivator;
     if (listener &&
         [listener respondsToSelector:@selector(activator:requiresExclusiveAssignmentGroupsForListenerName:)]) {
         NSArray *groups =
-            [LARuntimeBackend normalizedStringArray:[listener activator:self
-                                                        requiresExclusiveAssignmentGroupsForListenerName:listenerName]];
+            [LAServerBackend normalizedStringArray:[listener activator:self
+                                                       requiresExclusiveAssignmentGroupsForListenerName:listenerName]];
         if (groups.count > 0) {
             return groups;
         }
     }
-    return [LARuntimeBackend
+    return [LAServerBackend
         normalizedStringArray:[LAResourceManager.sharedManager infoDictionaryValueOfKey:@"exclusive-assignment-groups"
                                                                         forListenerName:listenerName]];
 }
 
 - (BOOL)listenerNamesAreMutuallyCompatible:(NSArray *)listenerNames {
     if (!self.runningInsideSpringBoard) {
-        NSArray *normalizedNames = [LARuntimeBackend normalizedStringArray:listenerNames];
+        NSArray *normalizedNames = [LAServerBackend normalizedStringArray:listenerNames];
         NSDictionary *userInfo = @{LAIPCKeyListenerNames : normalizedNames};
         return [self.ipcClient boolValueForMessageName:LAIPCMessageListenerNamesAreMutuallyCompatible
                                               userInfo:userInfo
                                           defaultValue:YES];
     }
-    NSArray *normalizedNames = [LARuntimeBackend normalizedStringArray:listenerNames];
+    NSArray *normalizedNames = [LAServerBackend normalizedStringArray:listenerNames];
     NSMutableDictionary *groupOwners = [NSMutableDictionary dictionary];
     for (NSString *listenerName in normalizedNames) {
         for (NSString *group in [self exclusiveAssignmentGroupsForListenerName:listenerName]) {
@@ -1563,11 +1491,7 @@ LAActivator *LASharedActivator;
         return [self.ipcClient stringValueForMessageName:LAIPCMessageCurrentEventMode userInfo:nil]
                    ?: LAEventModeSpringBoard;
     }
-    __block NSString *eventMode = nil;
-    dispatch_sync(self.runtimeSnapshotQueue, ^{
-        eventMode = [self->_cachedEventMode copy];
-    });
-    return eventMode ?: LAEventModeSpringBoard;
+    return [self.runtimeContext currentEventMode];
 }
 
 - (NSString *)currentEventModeUnderneathLockScreen {
@@ -1575,11 +1499,7 @@ LAActivator *LASharedActivator;
         return [self.ipcClient stringValueForMessageName:LAIPCMessageCurrentEventModeUnderneathLockScreen userInfo:nil]
                    ?: LAEventModeSpringBoard;
     }
-    __block NSString *eventMode = nil;
-    dispatch_sync(self.runtimeSnapshotQueue, ^{
-        eventMode = [self->_cachedEventModeUnderneathLockScreen copy];
-    });
-    return eventMode ?: LAEventModeSpringBoard;
+    return [self.runtimeContext currentEventModeUnderneathLockScreen];
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {
@@ -1599,11 +1519,7 @@ LAActivator *LASharedActivator;
             [self.ipcClient stringValueForMessageName:LAIPCMessageCurrentApplicationDisplayIdentifier userInfo:nil];
         return displayIdentifier.length > 0 ? displayIdentifier : nil;
     }
-    __block NSString *displayIdentifier = nil;
-    dispatch_sync(self.runtimeSnapshotQueue, ^{
-        displayIdentifier = [self->_cachedDisplayIdentifier copy];
-    });
-    return displayIdentifier;
+    return [self.runtimeContext displayIdentifierForCurrentApplication];
 }
 
 - (BOOL)applicationWithDisplayIdentifierIsBlacklisted:(NSString *)displayIdentifier {

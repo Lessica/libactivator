@@ -1,5 +1,5 @@
 //
-//  LARuntimeBackend.h
+//  LAServerBackend.h
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
@@ -13,7 +13,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class LAPersistence;
 
 __attribute__((visibility("hidden")))
-@interface LARuntimeBackend : NSObject
+@interface LAServerBackend : NSObject
 
 #pragma mark - Lifecycle
 

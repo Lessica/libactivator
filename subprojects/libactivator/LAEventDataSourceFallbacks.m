@@ -10,7 +10,7 @@
 
 #import "LAResourceManager.h"
 
-@implementation NSObject (LAEventDataSource)
+@implementation NSObject (EventDataSourceFallbacks)
 
 - (BOOL)eventWithNameIsHidden:(NSString *)eventName {
     id value = [LAResourceManager.sharedManager eventInfoDictionaryForName:eventName][@"hidden"];
