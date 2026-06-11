@@ -21,15 +21,6 @@
 
 #pragma mark - Lifecycle
 
-+ (instancetype)sharedListener {
-    static dispatch_once_t sOnceToken;
-    static LARemoteListener *sListener;
-    dispatch_once(&sOnceToken, ^{
-        sListener = [[self alloc] init];
-    });
-    return sListener;
-}
-
 - (instancetype)init {
     self = [super init];
     if (self) {

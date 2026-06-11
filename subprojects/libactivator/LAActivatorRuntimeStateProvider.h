@@ -28,6 +28,7 @@ __attribute__((visibility("hidden")))
 - (void)setEventModeChangeHandler:(nullable void (^)(NSString *eventMode))handler;
 - (NSString *)currentEventMode;
 - (NSString *)currentEventModeUnderneathLockScreen;
+- (BOOL)screenIsOn;
 - (BOOL)supportsUnlockingDeviceToSendEvents;
 - (nullable NSString *)displayIdentifierForCurrentApplication;
 

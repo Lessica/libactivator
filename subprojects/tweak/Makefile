@@ -11,6 +11,7 @@ ActivatorTweak_FILES += applications/LATApplicationCatalog.m
 ActivatorTweak_FILES += applications/LATApplicationDescriptor.m
 ActivatorTweak_FILES += applications/LATApplicationLauncher.m
 ActivatorTweak_FILES += applications/LATDynamicApplicationListenerProvider.m
+ActivatorTweak_FILES += applications/LATLockScreenCameraLauncher.m
 ActivatorTweak_FILES += listeners/LATApplicationActionListener.m
 ActivatorTweak_FILES += listeners/LATHardwareActionListener.m
 ActivatorTweak_FILES += listeners/LATNothingListener.m

@@ -40,6 +40,17 @@ static const uint32_t LATHardwareHIDUsageALKeyboardLayout = 0x1AE;
 static const uint32_t LATHardwareHIDUsageACSearch = 0x221;
 static const uint32_t LATHardwareHIDEventOptionNone = 0;
 static const uint64_t LATHardwareHIDSenderID = 0x8000000817319371;
+static const NSTimeInterval LATHardwareHIDPressDuration = 0.05;
+
+static uint64_t LATHardwareHIDMachTimeForTimeInterval(NSTimeInterval timeInterval) {
+    static mach_timebase_info_data_t sTimebaseInfo;
+    static dispatch_once_t sOnceToken;
+    dispatch_once(&sOnceToken, ^{
+        mach_timebase_info(&sTimebaseInfo);
+    });
+    return (uint64_t)(timeInterval * (NSTimeInterval)NSEC_PER_SEC * (NSTimeInterval)sTimebaseInfo.denom /
+                      (NSTimeInterval)sTimebaseInfo.numer);
+}
 
 typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
     LATHardwareActionKindHID,
@@ -127,8 +138,10 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
         return NO;
     }
 
-    IOHIDEventRef downEvent = [self keyboardEventForCommand:command keyDown:YES];
-    IOHIDEventRef upEvent = [self keyboardEventForCommand:command keyDown:NO];
+    uint64_t downTimestamp = mach_absolute_time();
+    uint64_t pressDuration = LATHardwareHIDMachTimeForTimeInterval(LATHardwareHIDPressDuration);
+    IOHIDEventRef downEvent = [self keyboardEventForCommand:command keyDown:YES timestamp:downTimestamp];
+    IOHIDEventRef upEvent = [self keyboardEventForCommand:command keyDown:NO timestamp:downTimestamp + pressDuration];
     if (!downEvent || !upEvent) {
         if (downEvent) {
             CFRelease(downEvent);
@@ -156,9 +169,11 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
     return self.client;
 }
 
-- (IOHIDEventRef)keyboardEventForCommand:(LATHardwareActionCommand *)command keyDown:(BOOL)keyDown {
-    IOHIDEventRef event = IOHIDEventCreateKeyboardEvent(kCFAllocatorDefault, mach_absolute_time(), command.page,
-                                                        command.usage, keyDown, LATHardwareHIDEventOptionNone);
+- (IOHIDEventRef)keyboardEventForCommand:(LATHardwareActionCommand *)command
+                                 keyDown:(BOOL)keyDown
+                               timestamp:(uint64_t)timestamp {
+    IOHIDEventRef event = IOHIDEventCreateKeyboardEvent(kCFAllocatorDefault, timestamp, command.page, command.usage,
+                                                        keyDown, LATHardwareHIDEventOptionNone);
     if (event) {
         IOHIDEventSetSenderID(event, LATHardwareHIDSenderID);
     }

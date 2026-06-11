@@ -21,6 +21,7 @@
 #import "LALegacyPreferenceBridge.h"
 #import "LAListenerMetadataCache.h"
 #import "LARemoteListener.h"
+#import "LAScreenWakeCoordinator.h"
 #import "LATouchActivityTracker.h"
 
 #pragma mark - Class Extension
@@ -33,6 +34,9 @@
 @property(nonatomic, strong) LATouchActivityTracker *touchActivityTracker;
 @property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
 @property(nonatomic, strong) LALegacyPreferenceBridge *legacyPreferenceBridge;
+@property(nonatomic, strong) LAScreenWakeCoordinator *screenWakeCoordinator;
+@property(nonatomic, strong) LADefaultEventDataSource *defaultEventDataSource;
+@property(nonatomic, strong) LARemoteListener *remoteListener;
 - (void)la_handleSystemNotificationNamed:(NSString *)darwinName;
 @end
 
@@ -85,13 +89,17 @@ LAActivator *LASharedActivator;
             _backend = [[LAActivatorBackend alloc] initWithPersistence:[self defaultPersistence]];
             _legacyPreferenceBridge = [[LALegacyPreferenceBridge alloc] initWithBackend:_backend];
             _touchActivityTracker = [[LATouchActivityTracker alloc] init];
+            _screenWakeCoordinator = [[LAScreenWakeCoordinator alloc] init];
+            _defaultEventDataSource = [[LADefaultEventDataSource alloc] init];
             __weak typeof(self) weakSelf = self;
             [_runtimeStateProvider setEventModeChangeHandler:^(NSString *eventMode) {
                 [weakSelf la_notifyEventModeChanged:eventMode];
             }];
-            [LADefaultEventDataSource.sharedDataSource registerAvailableEventsWithActivator:self];
+            [_screenWakeCoordinator startObservingScreenStateWithActivator:self];
+            [_defaultEventDataSource registerAvailableEventsWithActivator:self];
         } else {
             _ipcClient = [[LAActivatorIPCClient alloc] init];
+            _remoteListener = [[LARemoteListener alloc] init];
             [self la_registerSystemNotificationBridgeIfNeeded];
         }
     }
@@ -294,6 +302,23 @@ LAActivator *LASharedActivator;
     [self.touchActivityTracker noteTouchEvent:event];
 }
 
+- (BOOL)la_screenIsOn {
+    if (!self.runningInsideSpringBoard) {
+        return YES;
+    }
+    return self.runtimeStateProvider.screenIsOn;
+}
+
+- (BOOL)la_wakeScreenForReason:(NSString *)reason completion:(dispatch_block_t)completion {
+    if (!self.runningInsideSpringBoard) {
+        if (completion) {
+            dispatch_async(dispatch_get_main_queue(), completion);
+        }
+        return completion != nil;
+    }
+    return [self.screenWakeCoordinator wakeScreenForReason:reason completion:completion];
+}
+
 #if LA_TESTING
 - (NSDictionary *)la_runtimeStateDebugDictionary {
     if (!self.runningInsideSpringBoard) {
@@ -474,6 +499,9 @@ LAActivator *LASharedActivator;
             continue;
         }
         if (![self listenerWithName:listenerName isCompatibleWithEventName:event.name]) {
+            continue;
+        }
+        if ([self listenerWithNameNeedsPoweredDisplay:listenerName] && !self.runtimeStateProvider.screenIsOn) {
             continue;
         }
         [dispatchableNames addObject:listenerName];
@@ -659,7 +687,7 @@ LAActivator *LASharedActivator;
     NSString *culprit = [self la_invalidSpringBoardOperationCulpritName];
 
     HBLogError(@"Invalid SpringBoard operation: %@ called -[LAActivator %@] from outside SpringBoard. "
-               "This call was rejected and no client-local runtime state was created. Contact %@'s developer.",
+                "This call was rejected and no client-local runtime state was created. Contact %@'s developer.",
                culprit, selectorName, culprit);
 }
 
@@ -751,7 +779,7 @@ LAActivator *LASharedActivator;
 
 - (id<LAListener>)listenerForName:(NSString *)name {
     if (!self.runningInsideSpringBoard) {
-        return [self hasListenerWithName:name] ? [LARemoteListener sharedListener] : nil;
+        return [self hasListenerWithName:name] ? self.remoteListener : nil;
     }
     return [self.backend listenerForName:name];
 }

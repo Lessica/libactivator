@@ -39,8 +39,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)remoteLock:(BOOL)lock;
 - (void)attemptUnlockWithPasscode:(NSString *)passcode;
 - (void)attemptUnlockWithPasscode:(NSString *)passcode
-                    finishUIUnlock:(BOOL)finishUIUnlock
-                        completion:(nullable id)completion;
+                   finishUIUnlock:(BOOL)finishUIUnlock
+                       completion:(nullable id)completion;
 @end
 
 #pragma mark - Backlight
@@ -48,7 +48,6 @@ NS_ASSUME_NONNULL_BEGIN
 @interface SBBacklightController : NSObject
 + (instancetype)sharedInstance;
 - (void)_startFadeOutAnimationFromLockSource:(long long)source;
-- (void)turnOnScreenFullyWithBacklightSource:(long long)source;
 @end
 
 #pragma mark - Automation

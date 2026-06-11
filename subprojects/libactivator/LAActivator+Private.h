@@ -38,6 +38,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)la_noteScreenBlanked:(BOOL)blanked;
 - (void)la_noteRuntimeStateMayHaveChanged;
 - (void)la_noteSystemTouchEvent:(UIEvent *)event;
+- (BOOL)la_screenIsOn;
+- (BOOL)la_wakeScreenForReason:(NSString *)reason completion:(dispatch_block_t)completion;
 #if LA_TESTING
 - (NSDictionary<NSString *, id> *)la_runtimeStateDebugDictionary;
 #endif

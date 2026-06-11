@@ -67,6 +67,10 @@
     return self.exclusiveGroups;
 }
 
+- (BOOL)activator:(LAActivator *)activator requiresNeedsPoweredDisplayForListenerName:(NSString *)listenerName {
+    return self.needsPoweredDisplay;
+}
+
 - (id)activator:(LAActivator *)activator
     requiresInfoDictionaryValueOfKey:(NSString *)key
                  forListenerWithName:(NSString *)listenerName {
@@ -107,4 +111,3 @@
 }
 
 @end
-

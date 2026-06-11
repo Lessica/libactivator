@@ -260,27 +260,38 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
 + (BOOL)unlockDeviceWithPasscode:(NSString *)passcode {
     __block BOOL attempted = NO;
+    NSString *passcodeToUse = [passcode copy] ?: @"";
     [self performOnMainThreadSynchronously:^{
-        Class backlightClass = NSClassFromString(@"SBBacklightController");
-        id backlight =
-            [backlightClass respondsToSelector:@selector(sharedInstance)] ? [backlightClass sharedInstance] : nil;
-        if ([backlight respondsToSelector:@selector(turnOnScreenFullyWithBacklightSource:)]) {
-            [backlight turnOnScreenFullyWithBacklightSource:1];
+        if (![LAActivator.sharedInstance la_screenIsOn]) {
+            attempted = [LAActivator.sharedInstance la_wakeScreenForReason:@"test unlock"
+                                                                 completion:^{
+                                                                     [self attemptUnlockOnMainThreadWithPasscode:
+                                                                               passcodeToUse
+                                                                               fallbackToHomeScreen:YES];
+                                                                 }];
+            return;
         }
 
-        Class managerClass = NSClassFromString(@"SBLockScreenManager");
-        id manager = [managerClass respondsToSelector:@selector(sharedInstance)] ? [managerClass sharedInstance] : nil;
-        if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:finishUIUnlock:completion:)]) {
-            [manager attemptUnlockWithPasscode:passcode ?: @"" finishUIUnlock:YES completion:nil];
-            attempted = YES;
-        } else if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:)]) {
-            [manager attemptUnlockWithPasscode:passcode ?: @""];
-            attempted = YES;
-        } else {
-            attempted = [self resetHomeScreen];
-        }
+        attempted = [self attemptUnlockOnMainThreadWithPasscode:passcodeToUse fallbackToHomeScreen:YES];
     }];
     return attempted;
+}
+
++ (BOOL)attemptUnlockOnMainThreadWithPasscode:(NSString *)passcode fallbackToHomeScreen:(BOOL)fallbackToHomeScreen {
+    Class managerClass = NSClassFromString(@"SBLockScreenManager");
+    id manager = [managerClass respondsToSelector:@selector(sharedInstance)] ? [managerClass sharedInstance] : nil;
+    if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:finishUIUnlock:completion:)]) {
+        [manager attemptUnlockWithPasscode:passcode ?: @"" finishUIUnlock:YES completion:nil];
+        return YES;
+    }
+    if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:)]) {
+        [manager attemptUnlockWithPasscode:passcode ?: @""];
+        return YES;
+    }
+    if (fallbackToHomeScreen) {
+        return [self resetHomeScreen];
+    }
+    return NO;
 }
 
 #pragma mark - Runtime State

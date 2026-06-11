@@ -10,11 +10,15 @@
 
 #import "LATApplicationDescriptor.h"
 #import "LATApplicationLauncher.h"
+#import "LATLockScreenCameraLauncher.h"
 
 #import <HBLog.h>
 
+static NSString *const LATCameraApplicationIdentifier = @"com.apple.camera";
+
 @interface LATApplicationActionListener ()
 @property(nonatomic, strong) LATApplicationLauncher *launcher;
+@property(nonatomic, strong) LATLockScreenCameraLauncher *lockScreenCameraLauncher;
 @property(nonatomic, strong) dispatch_queue_t descriptorQueue;
 @property(nonatomic, copy) NSDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier;
 @end
@@ -25,6 +29,7 @@
     self = [super init];
     if (self) {
         _launcher = launcher;
+        _lockScreenCameraLauncher = [[LATLockScreenCameraLauncher alloc] init];
         _descriptorQueue = dispatch_queue_create("libactivator.application-action-listener.descriptors",
                                                  DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _descriptorsByIdentifier = @{};
@@ -59,7 +64,31 @@
     }
 
     event.handled = YES;
+    if ([self shouldOpenLockScreenCameraForDescriptor:descriptor
+                                         listenerName:listenerName
+                                                event:event
+                                            activator:activator]) {
+        if ([self.lockScreenCameraLauncher enqueueOpenLockScreenCamera]) {
+            return;
+        }
+
+        HBLogWarn(@"Falling back to normal camera application launch");
+    }
+
     [self.launcher enqueueLaunchApplicationWithIdentifier:descriptor.identifier];
+}
+
+- (BOOL)shouldOpenLockScreenCameraForDescriptor:(LATApplicationDescriptor *)descriptor
+                                   listenerName:(NSString *)listenerName
+                                          event:(LAEvent *)event
+                                      activator:(LAActivator *)activator {
+    if (![listenerName isEqualToString:LATCameraApplicationIdentifier] &&
+        ![descriptor.identifier isEqualToString:LATCameraApplicationIdentifier]) {
+        return NO;
+    }
+
+    NSString *eventMode = event.mode ?: activator.currentEventMode;
+    return [eventMode isEqualToString:LAEventModeLockScreen];
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName {

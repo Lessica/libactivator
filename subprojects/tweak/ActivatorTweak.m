@@ -17,7 +17,6 @@
 
 CHDeclareClass(SpringBoard);
 CHDeclareClass(UIViewController);
-CHDeclareClass(SBBacklightController);
 CHDeclareClass(SBCoverSheetPrimarySlidingViewController);
 CHDeclareClass(SBMainSwitcherViewController);
 CHDeclareClass(SBMainSwitcherControllerCoordinator);
@@ -37,6 +36,10 @@ static Class gLockScreenEmergencyCallViewControllerClass = nil;
 static Class gIconControllerClass = nil;
 
 static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
+    if (gCoverSheetViewControllerClass && [viewController isKindOfClass:gCoverSheetViewControllerClass]) {
+        LATBuiltInListenerRegistry.coverSheetViewControllerInstance = (CSCoverSheetViewController *)viewController;
+    }
+
     if ((gCoverSheetViewControllerClass && [viewController isKindOfClass:gCoverSheetViewControllerClass]) ||
         (gPosterSwitcherViewControllerClass && [viewController isKindOfClass:gPosterSwitcherViewControllerClass]) ||
         (gDashboardCameraPageViewControllerClass &&
@@ -100,20 +103,6 @@ CHOptimizedMethod1(self, void, UIViewController, viewWillAppear, BOOL, animated)
 CHOptimizedMethod1(self, void, UIViewController, viewDidDisappear, BOOL, animated) {
     CHSuper1(UIViewController, viewDidDisappear, animated);
     LATNoteViewControllerVisibility(self, NO);
-}
-
-#pragma mark - SBBacklightController
-
-CHOptimizedMethod1(self, void, SBBacklightController, turnOnScreenFullyWithBacklightSource, long long, source) {
-    CHSuper1(SBBacklightController, turnOnScreenFullyWithBacklightSource, source);
-    [LASharedActivator la_noteScreenBlanked:NO];
-    [LASharedActivator la_noteRuntimeStateMayHaveChanged];
-}
-
-CHOptimizedMethod2(self, void, SBBacklightController, _notifyObserversDidAnimateToFactor, float, factor, source,
-                   long long, backlightSource) {
-    CHSuper2(SBBacklightController, _notifyObserversDidAnimateToFactor, factor, source, backlightSource);
-    [LASharedActivator la_noteScreenBlanked:factor <= 1e-3];
 }
 
 #pragma mark - SBCoverSheetPrimarySlidingViewController
@@ -204,16 +193,9 @@ CHOptimizedMethod1(self, void, SpringBoard, applicationDidFinishLaunching, id, a
 
 static void LATRegisterDarwinNotifications(void) {
     static int sLockStateToken = 0;
-    static int sBlankedScreenToken = 0;
     notify_register_dispatch("com.apple.springboard.lockstate", &sLockStateToken, dispatch_get_main_queue(),
                              ^(int token) {
                                  [LASharedActivator la_noteRuntimeStateMayHaveChanged];
-                             });
-    notify_register_dispatch("com.apple.springboard.hasBlankedScreen", &sBlankedScreenToken, dispatch_get_main_queue(),
-                             ^(int token) {
-                                 uint64_t state = 0;
-                                 notify_get_state(token, &state);
-                                 [LASharedActivator la_noteScreenBlanked:state != 0];
                              });
 }
 
@@ -231,7 +213,6 @@ static void LATLoadRuntimeStateClasses(void) {
 static void LATLoadSpringBoardClasses(void) {
     CHLoadClass(UIViewController);
     CHLoadClass_(&SpringBoard$, NSClassFromString(@"SpringBoard"));
-    CHLoadClass_(&SBBacklightController$, NSClassFromString(@"SBBacklightController"));
     CHLoadClass_(&SBCoverSheetPrimarySlidingViewController$,
                  NSClassFromString(@"SBCoverSheetPrimarySlidingViewController"));
     CHLoadClass_(&SBMainSwitcherViewController$, NSClassFromString(@"SBMainSwitcherViewController"));
@@ -249,8 +230,6 @@ static void LATInstallHooks(void) {
 
         CHHook1(UIViewController, viewWillAppear);
         CHHook1(UIViewController, viewDidDisappear);
-        CHHook1(SBBacklightController, turnOnScreenFullyWithBacklightSource);
-        CHHook2(SBBacklightController, _notifyObserversDidAnimateToFactor, source);
         CHHook1(SBCoverSheetPrimarySlidingViewController, _beginTransitionFromAppeared);
         CHHook1(SBCoverSheetPrimarySlidingViewController, _endTransitionToAppeared);
         CHHook2(SBMainSwitcherViewController, layoutStateTransitionCoordinator,

@@ -13,10 +13,6 @@ NS_ASSUME_NONNULL_BEGIN
 __attribute__((visibility("hidden")))
 @interface LADefaultEventDataSource : NSObject<LAEventDataSource>
 
-#pragma mark - Lifecycle
-
-+ (instancetype)sharedDataSource;
-
 #pragma mark - Registration
 
 - (void)registerAvailableEventsWithActivator:(LAActivator *)activator;

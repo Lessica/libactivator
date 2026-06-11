@@ -124,7 +124,24 @@
     [recorder expect:listenerA.lastReceivedEventMode == nil
             caseName:@"nil-mode-deferred-dispatch"
               reason:@"Deferred dispatch rewrote nil event mode"];
+
+    listenerA.compatibleModes = @[ LAEventModeSpringBoard, LAEventModeApplication, LAEventModeLockScreen ];
+    listenerA.requiresNoTouchEvents = NO;
+    listenerA.needsPoweredDisplay = YES;
+    listenerA.receiveCount = 0;
+    listenerB.receiveCount = 0;
+    [activator la_noteScreenBlanked:YES];
+    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
+        toListenersWithNames:@[ listenerAName, listenerBName ]];
+    [recorder expect:listenerA.receiveCount == 0 && listenerB.receiveCount == 1
+            caseName:@"needs-powered-display-skips-blank-screen"
+              reason:@"Listener requiring powered display ran while the screen was blanked"];
+    [activator la_noteScreenBlanked:NO];
+    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
+        toListenersWithNames:@[ listenerAName ]];
+    [recorder expect:listenerA.receiveCount == 1
+            caseName:@"needs-powered-display-runs-with-screen-on"
+              reason:@"Listener requiring powered display did not run after the screen powered on"];
 }
 
 @end
-

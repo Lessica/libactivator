@@ -14,17 +14,6 @@
 
 @implementation LADefaultEventDataSource
 
-#pragma mark - Lifecycle
-
-+ (instancetype)sharedDataSource {
-    static dispatch_once_t sOnceToken;
-    static LADefaultEventDataSource *sDataSource;
-    dispatch_once(&sOnceToken, ^{
-        sDataSource = [[self alloc] init];
-    });
-    return sDataSource;
-}
-
 - (void)registerAvailableEventsWithActivator:(LAActivator *)activator {
     for (NSString *eventName in [LAActivatorResourceManager.sharedManager availableEventNames]) {
         if (![activator hasEventWithName:eventName]) {

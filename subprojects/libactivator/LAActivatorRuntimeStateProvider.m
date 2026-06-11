@@ -134,6 +134,14 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
     return eventMode ?: LAEventModeSpringBoard;
 }
 
+- (BOOL)screenIsOn {
+    __block BOOL screenOn = YES;
+    dispatch_sync(_stateQueue, ^{
+        screenOn = self->_cachedScreenOn;
+    });
+    return screenOn;
+}
+
 - (BOOL)supportsUnlockingDeviceToSendEvents {
     return [_unlockService supportsUnlockingDeviceToSendEvents];
 }

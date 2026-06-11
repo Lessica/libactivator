@@ -14,6 +14,8 @@ libactivator_FILES += LALegacyPreferenceBridge.m
 libactivator_FILES += LAActivatorBackend.m
 libactivator_FILES += LAActivatorResourceManager.m
 libactivator_FILES += LAListenerMetadataCache.m
+libactivator_FILES += LAHIDPowerButtonSender.m
+libactivator_FILES += LAScreenWakeCoordinator.m
 libactivator_FILES += LAActivatorUnlockService.m
 libactivator_FILES += LAActivatorRuntimeStateProvider.m
 libactivator_FILES += LATouchActivityTracker.m
@@ -62,7 +64,6 @@ libactivator_CFLAGS += -Itests/fakes
 libactivator_CFLAGS += -Itests/suites/core
 libactivator_CFLAGS += -Itests/suites/builtins
 libactivator_CFLAGS += -Itests/suites/runtime
-libactivator_PRIVATE_FRAMEWORKS += IOKit
 endif
 
 libactivator_FRAMEWORKS += Foundation
@@ -72,6 +73,7 @@ libactivator_FRAMEWORKS += CoreGraphics
 libactivator_LIBRARIES += MobileGestalt
 
 libactivator_PRIVATE_FRAMEWORKS += AppSupport
+libactivator_PRIVATE_FRAMEWORKS += IOKit
 
 libactivator_INSTALL_PATH := /usr/lib
 

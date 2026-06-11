@@ -23,6 +23,7 @@
 
 static __weak SBVolumeControl *gCapturedVolumeControl = nil;
 static __weak SBRingerControl *gCapturedRingerControl = nil;
+static __weak CSCoverSheetViewController *gCapturedCoverSheetViewController = nil;
 
 @implementation LATBuiltInListenerRegistry
 
@@ -40,6 +41,14 @@ static __weak SBRingerControl *gCapturedRingerControl = nil;
 
 + (void)setRingerControlInstance:(SBRingerControl *)ringerControlInstance {
     gCapturedRingerControl = ringerControlInstance;
+}
+
++ (CSCoverSheetViewController *)coverSheetViewControllerInstance {
+    return gCapturedCoverSheetViewController;
+}
+
++ (void)setCoverSheetViewControllerInstance:(CSCoverSheetViewController *)coverSheetViewControllerInstance {
+    gCapturedCoverSheetViewController = coverSheetViewControllerInstance;
 }
 
 + (NSArray<NSDictionary<NSString *, id> *> *)la_builtInListenerFactoryConfigurations {

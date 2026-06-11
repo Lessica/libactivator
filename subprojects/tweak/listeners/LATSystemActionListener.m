@@ -223,7 +223,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
         return;
     }
 
-    if (![self.applicationLauncher enqueueLaunchApplicationWithIdentifier:displayIdentifier unlockDevice:NO]) {
+    if (![self.applicationLauncher enqueueLaunchApplicationWithIdentifier:displayIdentifier unlockDevice:YES]) {
         HBLogError(@"Unable to enqueue now-playing application %@ for system action %@", displayIdentifier,
                    listenerName ?: @"");
     }

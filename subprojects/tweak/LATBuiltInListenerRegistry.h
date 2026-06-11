@@ -10,12 +10,14 @@
 
 @class SBRingerControl;
 @class SBVolumeControl;
+@class CSCoverSheetViewController;
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATBuiltInListenerRegistry : NSObject
 @property(class, nonatomic, weak, nullable) SBVolumeControl *volumeControlInstance;
 @property(class, nonatomic, weak, nullable) SBRingerControl *ringerControlInstance;
+@property(class, nonatomic, weak, nullable) CSCoverSheetViewController *coverSheetViewControllerInstance;
 + (void)registerWithActivator:(LAActivator *)activator;
 @end
 

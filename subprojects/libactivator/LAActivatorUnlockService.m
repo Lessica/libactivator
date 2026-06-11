@@ -7,6 +7,7 @@
 //
 
 #import "LAActivatorUnlockService.h"
+#import "LAActivator+Private.h"
 
 @interface SBLockScreenManager : NSObject
 + (instancetype)sharedInstance;
@@ -15,11 +16,6 @@
 - (void)attemptUnlockWithPasscode:(NSString *)passcode
                    finishUIUnlock:(BOOL)finishUIUnlock
                        completion:(nullable id)completion;
-@end
-
-@interface SBBacklightController : NSObject
-+ (instancetype)sharedInstance;
-- (void)turnOnScreenFullyWithBacklightSource:(NSInteger)source;
 @end
 
 @implementation LAActivatorUnlockService
@@ -56,20 +52,18 @@
 
 - (BOOL)requestUnlockWithPasscode:(NSString *)passcode {
     __block BOOL attempted = NO;
+    NSString *passcodeToUse = [passcode copy] ?: @"";
     [self performOnMainThreadSynchronously:^{
-        SBBacklightController *backlightController = [self backlightController];
-        if ([backlightController respondsToSelector:@selector(turnOnScreenFullyWithBacklightSource:)]) {
-            [backlightController turnOnScreenFullyWithBacklightSource:1];
+        if (![LAActivator.sharedInstance la_screenIsOn]) {
+            attempted = [LAActivator.sharedInstance la_wakeScreenForReason:@"unlock request"
+                                                                 completion:^{
+                                                                     [self attemptUnlockOnMainThreadWithPasscode:
+                                                                               passcodeToUse];
+                                                                 }];
+            return;
         }
 
-        SBLockScreenManager *manager = [self lockScreenManager];
-        if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:finishUIUnlock:completion:)]) {
-            [manager attemptUnlockWithPasscode:passcode ?: @"" finishUIUnlock:YES completion:nil];
-            attempted = YES;
-        } else if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:)]) {
-            [manager attemptUnlockWithPasscode:passcode ?: @""];
-            attempted = YES;
-        }
+        attempted = [self attemptUnlockOnMainThreadWithPasscode:passcodeToUse];
     }];
     return attempted;
 }
@@ -95,12 +89,17 @@
     return [(id)managerClass sharedInstance];
 }
 
-- (SBBacklightController *)backlightController {
-    Class controllerClass = NSClassFromString(@"SBBacklightController");
-    if (![controllerClass respondsToSelector:@selector(sharedInstance)]) {
-        return nil;
+- (BOOL)attemptUnlockOnMainThreadWithPasscode:(NSString *)passcode {
+    SBLockScreenManager *manager = [self lockScreenManager];
+    if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:finishUIUnlock:completion:)]) {
+        [manager attemptUnlockWithPasscode:passcode ?: @"" finishUIUnlock:YES completion:nil];
+        return YES;
     }
-    return [(id)controllerClass sharedInstance];
+    if ([manager respondsToSelector:@selector(attemptUnlockWithPasscode:)]) {
+        [manager attemptUnlockWithPasscode:passcode ?: @""];
+        return YES;
+    }
+    return NO;
 }
 
 @end
