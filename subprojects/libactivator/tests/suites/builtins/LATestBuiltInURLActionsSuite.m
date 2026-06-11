@@ -28,11 +28,10 @@
         @"libactivator.phone.favorites",
         @"libactivator.phone.recents",
         @"libactivator.phone.contacts",
-        @"libactivator.phone.keypad",
         @"libactivator.phone.voicemail",
     ]];
     NSSet<NSString *> *supportedNames = [NSSet setWithArray:[urlActionClass supportedListenerNames]];
-    [recorder expect:supportedNames.count == 49
+    [recorder expect:supportedNames.count == 48
             caseName:@"url-action-allowlist-count"
               reason:@"URL action allowlist did not match the expected count"];
 
@@ -80,6 +79,9 @@
     [recorder expect:![activator hasListenerWithName:@"libactivator.settings.brightness"]
             caseName:@"url-action-obsolete-name-not-registered"
               reason:@"Obsolete URL action was registered"];
+    [recorder expect:![activator hasListenerWithName:@"libactivator.phone.keypad"]
+            caseName:@"url-action-obsolete-phone-keypad-not-registered"
+              reason:@"Obsolete Phone keypad URL action was registered"];
 }
 
 @end

@@ -65,12 +65,11 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
 
 @interface LATSystemActionCommand : NSObject
 @property(nonatomic, copy, readonly) NSString *listenerName;
-@property(nonatomic, copy, readonly, nullable) NSString *selectorName;
+@property(nonatomic, copy, readonly) NSString *selectorName;
 @property(nonatomic, assign, readonly) LATSystemActionKind kind;
 - (instancetype)initWithListenerName:(NSString *)listenerName
-                        selectorName:(nullable NSString *)selectorName
+                        selectorName:(NSString *)selectorName
                                 kind:(LATSystemActionKind)kind;
-- (BOOL)requiresSelectorMetadata;
 @end
 
 @interface LATSystemVolumeHUDPresenter : NSObject
@@ -117,10 +116,6 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
         _kind = kind;
     }
     return self;
-}
-
-- (BOOL)requiresSelectorMetadata {
-    return _selectorName.length > 0;
 }
 
 @end
@@ -397,18 +392,13 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
 }
 
 + (BOOL)listenerNameHasRequiredMetadata:(NSString *)listenerName activator:(LAActivator *)activator {
-    LATSystemActionCommand *command = [self commandsByListenerName][listenerName ?: @""];
-    if (listenerName.length == 0 || !command) {
+    NSString *expectedSelector = [self expectedSelectorForListenerName:listenerName];
+    if (listenerName.length == 0 || expectedSelector.length == 0) {
         return NO;
     }
 
-    if (![command requiresSelectorMetadata]) {
-        id title = [activator infoDictionaryValueOfKey:@"title" forListenerWithName:listenerName];
-        return [title isKindOfClass:NSString.class] && [title length] > 0;
-    }
-
     id selector = [activator infoDictionaryValueOfKey:@"selector" forListenerWithName:listenerName];
-    return [selector isKindOfClass:NSString.class] && [selector isEqualToString:command.selectorName];
+    return [selector isKindOfClass:NSString.class] && [selector isEqualToString:expectedSelector];
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
@@ -447,11 +437,6 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
 }
 
 - (BOOL)listenerMetadataMatchesCommand:(LATSystemActionCommand *)command activator:(LAActivator *)activator {
-    if (![command requiresSelectorMetadata]) {
-        id title = [activator infoDictionaryValueOfKey:@"title" forListenerWithName:command.listenerName];
-        return [title isKindOfClass:NSString.class] && [title length] > 0;
-    }
-
     id selector = [activator infoDictionaryValueOfKey:@"selector" forListenerWithName:command.listenerName];
     return [selector isKindOfClass:NSString.class] && [selector isEqualToString:command.selectorName];
 }
@@ -464,10 +449,9 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.audio.show-volume-bar"
                                                     selectorName:@"showVolumeBar"
                                                             kind:LATSystemActionKindVolumeHUD],
-            [[LATSystemActionCommand alloc]
-                initWithListenerName:@"libactivator.audio.launch-playing-app"
-                         selectorName:nil
-                                 kind:LATSystemActionKindNowPlayingApplication],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.audio.launch-playing-app"
+                                                    selectorName:@"launchPlayingApp"
+                                                            kind:LATSystemActionKindNowPlayingApplication],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.audio.reset-ringer-state"
                                                     selectorName:@"resetRingerState"
                                                             kind:LATSystemActionKindRingerReset],

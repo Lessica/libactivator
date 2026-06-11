@@ -182,7 +182,7 @@ typedef NS_ENUM(NSUInteger, LATTelephonyActionKind) {
                                                        selectorName:@"answerCall"
                                                                kind:LATTelephonyActionKindAnswerCall],
             [[LATTelephonyActionCommand alloc] initWithListenerName:@"libactivator.phone.disconnect-call"
-                                                       selectorName:@"answerCall"
+                                                       selectorName:@"disconnectCall"
                                                                kind:LATTelephonyActionKindDisconnectCall],
         ];
 

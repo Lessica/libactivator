@@ -26,7 +26,7 @@
 
     NSDictionary<NSString *, NSString *> *expectedSelectors = @{
         @"libactivator.phone.answer-call" : @"answerCall",
-        @"libactivator.phone.disconnect-call" : @"answerCall",
+        @"libactivator.phone.disconnect-call" : @"disconnectCall",
     };
     NSSet<NSString *> *supportedNames = [NSSet setWithArray:[telephonyActionClass supportedListenerNames]];
 
@@ -45,6 +45,11 @@
                 caseName:[NSString stringWithFormat:@"telephony-action-selector-%@", listenerName]
                   reason:@"Telephony action selector mapping did not match bundled metadata"];
     }
+
+    [recorder expect:![expectedSelectors[@"libactivator.phone.answer-call"]
+                         isEqualToString:expectedSelectors[@"libactivator.phone.disconnect-call"]]
+            caseName:@"telephony-action-selectors-are-distinct"
+              reason:@"Answer and disconnect call actions must not share selector metadata"];
 
     [recorder expect:![activator hasListenerWithName:@"libactivator.phone"]
             caseName:@"phone-group-name-not-registered"

@@ -23,7 +23,11 @@ extern void IOHIDEventSystemClientDispatchEvent(IOHIDEventSystemClientRef client
 extern void IOHIDEventSetSenderID(IOHIDEventRef event, uint64_t senderID);
 
 static const uint32_t LATHardwareHIDPageConsumer = 0x0C;
+static const uint32_t LATHardwareHIDUsagePower = 0x30;
+static const uint32_t LATHardwareHIDUsageMenu = 0x40;
 static const uint32_t LATHardwareHIDUsageSnapshot = 0x65;
+static const uint32_t LATHardwareHIDUsageDisplayBrightnessIncrement = 0x6F;
+static const uint32_t LATHardwareHIDUsageDisplayBrightnessDecrement = 0x70;
 static const uint32_t LATHardwareHIDUsagePlay = 0xB0;
 static const uint32_t LATHardwareHIDUsagePause = 0xB1;
 static const uint32_t LATHardwareHIDUsageScanNextTrack = 0xB5;
@@ -263,6 +267,22 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
                                                       selectorName:@"decreaseVolume"
                                                               page:LATHardwareHIDPageConsumer
                                                              usage:LATHardwareHIDUsageVolumeDecrement],
+            [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.screen.brightness.increase"
+                                                      selectorName:@"increaseBrightness"
+                                                              page:LATHardwareHIDPageConsumer
+                                                             usage:LATHardwareHIDUsageDisplayBrightnessIncrement],
+            [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.screen.brightness.decrease"
+                                                      selectorName:@"decreaseBrightness"
+                                                              page:LATHardwareHIDPageConsumer
+                                                             usage:LATHardwareHIDUsageDisplayBrightnessDecrement],
+            [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.system.homebutton"
+                                                      selectorName:@"homeButton"
+                                                              page:LATHardwareHIDPageConsumer
+                                                             usage:LATHardwareHIDUsageMenu],
+            [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.system.sleepbutton"
+                                                      selectorName:@"sleepButtonFromActivator:event:"
+                                                              page:LATHardwareHIDPageConsumer
+                                                             usage:LATHardwareHIDUsagePower],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.system.take-screenshot"
                                                       selectorName:@"takeScreenshot"
                                                               page:LATHardwareHIDPageConsumer

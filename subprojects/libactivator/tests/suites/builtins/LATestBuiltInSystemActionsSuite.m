@@ -26,16 +26,16 @@
 
     NSDictionary<NSString *, NSString *> *expectedSelectors = @{
         @"libactivator.audio.show-volume-bar" : @"showVolumeBar",
+        @"libactivator.audio.launch-playing-app" : @"launchPlayingApp",
         @"libactivator.audio.reset-ringer-state" : @"resetRingerState",
         @"libactivator.audio.mute-ringer" : @"muteRinger",
         @"libactivator.audio.unmute-ringer" : @"unmuteRinger",
         @"libactivator.audio.toggle-ringer-mute" : @"toggleRingerMute",
         @"libactivator.system.first-springboard-page" : @"firstSpringBoardPage",
     };
-    NSString *launchPlayingAppName = @"libactivator.audio.launch-playing-app";
     NSSet<NSString *> *supportedNames = [NSSet setWithArray:[systemActionClass supportedListenerNames]];
 
-    [recorder expect:supportedNames.count == expectedSelectors.count + 1
+    [recorder expect:supportedNames.count == expectedSelectors.count
             caseName:@"system-action-allowlist-count"
               reason:@"System action allowlist did not match the expected command count"];
     for (NSString *listenerName in expectedSelectors) {
@@ -50,14 +50,6 @@
                 caseName:[NSString stringWithFormat:@"system-action-selector-%@", listenerName]
                   reason:@"System action selector mapping did not match bundled metadata"];
     }
-
-    id launchTitle = [activator infoDictionaryValueOfKey:@"title" forListenerWithName:launchPlayingAppName];
-    [recorder expect:[supportedNames containsObject:launchPlayingAppName] &&
-                     [activator hasListenerWithName:launchPlayingAppName] &&
-                     [systemActionClass expectedSelectorForListenerName:launchPlayingAppName] == nil &&
-                     [launchTitle isKindOfClass:NSString.class] && [launchTitle length] > 0
-            caseName:@"system-now-playing-application-registered"
-              reason:@"Now-playing application system action registration or metadata was invalid"];
 
     [recorder expect:![activator hasListenerWithName:@"libactivator.volume.mute"]
             caseName:@"system-ringer-event-name-not-registered-as-listener"

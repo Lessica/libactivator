@@ -156,7 +156,6 @@
         @"libactivator.phone.favorites" : @"mobilephone-favorites:",
         @"libactivator.phone.recents" : @"mobilephone-recents:",
         @"libactivator.phone.contacts" : @"mobilephone-contacts:",
-        @"libactivator.phone.keypad" : @"mobilephone-keypad:",
         @"libactivator.phone.voicemail" : @"vmshow:",
     };
 }
@@ -166,7 +165,6 @@
         @"libactivator.phone.favorites" : @"showPhoneFavorites",
         @"libactivator.phone.recents" : @"showPhoneRecents",
         @"libactivator.phone.contacts" : @"showPhoneContacts",
-        @"libactivator.phone.keypad" : @"showPhoneKeypad",
         @"libactivator.phone.voicemail" : @"showPhoneVoicemail",
     };
 }

@@ -50,6 +50,8 @@
 		<string>Audio</string>
 		<key>needs-powered-display</key>
 		<string>1</string>
+		<key>selector</key>
+		<string>launchPlayingApp</string>
 		<key>title</key>
 		<string>Launch Playing App</string>
 	</dict>
@@ -594,7 +596,7 @@
 		<key>group</key>
 		<string>Phone</string>
 		<key>selector</key>
-		<string>answerCall</string>
+		<string>disconnectCall</string>
 		<key>small-icons</key>
 		<array>
 			<string>/Applications/MobilePhone.app/Icon-Small@2x~iphone.png</string>
@@ -633,35 +635,6 @@
 		</array>
 		<key>title</key>
 		<string>Show Favorites</string>
-	</dict>
-	<key>libactivator.phone.keypad</key>
-	<dict>
-		<key>apply-rounded-corners</key>
-		<string>1</string>
-		<key>compatible-modes</key>
-		<array>
-			<string>springboard</string>
-			<string>application</string>
-		</array>
-		<key>description</key>
-		<string>Launch Phone to the Keypad tab</string>
-		<key>exclusive-assignment-groups</key>
-		<array>
-			<string>application-launch</string>
-		</array>
-		<key>group</key>
-		<string>Phone</string>
-		<key>selector</key>
-		<string>showPhoneKeypad</string>
-		<key>small-icons</key>
-		<array>
-			<string>/Applications/MobilePhone.app/Icon-Small@2x~iphone.png</string>
-			<string>/Applications/MobilePhone.app/Icon-Small~iphone.png</string>
-			<string>/Applications/MobilePhone.app/Icon-Small.png</string>
-			<string>/System/Library/PreferenceBundles/MobilePhoneSettings.bundle/icon.png</string>
-		</array>
-		<key>title</key>
-		<string>Show Keypad</string>
 	</dict>
 	<key>libactivator.phone.recents</key>
 	<dict>
@@ -725,6 +698,8 @@
 	<dict>
 		<key>description</key>
 		<string>Decrease screen brightness by one step</string>
+		<key>selector</key>
+		<string>decreaseBrightness</string>
 		<key>title</key>
 		<string>Decrease Brightness</string>
 	</dict>
@@ -732,6 +707,8 @@
 	<dict>
 		<key>description</key>
 		<string>Increase screen brightness by one step</string>
+		<key>selector</key>
+		<string>increaseBrightness</string>
 		<key>title</key>
 		<string>Increase Brightness</string>
 	</dict>
@@ -2361,6 +2338,8 @@
 		</array>
 		<key>group</key>
 		<string>System Actions</string>
+		<key>selector</key>
+		<string>previousApp</string>
 		<key>title</key>
 		<string>Previous App</string>
 	</dict>
