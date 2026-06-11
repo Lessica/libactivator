@@ -13,6 +13,7 @@ ActivatorTweak_FILES += applications/LATApplicationLauncher.m
 ActivatorTweak_FILES += applications/LATApplicationListenerProvider.m
 ActivatorTweak_FILES += applications/LATLockScreenCameraLauncher.m
 ActivatorTweak_FILES += events/LATLockStateEventSource.m
+ActivatorTweak_FILES += events/LATPowerStateEventSource.m
 ActivatorTweak_FILES += listeners/LATApplicationActionListener.m
 ActivatorTweak_FILES += listeners/LATHardwareActionListener.m
 ActivatorTweak_FILES += listeners/LATNothingListener.m

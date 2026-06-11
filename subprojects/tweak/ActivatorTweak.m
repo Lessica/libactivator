@@ -11,6 +11,7 @@
 #import "LAActivator+Private.h"
 #import "LATBuiltInListenerRegistry.h"
 #import "LATLockStateEventSource.h"
+#import "LATPowerStateEventSource.h"
 
 #import <CaptainHook/CaptainHook.h>
 #import <UIKit/UIKit.h>
@@ -29,6 +30,7 @@ static NSString *const LATRuntimeStateSourceIconManagerRootFolder = @"icon-manag
 static NSString *const LATRuntimeStateSourceMainSwitcher = @"main-switcher";
 
 static LATLockStateEventSource *gLockStateEventSource = nil;
+static LATPowerStateEventSource *gPowerStateEventSource = nil;
 
 static Class gCoverSheetViewControllerClass = nil;
 static Class gPosterSwitcherViewControllerClass = nil;
@@ -190,6 +192,7 @@ CHOptimizedMethod1(self, void, SpringBoard, applicationDidFinishLaunching, id, a
     [LASharedActivator la_noteRuntimeStateMayHaveChanged];
     [LASharedActivator startIPCServerIfNeeded];
     [gLockStateEventSource start];
+    [gPowerStateEventSource start];
 }
 
 #pragma mark - Hook Installation
@@ -241,6 +244,7 @@ static void LATInstallHooks(void) {
         CHHook1(SpringBoard, applicationDidFinishLaunching);
 
         gLockStateEventSource = [[LATLockStateEventSource alloc] init];
+        gPowerStateEventSource = [[LATPowerStateEventSource alloc] init];
     });
 }
 

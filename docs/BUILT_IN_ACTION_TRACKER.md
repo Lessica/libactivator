@@ -47,12 +47,12 @@ Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使�
 
 建议进入低风险 event source family，而不是继续补零散 action。优先考虑不依赖复杂触摸识别、能通过系统通知或 SpringBoard 状态稳定采集的事件。
 
-当前 `device locked / unlocked` 已实现。`LATLockStateEventSource` 在 SpringBoard tweak 内承载 `com.apple.springboard.lockstate` Darwin notification，使用 `SBLockScreenManager isUILocked` 读取权威锁定状态，并只在锁定状态边沿变化时发送 `libactivator.device.locked` 或 `libactivator.device.unlocked`。adapter 在 `SpringBoard applicationDidFinishLaunching:` 后启动，启动时只 seed 当前锁定状态、不发送事件，避免在 tweak constructor 阶段提前创建 `SBLockScreenManager`；adapter 同时承接原先 `ActivatorTweak.m` 中 lockstate notification 触发 runtime state refresh 的职责，避免 tweak 入口重复注册同一通知。
+当前 `device locked / unlocked` 已实现。`LATLockStateEventSource` 在 SpringBoard tweak 内承载 `com.apple.springboard.lockstate` Darwin notification，使用 `SBLockScreenManager isUILocked` 读取权威锁定状态，并只在锁定状态边沿变化时发送 `libactivator.device.locked` 或 `libactivator.device.unlocked`。adapter 在 `SpringBoard applicationDidFinishLaunching:` 后启动，启动时只 seed 当前锁定状态、不发送事件，避免在 tweak constructor 阶段提前创建 `SBLockScreenManager`；adapter 同时承接原先 `ActivatorTweak.m` 中 lockstate notification 触发 runtime state refresh 的职责，避免 tweak 入口重复注册同一通知。`power connected / disconnected` 也已实现，`LATPowerStateEventSource` 通过 `UIDeviceBatteryStateDidChangeNotification` 采集 `UIDeviceBatteryStateCharging` / `Full` 与 `Unplugged` 的边沿变化，`Unknown` 状态只忽略、不发送事件。
 
 优先候选：
 
 - device locked / unlocked：已实现，信号来源为 `com.apple.springboard.lockstate` + `SBLockScreenManager isUILocked`；仍需在真机 checklist 中覆盖手动锁定、自动锁定、回主屏幕解锁和回 App 解锁路径。
-- power connected / disconnected：可从系统电源通知或 IOKit/power source 变化入手，适合稳定测试与手工验证结合。
+- power connected / disconnected：已实现，信号来源为 `UIDeviceBatteryStateDidChangeNotification`；仍需在真机 checklist 中覆盖接入电源、断开电源、满电状态下重新接入等路径。
 - headset connected / disconnected：需要确认现代 route change / accessory 通知来源，并区分蓝牙、CarPlay、AirPods 等语义边界。
 - Wi-Fi joined / left：需要确认 CaptiveNetwork / SystemConfiguration / Wi-Fi private notification 的现代可用性；不确定时先停在 probe 阶段。
 
