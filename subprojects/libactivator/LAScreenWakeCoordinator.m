@@ -14,8 +14,7 @@
 #import <HBLog.h>
 #import <notify.h>
 
-static const NSTimeInterval LAScreenWakeFallbackDelay = 2.0;
-static const char *LAScreenWakeBlankedScreenNotification = "com.apple.springboard.hasBlankedScreen";
+static const NSTimeInterval LAScreenWakeFallbackDelay = 1.0;
 
 @interface LAScreenWakeCoordinator ()
 @property(nonatomic, weak) LAActivator *activator;
@@ -74,7 +73,7 @@ static const char *LAScreenWakeBlankedScreenNotification = "com.apple.springboar
     }
 
     int token = 0;
-    int status = notify_register_dispatch(LAScreenWakeBlankedScreenNotification, &token, dispatch_get_main_queue(),
+    int status = notify_register_dispatch("com.apple.springboard.hasBlankedScreen", &token, dispatch_get_main_queue(),
                                           ^(int deliveredToken) {
                                               [self handleBlankedScreenNotificationWithToken:deliveredToken];
                                           });

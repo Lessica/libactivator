@@ -10,10 +10,10 @@
 
 #import "LAActivator+Private.h"
 #import "LATBuiltInListenerRegistry.h"
+#import "LATLockStateEventSource.h"
 
 #import <CaptainHook/CaptainHook.h>
 #import <UIKit/UIKit.h>
-#import <notify.h>
 
 CHDeclareClass(SpringBoard);
 CHDeclareClass(UIViewController);
@@ -27,6 +27,8 @@ CHDeclareClass(_UISystemGestureWindow);
 static NSString *const LATRuntimeStateSourceCoverSheetTransition = @"cover-sheet-transition";
 static NSString *const LATRuntimeStateSourceIconManagerRootFolder = @"icon-manager-root-folder";
 static NSString *const LATRuntimeStateSourceMainSwitcher = @"main-switcher";
+
+static LATLockStateEventSource *gLockStateEventSource = nil;
 
 static Class gCoverSheetViewControllerClass = nil;
 static Class gPosterSwitcherViewControllerClass = nil;
@@ -187,16 +189,7 @@ CHOptimizedMethod1(self, void, SpringBoard, applicationDidFinishLaunching, id, a
     CHSuper1(SpringBoard, applicationDidFinishLaunching, application);
     [LASharedActivator la_noteRuntimeStateMayHaveChanged];
     [LASharedActivator startIPCServerIfNeeded];
-}
-
-#pragma mark - Darwin Notifications
-
-static void LATRegisterDarwinNotifications(void) {
-    static int sLockStateToken = 0;
-    notify_register_dispatch("com.apple.springboard.lockstate", &sLockStateToken, dispatch_get_main_queue(),
-                             ^(int token) {
-                                 [LASharedActivator la_noteRuntimeStateMayHaveChanged];
-                             });
+    [gLockStateEventSource start];
 }
 
 #pragma mark - Hook Installation
@@ -247,7 +240,7 @@ static void LATInstallHooks(void) {
         CHHook1(_UISystemGestureWindow, sendEvent);
         CHHook1(SpringBoard, applicationDidFinishLaunching);
 
-        LATRegisterDarwinNotifications();
+        gLockStateEventSource = [[LATLockStateEventSource alloc] init];
     });
 }
 

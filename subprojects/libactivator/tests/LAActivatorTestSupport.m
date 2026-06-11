@@ -12,6 +12,7 @@
 #import "LAIPC.h"
 #import "LATestBuiltInActionRegistrySuite.h"
 #import "LATestBuiltInDynamicApplicationListenersSuite.h"
+#import "LATestBuiltInEventSourcesSuite.h"
 #import "LATestBuiltInHardwareActionsSuite.h"
 #import "LATestBuiltInSystemActionsSuite.h"
 #import "LATestBuiltInTelephonyActionsSuite.h"
@@ -113,6 +114,7 @@
     [LATestBuiltInSystemActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInTelephonyActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInDynamicApplicationListenersSuite runWithRecorder:recorder activator:activator];
+    [LATestBuiltInEventSourcesSuite runWithRecorder:recorder activator:activator];
     [LATestEnvironment cleanActivator:activator];
     return [recorder resultDictionary];
 }

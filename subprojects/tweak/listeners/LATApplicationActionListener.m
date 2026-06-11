@@ -14,8 +14,6 @@
 
 #import <HBLog.h>
 
-static NSString *const LATCameraApplicationIdentifier = @"com.apple.camera";
-
 @interface LATApplicationActionListener ()
 @property(nonatomic, strong) LATApplicationLauncher *launcher;
 @property(nonatomic, strong) LATLockScreenCameraLauncher *lockScreenCameraLauncher;
@@ -82,8 +80,8 @@ static NSString *const LATCameraApplicationIdentifier = @"com.apple.camera";
                                    listenerName:(NSString *)listenerName
                                           event:(LAEvent *)event
                                       activator:(LAActivator *)activator {
-    if (![listenerName isEqualToString:LATCameraApplicationIdentifier] &&
-        ![descriptor.identifier isEqualToString:LATCameraApplicationIdentifier]) {
+    if (![listenerName isEqualToString:@"com.apple.camera"] &&
+        ![descriptor.identifier isEqualToString:@"com.apple.camera"]) {
         return NO;
     }
 

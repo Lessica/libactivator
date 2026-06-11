@@ -15,8 +15,6 @@
 
 #import <HBLog.h>
 
-static CFStringRef const LATLaunchServicesApplicationsChangedNotification =
-    CFSTR("com.apple.LaunchServices.ApplicationsChanged");
 static NSTimeInterval const LATApplicationRefreshDebounceDelay = 1.0;
 
 @interface LATApplicationListenerProvider ()
@@ -59,7 +57,7 @@ static void LATLaunchServicesApplicationsChangedCallback(__unused CFNotification
 
 - (void)dealloc {
     CFNotificationCenterRemoveObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self,
-                                       LATLaunchServicesApplicationsChangedNotification, NULL);
+                                       CFSTR("com.apple.LaunchServices.ApplicationsChanged"), NULL);
 }
 
 #pragma mark - Public API
@@ -67,7 +65,7 @@ static void LATLaunchServicesApplicationsChangedCallback(__unused CFNotification
 - (void)start {
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self,
                                     LATLaunchServicesApplicationsChangedCallback,
-                                    LATLaunchServicesApplicationsChangedNotification, NULL,
+                                    CFSTR("com.apple.LaunchServices.ApplicationsChanged"), NULL,
                                     CFNotificationSuspensionBehaviorDeliverImmediately);
     [self refreshApplications];
 }
