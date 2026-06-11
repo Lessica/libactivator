@@ -26,18 +26,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)registerListener:(id<LAListener>)listener forName:(NSString *)name ignoreHasSeen:(BOOL)ignoreHasSeen;
 - (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
 
-#pragma mark - Runtime State
-
-- (void)la_updateRuntimeEventMode:(NSString *)eventMode
-             underneathLockScreen:(NSString *)underneathMode
-                displayIdentifier:(nullable NSString *)displayIdentifier
-                         screenOn:(BOOL)screenOn;
-- (void)la_setSystemTouchActivityProvider:(nullable BOOL (^)(void))touchActiveProvider
-                    touchesEndedPerformer:(nullable void (^)(dispatch_block_t block))touchesEndedPerformer;
-#if LA_TESTING
-- (NSDictionary<NSString *, id> *)la_runtimeStateDebugDictionary;
-#endif
-
 #pragma mark - Assignment Model
 
 - (BOOL)la_assignEventAndNotifyIfChanged:(LAEvent *)event toListenersWithNames:(NSArray<NSString *> *)listenerNames;

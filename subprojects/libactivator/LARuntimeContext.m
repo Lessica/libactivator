@@ -11,16 +11,44 @@
 #import <Activator/Activator.h>
 
 @interface LARuntimeContext ()
-@property(nonatomic, strong) dispatch_queue_t queue;
+
+// Caches
 @property(nonatomic, copy) NSString *cachedEventMode;
 @property(nonatomic, copy) NSString *cachedEventModeUnderneathLockScreen;
 @property(nonatomic, copy, nullable) NSString *cachedDisplayIdentifier;
 @property(nonatomic, assign) BOOL cachedScreenOn;
+
+// Handlers
+@property(nonatomic, copy, nullable) void (^eventModeChangeHandler)(NSString *eventMode);
 @property(nonatomic, copy, nullable) BOOL (^touchActiveProvider)(void);
 @property(nonatomic, copy, nullable) void (^touchesEndedPerformer)(dispatch_block_t block);
+
+// Concurrency
+@property(nonatomic, strong) dispatch_queue_t queue;
+
 @end
 
 @implementation LARuntimeContext
+
++ (nullable instancetype)sharedContext {
+    if (![self shouldCreateSharedContext]) {
+        return nil;
+    }
+    static LARuntimeContext *sSharedContext = nil;
+    static dispatch_once_t sOnceToken;
+    dispatch_once(&sOnceToken, ^{
+        sSharedContext = [[self alloc] init];
+    });
+    return sSharedContext;
+}
+
++ (BOOL)shouldCreateSharedContext {
+    NSString *processName = NSProcessInfo.processInfo.processName;
+    if (![processName isEqualToString:@"SpringBoard"]) {
+        return NO;
+    }
+    return [NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.springboard"];
+}
 
 - (instancetype)init {
     self = [super init];
@@ -41,6 +69,7 @@
     NSString *effectiveUnderneathMode = underneathMode.length > 0 ? underneathMode : LAEventModeSpringBoard;
     NSString *effectiveDisplayIdentifier = displayIdentifier.length > 0 ? displayIdentifier : nil;
     __block NSString *changedEventMode = nil;
+    __block void (^changeHandler)(NSString *eventMode) = nil;
     dispatch_sync(self.queue, ^{
         NSString *previousMode = [self->_cachedEventMode copy];
         self->_cachedEventMode = [effectiveMode copy];
@@ -49,9 +78,21 @@
         self->_cachedScreenOn = screenOn;
         if (![effectiveMode isEqualToString:previousMode]) {
             changedEventMode = [effectiveMode copy];
+            changeHandler = [self->_eventModeChangeHandler copy];
         }
     });
+    if (changedEventMode.length > 0 && changeHandler) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            changeHandler(changedEventMode);
+        });
+    }
     return changedEventMode;
+}
+
+- (void)setEventModeChangeHandler:(void (^)(NSString *eventMode))handler {
+    dispatch_sync(self.queue, ^{
+        self->_eventModeChangeHandler = [handler copy];
+    });
 }
 
 - (void)setTouchActivityProvider:(BOOL (^)(void))touchActiveProvider

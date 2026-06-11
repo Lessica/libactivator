@@ -11,11 +11,16 @@
 #import <dispatch/dispatch.h>
 
 @interface LAListenerMetadataCache ()
+
+// Underlying caches
 @property(nonatomic, strong) NSMutableDictionary *smallIcons;
 @property(nonatomic, strong) NSMutableDictionary *localizedTitles;
 @property(nonatomic, strong) NSMutableDictionary *localizedGroups;
 @property(nonatomic, strong) NSMutableDictionary *localizedDescriptions;
+
+// Concurrency
 @property(nonatomic, strong) dispatch_queue_t queue;
+
 @end
 
 @implementation LAListenerMetadataCache

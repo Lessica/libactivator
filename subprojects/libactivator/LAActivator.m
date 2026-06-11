@@ -25,15 +25,25 @@
 #pragma mark - Class Extension
 
 @interface LAActivator ()
+
+// Runtime
+@property(nonatomic, strong, nullable) LARuntimeContext *runtimeContext;
+
+// SpringBoard (server-side)
 @property(nonatomic, strong) LAServerBackend *backend;
-@property(nonatomic, strong) LAIPCClient *ipcClient;
 @property(nonatomic, strong) LAIPCServer *ipcServer;
-@property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
 @property(nonatomic, strong) LALegacyBridge *legacyPreferenceBridge;
 @property(nonatomic, strong) LADefaultEventDataSource *defaultEventDataSource;
+
+// Client (non-SpringBoard)
+@property(nonatomic, strong) LAIPCClient *ipcClient;
 @property(nonatomic, strong) LARemoteListener *remoteListener;
-@property(nonatomic, strong) LARuntimeContext *runtimeContext;
+
+// Caches
+@property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
+
 - (void)la_handleSystemNotificationNamed:(NSString *)darwinName;
+
 @end
 
 static NSString *const LAActivatorDarwinAvailableListenersChangedNotification =
@@ -80,8 +90,13 @@ LAActivator *LASharedActivator;
                                                selector:@selector(la_didReceiveMemoryWarning:)
                                                    name:UIApplicationDidReceiveMemoryWarningNotification
                                                  object:nil];
-        _runtimeContext = [[LARuntimeContext alloc] init];
         if (self.runningInsideSpringBoard) {
+            _runtimeContext = [LARuntimeContext sharedContext];
+            NSAssert(_runtimeContext, @"LARuntimeContext must be available inside SpringBoard");
+            __weak typeof(self) weakSelf = self;
+            [_runtimeContext setEventModeChangeHandler:^(NSString *eventMode) {
+                [weakSelf la_notifyEventModeChanged:eventMode];
+            }];
             _backend = [[LAServerBackend alloc] initWithPersistence:[self defaultPersistence]];
             _legacyPreferenceBridge = [[LALegacyBridge alloc] initWithBackend:_backend];
             _defaultEventDataSource = [[LADefaultEventDataSource alloc] init];
@@ -234,49 +249,6 @@ LAActivator *LASharedActivator;
     [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:self];
     notify_post(darwinName.UTF8String);
 }
-
-- (void)la_updateRuntimeEventMode:(NSString *)eventMode
-             underneathLockScreen:(NSString *)underneathMode
-                displayIdentifier:(NSString *)displayIdentifier
-                         screenOn:(BOOL)screenOn {
-    if (!self.runningInsideSpringBoard) {
-        return;
-    }
-
-    NSString *changedEventMode = [self.runtimeContext updateEventMode:eventMode
-                                                 underneathLockScreen:underneathMode
-                                                    displayIdentifier:displayIdentifier
-                                                             screenOn:screenOn];
-    if (changedEventMode.length == 0) {
-        return;
-    }
-
-    dispatch_block_t notifyBlock = ^{
-        [self la_notifyEventModeChanged:changedEventMode];
-    };
-    if ([NSThread isMainThread]) {
-        notifyBlock();
-    } else {
-        dispatch_async(dispatch_get_main_queue(), notifyBlock);
-    }
-}
-
-- (void)la_setSystemTouchActivityProvider:(BOOL (^)(void))touchActiveProvider
-                    touchesEndedPerformer:(void (^)(dispatch_block_t block))touchesEndedPerformer {
-    if (!self.runningInsideSpringBoard) {
-        return;
-    }
-    [self.runtimeContext setTouchActivityProvider:touchActiveProvider touchesEndedPerformer:touchesEndedPerformer];
-}
-
-#if LA_TESTING
-- (NSDictionary *)la_runtimeStateDebugDictionary {
-    if (!self.runningInsideSpringBoard) {
-        return @{};
-    }
-    return [self.runtimeContext testingDebugDictionary];
-}
-#endif
 
 #pragma mark - Event Delivery
 
@@ -447,7 +419,8 @@ LAActivator *LASharedActivator;
         if (![self listenerWithName:listenerName isCompatibleWithEventName:event.name]) {
             continue;
         }
-        if ([self listenerWithNameNeedsPoweredDisplay:listenerName] && !self.runtimeContext.screenIsOn) {
+        if ([self listenerWithNameNeedsPoweredDisplay:listenerName] && self.runtimeContext &&
+            !self.runtimeContext.screenIsOn) {
             continue;
         }
         [dispatchableNames addObject:listenerName];
@@ -472,7 +445,7 @@ LAActivator *LASharedActivator;
         return;
     }
 
-    BOOL touchActive = allowDeferral && self.runtimeContext.touchActive;
+    BOOL touchActive = allowDeferral && self.runtimeContext && self.runtimeContext.touchActive;
     for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
         id<LAListener> listener = [self listenerForName:listenerName];
         if (touchActive && [self la_listenerWithNameRequiresNoTouchEvents:listenerName]) {
@@ -1491,7 +1464,7 @@ LAActivator *LASharedActivator;
         return [self.ipcClient stringValueForMessageName:LAIPCMessageCurrentEventMode userInfo:nil]
                    ?: LAEventModeSpringBoard;
     }
-    return [self.runtimeContext currentEventMode];
+    return [self.runtimeContext currentEventMode] ?: LAEventModeSpringBoard;
 }
 
 - (NSString *)currentEventModeUnderneathLockScreen {
@@ -1499,7 +1472,7 @@ LAActivator *LASharedActivator;
         return [self.ipcClient stringValueForMessageName:LAIPCMessageCurrentEventModeUnderneathLockScreen userInfo:nil]
                    ?: LAEventModeSpringBoard;
     }
-    return [self.runtimeContext currentEventModeUnderneathLockScreen];
+    return [self.runtimeContext currentEventModeUnderneathLockScreen] ?: LAEventModeSpringBoard;
 }
 
 - (BOOL)supportsUnlockingDeviceToSendEvents {

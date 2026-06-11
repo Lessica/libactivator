@@ -8,7 +8,7 @@
 
 #import "LATRuntimeStateSource.h"
 
-#import "LAActivator+Private.h"
+#import "LARuntimeContext.h"
 #import "LATHIDEventSender.h"
 
 #import <HBLog.h>
@@ -32,37 +32,53 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 @end
 
 @interface LATRuntimeStateSource ()
-@property(nonatomic, weak) LAActivator *activator;
+
+// Dependencies
+@property(nonatomic, strong) LARuntimeContext *runtimeContext;
+@property(nonatomic, strong) LATHIDEventSender *hidEventSender;
+
+// State serialization queues
+@property(nonatomic, strong) dispatch_queue_t stateQueue;
+@property(nonatomic, strong) dispatch_queue_t touchQueue;
+
+// Visibility source trackers
 @property(nonatomic, strong) NSMutableSet *homeScreenVisibilitySources;
 @property(nonatomic, strong) NSMutableSet *springBoardInterfaceVisibilitySources;
 @property(nonatomic, strong) NSMutableSet *lockScreenVisibilitySources;
+
+// Derived runtime state cache
 @property(nonatomic, assign) BOOL screenBlanked;
 @property(nonatomic, assign) BOOL cachedScreenOn;
 @property(nonatomic, assign) BOOL cachedUILocked;
-@property(nonatomic, assign) NSUInteger stateGeneration;
-@property(nonatomic, strong) dispatch_queue_t stateQueue;
 @property(nonatomic, copy) NSString *cachedEventMode;
 @property(nonatomic, copy) NSString *cachedEventModeUnderneathLockScreen;
 @property(nonatomic, copy, nullable) NSString *cachedDisplayIdentifier;
 @property(nonatomic, copy, nullable) NSString *cachedForegroundDisplayIdentifier;
-@property(nonatomic, strong) dispatch_queue_t touchQueue;
+@property(nonatomic, assign) NSUInteger stateGeneration;
+
+// Touch tracking
 @property(nonatomic, strong) NSHashTable *activeTouches;
 @property(nonatomic, strong) NSMutableArray *pendingTouchBlocks;
-@property(nonatomic, strong) LATHIDEventSender *hidEventSender;
+
+// Screen wake request lifecycle
 @property(nonatomic, assign) BOOL wakeRequestInFlight;
 @property(nonatomic, strong) NSMutableArray<dispatch_block_t> *pendingScreenWakeCompletions;
+
+// Lifecycle and observers
 @property(nonatomic, assign) BOOL started;
 @property(nonatomic, assign) int screenBlankedToken;
+
 @end
 
 @implementation LATRuntimeStateSource
 
 #pragma mark - Lifecycle
 
-- (instancetype)initWithActivator:(LAActivator *)activator {
+- (instancetype)initWithRuntimeContext:(LARuntimeContext *)runtimeContext {
     self = [super init];
     if (self) {
-        _activator = activator;
+        _runtimeContext = runtimeContext ?: [LARuntimeContext sharedContext];
+        NSParameterAssert(_runtimeContext);
         _homeScreenVisibilitySources = [[NSMutableSet alloc] init];
         _springBoardInterfaceVisibilitySources = [[NSMutableSet alloc] init];
         _lockScreenVisibilitySources = [[NSMutableSet alloc] init];
@@ -81,8 +97,8 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
         _pendingScreenWakeCompletions = [[NSMutableArray alloc] init];
 
         __weak typeof(self) weakSelf = self;
-        [activator
-            la_setSystemTouchActivityProvider:^BOOL {
+        [_runtimeContext
+            setTouchActivityProvider:^BOOL {
                 return [weakSelf touchActive];
             }
             touchesEndedPerformer:^(dispatch_block_t block) {
@@ -392,10 +408,10 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
     });
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        [self.activator la_updateRuntimeEventMode:eventMode ?: LAEventModeSpringBoard
-                             underneathLockScreen:underneathMode ?: LAEventModeSpringBoard
-                                displayIdentifier:displayIdentifier
-                                         screenOn:screenOn];
+        [self.runtimeContext updateEventMode:eventMode ?: LAEventModeSpringBoard
+                        underneathLockScreen:underneathMode ?: LAEventModeSpringBoard
+                           displayIdentifier:displayIdentifier
+                                    screenOn:screenOn];
     });
 }
 

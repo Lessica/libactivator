@@ -13,6 +13,7 @@ sequenceDiagram
     participant Tweak as ActivatorTweak
     participant Source as LATLockStateEventSource
     participant Runtime as LATRuntimeStateSource
+    participant Context as LARuntimeContext
     participant Lock as SBLockScreenManager
     participant Activator as LAActivator SpringBoard
     participant Listener as Assigned LAListener
@@ -26,12 +27,12 @@ sequenceDiagram
     Server-->>Client: OK
 
     Note over Tweak,Runtime: SpringBoard constructor creates tweak-side runtime source
-    Runtime->>Activator: la_updateRuntimeEventMode
+    Runtime->>Context: updateEventMode
     Note over Tweak,Source: Constructor creates Source with Runtime
     Tweak->>Source: start after applicationDidFinishLaunching
     Source->>Lock: seed isUILocked
     Source->>Runtime: noteUILocked
-    Runtime->>Activator: la_updateRuntimeEventMode
+    Runtime->>Context: updateEventMode
     Note over Source,Lock: Runs on SpringBoard main queue
     Source->>Source: register lockstate notification
 
@@ -41,7 +42,8 @@ sequenceDiagram
     Source->>Lock: isUILocked
     Source->>Runtime: noteUILocked
     Note over Runtime: Runtime cache uses internal serial queue
-    Runtime->>Activator: la_updateRuntimeEventMode
+    Runtime->>Context: updateEventMode
+    Context->>Activator: event mode change handler
     Source->>Source: detect lock state edge
 
     alt lock state changed

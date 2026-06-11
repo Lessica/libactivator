@@ -10,6 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LAIPC.h"
+#import "LARuntimeContext.h"
 #import "LATestBuiltInActionRegistrySuite.h"
 #import "LATestBuiltInDynamicApplicationListenersSuite.h"
 #import "LATestBuiltInEventSourcesSuite.h"
@@ -57,7 +58,7 @@
         return [self okReplyWithValue:[self runDeviceRuntimeTestsWithActivator:activator]];
     }
     if ([command isEqualToString:LAIPCTestingCommandRuntimeState]) {
-        return [self okReplyWithValue:[activator la_runtimeStateDebugDictionary]];
+        return [self okReplyWithValue:[[LARuntimeContext sharedContext] testingDebugDictionary]];
     }
     if ([command isEqualToString:LAIPCTestingCommandPrepareUserInfoProbe]) {
         NSString *eventName = [self userInfoProbeEventName];

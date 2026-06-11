@@ -24,7 +24,7 @@ scripts/run-tests.sh
 
 runner-owned tests 在 `libactivator-tests` 进程内执行断言，适合验证非 SpringBoard 客户端视角，例如 CLI 入口、测试 IPC 可达性、结果聚合、退出码、普通进程中的 `LAActivator` facade 是否通过 IPC 转发、server 不可用时的 fallback。
 
-SpringBoard-owned tests 通过隐藏 testing IPC 在 SpringBoard 内执行断言，适合验证 SpringBoard authoritative backend、真实 listener object、event data source、built-in listener/action、dispatch callback、persistence 写入、runtime state provider、SpringBoard SPI、主队列设备动作和真实 hook。
+SpringBoard-owned tests 通过隐藏 testing IPC 在 SpringBoard 内执行断言，适合验证 SpringBoard authoritative backend、真实 listener object、event data source、built-in listener/action、dispatch callback、persistence 写入、runtime context、SpringBoard SPI、主队列设备动作和真实 hook。
 
 watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail 结果。watcher 输出只能帮助人工判断，不能作为自动化测试通过依据。
 
@@ -32,7 +32,7 @@ watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail �
 
 `run` 是默认稳定套件，允许包含 runner-owned tests 和 SpringBoard-owned tests，但必须稳定、可重复、不能污染用户配置或 SpringBoard runtime state。它覆盖 `ClientFacade`、`LAEvent`、`Persistence`、`SpringBoardCore`、`Dispatch`、`Resources`、`BuiltInActions` 等核心能力。已经迁到 tweak runtime layer 的内部采集组件不应为了早期单元测试继续留在 lib target；风险低的内部状态机测试可以移除，改由 dispatch 或 device runtime 行为覆盖。
 
-`run-runtime-input` 只测试 libactivator core 接收 runtime snapshot 后的 Public API 和 dispatch 条件效果，例如 mode、锁屏下层 mode、当前 app display identifier、screen-on gate。它不测试 tweak-side `LATRuntimeStateSource` 的内部 source set、reducer、touch drain 或 screen wake 细节；这些细节应通过真实 hook、手工观察或后续 tweak-owned 测试覆盖。
+`run-runtime-input` 只测试 libactivator core 从 hidden `LARuntimeContext` 接收 runtime snapshot 后的 Public API 和 dispatch 条件效果，例如 mode、锁屏下层 mode、当前 app display identifier、screen-on gate。它不测试 tweak-side `LATRuntimeStateSource` 的内部 source set、reducer、touch drain 或 screen wake 细节；这些细节应通过真实 hook、手工观察或后续 tweak-owned 测试覆盖。
 
 `run-device-runtime` 只测试真实 SpringBoard hook 和真实设备状态，严禁调用任何 `la_note*` 注入入口。它不属于默认提交门槛，失败说明设备自动化流程、当前设备状态或 hook 场景需要单独调查。
 

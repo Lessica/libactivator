@@ -10,15 +10,24 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-__attribute__((visibility("hidden")))
 @interface LARuntimeContext : NSObject
+
+#pragma mark - Lifecycle
+
++ (nullable instancetype)sharedContext;
+
+#pragma mark - Setters
 
 - (nullable NSString *)updateEventMode:(NSString *)eventMode
                   underneathLockScreen:(NSString *)underneathMode
                      displayIdentifier:(nullable NSString *)displayIdentifier
                               screenOn:(BOOL)screenOn;
+
+- (void)setEventModeChangeHandler:(nullable void (^)(NSString *eventMode))handler;
 - (void)setTouchActivityProvider:(nullable BOOL (^)(void))touchActiveProvider
            touchesEndedPerformer:(nullable void (^)(dispatch_block_t block))touchesEndedPerformer;
+
+#pragma mark - Getters
 
 - (NSString *)currentEventMode;
 - (NSString *)currentEventModeUnderneathLockScreen;
@@ -26,6 +35,8 @@ __attribute__((visibility("hidden")))
 - (BOOL)screenIsOn;
 - (BOOL)touchActive;
 - (void)performWhenTouchesEnd:(dispatch_block_t)block;
+
+#pragma mark - Testing
 
 #if LA_TESTING
 - (NSDictionary<NSString *, id> *)testingDebugDictionary;

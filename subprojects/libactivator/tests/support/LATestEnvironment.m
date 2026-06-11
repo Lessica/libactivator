@@ -9,6 +9,7 @@
 #import "LATestEnvironment.h"
 
 #import "LAActivator+Private.h"
+#import "LARuntimeContext.h"
 #import "LATestPrivateInterfaces.h"
 
 #import <Activator/Activator.h>
@@ -83,10 +84,10 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 }
 
 + (void)cleanRuntimeInputStateWithActivator:(LAActivator *)activator {
-    [activator la_updateRuntimeEventMode:LAEventModeSpringBoard
-                    underneathLockScreen:LAEventModeSpringBoard
-                       displayIdentifier:nil
-                                screenOn:YES];
+    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeSpringBoard
+                                 underneathLockScreen:LAEventModeSpringBoard
+                                    displayIdentifier:nil
+                                             screenOn:YES];
 }
 
 + (void)removeTestPlist {
@@ -335,7 +336,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 }
 
 + (NSString *)runtimeDebugReasonWithPrefix:(NSString *)prefix activator:(LAActivator *)activator {
-    NSDictionary *state = [activator la_runtimeStateDebugDictionary];
+    NSDictionary *state = [[LARuntimeContext sharedContext] testingDebugDictionary];
     return [NSString stringWithFormat:@"%@; mode=%@; homeSources=%@; springBoardSources=%@; lockSources=%@; "
                                       @"screenOn=%@; uiLocked=%@; frontMost=%@",
                                       prefix ?: @"Runtime mode mismatch", state[@"Mode"] ?: @"",

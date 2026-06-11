@@ -25,19 +25,28 @@ static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
 @interface LAServerBackend ()
-@property(nonatomic, strong) NSMutableDictionary *eventDataSources;
-@property(nonatomic, strong) NSMutableDictionary *listeners;
-@property(nonatomic, strong) NSMutableDictionary *profiles;
-@property(nonatomic, strong) NSMutableSet *blacklistedDisplayIdentifiers;
-@property(nonatomic, strong) NSMutableSet *seenListenerNames;
-@property(nonatomic, strong) NSMutableDictionary *legacyPreferences;
-@property(nonatomic, copy) NSArray *cachedListenerNames;
-@property(nonatomic, strong) dispatch_queue_t stateQueue;
+
+// Registries
+@property(nonatomic, strong) NSMutableDictionary<NSString *, id<LAEventDataSource>> *eventDataSources;
+@property(nonatomic, strong) NSMutableDictionary<NSString *, id<LAListener>> *listeners;
+@property(nonatomic, copy, nullable) NSArray<NSString *> *cachedListenerNames;
+
+// State
+@property(nonatomic, strong) NSMutableDictionary<NSString *, NSMutableDictionary *> *profiles;
+@property(nonatomic, strong) NSMutableSet<NSString *> *blacklistedDisplayIdentifiers;
+@property(nonatomic, strong) NSMutableSet<NSString *> *seenListenerNames;
+@property(nonatomic, strong) NSMutableDictionary<NSString *, id> *legacyPreferences;
+@property(nonatomic, copy) NSString *storedCurrentProfileName;
+
+// Persistence
 @property(nonatomic, strong) LAPersistence *persistence;
 @property(nonatomic, assign) BOOL persistentStateDirty;
 @property(nonatomic, assign) BOOL persistentSaveScheduled;
-@property(nonatomic, copy) NSString *storedCurrentProfileName;
-@property(nonatomic, assign) CFRunLoopObserverRef persistentSaveObserver;
+@property(nonatomic, assign, nullable) CFRunLoopObserverRef persistentSaveObserver;
+
+// Concurrency
+@property(nonatomic, strong) dispatch_queue_t stateQueue;
+
 @end
 
 @implementation LAServerBackend
@@ -198,20 +207,22 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     }
 
     __weak typeof(self) weakSelf = self;
-    CFRunLoopObserverRef observer =
-        CFRunLoopObserverCreateWithHandler(kCFAllocatorDefault, kCFRunLoopBeforeWaiting | kCFRunLoopExit, false, 0,
-                                           ^(CFRunLoopObserverRef observer, CFRunLoopActivity activity) {
-                                               __strong typeof(weakSelf) strongSelf = weakSelf;
-                                               if (!strongSelf) {
-                                                   return;
-                                               }
-                                               if (strongSelf.persistentSaveObserver) {
-                                                   CFRunLoopObserverInvalidate(strongSelf.persistentSaveObserver);
-                                                   CFRelease(strongSelf.persistentSaveObserver);
-                                                   strongSelf.persistentSaveObserver = NULL;
-                                               }
-                                               [strongSelf flushPendingPersistentState];
-                                           });
+    void (^handler)(CFRunLoopObserverRef observer, CFRunLoopActivity activity) =
+        ^(CFRunLoopObserverRef observer, CFRunLoopActivity activity) {
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (!strongSelf) {
+                return;
+            }
+            if (strongSelf.persistentSaveObserver) {
+                CFRunLoopObserverInvalidate(strongSelf.persistentSaveObserver);
+                CFRelease(strongSelf.persistentSaveObserver);
+                strongSelf.persistentSaveObserver = NULL;
+            }
+            [strongSelf flushPendingPersistentState];
+        };
+
+    CFRunLoopObserverRef observer = CFRunLoopObserverCreateWithHandler(
+        kCFAllocatorDefault, kCFRunLoopBeforeWaiting | kCFRunLoopExit, false, 0, handler);
     if (!observer) {
         [self flushPendingPersistentState];
         return;

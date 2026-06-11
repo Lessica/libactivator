@@ -9,6 +9,7 @@
 #define CHUseSubstrate
 
 #import "LAActivator+Private.h"
+#import "LARuntimeContext.h"
 #import "LATBuiltInListenerRegistry.h"
 #import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
@@ -255,7 +256,7 @@ static void LATInstallHooks(void) {
         CHHook1(_UISystemGestureWindow, sendEvent);
         CHHook1(SpringBoard, applicationDidFinishLaunching);
 
-        gRuntimeStateSource = [[LATRuntimeStateSource alloc] initWithActivator:LASharedActivator];
+        gRuntimeStateSource = [[LATRuntimeStateSource alloc] initWithRuntimeContext:[LARuntimeContext sharedContext]];
         gLockStateEventSource = [[LATLockStateEventSource alloc] initWithRuntimeStateSource:gRuntimeStateSource];
         gPowerStateEventSource = [[LATPowerStateEventSource alloc] init];
         gMediaEventSource = [[LATMediaEventSource alloc] init];

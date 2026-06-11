@@ -12,10 +12,13 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class UIEvent;
+@class LARuntimeContext;
 
 @interface LATRuntimeStateSource : NSObject
 
-- (instancetype)initWithActivator:(LAActivator *)activator;
+#pragma mark - Lifecycle
+
+- (instancetype)initWithRuntimeContext:(nullable LARuntimeContext *)runtimeContext;
 
 // Main-queue confined. This source feeds runtime state and dispatch gates; it does not send public events.
 - (void)start;

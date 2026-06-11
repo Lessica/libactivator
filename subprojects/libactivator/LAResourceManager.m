@@ -14,12 +14,17 @@
 extern Boolean MGGetBoolAnswer(CFStringRef key);
 
 @interface LAResourceManager ()
+
+// Caches
 @property(nonatomic, strong) NSBundle *cachedSupportBundle;
 @property(nonatomic, strong) NSMutableDictionary *eventBundles;
 @property(nonatomic, strong) NSMutableDictionary *listenerBundles;
 @property(nonatomic, strong) NSDictionary *bundledEventInfo;
 @property(nonatomic, strong) NSDictionary *bundledListenerInfo;
+
+// Concurrency
 @property(nonatomic, strong) dispatch_queue_t cacheQueue;
+
 @end
 
 @implementation LAResourceManager

@@ -90,7 +90,7 @@
 ## Runtime 规则
 
 - runtime state 应采用事件驱动缓存模型，而不是在热路径反复同步主线程查询 UI/SpringBoard 状态。
-- `libactivator.dylib` 是 dispatch / assignment owner，并只持有 dispatch 所需的 runtime snapshot：当前 mode、锁屏下层 mode、当前 app display identifier、screen-on 状态，以及 listener dispatch gate 所需的触摸条件入口。SpringBoard hook、Darwin notification、runtime reducer、触摸状态机和私有系统能力调用应收敛在 `ActivatorTweak.dylib` 的 acquisition/capability layer；当前这些职责统一由 tweak-side `LATRuntimeStateSource` 承接，再通过 `LAActivator+Private` 向核心提交完整 runtime snapshot 或注册触摸条件 block。不要在 `LAActivator` facade 上新增逐项镜像 acquisition source 的 `la_note...` 转发方法，也不要让 libactivator 直接持有 tweak-side source/reducer/tracker/coordinator。
+- `libactivator.dylib` 是 dispatch / assignment owner，并只持有 dispatch 所需的 runtime snapshot：当前 mode、锁屏下层 mode、当前 app display identifier、screen-on 状态，以及 listener dispatch gate 所需的触摸条件入口。SpringBoard hook、Darwin notification、runtime reducer、触摸状态机和私有系统能力调用应收敛在 `ActivatorTweak.dylib` 的 acquisition/capability layer；当前这些职责统一由 tweak-side `LATRuntimeStateSource` 承接，并直接写入 hidden `LARuntimeContext`。`LARuntimeContext` 是 SpringBoard 服务端上下文，普通 client facade 不应创建本地 runtime cache；`LAActivator` facade 只在服务端读取 `LARuntimeContext` 并订阅 mode change handler 来发布既有通知，不提供成组 runtime snapshot 写入方法，也不要新增逐项镜像 acquisition source 的 `la_note...` 转发方法。
 - 前台 App、主屏幕、App Switcher、锁屏、screen blank 等状态源应来自 SpringBoard 自身 hook 和已验证信号；不要引入 `BKSApplicationStateMonitor` 这类偏重的全局观察者来观察 SpringBoard 自身。
 - screen blank 的生产信号源只使用 tweak-side `LATRuntimeStateSource` 中的 `com.apple.springboard.hasBlankedScreen` Darwin notification；不要在其他 helper 或 event source 中重复注册该通知，也不要再 hook `SBBacklightController` 的背光动画方法来更新同一状态。
 - 当前 runtime mode 语义：锁屏优先；App Switcher 属于 SpringBoard UI；锁屏下的 underneath mode 按底下真实状态；覆盖层原则上按 underneath mode。
