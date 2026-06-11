@@ -12,6 +12,8 @@
 
 @implementation LATestRecorder
 
+#pragma mark - Lifecycle
+
 - (instancetype)init {
     self = [super init];
     if (self) {
@@ -21,6 +23,8 @@
     }
     return self;
 }
+
+#pragma mark - Recording
 
 - (void)beginSuite:(NSString *)suiteName {
     self.suiteName = suiteName ?: @"Unknown";
@@ -54,7 +58,9 @@
     }
 }
 
-- (NSDictionary *)resultDictionary {
+#pragma mark - Result
+
+- (NSDictionary<NSString *, id> *)resultDictionary {
     return @{
         LAActivatorIPCKeyTestingSuites : self.suites,
         LAActivatorIPCKeyTestingFailures : self.failures,

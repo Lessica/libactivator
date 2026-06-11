@@ -49,6 +49,7 @@
 - C SPI 的声明按规模放置：单个函数可在使用它的 `.m` 内 `extern` 声明；一组相关函数、结构体、枚举或常量才抽成 tweak-local private header。不要为单个 C 函数单独创建头文件。
 - 允许链接已明确决策的私有 framework，例如 `CoreTelephony`、`BackBoardServices`、`MediaRemote` 和 `SpringBoardServices`；不要为了回避链接而默认改用 `dlopen` / `dlsym`。只有 framework 不可直接链接、符号跨系统版本高度不稳定、或确实需要 weak runtime probing 时，才使用动态解析，并记录原因。
 - UIKit、SpringBoard、FrontBoard 私有 UI API 默认在主队列调用，除非已经确认该 API 线程安全。
+- SpringBoard 内的 SBS/FBS 启动类 SPI 不得从主队列发起，也不得在同步 IPC handler 中同步等待其返回；listener 应只提交异步请求并按 `LAEvent.handled` 语义消费事件，实际失败用英文日志诊断。
 - 用 GCD 和 `dispatch_once` 管理并发与单例，不使用 `@synchronized(self)`。
 - 一个实现文件默认只放一个主要类。多个类堆在一个 `.m` 里只允许用于明确记录过的兼容 shim 或极小私有局部类型。
 - 不要把一两行逻辑抽成无意义 C helper。只有确实有抽象价值、能减少真实复杂度的逻辑才抽成 ObjC method、类或服务。
@@ -76,6 +77,7 @@
 - runtime lookup 必须先走 `jbroot(...)` 后的路径；对历史 metadata 中的绝对路径，可先查 `jbroot(path)`，不存在时再尝试原路径。
 - `required-capabilities` 这类设备能力字段属于资源模型有效性，应通过 MobileGestalt 等能力查询参与过滤，不要引入无关重量级 API。
 - listener localization、metadata、small icon 等高频查询应通过专门 cache/service 统一处理，缓存清理策略也应集中管理，例如内存警告时清理 listener metadata cache。
+- Dynamic application listener refresh 运行在 SpringBoard runtime 内，只能做注册所需的最小快照：应用 identifier、System/User 分类、LaunchServices 已提供的 hidden/launchProhibited 信号。refresh 阶段禁止读取每个 bundle 的 `Info.plist`、禁止计算或按 display name 排序、禁止为 Settings UI 展示提前准备 metadata。title/group 等展示字段必须在 metadata 查询时懒加载；Settings UI 需要排序时应在 Settings 层单独处理。
 
 ## CLI 与安装后处理
 

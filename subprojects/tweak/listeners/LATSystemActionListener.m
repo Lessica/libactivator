@@ -8,6 +8,7 @@
 
 #import "LATSystemActionListener.h"
 
+#import "LATApplicationLauncher.h"
 #import "LATBuiltInListenerRegistry.h"
 
 #import <HBLog.h>
@@ -26,11 +27,6 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 - (void)_updateRingerState:(int)ringerState
                  withVisuals:(BOOL)withVisuals
     updatePreferenceRegister:(BOOL)updatePreferenceRegister;
-@end
-
-@interface SpringBoard : UIApplication
-+ (instancetype)sharedApplication;
-- (void)launchApplicationWithIdentifier:(NSString *)displayIdentifier suspended:(BOOL)suspended;
 @end
 
 @interface SBVolumeControl : NSObject
@@ -77,6 +73,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
 @end
 
 @interface LATSystemNowPlayingApplicationLauncher : NSObject
+- (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher;
 - (BOOL)launchNowPlayingApplicationForListenerName:(NSString *)listenerName;
 @end
 
@@ -93,7 +90,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
 @end
 
 @interface LATSystemNowPlayingApplicationLauncher ()
-@property(nonatomic, strong) dispatch_queue_t queue;
+@property(nonatomic, strong) LATApplicationLauncher *applicationLauncher;
 @end
 
 @interface LATSystemActionListener ()
@@ -156,12 +153,10 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
 
 @implementation LATSystemNowPlayingApplicationLauncher
 
-- (instancetype)init {
+- (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher {
     self = [super init];
     if (self) {
-        dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(
-            DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL, QOS_CLASS_USER_INITIATED, 0);
-        _queue = dispatch_queue_create("libactivator.system-actions.now-playing-launch", attr);
+        _applicationLauncher = applicationLauncher;
     }
     return self;
 }
@@ -188,23 +183,24 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
 }
 
 - (void)requestNowPlayingApplicationDisplayIdentifierForListenerName:(NSString *)listenerName {
-    MRMediaRemoteGetNowPlayingApplicationDisplayID(self.queue, ^(CFStringRef displayID) {
-        NSString *identifier = [(__bridge NSString *)displayID copy];
-        if (identifier.length > 0) {
-            [self launchApplicationWithIdentifier:identifier listenerName:listenerName];
-            return;
-        }
+    MRMediaRemoteGetNowPlayingApplicationDisplayID(
+        dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^(CFStringRef displayID) {
+            NSString *identifier = [(__bridge NSString *)displayID copy];
+            if (identifier.length > 0) {
+                [self launchApplicationWithIdentifier:identifier listenerName:listenerName];
+                return;
+            }
 
-        HBLogWarn(@"MediaRemote returned no now-playing application display identifier for system action %@",
-                  listenerName ?: @"");
-        if (MRMediaRemoteGetNowPlayingApplicationPID && SBSCopyDisplayIdentifierForProcessID) {
-            [self requestNowPlayingApplicationProcessIdentifierForListenerName:listenerName];
-        }
-    });
+            HBLogWarn(@"MediaRemote returned no now-playing application display identifier for system action %@",
+                      listenerName ?: @"");
+            if (MRMediaRemoteGetNowPlayingApplicationPID && SBSCopyDisplayIdentifierForProcessID) {
+                [self requestNowPlayingApplicationProcessIdentifierForListenerName:listenerName];
+            }
+        });
 }
 
 - (void)requestNowPlayingApplicationProcessIdentifierForListenerName:(NSString *)listenerName {
-    MRMediaRemoteGetNowPlayingApplicationPID(self.queue, ^(int PID) {
+    MRMediaRemoteGetNowPlayingApplicationPID(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^(int PID) {
         if (PID <= 0) {
             HBLogWarn(@"MediaRemote returned no now-playing application process identifier for system action %@",
                       listenerName ?: @"");
@@ -227,36 +223,10 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
         return;
     }
 
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (![self launchApplicationWithIdentifier:displayIdentifier]) {
-            HBLogError(@"Unable to launch now-playing application %@ for system action %@", displayIdentifier,
-                       listenerName ?: @"");
-        }
-    });
-}
-
-- (BOOL)launchApplicationWithIdentifier:(NSString *)displayIdentifier {
-    if (![NSThread isMainThread]) {
-        __block BOOL launched = NO;
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            launched = [self launchApplicationWithIdentifier:displayIdentifier];
-        });
-        return launched;
+    if (![self.applicationLauncher enqueueLaunchApplicationWithIdentifier:displayIdentifier unlockDevice:NO]) {
+        HBLogError(@"Unable to enqueue now-playing application %@ for system action %@", displayIdentifier,
+                   listenerName ?: @"");
     }
-
-    Class springBoardClass = NSClassFromString(@"SpringBoard");
-    if (![springBoardClass respondsToSelector:@selector(sharedApplication)]) {
-        HBLogError(@"SpringBoard shared application is unavailable");
-        return NO;
-    }
-
-    SpringBoard *springBoard = (SpringBoard *)[springBoardClass sharedApplication];
-    if (![springBoard respondsToSelector:@selector(launchApplicationWithIdentifier:suspended:)]) {
-        return NO;
-    }
-
-    [springBoard launchApplicationWithIdentifier:displayIdentifier suspended:NO];
-    return YES;
 }
 
 @end
@@ -335,7 +305,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
 @implementation LATSystemHomeScreenController
 
 - (BOOL)resetToFirstSpringBoardPageForListenerName:(NSString *)listenerName {
-    dispatch_async([self.class homeScreenQueue], ^{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         Class facilityClass = NSClassFromString(@"SBSServiceFacilityClient");
         Class serviceClass = NSClassFromString(@"SBSSystemServiceClient");
         if (![facilityClass respondsToSelector:@selector(checkOutClientWithClass:)] || !serviceClass) {
@@ -357,24 +327,20 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     return YES;
 }
 
-+ (dispatch_queue_t)homeScreenQueue {
-    static dispatch_queue_t sQueue;
-    static dispatch_once_t sOnceToken;
-    dispatch_once(&sOnceToken, ^{
-        sQueue = dispatch_queue_create("libactivator.system-actions.home-screen", DISPATCH_QUEUE_SERIAL);
-    });
-    return sQueue;
-}
-
 @end
 
 @implementation LATSystemActionListener
 
 - (instancetype)init {
+    return [self initWithApplicationLauncher:[[LATApplicationLauncher alloc] init]];
+}
+
+- (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher {
     self = [super init];
     if (self) {
         _volumeHUDPresenter = [[LATSystemVolumeHUDPresenter alloc] init];
-        _nowPlayingApplicationLauncher = [[LATSystemNowPlayingApplicationLauncher alloc] init];
+        _nowPlayingApplicationLauncher =
+            [[LATSystemNowPlayingApplicationLauncher alloc] initWithApplicationLauncher:applicationLauncher];
         _ringerStateResetter = [[LATSystemRingerStateResetter alloc] init];
         _ringerMuteController = [[LATSystemRingerMuteController alloc] init];
         _homeScreenController = [[LATSystemHomeScreenController alloc] init];

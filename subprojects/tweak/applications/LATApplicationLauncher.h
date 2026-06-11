@@ -11,7 +11,8 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATApplicationLauncher : NSObject
-- (BOOL)launchApplicationWithIdentifier:(NSString *)identifier;
+- (BOOL)enqueueLaunchApplicationWithIdentifier:(NSString *)identifier;
+- (BOOL)enqueueLaunchApplicationWithIdentifier:(NSString *)identifier unlockDevice:(BOOL)unlockDevice;
 @end
 
 NS_ASSUME_NONNULL_END

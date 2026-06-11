@@ -10,9 +10,12 @@
 
 #import "LATBuiltInListenerRegistrant.h"
 
+@class LATApplicationLauncher;
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATSystemActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
+- (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher;
 @end
 
 NS_ASSUME_NONNULL_END

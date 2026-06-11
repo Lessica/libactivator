@@ -64,6 +64,14 @@ static __weak SBRingerControl *gCapturedRingerControl = nil;
 }
 
 + (id<LAListener>)la_createListenerForRegistrantClass:(Class<LATBuiltInListenerRegistrant>)registrantClass {
+    return [self la_createListenerForRegistrantClass:registrantClass applicationLauncher:nil];
+}
+
++ (id<LAListener>)la_createListenerForRegistrantClass:(Class<LATBuiltInListenerRegistrant>)registrantClass
+                                  applicationLauncher:(LATApplicationLauncher *)applicationLauncher {
+    if (registrantClass == LATSystemActionListener.class && applicationLauncher) {
+        return [[LATSystemActionListener alloc] initWithApplicationLauncher:applicationLauncher];
+    }
     return [[(Class)registrantClass alloc] init];
 }
 
@@ -85,6 +93,7 @@ static __weak SBRingerControl *gCapturedRingerControl = nil;
     static dispatch_once_t sOnceToken;
     static LATDynamicApplicationListenerProvider *sDynamicApplicationListenerProvider = nil;
     dispatch_once(&sOnceToken, ^{
+        LATApplicationLauncher *applicationLauncher = [[LATApplicationLauncher alloc] init];
         LATNothingListener *nothingListener = [[LATNothingListener alloc] init];
         [activator registerListener:nothingListener forName:@"libactivator.system.nothing"];
 
@@ -95,7 +104,8 @@ static __weak SBRingerControl *gCapturedRingerControl = nil;
                 continue;
             }
 
-            id<LAListener> listener = [self la_createListenerForRegistrantClass:registrantClass];
+            id<LAListener> listener = [self la_createListenerForRegistrantClass:registrantClass
+                                                            applicationLauncher:applicationLauncher];
             if (!listener) {
                 continue;
             }
@@ -106,7 +116,6 @@ static __weak SBRingerControl *gCapturedRingerControl = nil;
                 missingMetadataReason:missingMetadataReason];
         }
 
-        LATApplicationLauncher *applicationLauncher = [[LATApplicationLauncher alloc] init];
         LATApplicationActionListener *applicationListener =
             [[LATApplicationActionListener alloc] initWithLauncher:applicationLauncher];
         LATApplicationCatalog *applicationCatalog = [[LATApplicationCatalog alloc] init];

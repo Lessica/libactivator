@@ -30,8 +30,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
 #pragma mark - Cleanup
 
-+ (void)cleanActivator:(LAActivator *)activator {
-    NSArray *listenerNames = @[
++ (NSArray<NSString *> *)testListenerNames {
+    return @[
         @"libactivator.test.listener.a",
         @"libactivator.test.listener.b",
         @"libactivator.test.listener.c",
@@ -50,11 +50,10 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.url.missing",
         @"libactivator.test.url.invalid",
     ];
-    for (NSString *listenerName in listenerNames) {
-        [activator unregisterListenerWithName:listenerName];
-    }
+}
 
-    NSArray *eventNames = @[
++ (NSArray<NSString *> *)testEventNames {
+    return @[
         @"libactivator.test.core",
         @"libactivator.test.removable-event",
         @"libactivator.test.nonremovable-event",
@@ -64,7 +63,14 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.built-in.url",
         @"libactivator.test.client-facade.user-info",
     ];
-    for (NSString *eventName in eventNames) {
+}
+
++ (void)cleanActivator:(LAActivator *)activator {
+    for (NSString *listenerName in [self testListenerNames]) {
+        [activator unregisterListenerWithName:listenerName];
+    }
+
+    for (NSString *eventName in [self testEventNames]) {
         [activator unregisterEventDataSourceWithEventName:eventName];
         for (NSString *mode in activator.availableEventModes) {
             [activator unassignEvent:[LAEvent eventWithName:eventName mode:mode]];
@@ -277,6 +283,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     return attempted;
 }
 
+#pragma mark - Runtime State
+
 + (BOOL)isDeviceLocked {
     __block BOOL locked = NO;
     void (^readLockState)(void) = ^{
@@ -335,6 +343,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
                                       state[@"UILocked"] ?: @NO, state[@"FrontMost"] ?: @""];
 }
 
+#pragma mark - Synchronization Helpers
+
 + (void)performOnMainThreadSynchronously:(dispatch_block_t)block {
     if (!block) {
         return;
@@ -364,6 +374,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (void)waitForMainQueue {
     if (!NSThread.isMainThread) {
         dispatch_sync(dispatch_get_main_queue(), ^{
+                          // No work needed; just waiting for the main queue to be idle.
                       });
         return;
     }

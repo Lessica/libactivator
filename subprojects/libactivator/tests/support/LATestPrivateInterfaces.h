@@ -10,20 +10,28 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+#pragma mark - UIApplication
+
 @interface UIApplication (LATestPrivate)
 - (id)_accessibilityFrontMostApplication;
 @end
+
+#pragma mark - SpringBoard App
 
 @interface SBApplication : NSObject
 - (NSString *)bundleIdentifier;
 - (NSString *)displayIdentifier;
 @end
 
+#pragma mark - SpringBoard
+
 @interface SpringBoard : UIApplication
 + (instancetype)sharedApplication;
 - (void)launchApplicationWithIdentifier:(NSString *)identifier suspended:(BOOL)suspended;
 - (void)suspend;
 @end
+
+#pragma mark - Lock Screen
 
 @interface SBLockScreenManager : NSObject
 + (instancetype)sharedInstance;
@@ -35,11 +43,15 @@ NS_ASSUME_NONNULL_BEGIN
                         completion:(nullable id)completion;
 @end
 
+#pragma mark - Backlight
+
 @interface SBBacklightController : NSObject
 + (instancetype)sharedInstance;
 - (void)_startFadeOutAnimationFromLockSource:(long long)source;
 - (void)turnOnScreenFullyWithBacklightSource:(long long)source;
 @end
+
+#pragma mark - Automation
 
 @interface SBSTestAutomationService : NSObject
 - (void)resetToHomeScreenAnimated:(BOOL)animated;

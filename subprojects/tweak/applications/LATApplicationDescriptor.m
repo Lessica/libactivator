@@ -8,8 +8,6 @@
 
 #import "LATApplicationDescriptor.h"
 
-#import <UIKit/UIKit.h>
-
 @interface LSApplicationRecord : NSObject
 @property(nonatomic, readonly) NSArray *appTags;
 @property(nonatomic, readonly, getter=isLaunchProhibited) BOOL launchProhibited;
@@ -18,7 +16,6 @@
 @interface LSApplicationProxy : NSObject
 @property(nonatomic, readonly) NSString *applicationIdentifier;
 @property(nonatomic, readonly) NSString *bundleIdentifier;
-@property(nonatomic, readonly) NSURL *bundleURL;
 @property(nonatomic, readonly) NSString *localizedName;
 @property(nonatomic, readonly) NSString *applicationType;
 @property(nonatomic, readonly) NSArray *appTags;
@@ -26,7 +23,14 @@
 - (LSApplicationRecord *)correspondingApplicationRecord;
 @end
 
+@interface LATApplicationDescriptor ()
+@property(nonatomic, strong) LSApplicationProxy *applicationProxy;
+@end
+
 @implementation LATApplicationDescriptor
+
+@synthesize displayName = _displayName;
+@synthesize bundleAppTags = _bundleAppTags;
 
 #pragma mark - Factories
 
@@ -47,44 +51,45 @@
         return nil;
     }
 
-    NSArray *appTags = @[];
-    if ([proxy respondsToSelector:@selector(appTags)]) {
-        appTags = [self normalizedStringArray:proxy.appTags];
-    }
-
-    NSArray *recordAppTags = @[];
-    BOOL launchProhibited = NO;
-    if ([proxy respondsToSelector:@selector(correspondingApplicationRecord)]) {
-        LSApplicationRecord *record = [proxy correspondingApplicationRecord];
-        if ([record respondsToSelector:@selector(appTags)]) {
-            recordAppTags = [self normalizedStringArray:record.appTags];
-        }
-        if ([record respondsToSelector:@selector(isLaunchProhibited)]) {
-            launchProhibited = record.launchProhibited;
-        }
-    }
-    if (!launchProhibited && [proxy respondsToSelector:@selector(isLaunchProhibited)]) {
-        launchProhibited = proxy.launchProhibited;
-    }
-
-    NSArray *bundleAppTags = @[];
-    if ([proxy respondsToSelector:@selector(bundleURL)] && proxy.bundleURL) {
-        bundleAppTags = [self bundleAppTagsForBundleURL:proxy.bundleURL];
-    }
-
     NSString *applicationType = @"";
     if ([proxy respondsToSelector:@selector(applicationType)] && [proxy.applicationType isKindOfClass:NSString.class]) {
         applicationType = proxy.applicationType;
     }
 
-    NSString *displayName = [self displayNameForApplicationProxy:proxy fallbackIdentifier:identifier];
-    return [self descriptorWithIdentifier:identifier
-                              displayName:displayName
-                          applicationType:applicationType
-                                  appTags:appTags
-                            recordAppTags:recordAppTags
-                            bundleAppTags:bundleAppTags
-                         launchProhibited:launchProhibited];
+    NSArray *appTags = @[];
+    NSArray *recordAppTags = @[];
+    BOOL launchProhibited = NO;
+    BOOL mayRegisterDynamicListener =
+        ([applicationType isEqualToString:@"System"] || [applicationType isEqualToString:@"User"]) &&
+        [identifier rangeOfString:@"com.apple.webapp" options:NSCaseInsensitiveSearch].location == NSNotFound;
+    if (mayRegisterDynamicListener) {
+        if ([proxy respondsToSelector:@selector(appTags)]) {
+            appTags = [self normalizedStringArray:proxy.appTags];
+        }
+
+        if ([proxy respondsToSelector:@selector(correspondingApplicationRecord)]) {
+            LSApplicationRecord *record = [proxy correspondingApplicationRecord];
+            if ([record respondsToSelector:@selector(appTags)]) {
+                recordAppTags = [self normalizedStringArray:record.appTags];
+            }
+            if ([record respondsToSelector:@selector(isLaunchProhibited)]) {
+                launchProhibited = record.launchProhibited;
+            }
+        }
+        if (!launchProhibited && [proxy respondsToSelector:@selector(isLaunchProhibited)]) {
+            launchProhibited = proxy.launchProhibited;
+        }
+    }
+
+    LATApplicationDescriptor *descriptor = [[self alloc] initWithIdentifier:identifier
+                                                                displayName:nil
+                                                            applicationType:applicationType
+                                                                    appTags:appTags
+                                                              recordAppTags:recordAppTags
+                                                              bundleAppTags:@[]
+                                                           launchProhibited:launchProhibited];
+    descriptor.applicationProxy = proxy;
+    return descriptor;
 }
 
 + (instancetype)descriptorWithIdentifier:(NSString *)identifier
@@ -115,7 +120,7 @@
     self = [super init];
     if (self) {
         _identifier = [identifier copy];
-        _displayName = displayName.length > 0 ? [displayName copy] : [identifier copy];
+        _displayName = [displayName copy];
         _applicationType = [applicationType copy] ?: @"";
         _appTags = [appTags copy] ?: @[];
         _recordAppTags = [recordAppTags copy] ?: @[];
@@ -128,8 +133,13 @@
 #pragma mark - Classification
 
 - (BOOL)isVisibleApplication {
-    return !self.launchProhibited && ![self containsHiddenTag] && ![self isWebClip] &&
-           ([self isSystemApplication] || [self isUserApplication]);
+    if (![self isSystemApplication] && ![self isUserApplication]) {
+        return NO;
+    }
+    if ([self isWebClip] || self.launchProhibited) {
+        return NO;
+    }
+    return ![self containsHiddenTag];
 }
 
 - (BOOL)isSystemApplication {
@@ -158,6 +168,16 @@
 }
 
 #pragma mark - Internal
+
+- (NSString *)displayName {
+    if (_displayName.length > 0) {
+        return _displayName;
+    }
+
+    _displayName = [[self.class displayNameForApplicationProxy:self.applicationProxy
+                                            fallbackIdentifier:self.identifier] copy];
+    return _displayName;
+}
 
 - (BOOL)containsHiddenTag {
     return [self.class tagArray:self.appTags containsTag:@"hidden"] ||
@@ -194,15 +214,6 @@
     return NO;
 }
 
-+ (NSArray<NSString *> *)bundleAppTagsForBundleURL:(NSURL *)bundleURL {
-    if (![bundleURL checkResourceIsReachableAndReturnError:nil]) {
-        return @[];
-    }
-
-    NSBundle *bundle = [NSBundle bundleWithURL:bundleURL];
-    return [self normalizedStringArray:[bundle objectForInfoDictionaryKey:@"SBAppTags"]];
-}
-
 + (NSString *)displayNameForApplicationProxy:(LSApplicationProxy *)proxy fallbackIdentifier:(NSString *)identifier {
     NSString *cachedDisplayName = nil;
     @try {
@@ -218,31 +229,13 @@
     }
 
     NSString *localizedName = nil;
-    if ([proxy respondsToSelector:@selector(bundleURL)] && proxy.bundleURL &&
-        [proxy.bundleURL checkResourceIsReachableAndReturnError:nil]) {
-        NSBundle *bundle = [NSBundle bundleWithURL:proxy.bundleURL];
-        localizedName = [self stringFromBundle:bundle key:@"CFBundleDisplayName"];
-        if (localizedName.length == 0) {
-            localizedName = [self stringFromBundle:bundle key:@"CFBundleName"];
-        }
-        if (localizedName.length == 0) {
-            localizedName = [self stringFromBundle:bundle key:@"CFBundleExecutable"];
-        }
-    }
-
-    if (localizedName.length == 0 && [proxy respondsToSelector:@selector(localizedName)] &&
-        [proxy.localizedName isKindOfClass:NSString.class]) {
+    if ([proxy respondsToSelector:@selector(localizedName)] && [proxy.localizedName isKindOfClass:NSString.class]) {
         localizedName = proxy.localizedName;
     }
     if (localizedName.length == 0) {
         localizedName = identifier;
     }
     return localizedName;
-}
-
-+ (NSString *)stringFromBundle:(NSBundle *)bundle key:(NSString *)key {
-    id value = [bundle objectForInfoDictionaryKey:key];
-    return [value isKindOfClass:NSString.class] ? value : nil;
 }
 
 @end

@@ -30,11 +30,20 @@ NS_ASSUME_NONNULL_BEGIN
 @class LAActivator;
 
 @interface LATestEnvironment : NSObject
+
+#pragma mark - Cleanup
+
 + (void)cleanActivator:(LAActivator *)activator;
 + (void)cleanRuntimeInputStateWithActivator:(LAActivator *)activator;
 + (void)removeTestPlist;
+
+#pragma mark - Synthetic Touches
+
 + (void)sendSyntheticTouchWithTouching:(BOOL)touching;
 + (void)waitForSyntheticTouchDelivery;
+
+#pragma mark - Device Automation
+
 + (BOOL)resetHomeScreen;
 + (BOOL)openApplicationWithBundleIdentifier:(NSString *)bundleIdentifier;
 + (BOOL)prepareApplicationModeWithBundleIdentifier:(NSString *)bundleIdentifier
@@ -46,10 +55,14 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL)isDeviceLocked;
 + (nullable NSString *)frontMostDisplayIdentifier;
 + (BOOL)waitForFrontMostApplicationWithBundleIdentifier:(NSString *)bundleIdentifier timeout:(NSTimeInterval)timeout;
+
+#pragma mark - Synchronization Helpers
+
 + (NSString *)runtimeDebugReasonWithPrefix:(nullable NSString *)prefix activator:(LAActivator *)activator;
 + (void)performOnMainThreadSynchronously:(nullable dispatch_block_t)block;
 + (void)waitAllowingMainRunLoopForTimeInterval:(NSTimeInterval)timeInterval;
 + (void)waitForMainQueue;
+
 @end
 
 NS_ASSUME_NONNULL_END

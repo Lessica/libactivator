@@ -14,7 +14,7 @@
 
 URL actions / listener family 已完成。当前 `LATURLActionListener` 注册 44 个带 `url` 或 `urls` metadata 的 Clock / Settings URL action，并承载 4 个 hardcoded Phone tab URL action。Phone tab action 没有 `url` metadata，仍通过 selector metadata gate 校验资源形状，runtime URL 由代码 allowlist 提供。8 个经真机验证失效、重复或只打开错误页面的旧 URL action 已从资源和 allowlist 移除：`libactivator.clock.bedtime`、`libactivator.settings.brightness`、`libactivator.settings.brightness-and-wallpaper`、`libactivator.settings.equalizer`、`libactivator.settings.facebook`、`libactivator.settings.network`、`libactivator.settings.twitter`、`libactivator.settings.usage`。`libactivator.phone.keypad` 也已确认在现代 iOS 上失效且暂无替代 URL，当前从资源和 allowlist 移除并标记为 obsolete。
 
-URL family 的实现边界已固定：注册 name 仍由代码 allowlist 决定；metadata lookup 同时支持 `Listeners/bundled.plist` 和目录式 `Listeners/<name>/Info.plist`；真实打开通过 `LSApplicationWorkspace openSensitiveURL:withOptions:error:` 在专用非主队列提交，`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示目标 App 已完成打开。这与旧 master 中 `applicationOpenURL:publicURLsOnly:` 后立即返回 `YES` 的语义一致。
+URL family 的实现边界已固定：注册 name 仍由代码 allowlist 决定；metadata lookup 同时支持 `Listeners/bundled.plist` 和目录式 `Listeners/<name>/Info.plist`；真实打开通过 `LSApplicationWorkspace openSensitiveURL:withOptions:error:` 在非主队列提交，`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示目标 App 已完成打开。这与旧 master 中 `applicationOpenURL:publicURLsOnly:` 后立即返回 `YES` 的语义一致。
 
 Hardware actions / listener family 已从旧 Media family 中拆出。当前 `LATHardwareActionListener` 承载 15 个 HID Consumer page 播放、音量、输出静音、亮度、Home、Sleep、屏幕键盘、截图、Spotlight 硬件键，以及 `libactivator.system.vibrate` 的硬件振动反馈。HID 动作通过 `IOHIDEventCreateKeyboardEvent` 与 `IOHIDEventSystemClientDispatchEvent` 提交；vibrate 使用 `AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)`；`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示系统 UI 或目标应用已经完成状态变化。`SBScreenShotter` 已确认在现代 iOS 不可用，因此截图不走旧 master 的 `SBScreenShotter saveScreenshot:` 路径。
 
@@ -22,7 +22,9 @@ System actions / listener family 已用于承载非 URL、非 HID、但低风险
 
 Telephony actions / listener family 现在只承载通话控制。`LATTelephonyActionListener` 包含 2 个 call control 动作：`answer-call` 和 `disconnect-call`；Phone tab URL 已按执行机制并入 `LATURLActionListener`。Call control 动作参考 `TRAppIntentXpcServiceConnection.mm` 中已验证的 CoreTelephony 路径，tweak 使用项目内私有 `CTCall.h` 副本并链接 `CoreTelephony.framework`，在主队列异步执行通话控制。`libactivator.phone.disconnect-call` 的 selector metadata 已从旧资源误写的 `answerCall` 规范化为 `disconnectCall`。`libactivator.phone.answer-call` 曾出现首个来电可接、后续来电不可接但可挂断的现象；原因判断为 answer 依赖当前 incoming `CTCallRef`，而参考项目还通过 `CTTelephonyCenter` 持续订阅 call status / identification change 来维护进程内 CoreTelephony 状态，当前实现已补齐这个 observer。`event.handled = YES` 表示 telephony listener 已消费请求，不表示电话状态已完成变化。
 
-当前 built-in actions / listeners 的低风险实施面已经收束。后续阶段应从“继续补静态动作”转向“动态 listener family 和 event source family”。listener 划分仍按执行机制决定：URL action 归 `LATURLActionListener`，HID Consumer action 归 `LATHardwareActionListener`，SpringBoard/system-service action 归 `LATSystemActionListener`，通话控制归 `LATTelephonyActionListener`；新阶段不要把动态 App listener、event acquisition adapter 或 Settings UI 逻辑塞回现有 action listener。
+Dynamic application listeners 已实现。`LATDynamicApplicationListenerProvider` 使用 `LSApplicationWorkspace` / `LSApplicationProxy` 枚举可见 System / User 应用并注册 bundle/display identifier listener；app 列表变化通过 Darwin notification `com.apple.LaunchServices.ApplicationsChanged` 触发，并用防抖策略延迟刷新。LaunchServices snapshot 构建放在后台 utility queue，main queue 只应用 added / removed listener 变更，不全量重建其他 listener family。refresh 阶段只保留注册所需的最小 descriptor，不读取 bundle `Info.plist`、不计算 display name、也不按 display name 排序；动态 title、description、group metadata 由 `LATApplicationActionListener` 在 metadata 查询时懒加载。实际启动统一交给 `LATApplicationLauncher`，通过 `SBSLaunchApplicationWithIdentifierAndLaunchOptions` 在专用非主队列提交。`event.handled = YES` 表示 launch request 已被 listener 接受并提交，不表示目标 App 已完成前台切换。
+
+当前 built-in actions / listeners 的低风险实施面已经收束。后续阶段应从“继续补动作”转向 event source family。listener 划分仍按执行机制决定：URL action 归 `LATURLActionListener`，HID Consumer action 归 `LATHardwareActionListener`，SpringBoard/system-service action 归 `LATSystemActionListener`，通话控制归 `LATTelephonyActionListener`，动态 App 归 `LATApplicationActionListener`；新阶段不要把 event acquisition adapter 或 Settings UI 逻辑塞回现有 action listener。
 
 ## 已处理完成项
 
@@ -36,25 +38,14 @@ Telephony actions / listener family 现在只承载通话控制。`LATTelephonyA
 | System actions | `LATSystemActionListener` | `implemented` | Volume HUD、now-playing application launch、ringer state sync、ringer mute/unmute/toggle、SBS first SpringBoard page 已实现。 |
 | Phone tab URL actions | `LATURLActionListener` | `implemented` | Favorites、Recents、Contacts、Voicemail 已实现；Keypad 已确认失效并移除。 |
 | Telephony actions | `LATTelephonyActionListener` | `implemented` | Answer / Disconnect call 已实现；answer path 持有 `CTTelephonyCenter` observer 以维持 CoreTelephony call state。 |
+| Dynamic application listeners | `LATApplicationActionListener` + `LATDynamicApplicationListenerProvider` | `implemented` | 可见 System / User App listener 已动态注册；通过 `com.apple.LaunchServices.ApplicationsChanged` 刷新动态列表；WebClip 不注册。 |
 | Music controls modal | 无 | `obsolete` | 旧 `SBNowPlayingAlertItem` modal 在现代 iOS 没有等价 UI，不作为当前 listener family 恢复。 |
 
 ## 下一阶段建议
 
-### 1. Dynamic Application Listeners
+### 1. Low-Risk Event Sources
 
-建议下一阶段进入 dynamic application listener family。理由是 static action family 已经收束，旧 Activator 的另一大块用户可见能力是“打开某个 App / App 相关 listener”，并且这条线不需要用户 App 注入，符合当前架构。
-
-实施边界：
-
-- 数据源应来自 SpringBoard app model，不从 `Listeners/` 第三方 glyph 目录推导“已安装 App”。
-- Runtime 注册仍由 provider 代码生成，不把目录式 metadata 自动变成 executable listener。
-- listener name、display identifier、localized display name、glyph fallback 和 `hasSeen` / `ignoreHasSeen:` 语义需要先设计清楚。
-- 打开 App 继续走 SpringBoard 私有打开路径，不走 public `UIApplication openURL`。
-- stable tests 覆盖 registration、metadata/glyph fallback、`hasSeen` 语义和 metadata-only 不注册；真实打开 App、特殊系统 App、卸载/隐藏 App 进入设备手工 checklist。
-
-### 2. Low-Risk Event Sources
-
-dynamic application listeners 之后，建议进入低风险 event source family，而不是继续补零散 action。优先考虑不依赖复杂触摸识别、能通过系统通知或 SpringBoard 状态稳定采集的事件。
+建议进入低风险 event source family，而不是继续补零散 action。优先考虑不依赖复杂触摸识别、能通过系统通知或 SpringBoard 状态稳定采集的事件。
 
 优先候选：
 
@@ -69,7 +60,7 @@ dynamic application listeners 之后，建议进入低风险 event source family
 - assignment、blacklist、mode、no-touch、unlock-to-send 继续交给现有 dispatch engine，不在 adapter 中重复实现。
 - 能模拟的 notification path 可进 stable tests；真实硬件状态变化进入 `RuntimeDevice` 或手工 checklist。
 
-### 3. 暂缓 / 高风险
+### 2. 暂缓 / 高风险
 
 | Listener name | 标题 | 建议状态 | 说明 |
 | --- | --- | --- | --- |

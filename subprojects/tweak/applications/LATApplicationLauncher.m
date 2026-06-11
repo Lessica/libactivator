@@ -29,34 +29,33 @@ extern CFStringRef SBSApplicationLaunchingErrorString(int errorCode);
         dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(
             DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL, QOS_CLASS_USER_INITIATED, 0);
         _queue = dispatch_queue_create("libactivator.application-launch", attr);
-        dispatch_queue_set_specific(_queue, (__bridge const void *)(self), (__bridge void *)self, NULL);
     }
     return self;
 }
 
 #pragma mark - Public API
 
-- (BOOL)launchApplicationWithIdentifier:(NSString *)identifier {
+- (BOOL)enqueueLaunchApplicationWithIdentifier:(NSString *)identifier {
+    return [self enqueueLaunchApplicationWithIdentifier:identifier unlockDevice:YES];
+}
+
+- (BOOL)enqueueLaunchApplicationWithIdentifier:(NSString *)identifier unlockDevice:(BOOL)unlockDevice {
     if (identifier.length == 0) {
         HBLogError(@"Unable to launch application because identifier is empty");
         return NO;
     }
 
-    if (dispatch_get_specific((__bridge const void *)(self))) {
-        return [self launchApplicationOnQueueWithIdentifier:identifier];
-    }
-
-    __block BOOL launched = NO;
-    dispatch_sync(self.queue, ^{
-        launched = [self launchApplicationOnQueueWithIdentifier:identifier];
+    NSString *identifierToLaunch = [identifier copy];
+    dispatch_async(self.queue, ^{
+        [self launchApplicationWithIdentifier:identifierToLaunch unlockDevice:unlockDevice];
     });
-    return launched;
+    return YES;
 }
 
 #pragma mark - Internal
 
-- (BOOL)launchApplicationOnQueueWithIdentifier:(NSString *)identifier {
-    NSDictionary *launchOptions = @{SBSApplicationLaunchOptionUnlockDeviceKey : @YES};
+- (BOOL)launchApplicationWithIdentifier:(NSString *)identifier unlockDevice:(BOOL)unlockDevice {
+    NSDictionary *launchOptions = unlockDevice ? @{SBSApplicationLaunchOptionUnlockDeviceKey : @YES} : @{};
     int result = SBSLaunchApplicationWithIdentifierAndLaunchOptions((__bridge CFStringRef)identifier,
                                                                     (__bridge CFDictionaryRef)launchOptions, NO);
     if (result == 0) {

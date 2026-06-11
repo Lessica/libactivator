@@ -181,7 +181,7 @@
         return NO;
     }
 
-    dispatch_async([self.class URLActionOpenQueue], ^{
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSError *error = nil;
         BOOL opened = [workspace openSensitiveURL:url withOptions:@{} error:&error];
         if (!opened) {
@@ -191,15 +191,6 @@
     });
 
     return YES;
-}
-
-+ (dispatch_queue_t)URLActionOpenQueue {
-    static dispatch_queue_t sQueue;
-    static dispatch_once_t sOnceToken;
-    dispatch_once(&sOnceToken, ^{
-        sQueue = dispatch_queue_create("libactivator.url-actions.open", DISPATCH_QUEUE_SERIAL);
-    });
-    return sQueue;
 }
 
 @end

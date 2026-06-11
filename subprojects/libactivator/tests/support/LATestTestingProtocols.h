@@ -10,14 +10,17 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+#pragma mark - Built-in Listener Metadata
+
 @protocol LATestBuiltInListenerAllowlist <NSObject>
 + (NSArray<NSString *> *)supportedListenerNames;
 @end
 
 @protocol LATestSelectorBackedBuiltInListener <LATestBuiltInListenerAllowlist>
-+ (NSArray<NSString *> *)supportedListenerNames;
 + (nullable NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
 @end
+
+#pragma mark - Dynamic Application Descriptor
 
 @protocol LATestDynamicApplicationDescriptor <NSObject>
 @property(nonatomic, copy, readonly) NSString *identifier;
@@ -28,6 +31,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)isWebClip;
 - (nullable NSString *)applicationGroup;
 @end
+
+#pragma mark - Dynamic Application Factories
 
 @protocol LATestDynamicApplicationDescriptorFactory <NSObject>
 + (id<LATestDynamicApplicationDescriptor>)descriptorWithIdentifier:(NSString *)identifier

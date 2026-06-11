@@ -15,9 +15,6 @@
 @interface LSApplicationWorkspace : NSObject
 + (instancetype)defaultWorkspace;
 - (NSArray *)allInstalledApplications;
-- (void)enumerateApplicationsOfType:(NSUInteger)type block:(void (^)(id applicationProxy))block;
-- (void)addObserver:(id)observer;
-- (void)removeObserver:(id)observer;
 @end
 
 @interface LSApplicationProxy : NSObject
@@ -44,7 +41,7 @@
 
     return [[descriptorsByIdentifier allValues] sortedArrayUsingComparator:^NSComparisonResult(
                                                     LATApplicationDescriptor *first, LATApplicationDescriptor *second) {
-        return [first.displayName localizedCaseInsensitiveCompare:second.displayName];
+        return [first.identifier compare:second.identifier];
     }];
 }
 
@@ -58,43 +55,10 @@
     return [descriptor isVisibleApplication] ? descriptor : nil;
 }
 
-- (void)addObserver:(id)observer {
-    LSApplicationWorkspace *workspace = [LSApplicationWorkspace defaultWorkspace];
-    if ([workspace respondsToSelector:@selector(addObserver:)]) {
-        [workspace addObserver:observer];
-    } else {
-        HBLogError(@"LSApplicationWorkspace does not support addObserver:");
-    }
-}
-
-- (void)removeObserver:(id)observer {
-    LSApplicationWorkspace *workspace = [LSApplicationWorkspace defaultWorkspace];
-    if ([workspace respondsToSelector:@selector(removeObserver:)]) {
-        [workspace removeObserver:observer];
-    }
-}
-
 #pragma mark - Internal
 
 - (NSArray *)allInstalledApplicationProxies {
     LSApplicationWorkspace *workspace = [LSApplicationWorkspace defaultWorkspace];
-
-    if ([workspace respondsToSelector:@selector(enumerateApplicationsOfType:block:)]) {
-        NSMutableArray *applications = [[NSMutableArray alloc] init];
-        [workspace enumerateApplicationsOfType:0
-                                         block:^(id applicationProxy) {
-                                             if (applicationProxy) {
-                                                 [applications addObject:applicationProxy];
-                                             }
-                                         }];
-        [workspace enumerateApplicationsOfType:1
-                                         block:^(id applicationProxy) {
-                                             if (applicationProxy) {
-                                                 [applications addObject:applicationProxy];
-                                             }
-                                         }];
-        return [applications copy];
-    }
 
     if ([workspace respondsToSelector:@selector(allInstalledApplications)]) {
         NSArray *applications = [workspace allInstalledApplications];

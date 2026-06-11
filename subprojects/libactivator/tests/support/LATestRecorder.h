@@ -11,18 +11,30 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATestRecorder : NSObject
+
+#pragma mark - Counters
+
 @property(nonatomic, assign) NSInteger caseCount;
 @property(nonatomic, assign) NSInteger passCount;
 @property(nonatomic, assign) NSInteger failureCount;
 @property(nonatomic, assign) NSInteger skipCount;
-@property(nonatomic, copy) NSString *suiteName;
-@property(nonatomic, strong) NSMutableArray *suites;
-@property(nonatomic, strong) NSMutableArray *failures;
-@property(nonatomic, strong) NSMutableArray *skipped;
+
+#pragma mark - Records
+
+@property(nonatomic, copy, nullable) NSString *suiteName;
+@property(nonatomic, strong) NSMutableArray<NSString *> *suites;
+@property(nonatomic, strong) NSMutableArray<NSString *> *failures;
+@property(nonatomic, strong) NSMutableArray<NSString *> *skipped;
+
+#pragma mark - Recording
+
 - (void)beginSuite:(NSString *)suiteName;
 - (void)expect:(BOOL)condition caseName:(NSString *)caseName reason:(NSString *)reason;
 - (void)skip:(NSString *)caseName reason:(NSString *)reason;
-- (NSDictionary *)resultDictionary;
+
+#pragma mark - Result
+
+- (NSDictionary<NSString *, id> *)resultDictionary;
 @end
 
 NS_ASSUME_NONNULL_END

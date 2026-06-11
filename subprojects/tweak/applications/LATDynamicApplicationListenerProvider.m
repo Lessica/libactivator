@@ -15,13 +15,29 @@
 
 #import <HBLog.h>
 
+static CFStringRef const LATLaunchServicesApplicationsChangedNotification =
+    CFSTR("com.apple.LaunchServices.ApplicationsChanged");
+static NSTimeInterval const LATApplicationRefreshDebounceDelay = 1.0;
+
 @interface LATDynamicApplicationListenerProvider ()
 @property(nonatomic, weak) LAActivator *activator;
 @property(nonatomic, strong) LATApplicationCatalog *catalog;
 @property(nonatomic, strong) LATApplicationActionListener *listener;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier;
 @property(nonatomic, strong) NSMutableSet<NSString *> *registeredListenerNames;
+@property(nonatomic, assign) NSUInteger refreshGeneration;
+- (void)launchServicesApplicationsDidChange;
+- (void)scheduleRefreshApplicationsAfterDelay:(NSTimeInterval)delay;
+- (void)applyApplicationDescriptorsByIdentifier:
+    (NSDictionary<NSString *, LATApplicationDescriptor *> *)descriptorsByIdentifier;
 @end
+
+static void LATLaunchServicesApplicationsChangedCallback(__unused CFNotificationCenterRef center, void *observer,
+                                                         __unused CFStringRef name, __unused const void *object,
+                                                         __unused CFDictionaryRef userInfo) {
+    LATDynamicApplicationListenerProvider *provider = (__bridge LATDynamicApplicationListenerProvider *)observer;
+    [provider launchServicesApplicationsDidChange];
+}
 
 @implementation LATDynamicApplicationListenerProvider
 
@@ -42,13 +58,17 @@
 }
 
 - (void)dealloc {
-    [self.catalog removeObserver:self];
+    CFNotificationCenterRemoveObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self,
+                                       LATLaunchServicesApplicationsChangedNotification, NULL);
 }
 
 #pragma mark - Public API
 
 - (void)start {
-    [self.catalog addObserver:self];
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self,
+                                    LATLaunchServicesApplicationsChangedCallback,
+                                    LATLaunchServicesApplicationsChangedNotification, NULL,
+                                    CFNotificationSuspensionBehaviorDeliverImmediately);
     [self refreshApplications];
 }
 
@@ -60,18 +80,60 @@
         return;
     }
 
-    NSMutableDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier =
-        [[NSMutableDictionary alloc] init];
-    for (LATApplicationDescriptor *descriptor in [self.catalog visibleApplicationDescriptors]) {
-        if (descriptor.identifier.length > 0) {
-            descriptorsByIdentifier[descriptor.identifier] = descriptor;
+    NSUInteger refreshGeneration = ++self.refreshGeneration;
+    LATApplicationCatalog *catalog = self.catalog;
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        @autoreleasepool {
+            NSMutableDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier =
+                [[NSMutableDictionary alloc] init];
+            for (LATApplicationDescriptor *descriptor in [catalog visibleApplicationDescriptors]) {
+                if (descriptor.identifier.length > 0) {
+                    descriptorsByIdentifier[descriptor.identifier] = descriptor;
+                }
+            }
+
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (refreshGeneration != self.refreshGeneration) {
+                    return;
+                }
+                [self applyApplicationDescriptorsByIdentifier:descriptorsByIdentifier];
+            });
         }
+    });
+}
+
+- (void)scheduleRefreshApplicationsAfterDelay:(NSTimeInterval)delay {
+    if (![NSThread isMainThread]) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self scheduleRefreshApplicationsAfterDelay:delay];
+        });
+        return;
     }
+
+    self.refreshGeneration++;
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(refreshApplications) object:nil];
+    [self performSelector:@selector(refreshApplications) withObject:nil afterDelay:delay];
+}
+
+- (void)applyApplicationDescriptorsByIdentifier:
+    (NSDictionary<NSString *, LATApplicationDescriptor *> *)snapshotDescriptorsByIdentifier {
+    NSMutableDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier =
+        [snapshotDescriptorsByIdentifier mutableCopy] ?: [[NSMutableDictionary alloc] init];
+    NSSet<NSString *> *currentListenerNames = [NSSet setWithArray:descriptorsByIdentifier.allKeys];
 
     self.descriptorsByIdentifier = descriptorsByIdentifier;
     [self.listener setApplicationDescriptors:self.descriptorsByIdentifier];
-    [self.registeredListenerNames removeAllObjects];
-    for (NSString *identifier in self.descriptorsByIdentifier) {
+
+    NSMutableSet<NSString *> *removedListenerNames = [self.registeredListenerNames mutableCopy];
+    [removedListenerNames minusSet:currentListenerNames];
+    for (NSString *identifier in removedListenerNames) {
+        [self.activator unregisterListenerWithName:identifier];
+        [self.registeredListenerNames removeObject:identifier];
+    }
+
+    NSMutableSet<NSString *> *addedListenerNames = [currentListenerNames mutableCopy];
+    [addedListenerNames minusSet:self.registeredListenerNames];
+    for (NSString *identifier in addedListenerNames) {
         [self.activator registerListener:self.listener forName:identifier ignoreHasSeen:YES];
         [self.registeredListenerNames addObject:identifier];
     }
@@ -83,87 +145,9 @@
 
 #pragma mark - Application Catalog Notifications
 
-- (void)applicationsDidInstall:(id)applicationIdentifiers {
-    HBLogDebug(@"Applications did install: %@", applicationIdentifiers);
-    [self updateInstalledApplicationsWithIdentifiers:[self normalizedApplicationIdentifiers:applicationIdentifiers]];
-}
-
-- (void)applicationsDidUninstall:(id)applicationIdentifiers {
-    HBLogDebug(@"Applications did uninstall: %@", applicationIdentifiers);
-    [self removeApplicationsWithIdentifiers:[self normalizedApplicationIdentifiers:applicationIdentifiers]];
-}
-
-#pragma mark - Application Registration
-
-- (void)updateInstalledApplicationsWithIdentifiers:(NSArray<NSString *> *)applicationIdentifiers {
-    if (![NSThread isMainThread]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self updateInstalledApplicationsWithIdentifiers:applicationIdentifiers];
-        });
-        return;
-    }
-
-    for (NSString *identifier in applicationIdentifiers) {
-        LATApplicationDescriptor *descriptor = [self.catalog applicationDescriptorForIdentifier:identifier];
-        if (descriptor) {
-            [self registerDescriptor:descriptor];
-        } else {
-            [self unregisterApplicationWithIdentifier:identifier];
-        }
-    }
-}
-
-- (void)removeApplicationsWithIdentifiers:(NSArray<NSString *> *)applicationIdentifiers {
-    if (![NSThread isMainThread]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self removeApplicationsWithIdentifiers:applicationIdentifiers];
-        });
-        return;
-    }
-
-    for (NSString *identifier in applicationIdentifiers) {
-        [self unregisterApplicationWithIdentifier:identifier];
-    }
-}
-
-#pragma mark - Helpers
-
-- (void)registerDescriptor:(LATApplicationDescriptor *)descriptor {
-    if (descriptor.identifier.length == 0) {
-        return;
-    }
-
-    self.descriptorsByIdentifier[descriptor.identifier] = descriptor;
-    [self.listener setApplicationDescriptors:self.descriptorsByIdentifier];
-    [self.activator registerListener:self.listener forName:descriptor.identifier ignoreHasSeen:YES];
-    [self.registeredListenerNames addObject:descriptor.identifier];
-}
-
-- (void)unregisterApplicationWithIdentifier:(NSString *)identifier {
-    if (identifier.length == 0 || ![self.registeredListenerNames containsObject:identifier]) {
-        return;
-    }
-
-    [self.descriptorsByIdentifier removeObjectForKey:identifier];
-    [self.listener setApplicationDescriptors:self.descriptorsByIdentifier];
-    [self.activator unregisterListenerWithName:identifier];
-    [self.registeredListenerNames removeObject:identifier];
-}
-
-- (NSArray<NSString *> *)normalizedApplicationIdentifiers:(id)value {
-    if ([value isKindOfClass:NSString.class]) {
-        return @[ value ];
-    }
-    if ([value isKindOfClass:NSArray.class] || [value isKindOfClass:NSSet.class]) {
-        NSMutableArray<NSString *> *identifiers = [[NSMutableArray alloc] init];
-        for (id object in value) {
-            if ([object isKindOfClass:NSString.class]) {
-                [identifiers addObject:object];
-            }
-        }
-        return [identifiers copy];
-    }
-    return @[];
+- (void)launchServicesApplicationsDidChange {
+    HBLogDebug(@"LaunchServices applications changed");
+    [self scheduleRefreshApplicationsAfterDelay:LATApplicationRefreshDebounceDelay];
 }
 
 @end

@@ -25,8 +25,8 @@
     self = [super init];
     if (self) {
         _launcher = launcher;
-        _descriptorQueue =
-            dispatch_queue_create("libactivator.application-action-listener.descriptors", DISPATCH_QUEUE_SERIAL);
+        _descriptorQueue = dispatch_queue_create("libactivator.application-action-listener.descriptors",
+                                                 DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _descriptorsByIdentifier = @{};
     }
     return self;
@@ -59,7 +59,7 @@
     }
 
     event.handled = YES;
-    [self.launcher launchApplicationWithIdentifier:descriptor.identifier];
+    [self.launcher enqueueLaunchApplicationWithIdentifier:descriptor.identifier];
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName {
