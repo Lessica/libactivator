@@ -9,6 +9,7 @@
 - `TESTING.md`：测试分类、执行责任和默认验证入口，说明哪些测试可以进提交门槛，哪些只能作为专项诊断。
 - `BUILT_IN_ROADMAP.md`：下一阶段内置 event / listener / action 的实现路线图，明确各类能力由哪个模块承载、按什么顺序推进。
 - `BUILT_IN_ACTION_TRACKER.md`：内置 listener/action 的具体事项跟踪表，记录每项动作的依据、状态和首次验证方式。
+- `LOW_RISK_EVENT_SOURCE_FLOW.md`：以 `device locked / unlocked` 为例的低风险事件源端到端流程图，说明 assignment、event source、dispatch engine 和队列上下文的关系。
 - `LEGACY_REVERSE_ENGINEERING.md`：需要反复引用的 1.9.13 旧实现逆向证据，包括本地解混淆记录和已确认的旧版语义。
 
 ## 归档说明

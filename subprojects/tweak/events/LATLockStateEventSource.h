@@ -11,7 +11,11 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATLockStateEventSource : NSObject
+
+// Main-queue confined. This source reads SpringBoard lock state and submits events to the
+// SpringBoard dispatch engine, so callers must start it from the SpringBoard main queue.
 - (void)start;
+
 @end
 
 NS_ASSUME_NONNULL_END

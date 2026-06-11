@@ -13,6 +13,8 @@
 #import <HBLog.h>
 #import <notify.h>
 
+#define kLATLockStateEventSourceMainQueueReason @"LATLockStateEventSource must only be used on the main thread"
+
 @interface SBLockScreenManager : NSObject
 + (instancetype)sharedInstance;
 - (BOOL)isUILocked;
@@ -30,6 +32,7 @@
 #pragma mark - Lifecycle
 
 - (void)start {
+    NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
     if (self.started) {
         return;
     }
@@ -38,15 +41,17 @@
     [self refreshKnownLockStateWithoutSendingEvent];
 
     __weak typeof(self) weakSelf = self;
-    notify_register_dispatch("com.apple.springboard.lockstate", &_lockStateToken, dispatch_get_main_queue(), ^(int token) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        [strongSelf handleLockStateNotification];
-    });
+    notify_register_dispatch("com.apple.springboard.lockstate", &_lockStateToken, dispatch_get_main_queue(),
+                             ^(int token) {
+                                 __strong typeof(weakSelf) strongSelf = weakSelf;
+                                 [strongSelf handleLockStateNotification];
+                             });
 }
 
 #pragma mark - Notifications
 
 - (void)handleLockStateNotification {
+    NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
     [LASharedActivator la_noteRuntimeStateMayHaveChanged];
 
     BOOL locked = NO;
@@ -70,6 +75,7 @@
 }
 
 - (void)refreshKnownLockStateWithoutSendingEvent {
+    NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
     BOOL locked = NO;
     if (![self readUILocked:&locked]) {
         return;
@@ -81,38 +87,27 @@
 #pragma mark - State
 
 - (BOOL)readUILocked:(BOOL *)locked {
-    __block BOOL didRead = NO;
-    __block BOOL uiLocked = NO;
-    dispatch_block_t readBlock = ^{
-        Class managerClass = NSClassFromString(@"SBLockScreenManager");
-        if (![managerClass respondsToSelector:@selector(sharedInstance)]) {
-            return;
-        }
-
-        SBLockScreenManager *manager = [(id)managerClass sharedInstance];
-        if (![manager respondsToSelector:@selector(isUILocked)]) {
-            return;
-        }
-
-        uiLocked = [manager isUILocked];
-        didRead = YES;
-    };
-
-    if ([NSThread isMainThread]) {
-        readBlock();
-    } else {
-        dispatch_sync(dispatch_get_main_queue(), readBlock);
+    NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
+    Class managerClass = NSClassFromString(@"SBLockScreenManager");
+    if (![managerClass respondsToSelector:@selector(sharedInstance)]) {
+        return NO;
     }
 
-    if (didRead && locked) {
-        *locked = uiLocked;
+    SBLockScreenManager *manager = [(id)managerClass sharedInstance];
+    if (![manager respondsToSelector:@selector(isUILocked)]) {
+        return NO;
     }
-    return didRead;
+
+    if (locked) {
+        *locked = [manager isUILocked];
+    }
+    return YES;
 }
 
 #pragma mark - Event Dispatch
 
 - (void)sendDeviceLockEventForLockedState:(BOOL)locked {
+    NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
     NSString *eventName = locked ? LAEventNameDeviceLocked : LAEventNameDeviceUnlocked;
     NSString *eventMode = locked ? LAEventModeLockScreen : LASharedActivator.currentEventMode;
     if (!locked && [eventMode isEqualToString:LAEventModeLockScreen]) {
