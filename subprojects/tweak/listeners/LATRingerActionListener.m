@@ -8,11 +8,24 @@
 
 #import "LATRingerActionListener.h"
 
+#import "LATBuiltInListenerRegistry.h"
+
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
-#import <dlfcn.h>
 
-typedef int (*LATRingerStateGetter)(void);
+extern int BKSHIDServicesGetRingerState(void);
+
+@interface UIApplication (LATRingerPrivate)
+- (void)_updateRingerState:(int)ringerState
+               withVisuals:(BOOL)withVisuals
+  updatePreferenceRegister:(BOOL)updatePreferenceRegister;
+@end
+
+@interface SBRingerControl : NSObject
+- (BOOL)isRingerMuted;
+- (void)setRingerMuted:(BOOL)muted;
+- (void)activateRingerHUDFromMuteSwitch:(int)source;
+@end
 
 typedef NS_ENUM(NSUInteger, LATRingerActionKind) {
     LATRingerActionKindReset,
@@ -37,12 +50,6 @@ typedef NS_ENUM(NSUInteger, LATRingerActionKind) {
 @interface LATRingerMuteController : NSObject
 - (BOOL)applyCommand:(LATRingerActionCommand *)command;
 @end
-
-@interface LATRingerActionListener ()
-+ (id)ringerControlInstance;
-@end
-
-static __weak id gCapturedRingerControl = nil;
 
 @implementation LATRingerActionCommand
 
@@ -71,25 +78,17 @@ static __weak id gCapturedRingerControl = nil;
         return reset;
     }
 
-    LATRingerStateGetter getRingerState = (LATRingerStateGetter)dlsym(RTLD_DEFAULT, "BKSHIDServicesGetRingerState");
-    if (!getRingerState) {
-        HBLogError(@"Unable to reset ringer state for action %@ because BKSHIDServicesGetRingerState was not found",
+    UIApplication *application = UIApplication.sharedApplication;
+    SEL updateSelector = @selector(_updateRingerState:withVisuals:updatePreferenceRegister:);
+    if (!application || ![application respondsToSelector:updateSelector]) {
+        HBLogError(@"Unable to reset ringer state for action %@ because SpringBoard does not support "
+                   @"_updateRingerState:withVisuals:updatePreferenceRegister:",
                    listenerName ?: @"");
         return NO;
     }
 
-    UIApplication *application = UIApplication.sharedApplication;
-    SEL updateSelector = NSSelectorFromString(@"_updateRingerState:withVisuals:updatePreferenceRegister:");
-    if (!application || ![application respondsToSelector:updateSelector]) {
-        HBLogError(@"Unable to reset ringer state for action %@ because SpringBoard does not support %@",
-                   listenerName ?: @"", NSStringFromSelector(updateSelector));
-        return NO;
-    }
-
-    int ringerState = getRingerState();
-    void (*updateRingerState)(id, SEL, int, BOOL, BOOL) =
-        (void (*)(id, SEL, int, BOOL, BOOL))[application methodForSelector:updateSelector];
-    updateRingerState(application, updateSelector, ringerState, YES, NO);
+    int ringerState = BKSHIDServicesGetRingerState();
+    [application _updateRingerState:ringerState withVisuals:YES updatePreferenceRegister:NO];
     return YES;
 }
 
@@ -106,40 +105,33 @@ static __weak id gCapturedRingerControl = nil;
         return applied;
     }
 
-    id ringerControl = [LATRingerActionListener ringerControlInstance];
+    SBRingerControl *ringerControl = LATBuiltInListenerRegistry.ringerControlInstance;
     if (!ringerControl) {
         HBLogError(@"Unable to apply ringer action %@ because SBRingerControl was not captured",
                    command.listenerName ?: @"");
         return NO;
     }
 
-    SEL setMutedSelector = NSSelectorFromString(@"setRingerMuted:");
-    if (![ringerControl respondsToSelector:setMutedSelector]) {
+    if (![ringerControl respondsToSelector:@selector(setRingerMuted:)]) {
         HBLogError(@"SBRingerControl does not support setRingerMuted:");
         return NO;
     }
 
     BOOL muted = NO;
     if (command.kind == LATRingerActionKindToggle) {
-        SEL isMutedSelector = NSSelectorFromString(@"isRingerMuted");
-        if (![ringerControl respondsToSelector:isMutedSelector]) {
+        if (![ringerControl respondsToSelector:@selector(isRingerMuted)]) {
             HBLogError(@"SBRingerControl does not support isRingerMuted");
             return NO;
         }
-        BOOL (*isMuted)(id, SEL) = (BOOL(*)(id, SEL))[ringerControl methodForSelector:isMutedSelector];
-        muted = !isMuted(ringerControl, isMutedSelector);
+        muted = ![ringerControl isRingerMuted];
     } else {
         muted = (command.kind == LATRingerActionKindMute);
     }
 
-    void (*setMuted)(id, SEL, BOOL) = (void (*)(id, SEL, BOOL))[ringerControl methodForSelector:setMutedSelector];
-    setMuted(ringerControl, setMutedSelector, muted);
+    [ringerControl setRingerMuted:muted];
 
-    SEL activateHUDSelector = NSSelectorFromString(@"activateRingerHUDFromMuteSwitch:");
-    if ([ringerControl respondsToSelector:activateHUDSelector]) {
-        void (*activateHUD)(id, SEL, int) =
-            (void (*)(id, SEL, int))[ringerControl methodForSelector:activateHUDSelector];
-        activateHUD(ringerControl, activateHUDSelector, muted ? 0 : 1);
+    if ([ringerControl respondsToSelector:@selector(activateRingerHUDFromMuteSwitch:)]) {
+        [ringerControl activateRingerHUDFromMuteSwitch:(muted ? 0 : 1)];
     }
     return YES;
 }
@@ -236,16 +228,6 @@ static __weak id gCapturedRingerControl = nil;
         sCommands = [mutableCommands copy];
     });
     return sCommands;
-}
-
-+ (void)noteRingerControlInstance:(id)ringerControl {
-    if (ringerControl) {
-        gCapturedRingerControl = ringerControl;
-    }
-}
-
-+ (id)ringerControlInstance {
-    return gCapturedRingerControl;
 }
 
 @end

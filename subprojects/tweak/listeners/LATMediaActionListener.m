@@ -8,10 +8,23 @@
 
 #import "LATMediaActionListener.h"
 
+#import "LATBuiltInListenerRegistry.h"
+
 #import <CoreFoundation/CoreFoundation.h>
 #import <HBLog.h>
+#import <UIKit/UIKit.h>
 #import <mach/mach_time.h>
 #import <sys/types.h>
+
+@interface SpringBoard : UIApplication
++ (instancetype)sharedApplication;
+- (void)launchApplicationWithIdentifier:(NSString *)displayIdentifier suspended:(BOOL)suspended;
+@end
+
+@interface SBVolumeControl : NSObject
+- (float)_effectiveVolume;
+- (void)_presentVolumeHUDWithVolume:(float)volume;
+@end
 
 typedef const struct __IOHIDEvent *IOHIDEventRef;
 typedef const struct __IOHIDEventSystemClient *IOHIDEventSystemClientRef;
@@ -73,12 +86,6 @@ typedef NS_ENUM(NSUInteger, LATMediaActionKind) {
 @interface LATMediaNowPlayingApplicationLauncher : NSObject
 - (BOOL)launchNowPlayingApplicationForListenerName:(NSString *)listenerName;
 @end
-
-@interface LATMediaActionListener ()
-+ (id)volumeControlInstance;
-@end
-
-static __weak id gCapturedVolumeControl = nil;
 
 @implementation LATMediaActionCommand
 
@@ -200,30 +207,24 @@ static __weak id gCapturedVolumeControl = nil;
         return presented;
     }
 
-    id volumeControl = [LATMediaActionListener volumeControlInstance];
+    SBVolumeControl *volumeControl = LATBuiltInListenerRegistry.volumeControlInstance;
     if (!volumeControl) {
         HBLogError(@"Unable to present volume HUD for media action %@ because SBVolumeControl was not captured",
                    listenerName ?: @"");
         return NO;
     }
 
-    SEL presentSelector = NSSelectorFromString(@"_presentVolumeHUDWithVolume:");
-    if (![volumeControl respondsToSelector:presentSelector]) {
+    if (![volumeControl respondsToSelector:@selector(_presentVolumeHUDWithVolume:)]) {
         HBLogError(@"SBVolumeControl does not support _presentVolumeHUDWithVolume:");
         return NO;
     }
 
     float volume = 0.5f;
-    SEL effectiveVolumeSelector = NSSelectorFromString(@"_effectiveVolume");
-    if ([volumeControl respondsToSelector:effectiveVolumeSelector]) {
-        float (*effectiveVolume)(id, SEL) =
-            (float (*)(id, SEL))[volumeControl methodForSelector:effectiveVolumeSelector];
-        volume = effectiveVolume(volumeControl, effectiveVolumeSelector);
+    if ([volumeControl respondsToSelector:@selector(_effectiveVolume)]) {
+        volume = [volumeControl _effectiveVolume];
     }
 
-    void (*presentVolumeHUD)(id, SEL, float) =
-        (void (*)(id, SEL, float))[volumeControl methodForSelector:presentSelector];
-    presentVolumeHUD(volumeControl, presentSelector, volume);
+    [volumeControl _presentVolumeHUDWithVolume:volume];
     return YES;
 }
 
@@ -327,15 +328,12 @@ static __weak id gCapturedVolumeControl = nil;
         return NO;
     }
 
-    id springBoard = [springBoardClass sharedApplication];
-    SEL launchSelector = NSSelectorFromString(@"launchApplicationWithIdentifier:suspended:");
-    if (![springBoard respondsToSelector:launchSelector]) {
+    SpringBoard *springBoard = (SpringBoard *)[springBoardClass sharedApplication];
+    if (![springBoard respondsToSelector:@selector(launchApplicationWithIdentifier:suspended:)]) {
         return NO;
     }
 
-    void (*launchApplication)(id, SEL, NSString *, BOOL) =
-        (void (*)(id, SEL, NSString *, BOOL))[springBoard methodForSelector:launchSelector];
-    launchApplication(springBoard, launchSelector, displayIdentifier, NO);
+    [springBoard launchApplicationWithIdentifier:displayIdentifier suspended:NO];
     return YES;
 }
 
@@ -466,16 +464,6 @@ static __weak id gCapturedVolumeControl = nil;
         sCommands = [mutableCommands copy];
     });
     return sCommands;
-}
-
-+ (void)noteVolumeControlInstance:(id)volumeControl {
-    if (volumeControl) {
-        gCapturedVolumeControl = volumeControl;
-    }
-}
-
-+ (id)volumeControlInstance {
-    return gCapturedVolumeControl;
 }
 
 @end

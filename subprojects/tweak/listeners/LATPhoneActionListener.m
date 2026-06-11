@@ -8,27 +8,11 @@
 
 #import "LATPhoneActionListener.h"
 
+#import "CTCall.h"
+
 #import <CoreFoundation/CoreFoundation.h>
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
-#import <dlfcn.h>
-
-typedef struct __CTCall *CTCallRef;
-
-typedef NS_ENUM(NSInteger, LATPhoneCallStatus) {
-    LATPhoneCallStatusUnknown = 0,
-    LATPhoneCallStatusAnswered = 1,
-    LATPhoneCallStatusDroppedInterrupted = 2,
-    LATPhoneCallStatusOutgoingInitiated = 3,
-    LATPhoneCallStatusIncomingCall = 4,
-    LATPhoneCallStatusIncomingCallEnded = 5,
-};
-
-typedef CFArrayRef (*LATCTCopyCurrentCallsFunction)(CFAllocatorRef allocator);
-typedef int (*LATCTGetCurrentCallCountFunction)(void);
-typedef LATPhoneCallStatus (*LATCTCallGetStatusFunction)(CTCallRef call);
-typedef void (*LATCTCallAnswerFunction)(CTCallRef call);
-typedef void (*LATCTCallListDisconnectAllFunction)(void);
 
 @interface LSApplicationWorkspace : NSObject
 + (instancetype)defaultWorkspace;
@@ -48,7 +32,7 @@ typedef NS_ENUM(NSUInteger, LATPhoneActionKind) {
 @property(nonatomic, copy, readonly, nullable) NSString *URLString;
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
-                            URLString:(nullable NSString *)URLString;
+                           URLString:(nullable NSString *)URLString;
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
                                 kind:(LATPhoneActionKind)kind;
@@ -67,7 +51,7 @@ typedef NS_ENUM(NSUInteger, LATPhoneActionKind) {
 
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
-                            URLString:(NSString *)URLString {
+                           URLString:(NSString *)URLString {
     self = [super init];
     if (self) {
         _listenerName = [listenerName copy];
@@ -136,22 +120,9 @@ typedef NS_ENUM(NSUInteger, LATPhoneActionKind) {
 
 @end
 
-@implementation LATPhoneCallController {
-    BOOL _attemptedLoading;
-    BOOL _loaded;
-    void *_coreTelephonyHandle;
-    LATCTCopyCurrentCallsFunction _copyCurrentCalls;
-    LATCTGetCurrentCallCountFunction _getCurrentCallCount;
-    LATCTCallGetStatusFunction _callGetStatus;
-    LATCTCallAnswerFunction _callAnswer;
-    LATCTCallListDisconnectAllFunction _callListDisconnectAll;
-}
+@implementation LATPhoneCallController
 
 - (BOOL)answerIncomingCallForListenerName:(NSString *)listenerName {
-    if (![self loadCallControlForListenerName:listenerName]) {
-        return NO;
-    }
-
     dispatch_async(dispatch_get_main_queue(), ^{
         [self answerIncomingCallOnMainForListenerName:listenerName];
     });
@@ -159,7 +130,7 @@ typedef NS_ENUM(NSUInteger, LATPhoneActionKind) {
 }
 
 - (BOOL)answerIncomingCallOnMainForListenerName:(NSString *)listenerName {
-    int callCount = _getCurrentCallCount();
+    int callCount = CTGetCurrentCallCount();
     if (callCount <= 0) {
         HBLogWarn(@"No calls detected while handling phone action %@", listenerName ?: @"");
         return NO;
@@ -169,8 +140,8 @@ typedef NS_ENUM(NSUInteger, LATPhoneActionKind) {
     BOOL answered = NO;
     for (id callObject in calls) {
         CTCallRef call = (__bridge CTCallRef)callObject;
-        if (_callGetStatus(call) == LATPhoneCallStatusIncomingCall) {
-            _callAnswer(call);
+        if (CTCallGetStatus(call) == kCTCallStatusIncomingCall) {
+            CTCallAnswer(call);
             answered = YES;
         }
     }
@@ -182,10 +153,6 @@ typedef NS_ENUM(NSUInteger, LATPhoneActionKind) {
 }
 
 - (BOOL)disconnectCallsForListenerName:(NSString *)listenerName {
-    if (![self loadCallControlForListenerName:listenerName]) {
-        return NO;
-    }
-
     dispatch_async(dispatch_get_main_queue(), ^{
         [self disconnectCallsOnMainForListenerName:listenerName];
     });
@@ -193,53 +160,24 @@ typedef NS_ENUM(NSUInteger, LATPhoneActionKind) {
 }
 
 - (BOOL)disconnectCallsOnMainForListenerName:(NSString *)listenerName {
-    int callCount = _getCurrentCallCount();
+    int callCount = CTGetCurrentCallCount();
     if (callCount <= 0) {
         HBLogWarn(@"No calls detected while handling phone action %@", listenerName ?: @"");
         return NO;
     }
 
-    _callListDisconnectAll();
+    CTCallListDisconnectAll();
     return YES;
 }
 
 - (NSArray *)currentCallsForListenerName:(NSString *)listenerName {
-    CFArrayRef currentCalls = _copyCurrentCalls(kCFAllocatorDefault);
+    CFArrayRef currentCalls = CTCopyCurrentCalls(kCFAllocatorDefault);
     NSArray *calls = currentCalls ? CFBridgingRelease(currentCalls) : nil;
     if (![calls isKindOfClass:NSArray.class]) {
         HBLogError(@"Unable to copy current calls for phone action %@", listenerName ?: @"");
         return @[];
     }
     return calls;
-}
-
-- (BOOL)loadCallControlForListenerName:(NSString *)listenerName {
-    if (_attemptedLoading) {
-        return _loaded;
-    }
-
-    _attemptedLoading = YES;
-    _coreTelephonyHandle = dlopen("/System/Library/Frameworks/CoreTelephony.framework/CoreTelephony",
-                                  RTLD_LAZY | RTLD_GLOBAL);
-    if (!_coreTelephonyHandle) {
-        const char *error = dlerror();
-        HBLogError(@"Unable to load CoreTelephony for phone action %@: %s", listenerName ?: @"",
-                   error ?: "unknown error");
-        return NO;
-    }
-
-    _copyCurrentCalls = (LATCTCopyCurrentCallsFunction)dlsym(_coreTelephonyHandle, "CTCopyCurrentCalls");
-    _getCurrentCallCount = (LATCTGetCurrentCallCountFunction)dlsym(_coreTelephonyHandle, "CTGetCurrentCallCount");
-    _callGetStatus = (LATCTCallGetStatusFunction)dlsym(_coreTelephonyHandle, "CTCallGetStatus");
-    _callAnswer = (LATCTCallAnswerFunction)dlsym(_coreTelephonyHandle, "CTCallAnswer");
-    _callListDisconnectAll =
-        (LATCTCallListDisconnectAllFunction)dlsym(_coreTelephonyHandle, "CTCallListDisconnectAll");
-
-    _loaded = _copyCurrentCalls && _getCurrentCallCount && _callGetStatus && _callAnswer && _callListDisconnectAll;
-    if (!_loaded) {
-        HBLogError(@"CoreTelephony call control symbols are unavailable for phone action %@", listenerName ?: @"");
-    }
-    return _loaded;
 }
 
 @end

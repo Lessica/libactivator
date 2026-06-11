@@ -13,7 +13,6 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATRingerActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
-+ (void)noteRingerControlInstance:(id)ringerControl;
 @end
 
 NS_ASSUME_NONNULL_END

@@ -293,12 +293,12 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 + (NSString *)frontMostDisplayIdentifier {
     __block NSString *displayIdentifier = nil;
     void (^readFrontMostApplication)(void) = ^{
-        id<LATestApplicationPrivate> application = (id<LATestApplicationPrivate>)UIApplication.sharedApplication;
+        UIApplication *application = UIApplication.sharedApplication;
         if (![application respondsToSelector:@selector(_accessibilityFrontMostApplication)]) {
             return;
         }
 
-        id<LAActivatorTestingApplication> frontMostApplication = [application _accessibilityFrontMostApplication];
+        SBApplication *frontMostApplication = (SBApplication *)[application _accessibilityFrontMostApplication];
         if ([frontMostApplication respondsToSelector:@selector(bundleIdentifier)]) {
             displayIdentifier = [frontMostApplication bundleIdentifier];
         }
@@ -379,4 +379,3 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 }
 
 @end
-

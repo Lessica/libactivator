@@ -16,6 +16,7 @@ ActivatorTweak_FILES += listeners/LATURLActionListener.m
 ActivatorTweak_CFLAGS += -fobjc-arc
 ActivatorTweak_CFLAGS += -I.
 ActivatorTweak_CFLAGS += -Ilisteners
+ActivatorTweak_CFLAGS += -Iprivate
 ActivatorTweak_CFLAGS += -I../../include
 ActivatorTweak_CFLAGS += -I../libactivator
 
@@ -24,10 +25,12 @@ ActivatorTweak_CFLAGS += -DLA_TESTING=1
 endif
 
 ActivatorTweak_FRAMEWORKS += Foundation
+ActivatorTweak_FRAMEWORKS += CoreTelephony
 ActivatorTweak_FRAMEWORKS += UIKit
 
 ActivatorTweak_LIBRARIES += activator
 
+ActivatorTweak_PRIVATE_FRAMEWORKS += BackBoardServices
 ActivatorTweak_PRIVATE_FRAMEWORKS += IOKit
 ActivatorTweak_PRIVATE_FRAMEWORKS += MediaRemote
 ActivatorTweak_PRIVATE_FRAMEWORKS += SpringBoardServices

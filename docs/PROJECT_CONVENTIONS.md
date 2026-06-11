@@ -43,6 +43,11 @@
 - 头文件使用 Xcode 默认风格 copyright，并补齐 `NS_ASSUME_NONNULL_BEGIN/END`。
 - 新代码默认使用 ARC。除非 Theos/runtime 边界确实需要，否则不要写手动内存管理。
 - 私有接口必须先声明再调用；禁止直接调用 `objc_msgSend`。
+- ObjC SPI 应声明原始私有类型、category 或 class extension 后直接调用，例如 `SpringBoard *`、`SBVolumeControl *`、`SBRingerControl *` 或 `UIApplication (...)`；不要用本地 `@protocol LAT...` / `id<LAT...>` 伪装某个私有类型的能力集合。
+- 已持有原类型实例时，不要用 `NSSelectorFromString` + `methodForSelector` + 手写函数指针绕过编译器；应声明 selector，必要时用 `respondsToSelector:@selector(...)` 做兼容检查，然后直接发送 Objective-C 消息。
+- 只有需要避免强引用 ObjC class 本体、或类在目标系统上可能不存在时，才用 `NSClassFromString` 获取 class；获取实例后仍应 cast 到原始私有类型并按声明调用。
+- C SPI 的声明按规模放置：单个函数可在使用它的 `.m` 内 `extern` 声明；一组相关函数、结构体、枚举或常量才抽成 tweak-local private header。不要为单个 C 函数单独创建头文件。
+- 允许链接已明确决策的私有 framework，例如 `CoreTelephony`、`BackBoardServices`、`MediaRemote` 和 `SpringBoardServices`；不要为了回避链接而默认改用 `dlopen` / `dlsym`。只有 framework 不可直接链接、符号跨系统版本高度不稳定、或确实需要 weak runtime probing 时，才使用动态解析，并记录原因。
 - UIKit、SpringBoard、FrontBoard 私有 UI API 默认在主队列调用，除非已经确认该 API 线程安全。
 - 用 GCD 和 `dispatch_once` 管理并发与单例，不使用 `@synchronized(self)`。
 - 一个实现文件默认只放一个主要类。多个类堆在一个 `.m` 里只允许用于明确记录过的兼容 shim 或极小私有局部类型。

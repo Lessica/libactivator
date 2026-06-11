@@ -10,8 +10,6 @@
 
 #import "LAActivator+Private.h"
 #import "LATBuiltInListenerRegistry.h"
-#import "LATMediaActionListener.h"
-#import "LATRingerActionListener.h"
 
 #import <CaptainHook/CaptainHook.h>
 #import <UIKit/UIKit.h>
@@ -164,12 +162,14 @@ CHOptimizedMethod2(self, void, SBMainSwitcherControllerCoordinator, layoutStateT
 
 #pragma mark - SBVolumeControl
 
-CHOptimizedMethod4(self, id, SBVolumeControl, initWithHUDController, id, hudController, ringerControl, id,
-                   ringerControl, telephonyManager, id, telephonyManager, conferenceManager, id, conferenceManager) {
-    id instance = CHSuper4(SBVolumeControl, initWithHUDController, hudController, ringerControl, ringerControl,
-                           telephonyManager, telephonyManager, conferenceManager, conferenceManager);
-    [LATMediaActionListener noteVolumeControlInstance:instance];
-    [LATRingerActionListener noteRingerControlInstance:ringerControl];
+CHOptimizedMethod4(self, id, SBVolumeControl, initWithHUDController, id, hudController, ringerControl,
+                   SBRingerControl *, ringerControl, telephonyManager, id, telephonyManager, conferenceManager, id,
+                   conferenceManager) {
+    SBVolumeControl *instance =
+        CHSuper4(SBVolumeControl, initWithHUDController, hudController, ringerControl, ringerControl, telephonyManager,
+                 telephonyManager, conferenceManager, conferenceManager);
+    LATBuiltInListenerRegistry.volumeControlInstance = instance;
+    LATBuiltInListenerRegistry.ringerControlInstance = ringerControl;
     return instance;
 }
 

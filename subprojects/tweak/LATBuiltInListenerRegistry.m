@@ -17,7 +17,26 @@
 
 #import <HBLog.h>
 
+static __weak SBVolumeControl *gCapturedVolumeControl = nil;
+static __weak SBRingerControl *gCapturedRingerControl = nil;
+
 @implementation LATBuiltInListenerRegistry
+
++ (SBVolumeControl *)volumeControlInstance {
+    return gCapturedVolumeControl;
+}
+
++ (void)setVolumeControlInstance:(SBVolumeControl *)volumeControlInstance {
+    gCapturedVolumeControl = volumeControlInstance;
+}
+
++ (SBRingerControl *)ringerControlInstance {
+    return gCapturedRingerControl;
+}
+
++ (void)setRingerControlInstance:(SBRingerControl *)ringerControlInstance {
+    gCapturedRingerControl = ringerControlInstance;
+}
 
 + (NSArray<NSDictionary<NSString *, id> *> *)la_builtInListenerFactoryConfigurations {
     return @[

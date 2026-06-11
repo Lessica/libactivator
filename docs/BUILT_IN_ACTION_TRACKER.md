@@ -18,9 +18,9 @@ URL family 的实现边界已固定：注册 name 仍由代码 allowlist 决定�
 
 Audio / Media actions / listener family 已完成第一批。当前 `Listeners/bundled.plist` 中 7 个可由 HID Consumer page 表达的播放与音量动作、1 个现代 SpringBoard volume HUD 动作、1 个 now-playing application launch 动作，由 `LATMediaActionListener` 通过 `LATBuiltInListenerRegistry` 注册。实现边界已固定：注册 name 仍由代码 allowlist 决定；metadata lookup 用于注册前 selector 或 title metadata 校验和展示属性；HID 动作通过 `IOHIDEventCreateKeyboardEvent` 与 `IOHIDEventSystemClientDispatchEvent` 提交，volume HUD 动作通过 tweak hook 捕获 `SBVolumeControl` 实例后调用 `-_presentVolumeHUDWithVolume:`，now-playing launch 动作通过 Frida 真机验证的 `MRMediaRemoteGetNowPlayingApplicationDisplayID` 获取真实 display identifier，必要时用 `MRMediaRemoteGetNowPlayingApplicationPID` + `SBSCopyDisplayIdentifierForProcessID` fallback，再交给 SpringBoard 私有打开路径；`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示媒体应用或系统 UI 已完成状态变化。旧 music controls 依赖 `SBNowPlayingAlertItem` modal，在现代 iOS 上视为 obsolete。
 
-Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。当前包含 1 个 ringer state 同步动作和 3 个现代 ringer mute 动作：ringer reset 按 1.9.13 旧实现通过 `BKSHIDServicesGetRingerState` 读取硬件开关状态并调用 SpringBoard `-_updateRingerState:withVisuals:updatePreferenceRegister:` 同步；ringer mute 动作通过 `SBVolumeControl` init hook 捕获 `SBRingerControl` 后调用 `setRingerMuted:` 并触发 ringer HUD。注意 `libactivator.volume.mute`、`libactivator.volume.unmute`、`libactivator.volume.toggle-mute-twice` 仍是 Events，不复用为 listener name。
+Ringer actions / listener family 已拆分为独立 `LATRingerActionListener`。当前包含 1 个 ringer state 同步动作和 3 个现代 ringer mute 动作：ringer reset 按 1.9.13 旧实现通过 `BKSHIDServicesGetRingerState` 读取硬件开关状态并调用 SpringBoard `-_updateRingerState:withVisuals:updatePreferenceRegister:` 同步，tweak 在实现文件内声明单个 C SPI 并链接 `BackBoardServices.framework`；ringer mute 动作通过 `SBVolumeControl` init hook 捕获 `SBRingerControl` 后调用 `setRingerMuted:` 并触发 ringer HUD。注意 `libactivator.volume.mute`、`libactivator.volume.unmute`、`libactivator.volume.toggle-mute-twice` 仍是 Events，不复用为 listener name。
 
-Phone actions / listener family 已拆分为独立 `LATPhoneActionListener`。当前包含 5 个 Phone tab URL 动作和 2 个 call control 动作：Phone tab URL 使用旧 master 在 CoreFoundation 675 之后的 URL 形态；call control 动作参考 `TRAppIntentXpcServiceConnection.mm` 中已验证的 CoreTelephony 路径，通过 `dlopen` / `dlsym` 解析私有符号并在主队列异步执行。`libactivator.phone.disconnect-call` 的 selector metadata 仍按 1.9.13 资源保持为 `answerCall`，runtime 行为由 listener name 区分。`event.handled = YES` 表示 phone listener 已消费请求，不表示电话状态或目标 tab 已完成变化。
+Phone actions / listener family 已拆分为独立 `LATPhoneActionListener`。当前包含 5 个 Phone tab URL 动作和 2 个 call control 动作：Phone tab URL 使用真机验证后的 `mobilephone-*:` scheme 或 voicemail URL；call control 动作参考 `TRAppIntentXpcServiceConnection.mm` 中已验证的 CoreTelephony 路径，tweak 使用项目内私有 `CTCall.h` 副本并链接 `CoreTelephony.framework`，在主队列异步执行通话控制。`libactivator.phone.disconnect-call` 的 selector metadata 仍按 1.9.13 资源保持为 `answerCall`，runtime 行为由 listener name 区分。`event.handled = YES` 表示 phone listener 已消费请求，不表示电话状态或目标 tab 已完成变化。
 
 下一阶段应进入低风险 system selector actions。不要把没有 `url`/`urls` metadata 的旧 selector action 继续塞进 `LATURLActionListener`；即使旧实现内部也是打开 URL，也应按新的 family 单独建 listener class、allowlist、测试和手工验证清单。
 
@@ -102,7 +102,7 @@ Phone actions / listener family 已拆分为独立 `LATPhoneActionListener`。�
 
 | Listener name | 标题 | selector / 语义 | 状态 | 实施备注 |
 | --- | --- | --- | --- | --- |
-| `libactivator.audio.reset-ringer-state` | Reset Ringer | `resetRingerState` | `implemented` | 按 1.9.13 旧实现：动态解析 `BKSHIDServicesGetRingerState` 读取硬件开关状态，并调用 SpringBoard `-_updateRingerState:withVisuals:updatePreferenceRegister:`，后两个参数均为 `NO`。 |
+| `libactivator.audio.reset-ringer-state` | Reset Ringer | `resetRingerState` | `implemented` | 按 1.9.13 旧实现：通过 `BackBoardServices.framework` 的 `BKSHIDServicesGetRingerState` 读取硬件开关状态，并调用 SpringBoard `-_updateRingerState:withVisuals:updatePreferenceRegister:`，后两个参数均为 `NO`。 |
 | `libactivator.audio.mute-ringer` | Mute Ringer | `muteRinger` | `implemented` | 现代新增 action；不复用 `libactivator.volume.mute` event name。通过 `SBRingerControl setRingerMuted:YES` 设置软静音，并调用 `activateRingerHUDFromMuteSwitch:0`。 |
 | `libactivator.audio.unmute-ringer` | Unmute Ringer | `unmuteRinger` | `implemented` | 现代新增 action；不复用 `libactivator.volume.unmute` event name。通过 `SBRingerControl setRingerMuted:NO` 取消软静音，并调用 `activateRingerHUDFromMuteSwitch:1`。 |
 | `libactivator.audio.toggle-ringer-mute` | Toggle Ringer Mute | `toggleRingerMute` | `implemented` | 现代新增 action；不复用 `libactivator.volume.toggle-mute-twice` event name。通过 `SBRingerControl isRingerMuted` 计算目标状态，再调用 `setRingerMuted:` 与 ringer HUD。 |
@@ -111,12 +111,12 @@ Phone actions / listener family 已拆分为独立 `LATPhoneActionListener`。�
 
 | Listener name | 标题 | selector / 语义 | 状态 | 实施备注 |
 | --- | --- | --- | --- | --- |
-| `libactivator.phone.favorites` | Show Favorites | `showPhoneFavorites` | `implemented` | 使用旧 master 在 CoreFoundation 675 之后采用的 `mobilephone-recents:favorites`。 |
-| `libactivator.phone.recents` | Show Recents | `showPhoneRecents` | `implemented` | 使用 `mobilephone-recents:`。 |
-| `libactivator.phone.contacts` | Show Contacts | `showPhoneContacts` | `implemented` | 使用 `mobilephone-recents:contacts`。 |
-| `libactivator.phone.keypad` | Show Keypad | `showPhoneKeypad` | `implemented` | 使用 `mobilephone-recents:keypad`。 |
+| `libactivator.phone.favorites` | Show Favorites | `showPhoneFavorites` | `implemented` | 使用真机验证后的 `mobilephone-favorites:`。 |
+| `libactivator.phone.recents` | Show Recents | `showPhoneRecents` | `implemented` | 使用真机验证后的 `mobilephone-recents:`。 |
+| `libactivator.phone.contacts` | Show Contacts | `showPhoneContacts` | `implemented` | 使用真机验证后的 `mobilephone-contacts:`。 |
+| `libactivator.phone.keypad` | Show Keypad | `showPhoneKeypad` | `implemented` | 使用真机验证后的 `mobilephone-keypad:`。 |
 | `libactivator.phone.voicemail` | Show Voicemail | `showPhoneVoicemail` | `implemented` | 使用旧 master 的现代 URL `vmshow:`。 |
-| `libactivator.phone.answer-call` | Answer Call | `answerCall` | `implemented` | 通过 CoreTelephony 查找 incoming call 并调用 `CTCallAnswer`；若无通话、无来电或 SPI 不可用，仍消费事件并记录诊断。 |
+| `libactivator.phone.answer-call` | Answer Call | `answerCall` | `implemented` | 通过 CoreTelephony 查找 incoming call 并调用 `CTCallAnswer`；若无通话或无来电，仍消费事件并记录诊断。 |
 | `libactivator.phone.disconnect-call` | Disconnect Call | `answerCall` | `implemented` | 资源中的 selector metadata 保持旧值 `answerCall`；runtime 按 listener name 调用 `CTCallListDisconnectAll`，用于挂断活动通话或拒接来电。 |
 
 ## 下一阶段建议

@@ -10,12 +10,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@protocol LATestApplicationPrivate <NSObject>
+@interface UIApplication (LATestPrivate)
 - (id)_accessibilityFrontMostApplication;
 @end
 
-@protocol LAActivatorTestingApplication <NSObject>
-@optional
+@interface SBApplication : NSObject
 - (NSString *)bundleIdentifier;
 - (NSString *)displayIdentifier;
 @end
@@ -48,4 +47,3 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
-
