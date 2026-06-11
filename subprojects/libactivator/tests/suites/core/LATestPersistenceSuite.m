@@ -17,7 +17,7 @@
 
     NSString *path = jbroot(@"/var/mobile/Library/Preferences/libactivator.tests.plist");
     [NSFileManager.defaultManager removeItemAtPath:path error:nil];
-    LAActivatorPersistence *persistence = [[LAActivatorPersistence alloc] initWithFilePath:path];
+    LAPersistence *persistence = [[LAPersistence alloc] initWithFilePath:path];
     [recorder expect:[persistence loadDictionary] == nil
             caseName:@"default-empty"
               reason:@"Missing test plist should load nil"];
@@ -45,7 +45,7 @@
 
     LATestCountingPersistence *countingPersistence =
         [[LATestCountingPersistence alloc] initWithFilePath:@"libactivator-counting-tests.plist"];
-    LAActivatorBackend *backend = [[LAActivatorBackend alloc] initWithPersistence:countingPersistence];
+    LARuntimeBackend *backend = [[LARuntimeBackend alloc] initWithPersistence:countingPersistence];
     LAEvent *event = [LAEvent eventWithName:@"libactivator.test.persistence" mode:LAEventModeSpringBoard];
     [backend setCurrentProfileNameIfChanged:@"Testing"];
     [backend assignEvent:event toListenersWithNames:@[ @"libactivator.test.listener.one" ]];
@@ -82,4 +82,3 @@
 }
 
 @end
-

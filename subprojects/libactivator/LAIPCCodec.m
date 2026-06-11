@@ -1,28 +1,28 @@
 //
-//  LAActivatorIPCCodec.m
+//  LAIPCCodec.m
 //  libactivator
 //
 //  Created by Lessica on 6/9/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LAActivatorIPCCodec.h"
+#import "LAIPCCodec.h"
 
-#import "LAActivatorIPC.h"
+#import "LAIPC.h"
 
 #import <Activator/Activator.h>
 
-@implementation LAActivatorIPCCodec
+@implementation LAIPCCodec
 
 + (NSDictionary *)replyWithOK:(BOOL)ok value:(id)value {
     if (value) {
-        return @{LAActivatorIPCKeyOK : @(ok), LAActivatorIPCKeyValue : value};
+        return @{LAIPCKeyOK : @(ok), LAIPCKeyValue : value};
     }
-    return @{LAActivatorIPCKeyOK : @(ok)};
+    return @{LAIPCKeyOK : @(ok)};
 }
 
 + (NSDictionary *)eventReplyWithEvent:(LAEvent *)event {
-    return @{LAActivatorIPCKeyOK : @YES, LAActivatorIPCKeyEventHandled : @([event isHandled])};
+    return @{LAIPCKeyOK : @YES, LAIPCKeyEventHandled : @([event isHandled])};
 }
 
 + (NSString *)stringInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key {
@@ -63,16 +63,15 @@
 }
 
 + (LAEvent *)eventWithUserInfo:(NSDictionary *)userInfo {
-    NSString *eventName = [self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventName];
+    NSString *eventName = [self stringInUserInfo:userInfo forKey:LAIPCKeyEventName];
     if (eventName.length == 0) {
         return nil;
     }
 
-    LAEvent *event = [LAEvent eventWithName:eventName
-                                       mode:[self stringInUserInfo:userInfo forKey:LAActivatorIPCKeyEventMode]];
-    event.handled = [userInfo[LAActivatorIPCKeyEventHandled] boolValue];
+    LAEvent *event = [LAEvent eventWithName:eventName mode:[self stringInUserInfo:userInfo forKey:LAIPCKeyEventMode]];
+    event.handled = [userInfo[LAIPCKeyEventHandled] boolValue];
 
-    id eventUserInfo = userInfo[LAActivatorIPCKeyEventUserInfo];
+    id eventUserInfo = userInfo[LAIPCKeyEventUserInfo];
     if ([eventUserInfo isKindOfClass:NSDictionary.class]) {
         event.userInfo = eventUserInfo;
     }
@@ -84,9 +83,9 @@
         return @{};
     }
 
-    NSMutableDictionary *userInfo = [@{LAActivatorIPCKeyEventName : event.name} mutableCopy];
+    NSMutableDictionary *userInfo = [@{LAIPCKeyEventName : event.name} mutableCopy];
     if (event.mode.length > 0) {
-        userInfo[LAActivatorIPCKeyEventMode] = event.mode;
+        userInfo[LAIPCKeyEventMode] = event.mode;
     }
     return [userInfo copy];
 }
@@ -131,7 +130,7 @@
     if (data.length == 0) {
         return [self replyWithOK:NO value:nil];
     }
-    return @{LAActivatorIPCKeyOK : @YES, LAActivatorIPCKeyValue : data, LAActivatorIPCKeyScale : @(scale)};
+    return @{LAIPCKeyOK : @YES, LAIPCKeyValue : data, LAIPCKeyScale : @(scale)};
 }
 
 @end

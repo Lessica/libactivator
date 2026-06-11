@@ -12,7 +12,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - UIApplication
 
-@interface UIApplication (LATestPrivate)
+@interface UIApplication (TestPrivate)
 - (id)_accessibilityFrontMostApplication;
 @end
 

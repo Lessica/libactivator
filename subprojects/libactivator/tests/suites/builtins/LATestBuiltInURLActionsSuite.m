@@ -42,8 +42,8 @@
 
         if ([hardcodedPhoneURLNames containsObject:listenerName]) {
             id selector = [activator infoDictionaryValueOfKey:@"selector" forListenerWithName:listenerName];
-            allSupportedNamesHaveRequiredMetadata =
-                allSupportedNamesHaveRequiredMetadata && [selector isKindOfClass:NSString.class] && [selector length] > 0;
+            allSupportedNamesHaveRequiredMetadata = allSupportedNamesHaveRequiredMetadata &&
+                                                    [selector isKindOfClass:NSString.class] && [selector length] > 0;
         } else {
             id url = [activator infoDictionaryValueOfKey:@"url" forListenerWithName:listenerName];
             id urls = [activator infoDictionaryValueOfKey:@"urls" forListenerWithName:listenerName];

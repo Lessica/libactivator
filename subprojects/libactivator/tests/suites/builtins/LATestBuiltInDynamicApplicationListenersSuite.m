@@ -17,14 +17,14 @@
     [recorder beginSuite:@"BuiltInDynamicApplicationListeners"];
 
     Class<LATestDynamicApplicationProvider> providerClass =
-        (Class<LATestDynamicApplicationProvider>)NSClassFromString(@"LATDynamicApplicationListenerProvider");
+        (Class<LATestDynamicApplicationProvider>)NSClassFromString(@"LATApplicationListenerProvider");
     Class<LATestDynamicApplicationDescriptorFactory> descriptorClass =
         (Class<LATestDynamicApplicationDescriptorFactory>)NSClassFromString(@"LATApplicationDescriptor");
     Class listenerClass = NSClassFromString(@"LATApplicationActionListener");
 
     [recorder expect:providerClass != Nil
             caseName:@"dynamic-application-provider-class-available"
-              reason:@"LATDynamicApplicationListenerProvider class was not loaded in SpringBoard"];
+              reason:@"LATApplicationListenerProvider class was not loaded in SpringBoard"];
     [recorder expect:descriptorClass != Nil
             caseName:@"dynamic-application-descriptor-class-available"
               reason:@"LATApplicationDescriptor class was not loaded in SpringBoard"];

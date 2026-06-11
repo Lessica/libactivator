@@ -8,19 +8,19 @@
 
 #import "LATestClientFacadeSuite.h"
 
-#import "LAActivatorIPC.h"
+#import "LAIPC.h"
 #import "LATestRunnerRecorder.h"
-#import "LATestSpringBoardTestClient.h"
+#import "LATestSpringBoardClient.h"
 
 #import <Activator/Activator.h>
 
 @interface LATestClientFacadeSuite ()
-@property(nonatomic, strong) LATestSpringBoardTestClient *client;
+@property(nonatomic, strong) LATestSpringBoardClient *client;
 @end
 
 @implementation LATestClientFacadeSuite
 
-- (instancetype)initWithClient:(LATestSpringBoardTestClient *)client {
+- (instancetype)initWithClient:(LATestSpringBoardClient *)client {
     self = [super init];
     if (self) {
         _client = client;
@@ -135,16 +135,13 @@
             caseName:@"dispatch-handled-reply"
               reason:@"Client dispatch did not receive the handled state from SpringBoard"];
 
-    NSDictionary *probeReply = [self.client sendCommand:LAActivatorIPCTestingCommandPrepareUserInfoProbe];
-    NSDictionary *probeInfo = [probeReply[LAActivatorIPCKeyValue] isKindOfClass:NSDictionary.class]
-                                  ? probeReply[LAActivatorIPCKeyValue]
-                                  : nil;
-    NSString *probeEventName = [probeInfo[LAActivatorIPCKeyEventName] isKindOfClass:NSString.class]
-                                   ? probeInfo[LAActivatorIPCKeyEventName]
-                                   : @"";
-    NSString *probeListenerName = [probeInfo[LAActivatorIPCKeyListenerName] isKindOfClass:NSString.class]
-                                      ? probeInfo[LAActivatorIPCKeyListenerName]
-                                      : @"";
+    NSDictionary *probeReply = [self.client sendCommand:LAIPCTestingCommandPrepareUserInfoProbe];
+    NSDictionary *probeInfo =
+        [probeReply[LAIPCKeyValue] isKindOfClass:NSDictionary.class] ? probeReply[LAIPCKeyValue] : nil;
+    NSString *probeEventName =
+        [probeInfo[LAIPCKeyEventName] isKindOfClass:NSString.class] ? probeInfo[LAIPCKeyEventName] : @"";
+    NSString *probeListenerName =
+        [probeInfo[LAIPCKeyListenerName] isKindOfClass:NSString.class] ? probeInfo[LAIPCKeyListenerName] : @"";
     LAEvent *userInfoEvent = [LAEvent eventWithName:probeEventName mode:LAEventModeSpringBoard];
     userInfoEvent.userInfo = @{
         @"safe" : @"value",
@@ -156,10 +153,9 @@
         @"array" : @[ @"keep", [[NSObject alloc] init] ],
     };
     [activator sendEvent:userInfoEvent toListenerWithName:probeListenerName];
-    NSDictionary *probeResultReply = [self.client sendCommand:LAActivatorIPCTestingCommandUserInfoProbeResult];
-    NSDictionary *probeResult = [probeResultReply[LAActivatorIPCKeyValue] isKindOfClass:NSDictionary.class]
-                                    ? probeResultReply[LAActivatorIPCKeyValue]
-                                    : nil;
+    NSDictionary *probeResultReply = [self.client sendCommand:LAIPCTestingCommandUserInfoProbeResult];
+    NSDictionary *probeResult =
+        [probeResultReply[LAIPCKeyValue] isKindOfClass:NSDictionary.class] ? probeResultReply[LAIPCKeyValue] : nil;
     NSDictionary *receivedUserInfo =
         [probeResult[@"UserInfo"] isKindOfClass:NSDictionary.class] ? probeResult[@"UserInfo"] : nil;
     [recorder expect:userInfoEvent.handled && [probeResult[@"ReceiveCount"] integerValue] == 1

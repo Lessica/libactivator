@@ -11,7 +11,7 @@ libactivator-tests_FILES += LATestRunnerRecorder.m
 libactivator-tests_FILES += runner/LATestClientFacadeSuite.m
 libactivator-tests_FILES += runner/LATestRunnerResultPrinter.m
 libactivator-tests_FILES += runner/LATestRuntimeStatePrinter.m
-libactivator-tests_FILES += runner/LATestSpringBoardTestClient.m
+libactivator-tests_FILES += runner/LATestSpringBoardClient.m
 libactivator-tests_CFLAGS += -fobjc-arc
 libactivator-tests_CFLAGS += -DLA_TESTING=1
 libactivator-tests_CFLAGS += -I.

@@ -100,8 +100,8 @@
     if ([command isEqualToString:@"activate"]) {
         LAEvent *event = [self eventWithCurrentModeNamed:argument];
         [_activator sendEventToListener:event];
-        return [self exitStatusForEvent:event failureMessage:[NSString stringWithFormat:@"Event was not handled: %@",
-                                                                                        argument ?: @""]];
+        return [self exitStatusForEvent:event
+                         failureMessage:[NSString stringWithFormat:@"Event was not handled: %@", argument ?: @""]];
     }
     if ([command isEqualToString:@"send"]) {
         if (![self validateListenerName:argument]) {
@@ -109,15 +109,16 @@
         }
         LAEvent *event = [self eventWithCurrentModeNamed:@"libactivator"];
         [_activator sendEvent:event toListenerWithName:argument];
-        return [self exitStatusForEvent:event failureMessage:[NSString stringWithFormat:@"Listener did not handle event: %@",
-                                                                                        argument ?: @""]];
+        return
+            [self exitStatusForEvent:event
+                      failureMessage:[NSString stringWithFormat:@"Listener did not handle event: %@", argument ?: @""]];
     }
     if ([command isEqualToString:@"deactivate"]) {
         LAEvent *event = [self eventWithCurrentModeNamed:argument];
         [_activator sendDeactivateEventToListeners:event];
-        return [self exitStatusForEvent:event
-                         failureMessage:[NSString stringWithFormat:@"Deactivate event was not handled: %@",
-                                                                    argument ?: @""]];
+        return [self
+            exitStatusForEvent:event
+                failureMessage:[NSString stringWithFormat:@"Deactivate event was not handled: %@", argument ?: @""]];
     }
 
     [self printUsage];
@@ -138,7 +139,7 @@
         [_activator sendEvent:event toListenerWithName:secondArgument];
         return [self exitStatusForEvent:event
                          failureMessage:[NSString stringWithFormat:@"Listener did not handle event: %@ for %@",
-                                                                    secondArgument ?: @"", firstArgument ?: @""]];
+                                                                   secondArgument ?: @"", firstArgument ?: @""]];
     }
 
     [self printUsage];

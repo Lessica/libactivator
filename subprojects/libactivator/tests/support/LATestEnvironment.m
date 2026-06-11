@@ -263,12 +263,11 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     NSString *passcodeToUse = [passcode copy] ?: @"";
     [self performOnMainThreadSynchronously:^{
         if (![LAActivator.sharedInstance la_screenIsOn]) {
-            attempted = [LAActivator.sharedInstance la_wakeScreenForReason:@"test unlock"
-                                                                 completion:^{
-                                                                     [self attemptUnlockOnMainThreadWithPasscode:
-                                                                               passcodeToUse
-                                                                               fallbackToHomeScreen:YES];
-                                                                 }];
+            attempted = [LAActivator.sharedInstance
+                la_wakeScreenForReason:@"test unlock"
+                            completion:^{
+                                [self attemptUnlockOnMainThreadWithPasscode:passcodeToUse fallbackToHomeScreen:YES];
+                            }];
             return;
         }
 

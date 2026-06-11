@@ -1,19 +1,19 @@
 //
-//  LAActivatorBackend.m
+//  LARuntimeBackend.m
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LAActivatorBackend.h"
+#import "LARuntimeBackend.h"
 
-#import "LAActivatorPersistence.h"
+#import "LAPersistence.h"
 
 #import <HBLog.h>
 #import <dispatch/dispatch.h>
 
-static const void *LAActivatorBackendStateQueueKey = &LAActivatorBackendStateQueueKey;
+static const void *LARuntimeBackendStateQueueKey = &LARuntimeBackendStateQueueKey;
 
 static NSString *const LAActivatorDefaultProfileName = @"Default";
 static NSString *const LAActivatorSchemaVersionKey = @"SchemaVersion";
@@ -24,7 +24,7 @@ static NSString *const LAActivatorBlacklistedDisplayIdentifiersKey = @"Blacklist
 static NSString *const LAActivatorSeenListenerNamesKey = @"SeenListenerNames";
 static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
-@interface LAActivatorBackend ()
+@interface LARuntimeBackend ()
 @property(nonatomic, strong) NSMutableDictionary *eventDataSources;
 @property(nonatomic, strong) NSMutableDictionary *listeners;
 @property(nonatomic, strong) NSMutableDictionary *profiles;
@@ -33,18 +33,18 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 @property(nonatomic, strong) NSMutableDictionary *legacyPreferences;
 @property(nonatomic, copy) NSArray *cachedListenerNames;
 @property(nonatomic, strong) dispatch_queue_t stateQueue;
-@property(nonatomic, strong) LAActivatorPersistence *persistence;
+@property(nonatomic, strong) LAPersistence *persistence;
 @property(nonatomic, assign) BOOL persistentStateDirty;
 @property(nonatomic, assign) BOOL persistentSaveScheduled;
 @property(nonatomic, copy) NSString *storedCurrentProfileName;
 @property(nonatomic, assign) CFRunLoopObserverRef persistentSaveObserver;
 @end
 
-@implementation LAActivatorBackend
+@implementation LARuntimeBackend
 
 #pragma mark - Lifecycle
 
-- (instancetype)initWithPersistence:(LAActivatorPersistence *)persistence {
+- (instancetype)initWithPersistence:(LAPersistence *)persistence {
     self = [super init];
     if (self) {
         _persistence = persistence;
@@ -55,8 +55,8 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         _seenListenerNames = [[NSMutableSet alloc] init];
         _legacyPreferences = [[NSMutableDictionary alloc] init];
         _stateQueue = dispatch_queue_create("libactivator.state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
-        dispatch_queue_set_specific(_stateQueue, LAActivatorBackendStateQueueKey,
-                                    (void *)LAActivatorBackendStateQueueKey, NULL);
+        dispatch_queue_set_specific(_stateQueue, LARuntimeBackendStateQueueKey, (void *)LARuntimeBackendStateQueueKey,
+                                    NULL);
         [self resetRuntimeState];
         [self loadPersistentState];
     }
@@ -184,7 +184,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 }
 
 - (BOOL)isRunningOnStateQueue {
-    return dispatch_get_specific(LAActivatorBackendStateQueueKey) == LAActivatorBackendStateQueueKey;
+    return dispatch_get_specific(LARuntimeBackendStateQueueKey) == LARuntimeBackendStateQueueKey;
 }
 
 - (void)installPersistentSaveObserverIfNeeded {
@@ -262,7 +262,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
                     if (![mode isKindOfClass:NSString.class]) {
                         continue;
                     }
-                    NSArray *listenerNames = [LAActivatorBackend normalizedStringArray:modes[mode]];
+                    NSArray *listenerNames = [LARuntimeBackend normalizedStringArray:modes[mode]];
                     if (listenerNames.count > 0) {
                         loadedModes[mode] = listenerNames;
                     }
@@ -289,8 +289,8 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     }
 
     NSArray *blacklistedDisplayIdentifiers =
-        [LAActivatorBackend normalizedStringArray:dictionary[LAActivatorBlacklistedDisplayIdentifiersKey]];
-    NSArray *seenListenerNames = [LAActivatorBackend normalizedStringArray:dictionary[LAActivatorSeenListenerNamesKey]];
+        [LARuntimeBackend normalizedStringArray:dictionary[LAActivatorBlacklistedDisplayIdentifiersKey]];
+    NSArray *seenListenerNames = [LARuntimeBackend normalizedStringArray:dictionary[LAActivatorSeenListenerNamesKey]];
     NSDictionary *legacyPreferences = dictionary[LAActivatorLegacyPreferencesKey];
     self.profiles = loadedProfiles;
     self.blacklistedDisplayIdentifiers = [NSMutableSet setWithArray:blacklistedDisplayIdentifiers];
@@ -457,7 +457,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     }
 
     NSString *normalizedMode = mode ?: @"";
-    NSArray *normalizedNames = [LAActivatorBackend normalizedStringArray:listenerNames];
+    NSArray *normalizedNames = [LARuntimeBackend normalizedStringArray:listenerNames];
     __block BOOL changed = NO;
     dispatch_sync(self.stateQueue, ^{
         NSMutableDictionary *assignments = [self assignmentsForCurrentProfile];
@@ -506,7 +506,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         NSMutableArray *listenerNames = [eventAssignments[mode] mutableCopy] ?: [[NSMutableArray alloc] init];
         if (![listenerNames containsObject:listenerName]) {
             [listenerNames addObject:listenerName];
-            eventAssignments[mode] = [LAActivatorBackend normalizedStringArray:listenerNames];
+            eventAssignments[mode] = [LARuntimeBackend normalizedStringArray:listenerNames];
             changed = YES;
             [self savePersistentState];
         }
@@ -531,7 +531,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
         [listenerNames removeObject:listenerName];
         if (listenerNames.count > 0) {
-            eventAssignments[mode] = [LAActivatorBackend normalizedStringArray:listenerNames];
+            eventAssignments[mode] = [LARuntimeBackend normalizedStringArray:listenerNames];
         } else {
             [eventAssignments removeObjectForKey:mode];
             if (eventAssignments.count == 0) {

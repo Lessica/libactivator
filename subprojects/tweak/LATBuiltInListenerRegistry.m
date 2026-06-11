@@ -11,8 +11,8 @@
 #import "LATApplicationActionListener.h"
 #import "LATApplicationCatalog.h"
 #import "LATApplicationLauncher.h"
+#import "LATApplicationListenerProvider.h"
 #import "LATBuiltInListenerRegistrant.h"
-#import "LATDynamicApplicationListenerProvider.h"
 #import "LATHardwareActionListener.h"
 #import "LATNothingListener.h"
 #import "LATSystemActionListener.h"
@@ -100,7 +100,7 @@ static __weak CSCoverSheetViewController *gCapturedCoverSheetViewController = ni
 
 + (void)registerWithActivator:(LAActivator *)activator {
     static dispatch_once_t sOnceToken;
-    static LATDynamicApplicationListenerProvider *sDynamicApplicationListenerProvider = nil;
+    static LATApplicationListenerProvider *sDynamicApplicationListenerProvider = nil;
     dispatch_once(&sOnceToken, ^{
         LATApplicationLauncher *applicationLauncher = [[LATApplicationLauncher alloc] init];
         LATNothingListener *nothingListener = [[LATNothingListener alloc] init];
@@ -130,9 +130,9 @@ static __weak CSCoverSheetViewController *gCapturedCoverSheetViewController = ni
         LATApplicationCatalog *applicationCatalog = [[LATApplicationCatalog alloc] init];
 
         sDynamicApplicationListenerProvider =
-            [[LATDynamicApplicationListenerProvider alloc] initWithActivator:activator
-                                                                     catalog:applicationCatalog
-                                                                    listener:applicationListener];
+            [[LATApplicationListenerProvider alloc] initWithActivator:activator
+                                                              catalog:applicationCatalog
+                                                             listener:applicationListener];
         [sDynamicApplicationListenerProvider start];
     });
 }

@@ -10,14 +10,14 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class LAActivatorBackend;
+@class LARuntimeBackend;
 
 __attribute__((visibility("hidden")))
 @interface LALegacyPreferenceBridge : NSObject
 
 #pragma mark - Lifecycle
 
-- (instancetype)initWithBackend:(LAActivatorBackend *)backend;
+- (instancetype)initWithBackend:(LARuntimeBackend *)backend;
 
 #pragma mark - Preference Bridge
 

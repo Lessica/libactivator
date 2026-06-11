@@ -1,5 +1,5 @@
 //
-//  LAActivatorIPCCodec.h
+//  LAIPCCodec.h
 //  libactivator
 //
 //  Created by Lessica on 6/9/26.
@@ -14,7 +14,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class LAEvent;
 
 __attribute__((visibility("hidden")))
-@interface LAActivatorIPCCodec : NSObject
+@interface LAIPCCodec : NSObject
 
 #pragma mark - Reply Builders
 

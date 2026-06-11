@@ -8,7 +8,7 @@
 
 #import <Activator/Activator.h>
 
-#import "LAActivatorResourceManager.h"
+#import "LAResourceManager.h"
 
 @implementation NSObject (LAListener)
 
@@ -45,42 +45,42 @@
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName {
-    return [LAActivatorResourceManager.sharedManager localizedTitleForListenerName:listenerName];
+    return [LAResourceManager.sharedManager localizedTitleForListenerName:listenerName];
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedDescriptionForListenerName:(NSString *)listenerName {
-    return [LAActivatorResourceManager.sharedManager localizedDescriptionForListenerName:listenerName];
+    return [LAResourceManager.sharedManager localizedDescriptionForListenerName:listenerName];
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedGroupForListenerName:(NSString *)listenerName {
-    return [LAActivatorResourceManager.sharedManager localizedGroupForListenerName:listenerName];
+    return [LAResourceManager.sharedManager localizedGroupForListenerName:listenerName];
 }
 
 - (NSNumber *)activator:(LAActivator *)activator requiresRequiresAssignmentForListenerName:(NSString *)listenerName {
-    id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"requires-event"
-                                                                  forListenerName:listenerName];
+    id value = [LAResourceManager.sharedManager infoDictionaryValueOfKey:@"requires-event"
+                                                         forListenerName:listenerName];
     return [value respondsToSelector:@selector(boolValue)] ? @([value boolValue]) : nil;
 }
 
 - (NSArray *)activator:(LAActivator *)activator
     requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName {
-    id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"compatible-modes"
-                                                                  forListenerName:listenerName];
+    id value = [LAResourceManager.sharedManager infoDictionaryValueOfKey:@"compatible-modes"
+                                                         forListenerName:listenerName];
     return [value isKindOfClass:NSArray.class] ? value : nil;
 }
 
 - (NSNumber *)activator:(LAActivator *)activator
     requiresIsCompatibleWithEventName:(NSString *)eventName
                          listenerName:(NSString *)listenerName {
-    id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"incompatible-events"
-                                                                  forListenerName:listenerName];
+    id value = [LAResourceManager.sharedManager infoDictionaryValueOfKey:@"incompatible-events"
+                                                         forListenerName:listenerName];
     return [value isKindOfClass:NSArray.class] && eventName.length > 0 && [value containsObject:eventName] ? @NO : @YES;
 }
 
 - (NSArray *)activator:(LAActivator *)activator
     requiresExclusiveAssignmentGroupsForListenerName:(NSString *)listenerName {
-    id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"exclusive-assignment-groups"
-                                                                  forListenerName:listenerName];
+    id value = [LAResourceManager.sharedManager infoDictionaryValueOfKey:@"exclusive-assignment-groups"
+                                                         forListenerName:listenerName];
     return [value isKindOfClass:NSArray.class] ? value : nil;
 }
 
@@ -102,12 +102,12 @@
     if ([key isEqualToString:@"compatible-modes"]) {
         return [self activator:activator requiresCompatibleEventModesForListenerWithName:listenerName];
     }
-    return [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:key forListenerName:listenerName];
+    return [LAResourceManager.sharedManager infoDictionaryValueOfKey:key forListenerName:listenerName];
 }
 
 - (BOOL)activator:(LAActivator *)activator requiresNeedsPoweredDisplayForListenerName:(NSString *)listenerName {
-    id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"needs-powered-display"
-                                                                  forListenerName:listenerName];
+    id value = [LAResourceManager.sharedManager infoDictionaryValueOfKey:@"needs-powered-display"
+                                                         forListenerName:listenerName];
     return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
 }
 
@@ -119,7 +119,7 @@
 - (NSData *)activator:(LAActivator *)activator
     requiresSmallIconDataForListenerName:(NSString *)listenerName
                                    scale:(CGFloat *)scale {
-    return [LAActivatorResourceManager.sharedManager iconDataForListenerName:listenerName small:YES scale:scale];
+    return [LAResourceManager.sharedManager iconDataForListenerName:listenerName small:YES scale:scale];
 }
 
 - (UIImage *)activator:(LAActivator *)activator
@@ -133,8 +133,8 @@
 }
 
 - (BOOL)activator:(LAActivator *)activator requiresSupportsRemovalForListenerWithName:(NSString *)listenerName {
-    id value = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"supports-removal"
-                                                                  forListenerName:listenerName];
+    id value = [LAResourceManager.sharedManager infoDictionaryValueOfKey:@"supports-removal"
+                                                         forListenerName:listenerName];
     return [value respondsToSelector:@selector(boolValue)] ? [value boolValue] : NO;
 }
 
@@ -144,13 +144,13 @@
 - (NSString *)activator:(LAActivator *)activator
     requiresConfigurationViewControllerClassNameForListenerWithName:(NSString *)listenerName
                                                              bundle:(NSBundle **)outBundle {
-    NSString *className = [LAActivatorResourceManager.sharedManager infoDictionaryValueOfKey:@"configuration"
-                                                                             forListenerName:listenerName];
+    NSString *className = [LAResourceManager.sharedManager infoDictionaryValueOfKey:@"configuration"
+                                                                    forListenerName:listenerName];
     if (![className isKindOfClass:NSString.class] || className.length == 0) {
         return nil;
     }
     if (outBundle) {
-        *outBundle = [LAActivatorResourceManager.sharedManager listenerBundleForName:listenerName];
+        *outBundle = [LAResourceManager.sharedManager listenerBundleForName:listenerName];
     }
     return className;
 }

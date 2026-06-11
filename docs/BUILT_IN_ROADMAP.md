@@ -14,8 +14,8 @@
 
 | 能力类型 | 承载位置 | 说明 |
 | --- | --- | --- |
-| event metadata | `layout/Library/Activator/Events/bundled.plist` 和 `LAActivatorResourceManager` | 固定 1.9.13 事件范围、标题、分组、兼容模式、required capabilities 等信息。 |
-| listener/action metadata | `layout/Library/Activator/Listeners/bundled.plist`、glyph 资源和 `LAActivatorResourceManager` | 固定 1.9.13 静态动作展示信息、兼容规则、图标候选路径和 selector/url 元数据。 |
+| event metadata | `layout/Library/Activator/Events/bundled.plist` 和 `LAResourceManager` | 固定 1.9.13 事件范围、标题、分组、兼容模式、required capabilities 等信息。 |
+| listener/action metadata | `layout/Library/Activator/Listeners/bundled.plist`、glyph 资源和 `LAResourceManager` | 固定 1.9.13 静态动作展示信息、兼容规则、图标候选路径和 selector/url 元数据。 |
 | static built-in actions | `ActivatorTweak.dylib` 中的 built-in listener registry | 由 SpringBoard 注册真实 `LAListener` object，例如 `libactivator.system.nothing`、URL actions、系统 UI actions。 |
 | event sources | `ActivatorTweak.dylib` 中的 SpringBoard acquisition adapters | 负责从硬件按钮、触摸手势、SpringBoard 状态、通知或系统服务采集事件，然后调用 dispatch engine。 |
 | dynamic application listeners | 独立 application listener family provider | 动态读取 SpringBoard app model，注册 App launch/action listener，处理 app glyph、显示名、特殊系统 App 行为。 |

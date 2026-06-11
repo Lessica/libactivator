@@ -32,7 +32,7 @@ watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail �
 
 `run` 是默认稳定套件，允许包含 runner-owned tests 和 SpringBoard-owned tests，但必须稳定、可重复、不能污染用户配置或 SpringBoard runtime state。它覆盖 `ClientFacade`、`LAEvent`、`Persistence`、`SpringBoardCore`、`Dispatch`、`Resources`、`TouchActivity`、`BuiltInActions` 等核心能力。
 
-`run-runtime-input` 只测试 `LAActivatorRuntimeStateProvider` 的输入模型，允许调用 `la_noteHomeScreenVisible:`、`la_noteLockScreenVisible:`、`la_noteScreenBlanked:` 等注入入口，但前后必须清空状态，并且不能和真实设备场景连跑。
+`run-runtime-input` 只测试 `LARuntimeStateProvider` 的输入模型，允许调用 `la_noteHomeScreenVisible:`、`la_noteLockScreenVisible:`、`la_noteScreenBlanked:` 等注入入口，但前后必须清空状态，并且不能和真实设备场景连跑。
 
 `run-device-runtime` 只测试真实 SpringBoard hook 和真实设备状态，严禁调用任何 `la_note*` 注入入口。它不属于默认提交门槛，失败说明设备自动化流程、当前设备状态或 hook 场景需要单独调查。
 

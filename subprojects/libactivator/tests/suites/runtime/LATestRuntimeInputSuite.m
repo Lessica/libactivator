@@ -31,7 +31,8 @@
     [recorder expect:![homeRemovedSources containsObject:@"test.home.a"] &&
                      [homeRemovedSources containsObject:@"test.home.b"]
             caseName:@"home-source-remove"
-              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Home source removal failed" activator:activator]];
+              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Home source removal failed"
+                                                           activator:activator]];
 
     [activator la_noteHomeScreenVisible:NO];
     NSDictionary *homeClearedState = [activator la_runtimeStateDebugDictionary];
@@ -54,7 +55,8 @@
     [recorder expect:![lockRemovedSources containsObject:@"test.lock.a"] &&
                      [lockRemovedSources containsObject:@"test.lock.b"]
             caseName:@"lock-source-remove"
-              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Lock source removal failed" activator:activator]];
+              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Lock source removal failed"
+                                                           activator:activator]];
 
     [activator la_noteLockScreenVisible:NO];
     NSDictionary *lockClearedState = [activator la_runtimeStateDebugDictionary];
@@ -66,7 +68,7 @@
     [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeLockScreen]
             caseName:@"screen-blanked-mode"
               reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Blank screen did not report lockscreen mode"
-                                              activator:activator]];
+                                                           activator:activator]];
     [activator la_noteScreenBlanked:NO];
     [activator la_noteRuntimeStateMayHaveChanged];
 
@@ -97,4 +99,3 @@
 }
 
 @end
-

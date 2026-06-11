@@ -1,5 +1,5 @@
 //
-//  LAActivatorRuntimeStateProvider.h
+//  LARuntimeStateProvider.h
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
@@ -11,7 +11,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((visibility("hidden")))
-@interface LAActivatorRuntimeStateProvider : NSObject
+@interface LARuntimeStateProvider : NSObject
 
 #pragma mark - Runtime Updates
 

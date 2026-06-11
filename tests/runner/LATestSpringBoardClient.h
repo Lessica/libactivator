@@ -1,5 +1,5 @@
 //
-//  LATestSpringBoardTestClient.h
+//  LATestSpringBoardClient.h
 //  libactivator-tests
 //
 //  Created by Lessica on 6/10/26.
@@ -10,7 +10,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATestSpringBoardTestClient : NSObject
+@interface LATestSpringBoardClient : NSObject
 - (BOOL)waitForServer;
 - (NSDictionary *)sendCommand:(NSString *)command;
 @end

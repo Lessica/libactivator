@@ -8,19 +8,19 @@
 
 #import "LALegacyPreferenceBridge.h"
 
-#import "LAActivatorBackend.h"
+#import "LARuntimeBackend.h"
 
 static NSString *const LALegacyAssignmentPrefix = @"LAEventListener(";
 static NSString *const LALegacyBlacklistPrefix = @"LABlacklisted-";
 static NSString *const LALegacyHasSeenPrefix = @"LAHasSeenListener-";
 
 @interface LALegacyPreferenceBridge ()
-@property(nonatomic, strong) LAActivatorBackend *backend;
+@property(nonatomic, strong) LARuntimeBackend *backend;
 @end
 
 @implementation LALegacyPreferenceBridge
 
-- (instancetype)initWithBackend:(LAActivatorBackend *)backend {
+- (instancetype)initWithBackend:(LARuntimeBackend *)backend {
     self = [super init];
     if (self) {
         _backend = backend;

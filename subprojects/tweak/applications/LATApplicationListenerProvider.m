@@ -1,12 +1,12 @@
 //
-//  LATDynamicApplicationListenerProvider.m
+//  LATApplicationListenerProvider.m
 //  libactivator
 //
 //  Created by Lessica on 6/11/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LATDynamicApplicationListenerProvider.h"
+#import "LATApplicationListenerProvider.h"
 
 #import "LAActivator+Private.h"
 #import "LATApplicationActionListener.h"
@@ -19,7 +19,7 @@ static CFStringRef const LATLaunchServicesApplicationsChangedNotification =
     CFSTR("com.apple.LaunchServices.ApplicationsChanged");
 static NSTimeInterval const LATApplicationRefreshDebounceDelay = 1.0;
 
-@interface LATDynamicApplicationListenerProvider ()
+@interface LATApplicationListenerProvider ()
 @property(nonatomic, weak) LAActivator *activator;
 @property(nonatomic, strong) LATApplicationCatalog *catalog;
 @property(nonatomic, strong) LATApplicationActionListener *listener;
@@ -35,11 +35,11 @@ static NSTimeInterval const LATApplicationRefreshDebounceDelay = 1.0;
 static void LATLaunchServicesApplicationsChangedCallback(__unused CFNotificationCenterRef center, void *observer,
                                                          __unused CFStringRef name, __unused const void *object,
                                                          __unused CFDictionaryRef userInfo) {
-    LATDynamicApplicationListenerProvider *provider = (__bridge LATDynamicApplicationListenerProvider *)observer;
+    LATApplicationListenerProvider *provider = (__bridge LATApplicationListenerProvider *)observer;
     [provider launchServicesApplicationsDidChange];
 }
 
-@implementation LATDynamicApplicationListenerProvider
+@implementation LATApplicationListenerProvider
 
 #pragma mark - Lifecycle
 

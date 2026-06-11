@@ -62,7 +62,7 @@
 - 不再引入 direct XPC、`CFMessagePort`、自定义 timeout 或 version negotiation。客户端和 SpringBoard server 一体分发，安装后需要重启 SpringBoard。
 - 当前没有具体沙盒穿透需求时不引入 `libSandy`；如果未来某个 system service bridge 需要穿透沙盒，只为那个具体 bridge 引入。
 - IPC payload 只使用 property-list-safe dictionary。`LAEvent` 跨进程只传 `EventName`、`EventMode`、`EventHandled` 和 property-list-safe `UserInfo`。
-- `LAActivatorIPCServer` 只能是 transport adapter：注册 message、解码 payload、调用 `LAActivator` 内部 facade、编码 reply。业务规则、通知触发、listener/resource fallback、dispatch sequencing 不应放在 IPC server 里。
+- `LAIPCServer` 只能是 transport adapter：注册 message、解码 payload、调用 `LAActivator` 内部 facade、编码 reply。业务规则、通知触发、listener/resource fallback、dispatch sequencing 不应放在 IPC server 里。
 - Public change notifications 是进程内 `NSNotification` 名称。跨进程传播使用私有 Darwin notification 名称，再由各进程 facade 重新投递本地 public notification，避免同名混淆。
 
 ## 数据、资源与缓存

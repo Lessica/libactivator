@@ -1,5 +1,5 @@
 //
-//  LAActivatorBackend.h
+//  LARuntimeBackend.h
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
@@ -10,14 +10,14 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class LAActivatorPersistence;
+@class LAPersistence;
 
 __attribute__((visibility("hidden")))
-@interface LAActivatorBackend : NSObject
+@interface LARuntimeBackend : NSObject
 
 #pragma mark - Lifecycle
 
-- (instancetype)initWithPersistence:(nullable LAActivatorPersistence *)persistence;
+- (instancetype)initWithPersistence:(nullable LAPersistence *)persistence;
 
 #pragma mark - Listener Registry
 

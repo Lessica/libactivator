@@ -30,8 +30,8 @@
         return NO;
     }
 
-    if (![coverSheetViewController respondsToSelector:@selector(activateCameraViewAnimated:
-                                                                            sendingActions:completion:)]) {
+    if (![coverSheetViewController
+            respondsToSelector:@selector(activateCameraViewAnimated:sendingActions:completion:)]) {
         HBLogWarn(@"Unable to open lock screen camera because CoverSheet camera activation is unavailable");
         return NO;
     }
@@ -72,8 +72,8 @@
 
 - (void)activateLockScreenCameraIfNeededWithCoverSheetViewController:
     (CSCoverSheetViewController *)coverSheetViewController {
-    if (![coverSheetViewController respondsToSelector:@selector(activateCameraViewAnimated:
-                                                                            sendingActions:completion:)]) {
+    if (![coverSheetViewController
+            respondsToSelector:@selector(activateCameraViewAnimated:sendingActions:completion:)]) {
         HBLogWarn(@"Unable to open lock screen camera because CoverSheet camera activation became unavailable");
         return;
     }

@@ -8,7 +8,7 @@
 
 #import "LATestRunnerRecorder.h"
 
-#import "LAActivatorIPC.h"
+#import "LAIPC.h"
 
 @interface LATestRunnerRecorder ()
 @property(nonatomic, strong) NSMutableArray<NSString *> *suites;
@@ -48,13 +48,13 @@
 
 - (NSDictionary *)resultDictionary {
     return @{
-        LAActivatorIPCKeyTestingSuites : [self.suites copy],
-        LAActivatorIPCKeyTestingFailures : [self.failures copy],
-        LAActivatorIPCKeyTestingSkipped : @[],
-        LAActivatorIPCKeyTestingCaseCount : @(self.caseCount),
-        LAActivatorIPCKeyTestingPassCount : @(self.passCount),
-        LAActivatorIPCKeyTestingFailureCount : @(self.failures.count),
-        LAActivatorIPCKeyTestingSkipCount : @0,
+        LAIPCKeyTestingSuites : [self.suites copy],
+        LAIPCKeyTestingFailures : [self.failures copy],
+        LAIPCKeyTestingSkipped : @[],
+        LAIPCKeyTestingCaseCount : @(self.caseCount),
+        LAIPCKeyTestingPassCount : @(self.passCount),
+        LAIPCKeyTestingFailureCount : @(self.failures.count),
+        LAIPCKeyTestingSkipCount : @0,
     };
 }
 

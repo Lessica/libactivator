@@ -1,13 +1,13 @@
 //
-//  LAActivatorRuntimeStateProvider.m
+//  LARuntimeStateProvider.m
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LAActivatorRuntimeStateProvider.h"
-#import "LAActivatorUnlockService.h"
+#import "LARuntimeStateProvider.h"
+#import "LAUnlockService.h"
 
 #import <UIKit/UIKit.h>
 
@@ -23,7 +23,7 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
 - (NSString *)displayIdentifier;
 @end
 
-@interface LAActivatorRuntimeStateProvider ()
+@interface LARuntimeStateProvider ()
 @property(nonatomic, strong) NSMutableSet *homeScreenVisibilitySources;
 @property(nonatomic, strong) NSMutableSet *springBoardInterfaceVisibilitySources;
 @property(nonatomic, strong) NSMutableSet *lockScreenVisibilitySources;
@@ -37,10 +37,10 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
 @property(nonatomic, copy, nullable) NSString *cachedDisplayIdentifier;
 @property(nonatomic, copy, nullable) NSString *cachedForegroundDisplayIdentifier;
 @property(nonatomic, copy, nullable) void (^eventModeChangeHandler)(NSString *eventMode);
-@property(nonatomic, strong) LAActivatorUnlockService *unlockService;
+@property(nonatomic, strong) LAUnlockService *unlockService;
 @end
 
-@implementation LAActivatorRuntimeStateProvider
+@implementation LARuntimeStateProvider
 
 #pragma mark - Lifecycle
 
@@ -51,7 +51,7 @@ static NSString *const LAActivatorRuntimeStateDefaultSource = @"default";
         _springBoardInterfaceVisibilitySources = [[NSMutableSet alloc] init];
         _lockScreenVisibilitySources = [[NSMutableSet alloc] init];
         _stateQueue = dispatch_queue_create("libactivator.runtime-state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
-        _unlockService = [[LAActivatorUnlockService alloc] init];
+        _unlockService = [[LAUnlockService alloc] init];
         _cachedScreenOn = YES;
         _cachedEventMode = LAEventModeSpringBoard;
         _cachedEventModeUnderneathLockScreen = LAEventModeSpringBoard;

@@ -1,19 +1,19 @@
 //
-//  LAActivatorResourceManager.m
+//  LAResourceManager.m
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LAActivatorResourceManager.h"
+#import "LAResourceManager.h"
 
 #import <dispatch/dispatch.h>
 #import <roothide.h>
 
 extern Boolean MGGetBoolAnswer(CFStringRef key);
 
-@interface LAActivatorResourceManager ()
+@interface LAResourceManager ()
 @property(nonatomic, strong) NSBundle *cachedSupportBundle;
 @property(nonatomic, strong) NSMutableDictionary *eventBundles;
 @property(nonatomic, strong) NSMutableDictionary *listenerBundles;
@@ -22,13 +22,13 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 @property(nonatomic, strong) dispatch_queue_t cacheQueue;
 @end
 
-@implementation LAActivatorResourceManager
+@implementation LAResourceManager
 
 #pragma mark - Lifecycle
 
 + (instancetype)sharedManager {
     static dispatch_once_t sOnceToken;
-    static LAActivatorResourceManager *sManager;
+    static LAResourceManager *sManager;
     dispatch_once(&sOnceToken, ^{
         sManager = [[self alloc] init];
     });

@@ -8,7 +8,7 @@
 
 #import "LATestRecorder.h"
 
-#import "LAActivatorIPC.h"
+#import "LAIPC.h"
 
 @implementation LATestRecorder
 
@@ -62,15 +62,14 @@
 
 - (NSDictionary<NSString *, id> *)resultDictionary {
     return @{
-        LAActivatorIPCKeyTestingSuites : self.suites,
-        LAActivatorIPCKeyTestingFailures : self.failures,
-        LAActivatorIPCKeyTestingSkipped : self.skipped,
-        LAActivatorIPCKeyTestingCaseCount : @(self.caseCount),
-        LAActivatorIPCKeyTestingPassCount : @(self.passCount),
-        LAActivatorIPCKeyTestingFailureCount : @(self.failureCount),
-        LAActivatorIPCKeyTestingSkipCount : @(self.skipCount),
+        LAIPCKeyTestingSuites : self.suites,
+        LAIPCKeyTestingFailures : self.failures,
+        LAIPCKeyTestingSkipped : self.skipped,
+        LAIPCKeyTestingCaseCount : @(self.caseCount),
+        LAIPCKeyTestingPassCount : @(self.passCount),
+        LAIPCKeyTestingFailureCount : @(self.failureCount),
+        LAIPCKeyTestingSkipCount : @(self.skipCount),
     };
 }
 
 @end
-

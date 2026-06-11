@@ -1,5 +1,5 @@
 //
-//  LAActivatorPersistence.h
+//  LAPersistence.h
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
@@ -11,7 +11,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((visibility("hidden")))
-@interface LAActivatorPersistence : NSObject
+@interface LAPersistence : NSObject
 
 #pragma mark - Configuration
 

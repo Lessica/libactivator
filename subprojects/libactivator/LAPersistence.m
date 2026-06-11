@@ -1,18 +1,18 @@
 //
-//  LAActivatorPersistence.m
+//  LAPersistence.m
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LAActivatorPersistence.h"
+#import "LAPersistence.h"
 
 #import <HBLog.h>
 #import <roothide.h>
 #import <sys/stat.h>
 
-@implementation LAActivatorPersistence
+@implementation LAPersistence
 
 + (instancetype)defaultPersistence {
     return [[self alloc] initWithFilePath:jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")];

@@ -16,11 +16,10 @@
 
 extern CFNotificationCenterRef CTTelephonyCenterGetDefault(void);
 extern void CTTelephonyCenterAddObserver(CFNotificationCenterRef center, const void *observer,
-                                         CFNotificationCallback callBack, CFStringRef name,
-                                         const void *object,
+                                         CFNotificationCallback callBack, CFStringRef name, const void *object,
                                          CFNotificationSuspensionBehavior suspensionBehavior);
-extern void CTTelephonyCenterRemoveObserver(CFNotificationCenterRef center, const void *observer,
-                                            CFStringRef name, const void *object);
+extern void CTTelephonyCenterRemoveObserver(CFNotificationCenterRef center, const void *observer, CFStringRef name,
+                                            const void *object);
 
 typedef NS_ENUM(NSUInteger, LATTelephonyActionKind) {
     LATTelephonyActionKindAnswerCall,
@@ -178,8 +177,7 @@ static void LATTelephonyCallStateDidChange(__unused CFNotificationCenterRef cent
         HBLogError(@"Unable to copy current calls for telephony action %@", listenerName ?: @"");
         return @[];
     }
-    HBLogInfo(@"Telephony action %@ copied %lu current call objects", listenerName ?: @"",
-              (unsigned long)calls.count);
+    HBLogInfo(@"Telephony action %@ copied %lu current call objects", listenerName ?: @"", (unsigned long)calls.count);
     return calls;
 }
 
@@ -224,7 +222,8 @@ static void LATTelephonyCallStateDidChange(__unused CFNotificationCenterRef cent
     event.handled = YES;
 
     if (![self listenerSelectorMatchesCommand:command activator:activator]) {
-        HBLogWarn(@"Telephony action %@ metadata selector does not match %@", listenerName ?: @"", command.selectorName);
+        HBLogWarn(@"Telephony action %@ metadata selector does not match %@", listenerName ?: @"",
+                  command.selectorName);
         return;
     }
 

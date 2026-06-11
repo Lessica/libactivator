@@ -27,7 +27,8 @@
         _localizedTitles = [[NSMutableDictionary alloc] init];
         _localizedGroups = [[NSMutableDictionary alloc] init];
         _localizedDescriptions = [[NSMutableDictionary alloc] init];
-        _queue = dispatch_queue_create("libactivator.listener-metadata-cache", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+        _queue =
+            dispatch_queue_create("libactivator.listener-metadata-cache", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
     }
     return self;
 }
@@ -41,23 +42,25 @@
     });
 }
 
-- (UIImage *)smallIconForListenerName:(NSString *)listenerName resolver:(UIImage *(^)(void))resolver {
+- (UIImage *)smallIconForListenerName:(NSString *)listenerName resolver:(UIImage * (^)(void))resolver {
     return [self cachedObjectForListenerName:listenerName cache:self.smallIcons resolver:resolver];
 }
 
-- (NSString *)localizedTitleForListenerName:(NSString *)listenerName resolver:(NSString *(^)(void))resolver {
+- (NSString *)localizedTitleForListenerName:(NSString *)listenerName resolver:(NSString * (^)(void))resolver {
     return [self cachedObjectForListenerName:listenerName cache:self.localizedTitles resolver:resolver];
 }
 
-- (NSString *)localizedGroupForListenerName:(NSString *)listenerName resolver:(NSString *(^)(void))resolver {
+- (NSString *)localizedGroupForListenerName:(NSString *)listenerName resolver:(NSString * (^)(void))resolver {
     return [self cachedObjectForListenerName:listenerName cache:self.localizedGroups resolver:resolver];
 }
 
-- (NSString *)localizedDescriptionForListenerName:(NSString *)listenerName resolver:(NSString *(^)(void))resolver {
+- (NSString *)localizedDescriptionForListenerName:(NSString *)listenerName resolver:(NSString * (^)(void))resolver {
     return [self cachedObjectForListenerName:listenerName cache:self.localizedDescriptions resolver:resolver];
 }
 
-- (id)cachedObjectForListenerName:(NSString *)listenerName cache:(NSMutableDictionary *)cache resolver:(id (^)(void))resolver {
+- (id)cachedObjectForListenerName:(NSString *)listenerName
+                            cache:(NSMutableDictionary *)cache
+                         resolver:(id (^)(void))resolver {
     if (listenerName.length == 0) {
         return resolver ? resolver() : nil;
     }

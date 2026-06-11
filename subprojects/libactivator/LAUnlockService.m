@@ -1,12 +1,12 @@
 //
-//  LAActivatorUnlockService.m
+//  LAUnlockService.m
 //  libactivator
 //
 //  Created by Lessica on 6/6/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LAActivatorUnlockService.h"
+#import "LAUnlockService.h"
 #import "LAActivator+Private.h"
 
 @interface SBLockScreenManager : NSObject
@@ -18,7 +18,7 @@
                        completion:(nullable id)completion;
 @end
 
-@implementation LAActivatorUnlockService
+@implementation LAUnlockService
 
 #pragma mark - State
 
@@ -55,11 +55,11 @@
     NSString *passcodeToUse = [passcode copy] ?: @"";
     [self performOnMainThreadSynchronously:^{
         if (![LAActivator.sharedInstance la_screenIsOn]) {
-            attempted = [LAActivator.sharedInstance la_wakeScreenForReason:@"unlock request"
-                                                                 completion:^{
-                                                                     [self attemptUnlockOnMainThreadWithPasscode:
-                                                                               passcodeToUse];
-                                                                 }];
+            attempted =
+                [LAActivator.sharedInstance la_wakeScreenForReason:@"unlock request"
+                                                        completion:^{
+                                                            [self attemptUnlockOnMainThreadWithPasscode:passcodeToUse];
+                                                        }];
             return;
         }
 

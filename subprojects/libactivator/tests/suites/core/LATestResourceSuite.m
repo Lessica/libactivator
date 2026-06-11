@@ -12,7 +12,7 @@
 
 @interface LATestResourceSuite ()
 + (NSDictionary<NSString *, NSDictionary *> *)bundledListenerMetadataWithResourceManager:
-    (LAActivatorResourceManager *)resourceManager;
+    (LAResourceManager *)resourceManager;
 + (BOOL)allBundledListenersHaveActionMetadata:(NSDictionary<NSString *, NSDictionary *> *)listeners;
 + (BOOL)bundledListenerSelectorsHaveOnlyExpectedDuplicates:(NSDictionary<NSString *, NSDictionary *> *)listeners;
 @end
@@ -23,7 +23,7 @@
     [recorder beginSuite:@"Resources"];
 
     NSFileManager *fileManager = NSFileManager.defaultManager;
-    LAActivatorResourceManager *resourceManager = LAActivatorResourceManager.sharedManager;
+    LAResourceManager *resourceManager = LAResourceManager.sharedManager;
 
     NSString *eventName = @"libactivator.test.resource.capability";
     NSString *eventPath = [[resourceManager eventsDirectoryPath] stringByAppendingPathComponent:eventName];
@@ -71,7 +71,7 @@
 }
 
 + (NSDictionary<NSString *, NSDictionary *> *)bundledListenerMetadataWithResourceManager:
-    (LAActivatorResourceManager *)resourceManager {
+    (LAResourceManager *)resourceManager {
     NSString *path = [[resourceManager listenersDirectoryPath] stringByAppendingPathComponent:@"bundled.plist"];
     NSDictionary *metadata = [NSDictionary dictionaryWithContentsOfFile:path];
     return [metadata isKindOfClass:NSDictionary.class] ? metadata : @{};

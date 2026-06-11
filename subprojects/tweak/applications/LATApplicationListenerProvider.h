@@ -1,5 +1,5 @@
 //
-//  LATDynamicApplicationListenerProvider.h
+//  LATApplicationListenerProvider.h
 //  libactivator
 //
 //  Created by Lessica on 6/11/26.
@@ -14,7 +14,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATDynamicApplicationListenerProvider : NSObject
+@interface LATApplicationListenerProvider : NSObject
 - (instancetype)initWithActivator:(LAActivator *)activator
                           catalog:(LATApplicationCatalog *)catalog
                          listener:(LATApplicationActionListener *)listener;

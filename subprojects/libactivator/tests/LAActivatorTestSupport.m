@@ -9,7 +9,7 @@
 #import "LAActivatorTestSupport.h"
 
 #import "LAActivator+Private.h"
-#import "LAActivatorIPC.h"
+#import "LAIPC.h"
 #import "LATestBuiltInActionRegistrySuite.h"
 #import "LATestBuiltInDynamicApplicationListenersSuite.h"
 #import "LATestBuiltInHardwareActionsSuite.h"
@@ -37,30 +37,29 @@
 }
 
 + (NSDictionary *)handleCommandWithUserInfo:(NSDictionary *)userInfo activator:(LAActivator *)activator {
-    NSString *command = [userInfo[LAActivatorIPCKeyTestingCommand] isKindOfClass:NSString.class]
-                            ? userInfo[LAActivatorIPCKeyTestingCommand]
-                            : nil;
-    if ([command isEqualToString:LAActivatorIPCTestingCommandPing]) {
+    NSString *command =
+        [userInfo[LAIPCKeyTestingCommand] isKindOfClass:NSString.class] ? userInfo[LAIPCKeyTestingCommand] : nil;
+    if ([command isEqualToString:LAIPCTestingCommandPing]) {
         return [self okReplyWithValue:@"ready"];
     }
-    if ([command isEqualToString:LAActivatorIPCTestingCommandCleanup]) {
+    if ([command isEqualToString:LAIPCTestingCommandCleanup]) {
         [LATestEnvironment cleanActivator:activator];
         [LATestEnvironment removeTestPlist];
         return [self okReplyWithValue:@"clean"];
     }
-    if ([command isEqualToString:LAActivatorIPCTestingCommandRun]) {
+    if ([command isEqualToString:LAIPCTestingCommandRun]) {
         return [self okReplyWithValue:[self runStableTestsWithActivator:activator]];
     }
-    if ([command isEqualToString:LAActivatorIPCTestingCommandRunRuntimeInput]) {
+    if ([command isEqualToString:LAIPCTestingCommandRunRuntimeInput]) {
         return [self okReplyWithValue:[self runRuntimeInputTestsWithActivator:activator]];
     }
-    if ([command isEqualToString:LAActivatorIPCTestingCommandRunDeviceRuntime]) {
+    if ([command isEqualToString:LAIPCTestingCommandRunDeviceRuntime]) {
         return [self okReplyWithValue:[self runDeviceRuntimeTestsWithActivator:activator]];
     }
-    if ([command isEqualToString:LAActivatorIPCTestingCommandRuntimeState]) {
+    if ([command isEqualToString:LAIPCTestingCommandRuntimeState]) {
         return [self okReplyWithValue:[activator la_runtimeStateDebugDictionary]];
     }
-    if ([command isEqualToString:LAActivatorIPCTestingCommandPrepareUserInfoProbe]) {
+    if ([command isEqualToString:LAIPCTestingCommandPrepareUserInfoProbe]) {
         NSString *eventName = [self userInfoProbeEventName];
         NSString *listenerName = [self userInfoProbeListenerName];
         LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
@@ -69,11 +68,11 @@
         [activator registerEventDataSource:dataSource forEventName:eventName];
         [activator registerListener:listener forName:listenerName];
         return [self okReplyWithValue:@{
-            LAActivatorIPCKeyEventName : eventName,
-            LAActivatorIPCKeyListenerName : listenerName,
+            LAIPCKeyEventName : eventName,
+            LAIPCKeyListenerName : listenerName,
         }];
     }
-    if ([command isEqualToString:LAActivatorIPCTestingCommandUserInfoProbeResult]) {
+    if ([command isEqualToString:LAIPCTestingCommandUserInfoProbeResult]) {
         id<LAListener> listener = [activator listenerForName:[self userInfoProbeListenerName]];
         if (![listener isKindOfClass:LATestListener.class]) {
             return [self failureReply];
@@ -89,13 +88,13 @@
 
 + (NSDictionary *)okReplyWithValue:(id)value {
     if (value) {
-        return @{LAActivatorIPCKeyOK : @YES, LAActivatorIPCKeyValue : value};
+        return @{LAIPCKeyOK : @YES, LAIPCKeyValue : value};
     }
-    return @{LAActivatorIPCKeyOK : @YES};
+    return @{LAIPCKeyOK : @YES};
 }
 
 + (NSDictionary *)failureReply {
-    return @{LAActivatorIPCKeyOK : @NO};
+    return @{LAIPCKeyOK : @NO};
 }
 
 + (NSDictionary *)runStableTestsWithActivator:(LAActivator *)activator {

@@ -8,14 +8,14 @@
 
 #import "LATestRunner.h"
 
-#import "LAActivatorIPC.h"
+#import "LAIPC.h"
 #import "LATestClientFacadeSuite.h"
 #import "LATestRunnerResultPrinter.h"
 #import "LATestRuntimeStatePrinter.h"
-#import "LATestSpringBoardTestClient.h"
+#import "LATestSpringBoardClient.h"
 
 @interface LATestRunner ()
-@property(nonatomic, strong) LATestSpringBoardTestClient *client;
+@property(nonatomic, strong) LATestSpringBoardClient *client;
 @property(nonatomic, strong) LATestRunnerResultPrinter *resultPrinter;
 @property(nonatomic, strong) LATestRuntimeStatePrinter *runtimeStatePrinter;
 @end
@@ -25,7 +25,7 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _client = [[LATestSpringBoardTestClient alloc] init];
+        _client = [[LATestSpringBoardClient alloc] init];
         _resultPrinter = [[LATestRunnerResultPrinter alloc] init];
         _runtimeStatePrinter = [[LATestRuntimeStatePrinter alloc] init];
     }
@@ -42,25 +42,25 @@
         return 2;
     }
 
-    [self.client sendCommand:LAActivatorIPCTestingCommandCleanup];
+    [self.client sendCommand:LAIPCTestingCommandCleanup];
     printf("[tests] Running runner client facade test suites\n");
     fflush(stdout);
     NSDictionary *clientResult = [[[LATestClientFacadeSuite alloc] initWithClient:self.client] run];
     [self.resultPrinter printResult:clientResult];
-    [self.client sendCommand:LAActivatorIPCTestingCommandCleanup];
+    [self.client sendCommand:LAIPCTestingCommandCleanup];
     if ([self.resultPrinter resultHasFailures:clientResult]) {
         return 1;
     }
 
-    return [self runSpringBoardCommand:LAActivatorIPCTestingCommandRun suiteName:@"stable"];
+    return [self runSpringBoardCommand:LAIPCTestingCommandRun suiteName:@"stable"];
 }
 
 - (int)runRuntimeInputTests {
-    return [self runSpringBoardCommand:LAActivatorIPCTestingCommandRunRuntimeInput suiteName:@"runtime input"];
+    return [self runSpringBoardCommand:LAIPCTestingCommandRunRuntimeInput suiteName:@"runtime input"];
 }
 
 - (int)runDeviceRuntimeTests {
-    return [self runSpringBoardCommand:LAActivatorIPCTestingCommandRunDeviceRuntime suiteName:@"device runtime"];
+    return [self runSpringBoardCommand:LAIPCTestingCommandRunDeviceRuntime suiteName:@"device runtime"];
 }
 
 - (int)watchRuntimeState {
@@ -73,10 +73,9 @@
 
     [self.runtimeStatePrinter printHeader];
     while (YES) {
-        NSDictionary *reply = [self.client sendCommand:LAActivatorIPCTestingCommandRuntimeState];
-        NSDictionary *state =
-            [reply[LAActivatorIPCKeyValue] isKindOfClass:NSDictionary.class] ? reply[LAActivatorIPCKeyValue] : nil;
-        if (![reply[LAActivatorIPCKeyOK] boolValue] || !state) {
+        NSDictionary *reply = [self.client sendCommand:LAIPCTestingCommandRuntimeState];
+        NSDictionary *state = [reply[LAIPCKeyValue] isKindOfClass:NSDictionary.class] ? reply[LAIPCKeyValue] : nil;
+        if (![reply[LAIPCKeyOK] boolValue] || !state) {
             fprintf(stderr, "[runtime] unavailable\n");
             [NSThread sleepForTimeInterval:1.0];
             continue;
@@ -96,24 +95,23 @@
         return 2;
     }
 
-    [self.client sendCommand:LAActivatorIPCTestingCommandCleanup];
+    [self.client sendCommand:LAIPCTestingCommandCleanup];
     printf("[tests] Running SpringBoard %s test suites\n", [suiteName UTF8String]);
     fflush(stdout);
     NSDictionary *reply = [self.client sendCommand:command];
-    if (![reply[LAActivatorIPCKeyOK] boolValue]) {
+    if (![reply[LAIPCKeyOK] boolValue]) {
         fprintf(stderr, "[tests] Test command failed\n");
-        [self.client sendCommand:LAActivatorIPCTestingCommandCleanup];
+        [self.client sendCommand:LAIPCTestingCommandCleanup];
         return 3;
     }
-    NSDictionary *result =
-        [reply[LAActivatorIPCKeyValue] isKindOfClass:NSDictionary.class] ? reply[LAActivatorIPCKeyValue] : nil;
+    NSDictionary *result = [reply[LAIPCKeyValue] isKindOfClass:NSDictionary.class] ? reply[LAIPCKeyValue] : nil;
     if (!result) {
         fprintf(stderr, "[tests] Test command returned no result\n");
-        [self.client sendCommand:LAActivatorIPCTestingCommandCleanup];
+        [self.client sendCommand:LAIPCTestingCommandCleanup];
         return 3;
     }
     [self.resultPrinter printResult:result];
-    [self.client sendCommand:LAActivatorIPCTestingCommandCleanup];
+    [self.client sendCommand:LAIPCTestingCommandCleanup];
 
     return [self.resultPrinter resultHasFailures:result] ? 1 : 0;
 }

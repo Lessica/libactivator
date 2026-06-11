@@ -10,10 +10,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class LATestSpringBoardTestClient;
+@class LATestSpringBoardClient;
 
 @interface LATestClientFacadeSuite : NSObject
-- (instancetype)initWithClient:(LATestSpringBoardTestClient *)client NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithClient:(LATestSpringBoardClient *)client NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 - (NSDictionary *)run;
 @end

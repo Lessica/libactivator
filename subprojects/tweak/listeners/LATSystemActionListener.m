@@ -23,7 +23,7 @@ extern void MRMediaRemoteGetNowPlayingApplicationPID(dispatch_queue_t queue, voi
     __attribute__((weak_import));
 extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__((weak_import));
 
-@interface UIApplication (LATSystemRingerPrivate)
+@interface UIApplication (RingerPrivate)
 - (void)_updateRingerState:(int)ringerState
                  withVisuals:(BOOL)withVisuals
     updatePreferenceRegister:(BOOL)updatePreferenceRegister;

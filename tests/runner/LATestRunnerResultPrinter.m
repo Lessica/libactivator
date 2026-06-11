@@ -8,32 +8,30 @@
 
 #import "LATestRunnerResultPrinter.h"
 
-#import "LAActivatorIPC.h"
+#import "LAIPC.h"
 
 @implementation LATestRunnerResultPrinter
 
 - (void)printResult:(NSDictionary *)result {
-    NSInteger suiteCount = [result[LAActivatorIPCKeyTestingSuites] count];
-    NSInteger caseCount = [result[LAActivatorIPCKeyTestingCaseCount] integerValue];
-    NSInteger passCount = [result[LAActivatorIPCKeyTestingPassCount] integerValue];
-    NSInteger failureCount = [result[LAActivatorIPCKeyTestingFailureCount] integerValue];
-    NSInteger skipCount = [result[LAActivatorIPCKeyTestingSkipCount] integerValue];
+    NSInteger suiteCount = [result[LAIPCKeyTestingSuites] count];
+    NSInteger caseCount = [result[LAIPCKeyTestingCaseCount] integerValue];
+    NSInteger passCount = [result[LAIPCKeyTestingPassCount] integerValue];
+    NSInteger failureCount = [result[LAIPCKeyTestingFailureCount] integerValue];
+    NSInteger skipCount = [result[LAIPCKeyTestingSkipCount] integerValue];
 
     printf("[tests] Suites: %ld, Cases: %ld, Passed: %ld, Failed: %ld, Skipped: %ld\n", (long)suiteCount,
            (long)caseCount, (long)passCount, (long)failureCount, (long)skipCount);
     fflush(stdout);
 
-    NSArray *failures = [result[LAActivatorIPCKeyTestingFailures] isKindOfClass:NSArray.class]
-                            ? result[LAActivatorIPCKeyTestingFailures]
-                            : @[];
+    NSArray *failures =
+        [result[LAIPCKeyTestingFailures] isKindOfClass:NSArray.class] ? result[LAIPCKeyTestingFailures] : @[];
     for (NSString *failure in failures) {
         printf("[tests] FAIL: %s\n", [failure UTF8String]);
         fflush(stdout);
     }
 
-    NSArray *skipped = [result[LAActivatorIPCKeyTestingSkipped] isKindOfClass:NSArray.class]
-                           ? result[LAActivatorIPCKeyTestingSkipped]
-                           : @[];
+    NSArray *skipped =
+        [result[LAIPCKeyTestingSkipped] isKindOfClass:NSArray.class] ? result[LAIPCKeyTestingSkipped] : @[];
     for (NSString *skip in skipped) {
         printf("[tests] SKIP: %s\n", [skip UTF8String]);
         fflush(stdout);
@@ -41,7 +39,7 @@
 }
 
 - (BOOL)resultHasFailures:(NSDictionary *)result {
-    return [result[LAActivatorIPCKeyTestingFailureCount] integerValue] > 0;
+    return [result[LAIPCKeyTestingFailureCount] integerValue] > 0;
 }
 
 @end

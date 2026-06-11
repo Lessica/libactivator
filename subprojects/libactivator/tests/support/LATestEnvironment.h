@@ -7,11 +7,10 @@
 //
 
 #import "LAActivator+Private.h"
-#import "LAActivatorBackend.h"
-#import "LAActivatorIPC.h"
-#import "LAActivatorPersistence.h"
-#import "LAActivatorResourceManager.h"
-#import "LATouchActivityTracker.h"
+#import "LAIPC.h"
+#import "LAPersistence.h"
+#import "LAResourceManager.h"
+#import "LARuntimeBackend.h"
 #import "LATestCountingPersistence.h"
 #import "LATestEventDataSource.h"
 #import "LATestListener.h"
@@ -20,6 +19,7 @@
 #import "LATestTestingProtocols.h"
 #import "LATestTouch.h"
 #import "LATestTouchEvent.h"
+#import "LATouchActivityTracker.h"
 
 #import <Activator/Activator.h>
 #import <Foundation/Foundation.h>
@@ -66,4 +66,3 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
-

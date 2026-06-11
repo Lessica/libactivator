@@ -30,10 +30,12 @@
         [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeSpringBoard]
                 caseName:@"home-mode"
                   reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Home screen did not report springboard mode"
-                                                  activator:activator]];
+                                                               activator:activator]];
     }
 
-    if (![LATestEnvironment prepareApplicationModeWithBundleIdentifier:@"com.apple.Preferences" activator:activator attempts:3]) {
+    if (![LATestEnvironment prepareApplicationModeWithBundleIdentifier:@"com.apple.Preferences"
+                                                             activator:activator
+                                                              attempts:3]) {
         [recorder skip:@"application-mode" reason:@"Application launch automation is unavailable"];
     } else {
         [LATestEnvironment waitForMainQueue];
@@ -42,10 +44,11 @@
                          [activator.displayIdentifierForCurrentApplication isEqualToString:@"com.apple.Preferences"]
                 caseName:@"application-frontmost"
                   reason:@"Preferences did not become frontmost"];
-        [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeApplication]
-                caseName:@"application-mode"
-                  reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Foreground app did not report application mode"
-                                                  activator:activator]];
+        [recorder
+              expect:[activator.currentEventMode isEqualToString:LAEventModeApplication]
+            caseName:@"application-mode"
+              reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Foreground app did not report application mode"
+                                                           activator:activator]];
 
         NSString *eventName = @"libactivator.test.dispatch";
         NSString *listenerName = @"libactivator.test.dispatch.a";
@@ -66,20 +69,23 @@
         [recorder skip:@"lockscreen-mode" reason:@"Lock automation is unavailable"];
     } else {
         [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:1.0];
-        [recorder expect:[LATestEnvironment isDeviceLocked] || [activator.currentEventMode isEqualToString:LAEventModeLockScreen]
+        [recorder expect:[LATestEnvironment isDeviceLocked] ||
+                         [activator.currentEventMode isEqualToString:LAEventModeLockScreen]
                 caseName:@"lockscreen-mode"
                   reason:@"Lock screen did not report lockscreen mode"];
     }
 
-    if (![LATestEnvironment unlockDeviceWithPasscode:NSProcessInfo.processInfo.environment[@"LA_TEST_PASSCODE"] ?: @""]) {
+    if (![LATestEnvironment
+            unlockDeviceWithPasscode:NSProcessInfo.processInfo.environment[@"LA_TEST_PASSCODE"] ?: @""]) {
         [recorder skip:@"unlock-device" reason:@"Unlock automation is unavailable"];
     } else {
         [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:1.0];
-        [recorder expect:![LATestEnvironment isDeviceLocked] caseName:@"unlock-device" reason:@"Device is still locked"];
+        [recorder expect:![LATestEnvironment isDeviceLocked]
+                caseName:@"unlock-device"
+                  reason:@"Device is still locked"];
     }
 
     [LATestEnvironment suspendApplication];
 }
 
 @end
-
