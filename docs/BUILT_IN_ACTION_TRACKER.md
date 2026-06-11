@@ -8,7 +8,7 @@
 - 同一个 listener class 可以注册到多个 listener name。name 决定元数据、标题、分组、URL 或 selector；class 决定运行时行为。
 - metadata presence 不等于已实现。只有注册了真实 `LAListener` object 的 name 才能进入 `availableListenerNames` 并处理事件。
 - 1.9.13 资源 catalog 是当前内置动作范围的主要依据；旧 master 只用于证明历史承载方式和语义，不用于照搬实现。
-- 状态值：`metadata-only` 表示只有资源；`candidate` 表示可进入当前阶段评估；`in-progress` 表示正在实现；`implemented` 表示已有行为和测试；`blocked` 表示需要 owner 或 SPI 决策；`obsolete` 表示不计划恢复。
+- 状态值：`metadata-only` 表示只有资源；`candidate` 表示可进入当前阶段评估；`in-progress` 表示正在实现；`implemented` 表示已有行为和测试；`blocked` 表示需要 owner 或 SPI 决策；`obsolete` 表示不计划恢复；`out-of-scope` 表示违反当前项目架构约束。
 
 ## 阶段结论
 
@@ -16,156 +16,83 @@ URL actions / listener family 已完成。当前 `LATURLActionListener` 注册 4
 
 URL family 的实现边界已固定：注册 name 仍由代码 allowlist 决定；metadata lookup 同时支持 `Listeners/bundled.plist` 和目录式 `Listeners/<name>/Info.plist`；真实打开通过 `LSApplicationWorkspace openSensitiveURL:withOptions:error:` 在专用非主队列提交，`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示目标 App 已完成打开。这与旧 master 中 `applicationOpenURL:publicURLsOnly:` 后立即返回 `YES` 的语义一致。
 
-Hardware actions / listener family 已从旧 Media family 中拆出。当前 `LATHardwareActionListener` 承载 13 个 HID Consumer page 播放、音量、亮度、Home、Sleep、截图、Spotlight 硬件键，以及 `libactivator.system.vibrate` 的硬件振动反馈。HID 动作通过 `IOHIDEventCreateKeyboardEvent` 与 `IOHIDEventSystemClientDispatchEvent` 提交；vibrate 使用 `AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)`；`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示系统 UI 或目标应用已经完成状态变化。`SBScreenShotter` 已确认在现代 iOS 不可用，因此截图不走旧 master 的 `SBScreenShotter saveScreenshot:` 路径。
+Hardware actions / listener family 已从旧 Media family 中拆出。当前 `LATHardwareActionListener` 承载 15 个 HID Consumer page 播放、音量、输出静音、亮度、Home、Sleep、屏幕键盘、截图、Spotlight 硬件键，以及 `libactivator.system.vibrate` 的硬件振动反馈。HID 动作通过 `IOHIDEventCreateKeyboardEvent` 与 `IOHIDEventSystemClientDispatchEvent` 提交；vibrate 使用 `AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)`；`event.handled = YES` 表示 action request 已被 listener 接受并提交，不表示系统 UI 或目标应用已经完成状态变化。`SBScreenShotter` 已确认在现代 iOS 不可用，因此截图不走旧 master 的 `SBScreenShotter saveScreenshot:` 路径。
 
 System actions / listener family 已用于承载非 URL、非 HID、但低风险且接口明确的系统服务动作。当前 `LATSystemActionListener` 包含 volume HUD、now-playing application launch、ringer state sync、ringer mute/unmute/toggle、SBS first SpringBoard page。实现边界已固定：注册 name 仍由代码 allowlist 决定；metadata lookup 用于 selector metadata gate；volume/ringer 动作通过 tweak hook 缓存在 `LATBuiltInListenerRegistry` 中的 `SBVolumeControl` / `SBRingerControl` 原进程对象执行；ringer reset 按 1.9.13 旧实现通过 `BKSHIDServicesGetRingerState` 与 SpringBoard `-_updateRingerState:withVisuals:updatePreferenceRegister:` 同步；first-page 使用 `SBSServiceFacilityClient` checkout `SBSSystemServiceClient` 后调用 `resetToHomeScreenAnimated:`。
 
-Telephony actions / listener family 现在只承载通话控制。`LATTelephonyActionListener` 包含 2 个 call control 动作：`answer-call` 和 `disconnect-call`；Phone tab URL 已按执行机制并入 `LATURLActionListener`。Call control 动作参考 `TRAppIntentXpcServiceConnection.mm` 中已验证的 CoreTelephony 路径，tweak 使用项目内私有 `CTCall.h` 副本并链接 `CoreTelephony.framework`，在主队列异步执行通话控制。`libactivator.phone.disconnect-call` 的 selector metadata 已从旧资源误写的 `answerCall` 规范化为 `disconnectCall`。`event.handled = YES` 表示 telephony listener 已消费请求，不表示电话状态已完成变化。
+Telephony actions / listener family 现在只承载通话控制。`LATTelephonyActionListener` 包含 2 个 call control 动作：`answer-call` 和 `disconnect-call`；Phone tab URL 已按执行机制并入 `LATURLActionListener`。Call control 动作参考 `TRAppIntentXpcServiceConnection.mm` 中已验证的 CoreTelephony 路径，tweak 使用项目内私有 `CTCall.h` 副本并链接 `CoreTelephony.framework`，在主队列异步执行通话控制。`libactivator.phone.disconnect-call` 的 selector metadata 已从旧资源误写的 `answerCall` 规范化为 `disconnectCall`。`libactivator.phone.answer-call` 曾出现首个来电可接、后续来电不可接但可挂断的现象；原因判断为 answer 依赖当前 incoming `CTCallRef`，而参考项目还通过 `CTTelephonyCenter` 持续订阅 call status / identification change 来维护进程内 CoreTelephony 状态，当前实现已补齐这个 observer。`event.handled = YES` 表示 telephony listener 已消费请求，不表示电话状态已完成变化。
 
-下一阶段应继续处理低风险 system selector actions，但 listener 划分应优先按执行机制决定：URL action 归 `LATURLActionListener`，HID Consumer action 归 `LATHardwareActionListener`，SpringBoard/system-service action 归 `LATSystemActionListener`，通话控制归 `LATTelephonyActionListener`。
+当前 built-in actions / listeners 的低风险实施面已经收束。后续阶段应从“继续补静态动作”转向“动态 listener family 和 event source family”。listener 划分仍按执行机制决定：URL action 归 `LATURLActionListener`，HID Consumer action 归 `LATHardwareActionListener`，SpringBoard/system-service action 归 `LATSystemActionListener`，通话控制归 `LATTelephonyActionListener`；新阶段不要把动态 App listener、event acquisition adapter 或 Settings UI 逻辑塞回现有 action listener。
 
-## 已实现动作
+## 已处理完成项
 
-| Listener name / family | 动作 | 承载实体 | 依据 | 状态 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| `libactivator.system.nothing` | 不执行操作，吞掉原始动作 | `LATNothingListener` | 1.9.13 `Listeners/bundled.plist`；旧 master `LASimpleListener -doNothing` | `implemented` | 已由 `LATBuiltInListenerRegistry` 注册，stable `BuiltInActionRegistry` 覆盖 dispatch 后 `event.handled = YES`。 |
-| URL actions family | Clock、Settings、Phone tab URL actions | `LATURLActionListener` | 1.9.13 `Listeners/bundled.plist` 中保留的 `url` / `urls` metadata；旧 master `LASimpleListener -openURLWithActivator:event:listenerName:`；真机验证后的 `mobilephone-*:` URL | `implemented` | 44 个 metadata URL 项和 4 个 hardcoded Phone tab URL 项已注册；stable `BuiltInURLActions` 覆盖 metadata URL 与 hardcoded selector-gated URL。 |
-| Hardware actions family | HID Consumer 播放、音量、亮度、Home、Sleep、截图、Spotlight、vibrate | `LATHardwareActionListener` | `STHIDEventGenerator.mm` 的 HID Consumer event 发送方式；IOHID usage table 中 `Menu` / `Power` / brightness / `Snapshot` / `ACSearch` usage；`AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)` | `implemented` | 14 个 hardware action 项已注册；stable `BuiltInHardwareActions` 覆盖 allowlist、selector metadata 和 runtime registration。 |
-| System actions family | Volume HUD、当前播放应用、ringer、first page | `LATSystemActionListener` | 真机 Frida 验证的 `SBVolumeControl -_presentVolumeHUDWithVolume:`；1.9.13 ringer reset 与 now-playing launch 逆向结论；`SBSSystemServiceClient resetToHomeScreenAnimated:` | `implemented` | 7 个 system-service 项已注册；stable `BuiltInSystemActions` 覆盖 allowlist、selector/title metadata 和 runtime registration。 |
-| Telephony actions family | 接听来电、挂断活动或来电 | `LATTelephonyActionListener` | 1.9.13 `Listeners/bundled.plist` 中 selector metadata；`TRAppIntentXpcServiceConnection.mm` 中 CoreTelephony call control 路径 | `implemented` | 2 个 call control 项已注册；Phone tab URL 已移至 URL family；stable `BuiltInTelephonyActions` 覆盖 allowlist、selector metadata 和 runtime registration。 |
+现有 static built-in actions / listeners 清单已经处理完毕，详细逐项验证记录不再保留在 tracker 中；后续追溯具体实现时以代码、测试 suite、`LEGACY_REVERSE_ENGINEERING.md` 和 git 历史为准。
 
-## URL Actions 完成清单
-
-| Listener name | 分组 | 标题 | 状态 | URL metadata | 验证 |
-| --- | --- | --- | --- | --- | --- |
-| `libactivator.clock.alarm` | Clock | Alarm | `implemented` | `clock-alarm:default` | ✅ |
-| `libactivator.clock.stopwatch` | Clock | Stopwatch | `implemented` | `clock-stopwatch:default` | ✅ |
-| `libactivator.clock.timer` | Clock | Timer | `implemented` | `clock-timer:default` | ✅ |
-| `libactivator.clock.world-clock` | Clock | World Clock | `implemented` | `clock-worldclock:default` | ✅ |
-| `libactivator.settings.about` | Settings | About | `implemented` | `prefs:root=General&path=About` | ✅ |
-| `libactivator.settings.accessibility` | Settings | Accessibility | `implemented` | `prefs:root=ACCESSIBILITY` | ✅ |
-| `libactivator.settings.auto-lock` | Settings | Auto-Lock | `implemented` | `prefs:root=General&path=AUTOLOCK` | ✅ |
-| `libactivator.settings.background-app-refresh` | Settings | Background App Refresh | `implemented` | `prefs:root=General&path=AUTO_CONTENT_DOWNLOAD` | ✅ |
-| `libactivator.settings.battery` | Settings | Battery | `implemented` | `prefs:root=BATTERY_USAGE` | ✅ |
-| `libactivator.settings.bluetooth` | Settings | Bluetooth | `implemented` | `prefs:root=General&path=Bluetooth`<br>`700`<br>`prefs:root=Bluetooth` | ✅ |
-| `libactivator.settings.carplay` | Settings | Carplay | `implemented` | `prefs:root=General&path=CARPLAY` | ✅ |
-| `libactivator.settings.cellular` | Settings | Cellular | `implemented` | `prefs:root=General&path=MOBILE_DATA_SETTINGS_ID`<br>`1000`<br>`prefs:root=MOBILE_DATA_SETTINGS_ID` | ✅ |
-| `libactivator.settings.control-center` | Settings | Control Center | `implemented` | `prefs:root=ControlCenter` | ✅ |
-| `libactivator.settings.date-time` | Settings | Date & Time | `implemented` | `prefs:root=General&path=DATE_AND_TIME` | ✅ |
-| `libactivator.settings.display` | Settings | Display & Brightness | `implemented` | `prefs:root=DISPLAY` | ✅ |
-| `libactivator.settings.do-not-disturb` | Settings | Do Not Disturb | `implemented` | `prefs:root=DO_NOT_DISTURB` | ✅ |
-| `libactivator.settings.facetime` | Settings | FaceTime | `implemented` | `prefs:root=FACETIME` | ✅ |
-| `libactivator.settings.game-center` | Settings | Game Center | `implemented` | `prefs:root=GAMECENTER` | ✅ |
-| `libactivator.settings.general` | Settings | General | `implemented` | `prefs:root=General` | ✅ |
-| `libactivator.settings.handoff` | Settings | Handoff | `implemented` | `prefs:root=General&path=CONTINUITY_SPEC` | ✅ |
-| `libactivator.settings.icloud` | Settings | iCloud | `implemented` | `prefs:root=CASTLE` | ✅ |
-| `libactivator.settings.international` | Settings | Language & Region | `implemented` | `prefs:root=General&path=INTERNATIONAL` | ✅ |
-| `libactivator.settings.keyboard` | Settings | Keyboard | `implemented` | `prefs:root=General&path=Keyboard` | ✅ |
-| `libactivator.settings.location-services` | Settings | Location Services | `implemented` | `prefs:root=LOCATION_SERVICES` | ✅ |
-| `libactivator.settings.mail` | Settings | Mail, Contacts, Calendars | `implemented` | `prefs:root=ACCOUNT_SETTINGS` | ✅ |
-| `libactivator.settings.managed-configuration` | Settings | Profiles & Device Management | `implemented` | `prefs:root=General&path=ManagedConfigurationList` | ✅ |
-| `libactivator.settings.maps` | Settings | Maps | `implemented` | `prefs:root=MAPS` | ✅ |
-| `libactivator.settings.messages` | Settings | Messages | `implemented` | `prefs:root=MESSAGES` | ✅ |
-| `libactivator.settings.music` | Settings | Music | `implemented` | `prefs:root=MUSIC` | ✅ |
-| `libactivator.settings.notes` | Settings | Notes | `implemented` | `prefs:root=NOTES` | ✅ |
-| `libactivator.settings.notifications` | Settings | Notifications | `implemented` | `prefs:root=NOTIFICATIONS_ID` | ✅ |
-| `libactivator.settings.passcode` | Settings | Touch ID & Passcode | `implemented` | `prefs:root=PASSCODE` | ✅ |
-| `libactivator.settings.phone` | Settings | Phone | `implemented` | `prefs:root=Phone` | ✅ |
-| `libactivator.settings.photos` | Settings | Photos | `implemented` | `prefs:root=Photos` | ✅ |
-| `libactivator.settings.privacy` | Settings | Privacy | `implemented` | `prefs:root=Privacy` | ✅ |
-| `libactivator.settings.reminders` | Settings | Reminders | `implemented` | `prefs:root=REMINDERS` | ✅ |
-| `libactivator.settings.safari` | Settings | Safari | `implemented` | `prefs:root=Safari`<br>`1240`<br>`prefs:root=SAFARI` | ✅ |
-| `libactivator.settings.sounds` | Settings | Sounds | `implemented` | `prefs:root=Sounds` | ✅ |
-| `libactivator.settings.store` | Settings | Store | `implemented` | `prefs:root=STORE` | ✅ |
-| `libactivator.settings.tethering` | Settings | Personal Hotspot | `implemented` | `prefs:root=INTERNET_TETHERING` | ✅ |
-| `libactivator.settings.virtual-assistant` | Settings | Siri | `implemented` | `prefs:root=General&path=Assistant`<br>`1240`<br>`prefs:root=General&path=SIRI` | ✅ |
-| `libactivator.settings.vpn` | Settings | VPN | `implemented` | `prefs:root=VPN` | ✅ |
-| `libactivator.settings.wallpaper` | Settings | Wallpaper | `implemented` | `prefs:root=Wallpaper` | ✅ |
-| `libactivator.settings.wifi` | Settings | Wi-Fi | `implemented` | `prefs:root=WIFI` | ✅ |
-
-## Hardware Actions 完成清单
-
-| Listener name | 标题 | 旧 selector / 语义 | 状态 | 实施备注 |
-| --- | --- | --- | --- | --- |
-| `libactivator.ipod.toggle-playback` | Play/Pause | `togglePlayback` | `implemented` | HID Consumer `PlayOrPause`。 |
-| `libactivator.ipod.pause-playback` | Pause | `pauseMedia` | `implemented` | HID Consumer `Pause`。 |
-| `libactivator.ipod.resume-playback` | Play | `playMedia` | `implemented` | HID Consumer `Play`。 |
-| `libactivator.ipod.next-track` | Next Track | `nextTrack` | `implemented` | HID Consumer `ScanNextTrack`。 |
-| `libactivator.ipod.previous-track` | Previous Track | `previousTrack` | `implemented` | HID Consumer `ScanPreviousTrack`。 |
-| `libactivator.audio.increase-volume` | Volume Up | `increaseVolume` | `implemented` | HID Consumer `VolumeIncrement`；metadata 的 exclusive assignment group 继续由 resource lookup 提供。 |
-| `libactivator.audio.decrease-volume` | Volume Down | `decreaseVolume` | `implemented` | HID Consumer `VolumeDecrement`；metadata 的 exclusive assignment group 继续由 resource lookup 提供。 |
-| `libactivator.screen.brightness.increase` | Increase Brightness | `increaseBrightness` | `implemented` | HID Consumer `DisplayBrightnessIncrement`；selector metadata 为现代规范化补充。 |
-| `libactivator.screen.brightness.decrease` | Decrease Brightness | `decreaseBrightness` | `implemented` | HID Consumer `DisplayBrightnessDecrement`；selector metadata 为现代规范化补充。 |
-| `libactivator.system.homebutton` | Home Button | `homeButton` | `implemented` | HID Consumer `Menu`，只发送短按 down/up；保留资源中的 `requires-no-touch-events` 与 incompatible events。 |
-| `libactivator.system.sleepbutton` | Sleep Button | `sleepButtonFromActivator:event:` | `implemented` | HID Consumer `Power`，只发送短按 down/up，不实现长按 power menu。 |
-| `libactivator.system.take-screenshot` | Take Screenshot | `takeScreenshot` | `implemented` | HID Consumer `Snapshot`；`SBScreenShotter` 已确认在现代 iOS 不可用。 |
-| `libactivator.system.spotlight` | Spotlight | `spotlight` | `implemented` | HID Consumer `ACSearch`，对应外接键盘搜索键。 |
-| `libactivator.system.vibrate` | Vibrate | `vibrate` | `implemented` | 使用 `AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)`。 |
-| `libactivator.ipod.music-controls` | Music Controls | `musicControls` | `obsolete` | 1.9.13 通过 `SBNowPlayingAlertItem` / `SBAlertItemsController` 显示或关闭旧式 now-playing modal；现代 iOS 没有等价 UI，若要打开 Control Center 应作为新的系统 UI action family 决策，不复刻为本 listener。详见 `LEGACY_REVERSE_ENGINEERING.md`。 |
-
-### Hardware Actions 手工验证清单
-
-- Home Button：在 SpringBoard 无触控状态触发 `activator send libactivator.system.homebutton`，确认等价短按 Home；在 App 内触发，确认回到 Home 或系统当前短按 Home 语义；有持续触控时验证 `requires-no-touch-events` 不被绕过；全面屏设备上确认不会打开 switcher 或误触发手势语义。
-- Sleep Button：屏幕点亮且未锁时触发 `activator send libactivator.system.sleepbutton`，确认短按锁屏；锁屏/熄屏边界只验证不会长按弹出 power menu，不把唤醒或主动解锁作为本阶段成功标准。
-- Brightness：分别触发 `activator send libactivator.screen.brightness.increase` 与 `activator send libactivator.screen.brightness.decrease`，确认系统亮度变化和 HUD / Control Center 状态同步；在最低/最高亮度边界触发，确认不会异常或卡住。
-
-## System Actions 完成清单
-
-| Listener name | 标题 | selector / 语义 | 状态 | 实施备注 |
-| --- | --- | --- | --- | --- |
-| `libactivator.audio.show-volume-bar` | Show Volume Bar | `showVolumeBar` | `implemented` | 现代实现不再使用旧 App Switcher 音量滑块；通过 hook `SBVolumeControl` init 捕获实例，并调用 `-_presentVolumeHUDWithVolume:` 显示系统音量 HUD。 |
-| `libactivator.audio.launch-playing-app` | Launch Playing App | `launchPlayingApp` | `implemented` | 1.9.13 使用 `SBMediaController nowPlayingApplication`，并在缺少 now-playing app 时 fallback 到静态 `com.apple.Music`。现代实现不保留 `SBMediaController` 路径，也不复刻静态 Music fallback；改用 Frida 真机验证的 `MRMediaRemoteGetNowPlayingApplicationDisplayID`，必要时通过 `MRMediaRemoteGetNowPlayingApplicationPID` + `SBSCopyDisplayIdentifierForProcessID` 解析真实 display identifier，再交给 SpringBoard 私有打开路径。缺少 identity 或打开失败时仍消费事件并记录诊断。selector metadata 为现代规范化补充。详见 `LEGACY_REVERSE_ENGINEERING.md`。 |
-| `libactivator.audio.reset-ringer-state` | Reset Ringer | `resetRingerState` | `implemented` | 按 1.9.13 旧实现：通过 `BackBoardServices.framework` 的 `BKSHIDServicesGetRingerState` 读取硬件开关状态，并调用 SpringBoard `-_updateRingerState:withVisuals:updatePreferenceRegister:`，后两个参数均为 `NO`。 |
-| `libactivator.audio.mute-ringer` | Mute Ringer | `muteRinger` | `implemented` | 现代新增 action；不复用 `libactivator.volume.mute` event name。通过 `SBRingerControl setRingerMuted:YES` 设置软静音，并调用 `activateRingerHUDFromMuteSwitch:0`。 |
-| `libactivator.audio.unmute-ringer` | Unmute Ringer | `unmuteRinger` | `implemented` | 现代新增 action；不复用 `libactivator.volume.unmute` event name。通过 `SBRingerControl setRingerMuted:NO` 取消软静音，并调用 `activateRingerHUDFromMuteSwitch:1`。 |
-| `libactivator.audio.toggle-ringer-mute` | Toggle Ringer Mute | `toggleRingerMute` | `implemented` | 现代新增 action；不复用 `libactivator.volume.toggle-mute-twice` event name。通过 `SBRingerControl isRingerMuted` 计算目标状态，再调用 `setRingerMuted:` 与 ringer HUD。 |
-| `libactivator.system.first-springboard-page` | First SpringBoard Page | `firstSpringBoardPage` | `implemented` | 使用 `SBSServiceFacilityClient` checkout `SBSSystemServiceClient` 后调用 `resetToHomeScreenAnimated:`，提交到专用非主队列。 |
-
-## Phone Tab URL Actions 完成清单
-
-| Listener name | 标题 | selector / 语义 | 状态 | 实施备注 |
-| --- | --- | --- | --- | --- |
-| `libactivator.phone.favorites` | Show Favorites | `showPhoneFavorites` | `implemented` | 由 `LATURLActionListener` 承载，使用真机验证后的 `mobilephone-favorites:`。 |
-| `libactivator.phone.recents` | Show Recents | `showPhoneRecents` | `implemented` | 由 `LATURLActionListener` 承载，使用真机验证后的 `mobilephone-recents:`。 |
-| `libactivator.phone.contacts` | Show Contacts | `showPhoneContacts` | `implemented` | 由 `LATURLActionListener` 承载，使用真机验证后的 `mobilephone-contacts:`。 |
-| `libactivator.phone.voicemail` | Show Voicemail | `showPhoneVoicemail` | `implemented` | 由 `LATURLActionListener` 承载，使用旧 master 的现代 URL `vmshow:`。 |
-| `libactivator.phone.keypad` | Show Keypad | `showPhoneKeypad` | `obsolete` | `mobilephone-keypad:` 已真机确认失效，目前没有可替代 URL 或可靠 SPI，已从 bundled resource 和 runtime allowlist 移除。 |
-
-## Telephony Actions 完成清单
-
-| Listener name | 标题 | selector / 语义 | 状态 | 实施备注 |
-| --- | --- | --- | --- | --- |
-| `libactivator.phone.answer-call` | Answer Call | `answerCall` | `implemented` | 通过 CoreTelephony 查找 incoming call 并调用 `CTCallAnswer`；若无通话或无来电，仍消费事件并记录诊断。 |
-| `libactivator.phone.disconnect-call` | Disconnect Call | `disconnectCall` | `implemented` | 资源中的 selector metadata 已从旧值 `answerCall` 规范化为真实动作 selector；runtime 调用 `CTCallListDisconnectAll`，用于挂断活动通话或拒接来电。 |
+| Family | 承载实体 | 状态 | 说明 |
+| --- | --- | --- | --- |
+| No-op | `LATNothingListener` | `implemented` | `libactivator.system.nothing` 已注册并覆盖 dispatch 后 `event.handled = YES`。 |
+| URL actions | `LATURLActionListener` | `implemented` | Clock、Settings、Phone tab URL actions 已按 allowlist 注册；真机无效或重复项已从资源和 allowlist 移除。 |
+| Hardware actions | `LATHardwareActionListener` | `implemented` | HID Consumer 播放、音量、输出静音、亮度、Home、Sleep、屏幕键盘、截图、Spotlight，以及 `AudioServices` vibrate 已实现并完成手工验证。 |
+| System actions | `LATSystemActionListener` | `implemented` | Volume HUD、now-playing application launch、ringer state sync、ringer mute/unmute/toggle、SBS first SpringBoard page 已实现。 |
+| Phone tab URL actions | `LATURLActionListener` | `implemented` | Favorites、Recents、Contacts、Voicemail 已实现；Keypad 已确认失效并移除。 |
+| Telephony actions | `LATTelephonyActionListener` | `implemented` | Answer / Disconnect call 已实现；answer path 持有 `CTTelephonyCenter` observer 以维持 CoreTelephony call state。 |
+| Music controls modal | 无 | `obsolete` | 旧 `SBNowPlayingAlertItem` modal 在现代 iOS 没有等价 UI，不作为当前 listener family 恢复。 |
 
 ## 下一阶段建议
 
-### 1. HID / Hardware Action Candidates
+### 1. Dynamic Application Listeners
 
-以下动作都可以用 HID event 表达或部分表达，适合继续沿 `LATHardwareActionListener` 的执行机制评估。实现前仍需逐项确认 listener name、metadata gate 和真机效果，避免把“能发出 HID usage”误判为“旧 Activator action 语义已完整复刻”。
+建议下一阶段进入 dynamic application listener family。理由是 static action family 已经收束，旧 Activator 的另一大块用户可见能力是“打开某个 App / App 相关 listener”，并且这条线不需要用户 App 注入，符合当前架构。
 
-| Listener name | 标题 | 建议状态 | 实施备注 |
+实施边界：
+
+- 数据源应来自 SpringBoard app model，不从 `Listeners/` 第三方 glyph 目录推导“已安装 App”。
+- Runtime 注册仍由 provider 代码生成，不把目录式 metadata 自动变成 executable listener。
+- listener name、display identifier、localized display name、glyph fallback 和 `hasSeen` / `ignoreHasSeen:` 语义需要先设计清楚。
+- 打开 App 继续走 SpringBoard 私有打开路径，不走 public `UIApplication openURL`。
+- stable tests 覆盖 registration、metadata/glyph fallback、`hasSeen` 语义和 metadata-only 不注册；真实打开 App、特殊系统 App、卸载/隐藏 App 进入设备手工 checklist。
+
+### 2. Low-Risk Event Sources
+
+dynamic application listeners 之后，建议进入低风险 event source family，而不是继续补零散 action。优先考虑不依赖复杂触摸识别、能通过系统通知或 SpringBoard 状态稳定采集的事件。
+
+优先候选：
+
+- device locked / unlocked：需要确认现代 SpringBoard / lock state 通知来源，并验证 unlock-to-send 与 powered display 约束。
+- power connected / disconnected：可从系统电源通知或 IOKit/power source 变化入手，适合稳定测试与手工验证结合。
+- headset connected / disconnected：需要确认现代 route change / accessory 通知来源，并区分蓝牙、CarPlay、AirPods 等语义边界。
+- Wi-Fi joined / left：需要确认 CaptiveNetwork / SystemConfiguration / Wi-Fi private notification 的现代可用性；不确定时先停在 probe 阶段。
+
+实施边界：
+
+- 每个 event family 使用独立 SpringBoard acquisition adapter，只负责采集信号并构造 `LAEvent`。
+- assignment、blacklist、mode、no-touch、unlock-to-send 继续交给现有 dispatch engine，不在 adapter 中重复实现。
+- 能模拟的 notification path 可进 stable tests；真实硬件状态变化进入 `RuntimeDevice` 或手工 checklist。
+
+### 3. 暂缓 / 高风险
+
+| Listener name | 标题 | 建议状态 | 说明 |
 | --- | --- | --- | --- |
-| modern output mute toggle action | Output Mute Toggle | `candidate` | 可走 HID Consumer `Mute` (`0xE2`)。这是音频输出/媒体静音键，不是 `SBRingerControl` 的 ringer mute，也不是 `libactivator.volume.mute` / `libactivator.volume.unmute` 事件名。单个 HID usage 只能可靠表达 toggle；若要做 mute/unmute 分离，需要额外确认可读写的 output mute state SPI。 |
-| modern telephony microphone mute action | Call Microphone Mute | `candidate` | 可走 HID Telephony page `PhoneMute` (`0x0B:0x2F`)。这是通话麦克风静音键，不是 ringer mute，也不同于 Consumer `Mute`。需要先确认通话中系统是否响应，以及是否只适合做 toggle。 |
-| modern keyboard-layout action | On-Screen Keyboard / Keyboard Layout | `candidate` | 可走 HID Consumer `ALKeyboardLayout` (`0x1AE`)。行为依赖键盘/文本输入上下文，适合做手工验证后再决定是否新增现代 action name。 |
-| `libactivator.system.local-back` | Local Back | `blocked` | 当前参考 HID 表未看到明确现代系统 Back usage；不应把 `Menu` 或 keyboard Escape 临时当作 local back。 |
+| Control Center / Notification Center / Switcher | 系统 modal UI | `blocked` | 需要逐项 SPI probe 和设备 checklist；不要把旧 selector 直接映射到现代 UI，尤其要确认锁屏、App 内、SpringBoard 三种 mode 的行为。 |
+| Power UI / reboot / power down / Safe Mode | 电源与恢复路径 | `blocked` | 高风险动作，必须先确定 owner 可接受的 SPI、失败路径和测试边界；Safe Mode 不应靠 crash 副作用实现。 |
+| Siri / Voice Control / Wallet | 系统服务 UI | `blocked` | 依赖现代 SpringBoard / Assistant / PassKit 私有入口，先做 Frida/IDA probe，再决定是否进入 action family。 |
+| Rotation / orientation lock | 系统状态写入 | `blocked` | 需要确认现代 orientation policy 和 SpringBoard 同步接口，不能只改 preference 或只发通知。 |
+| Lock screen show / dismiss / toggle | 锁屏状态 | `blocked` | 与 passcode、biometric、unlock-to-send 和 display power policy 强相关，需单独设计。 |
+| Camera shutter / compose Mail/SMS/Notes / watch haptics | 应用或设备特定动作 | `blocked` | 涉及目标 App、设备能力或跨服务状态；不作为下一阶段默认目标。 |
 
-### 2. HID 可表达但暂不建议作为下一批
+### 4. 架构外 / 不恢复
 
-| HID usage | 建议状态 | 说明 |
-| --- | --- | --- |
-| Consumer `ACLock` (`0x26B`) / `ACUnlock` (`0x26C`) | `blocked` | 与 lock screen show/dismiss/toggle、passcode 和 unlock policy 语义重叠，不能只按 HID 可发出就接入 listener。 |
-| Consumer `FastForward` (`0xB3`) / `Rewind` (`0xB4`) / `Stop` (`0xB7`) | `blocked` | HID 可发出，但 1.9.13 当前 bundled listener resource 没有对应内置 action name；若要加入属于现代新增媒体 action，需要产品决策和资源设计。 |
-| Consumer `Eject` (`0xB8`) / `StopOrEject` (`0xCC`) | `obsolete` | iOS 上缺少明确用户价值和旧 Activator action 对应关系，暂不恢复。 |
-
-### 3. 暂缓或高风险
-
-以下 action family 暂不作为下一阶段默认目标：Control Center、Notification Center、Switcher、Power UI、Siri/Voice Control、Wallet、rotation、lock screen show/dismiss/toggle、Safe Mode、watch haptics、camera shutter、compose mail/SMS/notes。它们不是不能做，而是需要 owner-assisted SPI probe、真实 UI checklist 或明确产品决策后再进入 `candidate`。
+| Listener name / family | 标题 | 建议状态 | 说明 |
+| --- | --- | --- | --- |
+| `libactivator.system.local-back` / `libactivator.system.back` | Local Back / Back | `out-of-scope` | 1.9.13 旧语义依赖 `com.apple.UIKit` filter 把 `libactivator.dylib` 注入到 App 进程；SpringBoard 端只 `notify_post("libactivator.system.back")`，真正的 `dismissViewControllerAnimated:` / `popViewControllerAnimated:` 在 App 进程内执行。本项目基本约束是不注入用户 App 进程，因此该 family 只保留资源和逆向记录，暂不实现，也不阻塞下一阶段。 |
+| SBSettings toggles | Legacy toggles | `obsolete` | 旧 SBSettings ABI 已过时；除非 owner 明确要求现代兼容层，否则不恢复。 |
+| 旧 social compose actions | Twitter / Facebook / Weibo compose | `obsolete` | 资源和 runtime 已排除；旧服务入口不再作为内置 action 恢复。 |
 
 ## 下一阶段验收要求
 
-- 新增 family 必须有独立 listener class，代码层面显式 allowlist 注册，不扫描 metadata 自动生成 runtime listener。
-- 每个 family 至少拆出一个 stable suite，延续 `BuiltInActionRegistry` / `BuiltInURLActions` 的风格，不把新阶段测试继续塞进旧 URL suite。
-- stable tests 覆盖 registration、`hasSeen`、metadata-only 不注册、metadata / selector gate 和 `event.handled` 语义；`event.handled` 表示 listener 消费事件，不表示系统动作最终成功；真实系统状态变化进入设备手工 checklist。不要为了 stable tests 给真实 action path 增加替换 sender、presenter、launcher 或 opener 的测试 hook。
+- 新增 dynamic listener family 必须有独立 provider / registry path，不把动态 App listener 塞进 static built-in action listener。
+- 新增 event source family 必须有独立 acquisition adapter，不把采集 hook 混入现有 action listener。
+- 每个新 family 至少拆出一个 stable suite；测试重点是 registration、metadata lookup、`hasSeen`、mode/blacklist/dispatch 语义和 metadata-only 不注册。
+- `event.handled` 表示 listener 消费事件或 adapter 提交事件，不表示系统最终状态变化完成；真实系统状态变化进入设备手工 checklist。
+- 不为 stable tests 给真实 action path 增加高侵入 hook；优先测试真实分层边界和可观察状态。
 - 实现前先记录现代 SPI 选择；如果接口不确定，先标 `blocked` 并和 owner 确认，不用 public API fallback 掩盖行为差异。

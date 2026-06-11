@@ -124,6 +124,25 @@
 		<key>title</key>
 		<string>Show Volume Bar</string>
 	</dict>
+	<key>libactivator.audio.toggle-output-mute</key>
+	<dict>
+		<key>apply-rounded-corners</key>
+		<string>1</string>
+		<key>description</key>
+		<string>Toggle audio output mute</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>volume-change</string>
+		</array>
+		<key>group</key>
+		<string>Audio</string>
+		<key>needs-powered-display</key>
+		<string>0</string>
+		<key>selector</key>
+		<string>toggleOutputMute</string>
+		<key>title</key>
+		<string>Toggle Output Mute</string>
+	</dict>
 	<key>libactivator.audio.toggle-ringer-mute</key>
 	<dict>
 		<key>description</key>
@@ -417,6 +436,21 @@
 		</array>
 		<key>title</key>
 		<string>Dictation</string>
+	</dict>
+	<key>libactivator.keyboard.toggle-on-screen-keyboard</key>
+	<dict>
+		<key>apply-rounded-corners</key>
+		<string>1</string>
+		<key>description</key>
+		<string>Toggle on-screen keyboard visibility</string>
+		<key>group</key>
+		<string>Keyboard</string>
+		<key>needs-powered-display</key>
+		<string>0</string>
+		<key>selector</key>
+		<string>toggleOnScreenKeyboard</string>
+		<key>title</key>
+		<string>Toggle On-Screen Keyboard</string>
 	</dict>
 	<key>libactivator.lockscreen.dismiss</key>
 	<dict>

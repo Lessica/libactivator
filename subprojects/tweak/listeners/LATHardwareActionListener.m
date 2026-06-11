@@ -33,8 +33,10 @@ static const uint32_t LATHardwareHIDUsagePause = 0xB1;
 static const uint32_t LATHardwareHIDUsageScanNextTrack = 0xB5;
 static const uint32_t LATHardwareHIDUsageScanPreviousTrack = 0xB6;
 static const uint32_t LATHardwareHIDUsagePlayOrPause = 0xCD;
+static const uint32_t LATHardwareHIDUsageMute = 0xE2;
 static const uint32_t LATHardwareHIDUsageVolumeIncrement = 0xE9;
 static const uint32_t LATHardwareHIDUsageVolumeDecrement = 0xEA;
+static const uint32_t LATHardwareHIDUsageALKeyboardLayout = 0x1AE;
 static const uint32_t LATHardwareHIDUsageACSearch = 0x221;
 static const uint32_t LATHardwareHIDEventOptionNone = 0;
 static const uint64_t LATHardwareHIDSenderID = 0x8000000817319371;
@@ -267,6 +269,10 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
                                                       selectorName:@"decreaseVolume"
                                                               page:LATHardwareHIDPageConsumer
                                                              usage:LATHardwareHIDUsageVolumeDecrement],
+            [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.audio.toggle-output-mute"
+                                                      selectorName:@"toggleOutputMute"
+                                                              page:LATHardwareHIDPageConsumer
+                                                             usage:LATHardwareHIDUsageMute],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.screen.brightness.increase"
                                                       selectorName:@"increaseBrightness"
                                                               page:LATHardwareHIDPageConsumer
@@ -283,6 +289,10 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
                                                       selectorName:@"sleepButtonFromActivator:event:"
                                                               page:LATHardwareHIDPageConsumer
                                                              usage:LATHardwareHIDUsagePower],
+            [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.keyboard.toggle-on-screen-keyboard"
+                                                      selectorName:@"toggleOnScreenKeyboard"
+                                                              page:LATHardwareHIDPageConsumer
+                                                             usage:LATHardwareHIDUsageALKeyboardLayout],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.system.take-screenshot"
                                                       selectorName:@"takeScreenshot"
                                                               page:LATHardwareHIDPageConsumer

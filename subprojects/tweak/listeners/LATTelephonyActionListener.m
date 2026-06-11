@@ -14,10 +14,23 @@
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
 
+extern CFNotificationCenterRef CTTelephonyCenterGetDefault(void);
+extern void CTTelephonyCenterAddObserver(CFNotificationCenterRef center, const void *observer,
+                                         CFNotificationCallback callBack, CFStringRef name,
+                                         const void *object,
+                                         CFNotificationSuspensionBehavior suspensionBehavior);
+extern void CTTelephonyCenterRemoveObserver(CFNotificationCenterRef center, const void *observer,
+                                            CFStringRef name, const void *object);
+
 typedef NS_ENUM(NSUInteger, LATTelephonyActionKind) {
     LATTelephonyActionKindAnswerCall,
     LATTelephonyActionKindDisconnectCall,
 };
+
+@interface LATTelephonyCallStateObserver : NSObject
+@property(nonatomic, assign, readonly) int lastKnownCallCount;
+- (void)telephonyCallStateDidChangeWithName:(CFStringRef)name;
+@end
 
 @interface LATTelephonyActionCommand : NSObject
 @property(nonatomic, copy, readonly) NSString *listenerName;
@@ -29,6 +42,7 @@ typedef NS_ENUM(NSUInteger, LATTelephonyActionKind) {
 @end
 
 @interface LATTelephonyCallController : NSObject
+@property(nonatomic, strong, readonly) LATTelephonyCallStateObserver *callStateObserver;
 - (BOOL)answerIncomingCallForListenerName:(NSString *)listenerName;
 - (BOOL)disconnectCallsForListenerName:(NSString *)listenerName;
 @end
@@ -53,7 +67,52 @@ typedef NS_ENUM(NSUInteger, LATTelephonyActionKind) {
 
 @end
 
+@implementation LATTelephonyCallStateObserver
+
+static void LATTelephonyCallStateDidChange(__unused CFNotificationCenterRef center, void *observer, CFStringRef name,
+                                           __unused const void *object, __unused CFDictionaryRef userInfo) {
+    LATTelephonyCallStateObserver *callStateObserver = (__bridge LATTelephonyCallStateObserver *)observer;
+    [callStateObserver telephonyCallStateDidChangeWithName:name];
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _lastKnownCallCount = CTGetCurrentCallCount();
+        CTTelephonyCenterAddObserver(CTTelephonyCenterGetDefault(), (__bridge const void *)self,
+                                     LATTelephonyCallStateDidChange, kCTCallStatusChangeNotification, NULL,
+                                     CFNotificationSuspensionBehaviorDeliverImmediately);
+        CTTelephonyCenterAddObserver(CTTelephonyCenterGetDefault(), (__bridge const void *)self,
+                                     LATTelephonyCallStateDidChange, kCTCallIdentificationChangeNotification, NULL,
+                                     CFNotificationSuspensionBehaviorDeliverImmediately);
+    }
+    return self;
+}
+
+- (void)dealloc {
+    CTTelephonyCenterRemoveObserver(CTTelephonyCenterGetDefault(), (__bridge const void *)self,
+                                    kCTCallStatusChangeNotification, NULL);
+    CTTelephonyCenterRemoveObserver(CTTelephonyCenterGetDefault(), (__bridge const void *)self,
+                                    kCTCallIdentificationChangeNotification, NULL);
+}
+
+- (void)telephonyCallStateDidChangeWithName:(CFStringRef)name {
+    _lastKnownCallCount = CTGetCurrentCallCount();
+    HBLogInfo(@"Telephony call state changed: %@ call count = %d", (__bridge NSString *)name ?: @"",
+              _lastKnownCallCount);
+}
+
+@end
+
 @implementation LATTelephonyCallController
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _callStateObserver = [[LATTelephonyCallStateObserver alloc] init];
+    }
+    return self;
+}
 
 - (BOOL)answerIncomingCallForListenerName:(NSString *)listenerName {
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -64,6 +123,7 @@ typedef NS_ENUM(NSUInteger, LATTelephonyActionKind) {
 
 - (BOOL)answerIncomingCallOnMainForListenerName:(NSString *)listenerName {
     int callCount = CTGetCurrentCallCount();
+    HBLogInfo(@"Telephony action %@ detected %d current calls", listenerName ?: @"", callCount);
     if (callCount <= 0) {
         HBLogWarn(@"No calls detected while handling telephony action %@", listenerName ?: @"");
         return NO;
@@ -73,9 +133,16 @@ typedef NS_ENUM(NSUInteger, LATTelephonyActionKind) {
     BOOL answered = NO;
     for (id callObject in calls) {
         CTCallRef call = (__bridge CTCallRef)callObject;
-        if (CTCallGetStatus(call) == kCTCallStatusIncomingCall) {
+        CTCallStatus callStatus = CTCallGetStatus(call);
+        NSString *callType = (__bridge NSString *)CTCallGetCallType(call);
+        NSString *callAddress = CFBridgingRelease(CTCallCopyAddress(kCFAllocatorDefault, call));
+        HBLogInfo(@"Telephony action %@ inspecting call status=%ld type=%@ address=%@", listenerName ?: @"",
+                  (long)callStatus, callType ?: @"", callAddress ?: @"");
+        if (callStatus == kCTCallStatusIncomingCall) {
             CTCallAnswer(call);
             answered = YES;
+            HBLogInfo(@"Telephony action %@ requested answer for incoming call %@", listenerName ?: @"",
+                      callAddress ?: @"");
         }
     }
 
@@ -94,6 +161,7 @@ typedef NS_ENUM(NSUInteger, LATTelephonyActionKind) {
 
 - (BOOL)disconnectCallsOnMainForListenerName:(NSString *)listenerName {
     int callCount = CTGetCurrentCallCount();
+    HBLogInfo(@"Telephony action %@ detected %d current calls", listenerName ?: @"", callCount);
     if (callCount <= 0) {
         HBLogWarn(@"No calls detected while handling telephony action %@", listenerName ?: @"");
         return NO;
@@ -110,6 +178,8 @@ typedef NS_ENUM(NSUInteger, LATTelephonyActionKind) {
         HBLogError(@"Unable to copy current calls for telephony action %@", listenerName ?: @"");
         return @[];
     }
+    HBLogInfo(@"Telephony action %@ copied %lu current call objects", listenerName ?: @"",
+              (unsigned long)calls.count);
     return calls;
 }
 
