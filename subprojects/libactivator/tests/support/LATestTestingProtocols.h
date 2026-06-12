@@ -10,6 +10,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class LAActivator;
+@class LAEvent;
+
 #pragma mark - Built-in Listener Metadata
 
 @protocol LATestBuiltInListenerAllowlist <NSObject>
@@ -18,6 +21,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol LATestSelectorBackedBuiltInListener <LATestBuiltInListenerAllowlist>
 + (nullable NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
++ (BOOL)listenerNameHasRequiredMetadata:(NSString *)listenerName activator:(LAActivator *)activator;
+@end
+
+@protocol LATestURLActionListener <LATestBuiltInListenerAllowlist>
++ (BOOL)listenerNameHasRequiredMetadata:(NSString *)listenerName activator:(LAActivator *)activator;
+- (nullable NSString *)urlStringForListenerName:(NSString *)listenerName activator:(LAActivator *)activator;
+- (nullable NSString *)urlStringInURLsValue:(id)value;
+- (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName;
 @end
 
 #pragma mark - Dynamic Application Descriptor

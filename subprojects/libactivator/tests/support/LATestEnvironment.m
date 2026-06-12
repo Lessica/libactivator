@@ -45,6 +45,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.dispatch.simple-abort",
         @"libactivator.test.dispatch.lock",
         @"libactivator.test.dispatch.unlock",
+        @"libactivator.test.device.locked",
+        @"libactivator.test.device.unlocked",
         @"libactivator.test.client-facade.user-info",
         @"libactivator.test.url.missing",
         @"libactivator.test.url.invalid",
@@ -362,6 +364,21 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         return;
     }
     dispatch_sync(dispatch_get_main_queue(), block);
+}
+
++ (BOOL)waitUntilTrue:(BOOL (^)(void))predicate timeout:(NSTimeInterval)timeout {
+    if (!predicate) {
+        return NO;
+    }
+
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:timeout];
+    while (!predicate()) {
+        if ([deadline timeIntervalSinceNow] <= 0.0) {
+            return NO;
+        }
+        [self waitAllowingMainRunLoopForTimeInterval:0.05];
+    }
+    return YES;
 }
 
 + (void)waitAllowingMainRunLoopForTimeInterval:(NSTimeInterval)timeInterval {

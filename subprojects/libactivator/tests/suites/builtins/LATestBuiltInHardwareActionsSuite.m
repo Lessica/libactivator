@@ -59,6 +59,16 @@
                 caseName:[NSString stringWithFormat:@"hardware-action-selector-%@", listenerName]
                   reason:@"Hardware action selector mapping did not match bundled metadata"];
     }
+
+    id<LAListener> hardwareAction = [[(Class)hardwareActionClass alloc] init];
+    LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.hardware"
+                                                  mode:LAEventModeSpringBoard];
+    [hardwareAction activator:activator
+                 receiveEvent:unsupportedEvent
+              forListenerName:@"libactivator.test.hardware.unsupported"];
+    [recorder expect:!unsupportedEvent.handled
+            caseName:@"hardware-action-unsupported-name-unhandled"
+              reason:@"Unsupported hardware action listener name consumed the event"];
 }
 
 @end

@@ -30,6 +30,44 @@
             caseName:@"foreground-app-display-identifier"
               reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Foreground app display identifier was not cached"
                                                            activator:activator]];
+    [LATestEnvironment waitForMainQueue];
+    __block NSUInteger modeNotificationCount = 0;
+    id modeObserver = [NSNotificationCenter.defaultCenter addObserverForName:LAActivatorEventModeChangedNotification
+                                                                      object:activator
+                                                                       queue:nil
+                                                                  usingBlock:^(__unused NSNotification *notification) {
+                                                                      modeNotificationCount += 1;
+                                                                  }];
+    [runtimeContext updateEventMode:LAEventModeSpringBoard
+               underneathLockScreen:LAEventModeSpringBoard
+                  displayIdentifier:nil
+                           screenOn:YES];
+    [runtimeContext updateEventMode:LAEventModeApplication
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:@"com.apple.Preferences"
+                           screenOn:YES];
+    [runtimeContext updateEventMode:LAEventModeApplication
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:@"com.apple.Preferences"
+                           screenOn:YES];
+    [runtimeContext updateEventMode:LAEventModeApplication
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:@"com.apple.MobileSMS"
+                           screenOn:NO];
+    [LATestEnvironment
+        waitUntilTrue:^BOOL {
+            return modeNotificationCount > 0;
+        }
+              timeout:2.0];
+    [LATestEnvironment waitForMainQueue];
+    [recorder expect:modeNotificationCount == 2
+            caseName:@"event-mode-notification-count"
+              reason:@"Runtime snapshot changes posted an unexpected number of event mode notifications"];
+    [NSNotificationCenter.defaultCenter removeObserver:modeObserver];
+    [runtimeContext updateEventMode:LAEventModeApplication
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:@"com.apple.Preferences"
+                           screenOn:YES];
 
     [runtimeContext updateEventMode:LAEventModeLockScreen
                underneathLockScreen:LAEventModeApplication
@@ -97,6 +135,32 @@
     [recorder expect:lockScreenListener.receiveCount == 0
             caseName:@"unlock-to-send-stops-normal-dispatch"
               reason:@"Lock screen listener received an event after unlock-to-send handled it"];
+
+    NSString *poweredListenerName = @"libactivator.test.dispatch.a";
+    NSString *fallbackListenerName = @"libactivator.test.dispatch.b";
+    LATestListener *poweredListener = [[LATestListener alloc] init];
+    LATestListener *fallbackListener = [[LATestListener alloc] init];
+    poweredListener.needsPoweredDisplay = YES;
+    [activator registerListener:poweredListener forName:poweredListenerName];
+    [activator registerListener:fallbackListener forName:fallbackListenerName];
+    [runtimeContext updateEventMode:LAEventModeLockScreen
+               underneathLockScreen:LAEventModeSpringBoard
+                  displayIdentifier:nil
+                           screenOn:NO];
+    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
+        toListenersWithNames:@[ poweredListenerName, fallbackListenerName ]];
+    [recorder expect:poweredListener.receiveCount == 0 && fallbackListener.receiveCount == 1
+            caseName:@"snapshot-screen-off-powered-display-gate"
+              reason:@"Runtime snapshot screen-off state did not gate a powered-display listener"];
+    [runtimeContext updateEventMode:LAEventModeSpringBoard
+               underneathLockScreen:LAEventModeSpringBoard
+                  displayIdentifier:nil
+                           screenOn:YES];
+    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
+        toListenersWithNames:@[ poweredListenerName ]];
+    [recorder expect:poweredListener.receiveCount == 1
+            caseName:@"snapshot-screen-on-powered-display-gate"
+              reason:@"Runtime snapshot screen-on state did not allow a powered-display listener"];
 
     [LATestEnvironment cleanRuntimeInputStateWithActivator:activator];
 }

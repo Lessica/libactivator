@@ -18,6 +18,7 @@
 #import "LATHardwareActionListener.h"
 #import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
+#import "LATNetworkEventSource.h"
 #import "LATNothingListener.h"
 #import "LATPowerStateEventSource.h"
 #import "LATRuntimeStateSource.h"
@@ -39,6 +40,7 @@
 @property(nonatomic, strong, readwrite) LATLockStateEventSource *lockStateEventSource;
 @property(nonatomic, strong, readwrite) LATPowerStateEventSource *powerStateEventSource;
 @property(nonatomic, strong, readwrite) LATMediaEventSource *mediaEventSource;
+@property(nonatomic, strong, readwrite) LATNetworkEventSource *networkEventSource;
 
 @end
 
@@ -51,12 +53,15 @@
     if (self) {
         _applicationLauncher = [[LATApplicationLauncher alloc] init];
         _registeredListeners = [[NSMutableArray alloc] init];
+
         LARuntimeContext *runtimeContext = [activator la_runtimeContext];
         NSParameterAssert(runtimeContext);
+
         _runtimeStateSource = [[LATRuntimeStateSource alloc] initWithRuntimeContext:runtimeContext];
         _lockStateEventSource = [[LATLockStateEventSource alloc] initWithRuntimeStateSource:_runtimeStateSource];
         _powerStateEventSource = [[LATPowerStateEventSource alloc] init];
         _mediaEventSource = [[LATMediaEventSource alloc] init];
+        _networkEventSource = [[LATNetworkEventSource alloc] init];
 
         [self registerBuiltInListenersWithActivator:activator];
     }
@@ -73,6 +78,7 @@
     [self.lockStateEventSource start];
     [self.powerStateEventSource start];
     [self.mediaEventSource start];
+    [self.networkEventSource start];
 }
 
 - (NSArray<NSDictionary<NSString *, id> *> *)builtInListenerFactoryConfigurations {

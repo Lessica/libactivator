@@ -13,6 +13,7 @@
 @class CSCoverSheetViewController;
 @class LATLockStateEventSource;
 @class LATMediaEventSource;
+@class LATNetworkEventSource;
 @class LATPowerStateEventSource;
 @class LATRuntimeStateSource;
 
@@ -28,6 +29,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong, readonly) LATLockStateEventSource *lockStateEventSource;
 @property(nonatomic, strong, readonly) LATPowerStateEventSource *powerStateEventSource;
 @property(nonatomic, strong, readonly) LATMediaEventSource *mediaEventSource;
+@property(nonatomic, strong, readonly) LATNetworkEventSource *networkEventSource;
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithActivator:(LAActivator *)activator NS_DESIGNATED_INITIALIZER;

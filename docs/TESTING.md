@@ -38,6 +38,18 @@ watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail �
 
 `watch-runtime-state` 只做实时观察，不属于测试。
 
+## 覆盖矩阵
+
+| 覆盖对象 | 默认位置 | 允许验证内容 | 不应验证内容 |
+| --- | --- | --- | --- |
+| Core model / serialization / IPC codec | `run` | `LAEvent` 编解码、property-list-safe payload、malformed payload fallback、结果聚合和退出码 | 真实 SpringBoard UI 状态、真实系统服务副作用 |
+| Persistence / assignment / profile / blacklist | `run` | 隔离测试 plist、in-memory 先更新、coalesced flush、compat bridge 的可重复行为 | 用户真实配置文件、安装迁移副作用 |
+| Resources / metadata | `run` | bundled catalog 数量、required-capabilities、small-icons、selector/url/urls metadata、obsolete/excluded 项 | 把 metadata presence 当作 runtime behavior implemented |
+| Built-in listeners/actions | `run` | allowlist、metadata gate、runtime registration、unsupported name 不消费事件、无副作用的 dispatch 语义 | 打开 URL、启动 App、发送 HID、弹系统 UI、修改 ringer/audio/call 状态 |
+| Runtime snapshot input | `run-runtime-input` | mode/display/screen-on snapshot 对 Public API、通知、dispatch gate、unlock-to-send callback 的影响 | tweak-side hook/source/reducer 细节、真实设备手势或锁屏流程 |
+| Real device runtime | `run-device-runtime` | 真实 SpringBoard hook、锁屏/解锁、前台 App、dynamic application listener 的真实外层行为 | 通过 `la_note*` 或 acquisition 注入入口制造状态 |
+| Manual checklist / probes | 手工记录或 probe 脚本 | power/headset/media route、URL/HID/system UI 等需要硬件或人工确认的效果 | 作为自动化 pass/fail 结果替代 stable/device-runtime |
+
 ## 禁止混用
 
 - stable tests 不得调用 tweak-side acquisition source 的 `noteHomeScreenVisible:`、`noteLockScreenVisible:`、`noteScreenBlanked:` 或其他 acquisition 注入入口；需要验证 lib dispatch core 时，只能通过核心 snapshot testing 入口注入最小状态。
@@ -54,6 +66,12 @@ watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail �
 - built-in action stable suite 只覆盖代码 allowlist、metadata/selector gate、runtime registration、obsolete/unsupported name 不注册，以及不产生设备副作用的纯 dispatch 语义。会打开 URL、启动 App、投递 HID、显示系统 UI、修改 ringer/audio 状态的行为不进入 stable fake path；应通过 Frida probe、`run-device-runtime` 或手工真机清单验证。
 - 需要打开 App、回主屏幕、锁屏、解锁、App Switcher、强杀 App 的测试默认不进 stable，先放 `run-device-runtime` 或手工观察。
 - 为测试而新增 production 入口必须先证明必要性，并用 `LA_TESTING` 宏隔离。普通构建不能包含 testing IPC、testing path 或测试自动化接口。
+
+## 当前专项清单
+
+`run-device-runtime` 当前可以覆盖真实 home/application/lock/unlock mode、前台 App blacklist、真实 `device locked/unlocked` event dispatch，以及 `com.apple.Preferences` dynamic application listener 的真实启动路径。该入口允许因为自动化不可用而 skip；一旦自动化动作已经执行，目标状态或事件没有到达必须 fail。
+
+power connected/disconnected、headset connected/disconnected、media route / now playing、URL actions、HID-backed actions、system UI actions、ringer/audio/call state actions 暂不进 stable，也不通过 production fake 验证。它们需要硬件、系统 UI 或 SPI 行为确认时，先记录手工真机步骤、Frida probe 证据或后续专门 device-runtime 自动化条件，再决定是否纳入自动化。
 
 ## API 与静态检查
 

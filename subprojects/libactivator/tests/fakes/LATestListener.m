@@ -21,6 +21,7 @@
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
     self.receiveCount += 1;
+    self.lastReceivedEventName = event.name;
     self.lastReceivedEventMode = event.mode;
     self.lastReceivedUserInfo = event.userInfo;
     if (self.handlesReceivedEvents) {

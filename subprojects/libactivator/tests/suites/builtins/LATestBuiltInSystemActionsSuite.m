@@ -54,6 +54,16 @@
     [recorder expect:![activator hasListenerWithName:@"libactivator.volume.mute"]
             caseName:@"system-ringer-event-name-not-registered-as-listener"
               reason:@"Legacy event name was registered as a system listener"];
+
+    id<LAListener> systemAction = [[(Class)systemActionClass alloc] init];
+    LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.system"
+                                                  mode:LAEventModeSpringBoard];
+    [systemAction activator:activator
+               receiveEvent:unsupportedEvent
+            forListenerName:@"libactivator.test.system.unsupported"];
+    [recorder expect:!unsupportedEvent.handled
+            caseName:@"system-action-unsupported-name-unhandled"
+              reason:@"Unsupported system action listener name consumed the event"];
 }
 
 @end

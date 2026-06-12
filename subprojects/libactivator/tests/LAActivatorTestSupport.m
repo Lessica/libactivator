@@ -21,6 +21,7 @@
 #import "LATestDispatchSuite.h"
 #import "LATestEnvironment.h"
 #import "LATestEventSuite.h"
+#import "LATestIPCCodecSuite.h"
 #import "LATestPersistenceSuite.h"
 #import "LATestResourceSuite.h"
 #import "LATestRuntimeDeviceSuite.h"
@@ -105,6 +106,7 @@
     [LATestEnvironment removeTestPlist];
     [LATestEventSuite runWithRecorder:recorder];
     [LATestPersistenceSuite runWithRecorder:recorder];
+    [LATestIPCCodecSuite runWithRecorder:recorder];
     [LATestResourceSuite runWithRecorder:recorder];
     [LATestSpringBoardCoreSuite runWithRecorder:recorder activator:activator];
     [LATestDispatchSuite runWithRecorder:recorder activator:activator];

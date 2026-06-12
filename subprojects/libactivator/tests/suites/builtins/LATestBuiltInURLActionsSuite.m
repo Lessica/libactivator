@@ -15,8 +15,8 @@
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInURLActions"];
 
-    Class<LATestBuiltInListenerAllowlist> urlActionClass =
-        (Class<LATestBuiltInListenerAllowlist>)NSClassFromString(@"LATURLActionListener");
+    Class<LATestURLActionListener> urlActionClass =
+        (Class<LATestURLActionListener>)NSClassFromString(@"LATURLActionListener");
     [recorder expect:urlActionClass != Nil
             caseName:@"url-action-class-available"
               reason:@"LATURLActionListener class was not loaded in SpringBoard"];
@@ -75,6 +75,32 @@
                      [activator hasListenerWithName:@"libactivator.phone.recents"]
             caseName:@"url-action-phone-tab-registered"
               reason:@"Phone tab URL action was not registered by LATURLActionListener"];
+    [recorder expect:[urlActionClass listenerNameHasRequiredMetadata:@"libactivator.phone.recents" activator:activator]
+            caseName:@"url-action-hardcoded-phone-selector-metadata"
+              reason:@"Hardcoded Phone URL action selector metadata did not match the expected selector"];
+
+    id<LATestURLActionListener> urlAction = [[(Class)urlActionClass alloc] init];
+    NSString *phoneURL = [urlAction urlStringForListenerName:@"libactivator.phone.recents" activator:activator];
+    [recorder expect:[phoneURL isEqualToString:@"mobilephone-recents:"]
+            caseName:@"url-action-hardcoded-phone-url"
+              reason:@"Hardcoded Phone URL action did not resolve to the expected URL"];
+
+    NSString *selectedVersionedURL = [urlAction urlStringInURLsValue:@[
+        @"prefs:root=General",
+        @0,
+        @"prefs:root=Bluetooth",
+        @(kCFCoreFoundationVersionNumber + 1000.0),
+        @"prefs:root=Future",
+    ]];
+    [recorder expect:[selectedVersionedURL isEqualToString:@"prefs:root=Bluetooth"]
+            caseName:@"url-action-versioned-url-selection"
+              reason:@"Versioned URL metadata did not select the newest eligible URL"];
+
+    LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.url" mode:LAEventModeSpringBoard];
+    [urlAction activator:activator receiveEvent:unsupportedEvent forListenerName:@"libactivator.test.url.unsupported"];
+    [recorder expect:!unsupportedEvent.handled
+            caseName:@"url-action-unsupported-name-unhandled"
+              reason:@"Unsupported URL action listener name consumed the event"];
 
     [recorder expect:![activator hasListenerWithName:@"libactivator.settings.brightness"]
             caseName:@"url-action-obsolete-name-not-registered"

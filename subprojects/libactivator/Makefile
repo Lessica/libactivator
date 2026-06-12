@@ -40,6 +40,7 @@ libactivator_FILES += tests/fakes/LATestTouch.m
 libactivator_FILES += tests/fakes/LATestTouchEvent.m
 libactivator_FILES += tests/suites/core/LATestEventSuite.m
 libactivator_FILES += tests/suites/core/LATestPersistenceSuite.m
+libactivator_FILES += tests/suites/core/LATestIPCCodecSuite.m
 libactivator_FILES += tests/suites/core/LATestResourceSuite.m
 libactivator_FILES += tests/suites/core/LATestSpringBoardCoreSuite.m
 libactivator_FILES += tests/suites/core/LATestDispatchSuite.m

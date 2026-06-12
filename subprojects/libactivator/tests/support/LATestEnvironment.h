@@ -62,6 +62,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (NSString *)runtimeDebugReasonWithPrefix:(nullable NSString *)prefix activator:(LAActivator *)activator;
 + (void)performOnMainThreadSynchronously:(nullable dispatch_block_t)block;
++ (BOOL)waitUntilTrue:(BOOL (^)(void))predicate timeout:(NSTimeInterval)timeout;
 + (void)waitAllowingMainRunLoopForTimeInterval:(NSTimeInterval)timeInterval;
 + (void)waitForMainQueue;
 

@@ -87,6 +87,11 @@
     if (event.mode.length > 0) {
         userInfo[LAIPCKeyEventMode] = event.mode;
     }
+    userInfo[LAIPCKeyEventHandled] = @(event.handled);
+    NSDictionary *eventUserInfo = [self propertyListValue:event.userInfo];
+    if (eventUserInfo) {
+        userInfo[LAIPCKeyEventUserInfo] = eventUserInfo;
+    }
     return [userInfo copy];
 }
 
@@ -122,8 +127,36 @@
     if (!value) {
         return nil;
     }
-    return [NSPropertyListSerialization propertyList:value isValidForFormat:NSPropertyListBinaryFormat_v1_0] ? value
-                                                                                                             : nil;
+    if ([NSPropertyListSerialization propertyList:value isValidForFormat:NSPropertyListBinaryFormat_v1_0]) {
+        return value;
+    }
+
+    if ([value isKindOfClass:NSDictionary.class]) {
+        NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:[value count]];
+        for (id key in value) {
+            if (![key isKindOfClass:NSString.class]) {
+                continue;
+            }
+            id sanitizedValue = [self propertyListValue:value[key]];
+            if (sanitizedValue) {
+                dictionary[key] = sanitizedValue;
+            }
+        }
+        return [dictionary copy];
+    }
+
+    if ([value isKindOfClass:NSArray.class]) {
+        NSMutableArray *array = [NSMutableArray arrayWithCapacity:[value count]];
+        for (id item in value) {
+            id sanitizedItem = [self propertyListValue:item];
+            if (sanitizedItem) {
+                [array addObject:sanitizedItem];
+            }
+        }
+        return [array copy];
+    }
+
+    return nil;
 }
 
 + (NSDictionary *)smallIconDataReplyWithData:(NSData *)data scale:(CGFloat)scale {

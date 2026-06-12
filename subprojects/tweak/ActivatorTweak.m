@@ -10,6 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LATBuiltInRegistry.h"
+#import "LATNetworkEventSource.h"
 #import "LATRuntimeStateSource.h"
 
 #import <CaptainHook/CaptainHook.h>
@@ -22,6 +23,7 @@ CHDeclareClass(SBMainSwitcherViewController);
 CHDeclareClass(SBMainSwitcherControllerCoordinator);
 CHDeclareClass(SBVolumeControl);
 CHDeclareClass(SBHIconManager);
+CHDeclareClass(SBWiFiManager);
 CHDeclareClass(_UISystemGestureWindow);
 
 static NSString *const LATRuntimeStateSourceCoverSheetTransition = @"cover-sheet-transition";
@@ -183,6 +185,18 @@ CHOptimizedMethod1(self, void, SBHIconManager, rootFolderControllerViewDidDisapp
     [gBuiltInRegistry.runtimeStateSource refreshForegroundDisplayIdentifier];
 }
 
+#pragma mark - SBWiFiManager
+
+CHOptimizedMethod0(self, void, SBWiFiManager, _updateCurrentNetwork) {
+    CHSuper0(SBWiFiManager, _updateCurrentNetwork);
+    [gBuiltInRegistry.networkEventSource noteNetworkStateMayHaveChangedWithReason:@"wifi-update-current-network"];
+}
+
+CHOptimizedMethod0(self, void, SBWiFiManager, _linkDidChange) {
+    CHSuper0(SBWiFiManager, _linkDidChange);
+    [gBuiltInRegistry.networkEventSource noteNetworkStateMayHaveChangedWithReason:@"wifi-link-did-change"];
+}
+
 #pragma mark - _UISystemGestureWindow
 
 CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, event) {
@@ -218,6 +232,7 @@ static void LATLoadSpringBoardClasses(void) {
     CHLoadClass_(&SBMainSwitcherControllerCoordinator$, NSClassFromString(@"SBMainSwitcherControllerCoordinator"));
     CHLoadClass_(&SBVolumeControl$, NSClassFromString(@"SBVolumeControl"));
     CHLoadClass_(&SBHIconManager$, NSClassFromString(@"SBHIconManager"));
+    CHLoadClass_(&SBWiFiManager$, NSClassFromString(@"SBWiFiManager"));
     CHLoadClass_(&_UISystemGestureWindow$, NSClassFromString(@"_UISystemGestureWindow"));
 }
 
@@ -243,6 +258,8 @@ static void LATInstallHooks(void) {
             CHHook1(SBHIconManager, rootFolderControllerViewWillAppear);
             CHHook1(SBHIconManager, rootFolderControllerViewDidDisappear);
         }
+        CHHook0(SBWiFiManager, _updateCurrentNetwork);
+        CHHook0(SBWiFiManager, _linkDidChange);
         CHHook1(_UISystemGestureWindow, sendEvent);
         CHHook1(SpringBoard, applicationDidFinishLaunching);
     });

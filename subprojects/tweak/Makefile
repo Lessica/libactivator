@@ -17,6 +17,7 @@ ActivatorTweak_FILES += runtime/LATRuntimeStateSource.m
 ActivatorTweak_FILES += events/LATMediaEventSource.m
 ActivatorTweak_FILES += events/LATLockStateEventSource.m
 ActivatorTweak_FILES += events/LATPowerStateEventSource.m
+ActivatorTweak_FILES += events/LATNetworkEventSource.m
 ActivatorTweak_FILES += listeners/LATApplicationActionListener.m
 ActivatorTweak_FILES += listeners/LATHardwareActionListener.m
 ActivatorTweak_FILES += listeners/LATNothingListener.m
@@ -52,6 +53,7 @@ ActivatorTweak_FRAMEWORKS += Foundation
 ActivatorTweak_FRAMEWORKS += AudioToolbox
 ActivatorTweak_FRAMEWORKS += CoreServices
 ActivatorTweak_FRAMEWORKS += CoreTelephony
+ActivatorTweak_FRAMEWORKS += Network
 ActivatorTweak_FRAMEWORKS += UIKit
 
 ActivatorTweak_LIBRARIES += activator

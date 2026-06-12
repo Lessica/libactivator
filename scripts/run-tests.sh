@@ -20,9 +20,47 @@ wait_for_springboard_pid() {
     done
 }
 
+device_architecture() {
+    ssh -p "${THEOS_DEVICE_PORT:-22}" "${THEOS_DEVICE_USER:-root}@${THEOS_DEVICE_IP}" \
+        'dpkg --print-architecture 2>/dev/null || uname -m'
+}
+
+expected_device_architecture() {
+    case "${THEOS_PACKAGE_SCHEME:-}" in
+        rootless)
+            echo "iphoneos-arm64"
+            ;;
+        roothide)
+            echo "iphoneos-arm64e"
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
+
 test_runner_path="${LA_TEST_RUNNER_PATH:-/usr/libexec/libactivator/libactivator-tests}"
 if [ "${THEOS_PACKAGE_SCHEME:-}" = "rootless" ]; then
     test_runner_path="${LA_TEST_RUNNER_PATH:-/var/jb/usr/libexec/libactivator/libactivator-tests}"
+fi
+
+if [ -z "${THEOS_DEVICE_IP:-}" ]; then
+    echo "[tests] THEOS_DEVICE_IP is not set; source the matching device environment first" >&2
+    exit 2
+fi
+
+echo "[tests] Package scheme: ${THEOS_PACKAGE_SCHEME:-rootful}"
+echo "[tests] Device target: ${THEOS_DEVICE_USER:-root}@${THEOS_DEVICE_IP}:${THEOS_DEVICE_PORT:-22}"
+echo "[tests] Test runner path: ${test_runner_path}"
+
+expected_architecture="$(expected_device_architecture)"
+if [ -n "$expected_architecture" ]; then
+    actual_architecture="$(device_architecture)"
+    echo "[tests] Device architecture: ${actual_architecture}"
+    if [ "$actual_architecture" != "$expected_architecture" ]; then
+        echo "[tests] Device architecture ${actual_architecture} does not match ${THEOS_PACKAGE_SCHEME} package architecture ${expected_architecture}" >&2
+        exit 2
+    fi
 fi
 
 # shellcheck disable=SC1010

@@ -11,6 +11,8 @@
 #import "LATestEnvironment.h"
 
 @interface LATestResourceSuite ()
++ (NSDictionary<NSString *, NSDictionary *> *)bundledEventMetadataWithResourceManager:
+    (LAResourceManager *)resourceManager;
 + (NSDictionary<NSString *, NSDictionary *> *)bundledListenerMetadataWithResourceManager:
     (LAResourceManager *)resourceManager;
 + (BOOL)allBundledListenersHaveActionMetadata:(NSDictionary<NSString *, NSDictionary *> *)listeners;
@@ -24,6 +26,27 @@
 
     NSFileManager *fileManager = NSFileManager.defaultManager;
     LAResourceManager *resourceManager = LAResourceManager.sharedManager;
+    NSDictionary<NSString *, NSDictionary *> *bundledEvents =
+        [self bundledEventMetadataWithResourceManager:resourceManager];
+    NSDictionary<NSString *, NSDictionary *> *bundledListeners =
+        [self bundledListenerMetadataWithResourceManager:resourceManager];
+
+    [recorder expect:bundledEvents.count == 121
+            caseName:@"bundled-event-catalog-count"
+              reason:@"Bundled event catalog count did not match the 1.9.13 baseline"];
+    [recorder expect:[resourceManager.availableEventNames containsObject:LAEventNameVolumeDownPress] &&
+                     [resourceManager.availableEventNames containsObject:LAEventNameDeviceLocked] &&
+                     [resourceManager.availableEventNames containsObject:LAEventNamePowerConnected]
+            caseName:@"available-events-include-representative-bundled-events"
+              reason:@"Available event names did not include representative bundled event metadata"];
+    [recorder expect:bundledListeners.count == 110
+            caseName:@"bundled-listener-catalog-count"
+              reason:@"Bundled listener catalog count did not match the staged baseline"];
+    [recorder expect:bundledListeners[@"libactivator.twitter.compose-tweet"] == nil &&
+                     bundledListeners[@"libactivator.facebook.compose-post"] == nil &&
+                     bundledListeners[@"libactivator.weibo.compose-post"] == nil
+            caseName:@"excluded-social-compose-actions"
+              reason:@"Excluded legacy social compose actions were present in bundled listener metadata"];
 
     NSString *eventName = @"libactivator.test.resource.capability";
     NSString *eventPath = [[resourceManager eventsDirectoryPath] stringByAppendingPathComponent:eventName];
@@ -48,8 +71,6 @@
             caseName:@"small-icons-metadata"
               reason:@"1.9.13 bundled listener small icon metadata was not read"];
 
-    NSDictionary<NSString *, NSDictionary *> *bundledListeners =
-        [self bundledListenerMetadataWithResourceManager:resourceManager];
     [recorder expect:bundledListeners.count > 0 && [self allBundledListenersHaveActionMetadata:bundledListeners]
             caseName:@"bundled-listeners-have-action-metadata"
               reason:@"Bundled listener metadata must contain selector, url, or urls"];
@@ -68,6 +89,13 @@
               reason:@"Absolute resource path did not resolve through jbroot before the original path"];
 
     [fileManager removeItemAtPath:resourcePath error:nil];
+}
+
++ (NSDictionary<NSString *, NSDictionary *> *)bundledEventMetadataWithResourceManager:
+    (LAResourceManager *)resourceManager {
+    NSString *path = [[resourceManager eventsDirectoryPath] stringByAppendingPathComponent:@"bundled.plist"];
+    NSDictionary *metadata = [NSDictionary dictionaryWithContentsOfFile:path];
+    return [metadata isKindOfClass:NSDictionary.class] ? metadata : @{};
 }
 
 + (NSDictionary<NSString *, NSDictionary *> *)bundledListenerMetadataWithResourceManager:

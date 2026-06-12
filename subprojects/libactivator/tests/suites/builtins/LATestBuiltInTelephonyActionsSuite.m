@@ -58,6 +58,16 @@
                          containsObject:@"libactivator.phone.recents"]
             caseName:@"phone-url-action-not-owned-by-telephony-listener"
               reason:@"Phone tab URL action remained in LATTelephonyActionListener"];
+
+    id<LAListener> telephonyAction = [[(Class)telephonyActionClass alloc] init];
+    LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.telephony"
+                                                  mode:LAEventModeSpringBoard];
+    [telephonyAction activator:activator
+                  receiveEvent:unsupportedEvent
+               forListenerName:@"libactivator.test.telephony.unsupported"];
+    [recorder expect:!unsupportedEvent.handled
+            caseName:@"telephony-action-unsupported-name-unhandled"
+              reason:@"Unsupported telephony action listener name consumed the event"];
 }
 
 @end

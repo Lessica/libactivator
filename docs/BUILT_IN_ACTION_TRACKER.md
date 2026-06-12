@@ -54,7 +54,7 @@ Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使�
 - device locked / unlocked：已实现，信号来源为 `com.apple.springboard.lockstate` + `SBLockScreenManager isUILocked`；仍需在真机 checklist 中覆盖手动锁定、自动锁定、回主屏幕解锁和回 App 解锁路径。
 - power connected / disconnected：已实现，信号来源为 `UIDeviceBatteryStateDidChangeNotification`；仍需在真机 checklist 中覆盖接入电源、断开电源、满电状态下重新接入等路径。
 - headset connected / disconnected：已实现，信号来源为 MediaRemote route notification 和 `AVSystemController` route/headset notifications；实际状态读取使用 `AVSystemController_HeadphoneJackIsConnectedAttribute`，MediaRemote notification payload 只作为诊断日志；当前语义限定为有线耳机，蓝牙、CarPlay、AirPods 等 route 不触发该事件。
-- Wi-Fi joined / left：需要确认 CaptiveNetwork / SystemConfiguration / Wi-Fi private notification 的现代可用性；不确定时先停在 probe 阶段。
+- Wi-Fi joined / left：已通过 Frida probe 确认现代 SpringBoard 仍提供 `SBWiFiManager +sharedInstance`、`-currentNetworkName`、`-isAssociated`、`-wiFiEnabled`、`-_updateCurrentNetwork` 和 `-_linkDidChange`；断开时 `-_linkDidChange` 可观测到 `currentNetworkName` 从当前 SSID 变为 `nil`。当前由 `LATNetworkEventSource` 承载，使用已验证的 `SBWiFiManager` hook 和现代 `NWPathMonitor` 触发状态重读，并保留旧 SpringBoard Wi-Fi / wake notification 作为低成本辅助触发；不使用旧 `SCNetworkReachability` fallback。
 
 实施边界：
 

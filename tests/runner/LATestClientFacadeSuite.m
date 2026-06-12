@@ -48,6 +48,18 @@
     [recorder expect:[activator listenerForName:nothingName] != nil
             caseName:@"remote-listener-proxy"
               reason:@"Client facade did not return a remote listener proxy"];
+    id<LAListener> remoteListener = [activator listenerForName:nothingName];
+    LAEvent *remoteProxyEvent = [LAEvent eventWithName:@"libactivator.test.client.remote-proxy"
+                                                  mode:LAEventModeSpringBoard];
+    [remoteListener activator:activator receiveEvent:remoteProxyEvent forListenerName:nothingName];
+    [recorder expect:remoteProxyEvent.handled
+            caseName:@"remote-listener-proxy-receive"
+              reason:@"Remote listener proxy did not forward receiveEvent to SpringBoard"];
+
+    NSDictionary *unknownTestingReply = [self.client sendCommand:@"unknown-command"];
+    [recorder expect:![unknownTestingReply[LAIPCKeyOK] boolValue]
+            caseName:@"unknown-testing-command-fallback"
+              reason:@"Testing IPC did not fail safely for an unknown command"];
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

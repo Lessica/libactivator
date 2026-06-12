@@ -22,6 +22,9 @@
     [recorder expect:NSClassFromString(@"LATMediaEventSource") != Nil
             caseName:@"media-event-source-loaded"
               reason:@"LATMediaEventSource class was not loaded in SpringBoard"];
+    [recorder expect:NSClassFromString(@"LATNetworkEventSource") != Nil
+            caseName:@"network-event-source-loaded"
+              reason:@"LATNetworkEventSource class was not loaded in SpringBoard"];
     [recorder expect:NSClassFromString(@"LATRuntimeStateSource") != Nil
             caseName:@"runtime-state-source-loaded"
               reason:@"LATRuntimeStateSource class was not loaded in SpringBoard"];
@@ -79,6 +82,23 @@
                  [activator eventWithName:LAEventNameHeadsetDisconnected isCompatibleWithMode:LAEventModeLockScreen]
         caseName:@"headset-disconnected-all-modes-compatible"
           reason:@"Headset disconnected event was not compatible with all event modes"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameNetworkJoinedWiFi]
+            caseName:@"wifi-joined-event-available"
+              reason:@"Wi-Fi joined event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameNetworkLeftWiFi]
+            caseName:@"wifi-left-event-available"
+              reason:@"Wi-Fi left event metadata was not available"];
+    [recorder
+          expect:[activator eventWithName:LAEventNameNetworkJoinedWiFi isCompatibleWithMode:LAEventModeSpringBoard] &&
+                 [activator eventWithName:LAEventNameNetworkJoinedWiFi isCompatibleWithMode:LAEventModeApplication] &&
+                 [activator eventWithName:LAEventNameNetworkJoinedWiFi isCompatibleWithMode:LAEventModeLockScreen]
+        caseName:@"wifi-joined-all-modes-compatible"
+          reason:@"Wi-Fi joined event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameNetworkLeftWiFi isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameNetworkLeftWiFi isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameNetworkLeftWiFi isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"wifi-left-all-modes-compatible"
+              reason:@"Wi-Fi left event was not compatible with all event modes"];
 }
 
 @end
