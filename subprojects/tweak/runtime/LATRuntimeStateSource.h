@@ -18,7 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Lifecycle
 
-- (instancetype)initWithRuntimeContext:(nullable LARuntimeContext *)runtimeContext;
+- (instancetype)init NS_UNAVAILABLE;
+- (instancetype)initWithRuntimeContext:(nullable LARuntimeContext *)runtimeContext NS_DESIGNATED_INITIALIZER;
 
 // Main-queue confined. This source feeds runtime state and dispatch gates; it does not send public events.
 - (void)start;

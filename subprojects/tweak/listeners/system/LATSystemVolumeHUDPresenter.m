@@ -8,7 +8,7 @@
 
 #import "system/LATSystemVolumeHUDPresenter.h"
 
-#import "LATBuiltInListenerRegistry.h"
+#import "LATBuiltInRegistry.h"
 
 #import <HBLog.h>
 
@@ -17,7 +17,19 @@
 - (void)_presentVolumeHUDWithVolume:(float)volume;
 @end
 
+@interface LATSystemVolumeHUDPresenter ()
+@property(nonatomic, weak) LATBuiltInRegistry *registry;
+@end
+
 @implementation LATSystemVolumeHUDPresenter
+
+- (instancetype)initWithRegistry:(LATBuiltInRegistry *)registry {
+    self = [super init];
+    if (self) {
+        _registry = registry;
+    }
+    return self;
+}
 
 - (BOOL)presentVolumeHUDForListenerName:(NSString *)listenerName {
     if (![NSThread isMainThread]) {
@@ -28,7 +40,7 @@
         return presented;
     }
 
-    SBVolumeControl *volumeControl = LATBuiltInListenerRegistry.volumeControlInstance;
+    SBVolumeControl *volumeControl = self.registry.volumeControlInstance;
     if (!volumeControl) {
         HBLogError(@"Unable to present volume HUD for system action %@ because SBVolumeControl was not captured",
                    listenerName ?: @"");

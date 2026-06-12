@@ -13,9 +13,12 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATTelephonyCallController : NSObject
+
 @property(nonatomic, strong, readonly) LATTelephonyCallStateObserver *callStateObserver;
+
 - (BOOL)answerIncomingCallForListenerName:(NSString *)listenerName;
 - (BOOL)disconnectCallsForListenerName:(NSString *)listenerName;
+
 @end
 
 NS_ASSUME_NONNULL_END

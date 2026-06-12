@@ -8,7 +8,7 @@
 
 #import "LATLockScreenCameraLauncher.h"
 
-#import "LATBuiltInListenerRegistry.h"
+#import "LATBuiltInRegistry.h"
 #import "LATRuntimeStateSource.h"
 
 #import <HBLog.h>
@@ -21,10 +21,22 @@
 - (void)activateMainPageWithCompletion:(id)completion;
 @end
 
+@interface LATLockScreenCameraLauncher ()
+@property(nonatomic, weak) LATBuiltInRegistry *registry;
+@end
+
 @implementation LATLockScreenCameraLauncher
 
+- (instancetype)initWithRegistry:(LATBuiltInRegistry *)registry {
+    self = [super init];
+    if (self) {
+        _registry = registry;
+    }
+    return self;
+}
+
 - (BOOL)enqueueOpenLockScreenCamera {
-    CSCoverSheetViewController *coverSheetViewController = LATBuiltInListenerRegistry.coverSheetViewControllerInstance;
+    CSCoverSheetViewController *coverSheetViewController = self.registry.coverSheetViewControllerInstance;
     if (!coverSheetViewController) {
         HBLogWarn(@"Unable to open lock screen camera because CoverSheet controller is unavailable");
         return NO;
@@ -37,7 +49,7 @@
     }
 
     __weak CSCoverSheetViewController *weakCoverSheetViewController = coverSheetViewController;
-    LATRuntimeStateSource *runtimeStateSource = LATBuiltInListenerRegistry.runtimeStateSource;
+    LATRuntimeStateSource *runtimeStateSource = self.registry.runtimeStateSource;
     BOOL screenIsOn = runtimeStateSource ? runtimeStateSource.screenIsOn : YES;
     dispatch_async(dispatch_get_main_queue(), ^{
         CSCoverSheetViewController *strongCoverSheetViewController = weakCoverSheetViewController;

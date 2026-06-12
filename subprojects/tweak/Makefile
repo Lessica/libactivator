@@ -6,7 +6,7 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME := ActivatorTweak
 
 ActivatorTweak_FILES += ActivatorTweak.m
-ActivatorTweak_FILES += LATBuiltInListenerRegistry.m
+ActivatorTweak_FILES += LATBuiltInRegistry.m
 ActivatorTweak_FILES += applications/LATApplicationCatalog.m
 ActivatorTweak_FILES += applications/LATApplicationDescriptor.m
 ActivatorTweak_FILES += applications/LATApplicationLauncher.m

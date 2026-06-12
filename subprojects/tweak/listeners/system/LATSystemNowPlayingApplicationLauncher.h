@@ -15,9 +15,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LATSystemNowPlayingApplicationLauncher : NSObject
 
-- (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher;
+- (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher
-                           mediaEventSource:(LATMediaEventSource *_Nullable)mediaEventSource;
+                           mediaEventSource:(LATMediaEventSource *_Nullable)mediaEventSource NS_DESIGNATED_INITIALIZER;
 
 - (BOOL)launchNowPlayingApplicationForListenerName:(NSString *)listenerName;
 

@@ -11,8 +11,11 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATTelephonyCallStateObserver : NSObject
+
 @property(nonatomic, assign, readonly) int lastKnownCallCount;
+
 - (void)telephonyCallStateDidChangeWithName:(CFStringRef)name;
+
 @end
 
 NS_ASSUME_NONNULL_END

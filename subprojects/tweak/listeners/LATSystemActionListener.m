@@ -9,7 +9,7 @@
 #import "LATSystemActionListener.h"
 
 #import "LATApplicationLauncher.h"
-#import "LATMediaEventSource.h"
+#import "LATBuiltInRegistry.h"
 #import "system/LATSystemActionCommand.h"
 #import "system/LATSystemHomeScreenController.h"
 #import "system/LATSystemNowPlayingApplicationLauncher.h"
@@ -20,6 +20,7 @@
 #import <HBLog.h>
 
 @interface LATSystemActionListener ()
+@property(nonatomic, weak) LATBuiltInRegistry *registry;
 @property(nonatomic, strong) LATSystemVolumeHUDPresenter *volumeHUDPresenter;
 @property(nonatomic, strong) LATSystemNowPlayingApplicationLauncher *nowPlayingApplicationLauncher;
 @property(nonatomic, strong) LATSystemRingerStateResetter *ringerStateResetter;
@@ -29,24 +30,16 @@
 
 @implementation LATSystemActionListener
 
-- (instancetype)init {
-    return [self initWithApplicationLauncher:[[LATApplicationLauncher alloc] init]];
-}
-
-- (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher {
-    return [self initWithApplicationLauncher:applicationLauncher mediaEventSource:nil];
-}
-
-- (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher
-                           mediaEventSource:(LATMediaEventSource *)mediaEventSource {
+- (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher registry:(LATBuiltInRegistry *)registry {
     self = [super init];
     if (self) {
-        _volumeHUDPresenter = [[LATSystemVolumeHUDPresenter alloc] init];
+        _registry = registry;
+        _volumeHUDPresenter = [[LATSystemVolumeHUDPresenter alloc] initWithRegistry:_registry];
         _nowPlayingApplicationLauncher =
-            [[LATSystemNowPlayingApplicationLauncher alloc] initWithApplicationLauncher:applicationLauncher
-                                                                       mediaEventSource:mediaEventSource];
+            [[LATSystemNowPlayingApplicationLauncher alloc] initWithApplicationLauncher:launcher
+                                                                       mediaEventSource:_registry.mediaEventSource];
         _ringerStateResetter = [[LATSystemRingerStateResetter alloc] init];
-        _ringerMuteController = [[LATSystemRingerMuteController alloc] init];
+        _ringerMuteController = [[LATSystemRingerMuteController alloc] initWithRegistry:_registry];
         _homeScreenController = [[LATSystemHomeScreenController alloc] init];
     }
     return self;

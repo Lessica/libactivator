@@ -16,12 +16,16 @@ typedef NS_ENUM(NSUInteger, LATTelephonyActionKind) {
 };
 
 @interface LATTelephonyActionCommand : NSObject
+
 @property(nonatomic, copy, readonly) NSString *listenerName;
 @property(nonatomic, copy, readonly) NSString *selectorName;
 @property(nonatomic, assign, readonly) LATTelephonyActionKind kind;
+
+- (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
-                                kind:(LATTelephonyActionKind)kind;
+                                kind:(LATTelephonyActionKind)kind NS_DESIGNATED_INITIALIZER;
+
 @end
 
 NS_ASSUME_NONNULL_END

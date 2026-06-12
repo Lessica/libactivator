@@ -56,7 +56,7 @@
 4. Modal/system UI actions：会展示系统 UI 或改变 SpringBoard UI 状态的动作，例如 switcher、notification center、power menu、Siri/assistant、Wallet，逐个做 SPI probe 和手工 checklist。
 5. 高风险或待决策 actions：Safe Mode、call control、camera shutter、watch haptics、过时第三方服务集成，先保留 metadata，不注册 runtime listener。
 
-承载方式：新增一个或多个 `LAListener` 实现类，由 `LATBuiltInListenerRegistry` 在 SpringBoard 启动后注册。不要把所有 action 堆进一个巨型类；可以按 URL、media、system UI、lock screen 等 family 拆分。
+承载方式：新增一个或多个 `LAListener` 实现类，由 `LATBuiltInRegistry` 在 SpringBoard 中创建和注册。不要把所有 action 堆进一个巨型类；可以按 URL、media、system UI、lock screen 等 family 拆分。
 
 测试方式：纯 dispatch 语义进 stable `BuiltInActions`；真正打开 App、弹 UI、锁屏/解锁、系统服务变化进入 `RuntimeDevice` 或手工 checklist。
 

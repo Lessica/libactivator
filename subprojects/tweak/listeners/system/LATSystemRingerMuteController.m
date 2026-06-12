@@ -8,7 +8,7 @@
 
 #import "system/LATSystemRingerMuteController.h"
 
-#import "LATBuiltInListenerRegistry.h"
+#import "LATBuiltInRegistry.h"
 #import "system/LATSystemActionCommand.h"
 
 #import <HBLog.h>
@@ -19,7 +19,19 @@
 - (void)activateRingerHUDFromMuteSwitch:(int)source;
 @end
 
+@interface LATSystemRingerMuteController ()
+@property(nonatomic, weak) LATBuiltInRegistry *registry;
+@end
+
 @implementation LATSystemRingerMuteController
+
+- (instancetype)initWithRegistry:(LATBuiltInRegistry *)registry {
+    self = [super init];
+    if (self) {
+        _registry = registry;
+    }
+    return self;
+}
 
 - (BOOL)applyCommand:(LATSystemActionCommand *)command {
     if (![NSThread isMainThread]) {
@@ -30,7 +42,7 @@
         return applied;
     }
 
-    SBRingerControl *ringerControl = LATBuiltInListenerRegistry.ringerControlInstance;
+    SBRingerControl *ringerControl = self.registry.ringerControlInstance;
     if (!ringerControl) {
         HBLogError(@"Unable to apply ringer system action %@ because SBRingerControl was not captured",
                    command.listenerName ?: @"");

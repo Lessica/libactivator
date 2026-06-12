@@ -23,6 +23,7 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
 @property(nonatomic, assign, readonly) uint32_t page;
 @property(nonatomic, assign, readonly) uint32_t usage;
 
+- (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
                                 page:(uint32_t)page

@@ -8,10 +8,17 @@
 
 #import <Foundation/Foundation.h>
 
+@class LATBuiltInRegistry;
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATLockScreenCameraLauncher : NSObject
+
+- (instancetype)init NS_UNAVAILABLE;
+- (instancetype)initWithRegistry:(nullable LATBuiltInRegistry *)registry NS_DESIGNATED_INITIALIZER;
+
 - (BOOL)enqueueOpenLockScreenCamera;
+
 @end
 
 NS_ASSUME_NONNULL_END

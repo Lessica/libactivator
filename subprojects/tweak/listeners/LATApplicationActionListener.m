@@ -10,6 +10,7 @@
 
 #import "LATApplicationDescriptor.h"
 #import "LATApplicationLauncher.h"
+#import "LATBuiltInRegistry.h"
 #import "LATLockScreenCameraLauncher.h"
 
 #import <HBLog.h>
@@ -17,17 +18,19 @@
 @interface LATApplicationActionListener ()
 @property(nonatomic, strong) LATApplicationLauncher *launcher;
 @property(nonatomic, strong) LATLockScreenCameraLauncher *lockScreenCameraLauncher;
-@property(nonatomic, strong) dispatch_queue_t descriptorQueue;
+@property(nonatomic, weak) LATBuiltInRegistry *registry;
 @property(nonatomic, copy) NSDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier;
+@property(nonatomic, strong) dispatch_queue_t descriptorQueue;
 @end
 
 @implementation LATApplicationActionListener
 
-- (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher {
+- (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher registry:(LATBuiltInRegistry *)registry {
     self = [super init];
     if (self) {
         _launcher = launcher;
-        _lockScreenCameraLauncher = [[LATLockScreenCameraLauncher alloc] init];
+        _registry = registry;
+        _lockScreenCameraLauncher = [[LATLockScreenCameraLauncher alloc] initWithRegistry:_registry];
         _descriptorQueue = dispatch_queue_create("libactivator.application-action-listener.descriptors",
                                                  DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _descriptorsByIdentifier = @{};

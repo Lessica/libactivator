@@ -20,10 +20,6 @@
 
 @implementation LATSystemNowPlayingApplicationLauncher
 
-- (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher {
-    return [self initWithApplicationLauncher:applicationLauncher mediaEventSource:nil];
-}
-
 - (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher
                            mediaEventSource:(LATMediaEventSource *)mediaEventSource {
     self = [super init];

@@ -165,11 +165,6 @@
 
 #if DEBUG
 - (int)runSetAllModesCommandWithEventName:(NSString *)eventName listenerName:(NSString *)listenerName {
-    if (eventName.length == 0 || listenerName.length == 0) {
-        [self printUsage];
-        return 1;
-    }
-
     for (NSString *eventMode in [self allAssignmentModes]) {
         NSString *key = [NSString stringWithFormat:@"LAEventListener(%@)-%@", eventMode, eventName];
         [self.activator _setObject:listenerName forPreference:key];
