@@ -91,8 +91,7 @@ LAActivator *LASharedActivator;
                                                    name:UIApplicationDidReceiveMemoryWarningNotification
                                                  object:nil];
         if (self.runningInsideSpringBoard) {
-            _runtimeContext = [LARuntimeContext sharedContext];
-            NSAssert(_runtimeContext, @"LARuntimeContext must be available inside SpringBoard");
+            _runtimeContext = [[LARuntimeContext alloc] init];
             __weak typeof(self) weakSelf = self;
             [_runtimeContext setEventModeChangeHandler:^(NSString *eventMode) {
                 [weakSelf la_notifyEventModeChanged:eventMode];
@@ -176,6 +175,13 @@ LAActivator *LASharedActivator;
         self.ipcServer = [[LAIPCServer alloc] initWithActivator:self];
     }
     [self.ipcServer start];
+}
+
+- (nullable LARuntimeContext *)la_runtimeContext {
+    if (!self.runningInsideSpringBoard) {
+        return nil;
+    }
+    return self.runtimeContext;
 }
 
 - (void)la_registerSystemNotificationBridgeIfNeeded {

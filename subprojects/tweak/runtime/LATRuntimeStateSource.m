@@ -75,10 +75,11 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 #pragma mark - Lifecycle
 
 - (instancetype)initWithRuntimeContext:(LARuntimeContext *)runtimeContext {
+    NSParameterAssert(runtimeContext);
+
     self = [super init];
     if (self) {
-        _runtimeContext = runtimeContext ?: [LARuntimeContext sharedContext];
-        NSParameterAssert(_runtimeContext);
+        _runtimeContext = runtimeContext;
         _homeScreenVisibilitySources = [[NSMutableSet alloc] init];
         _springBoardInterfaceVisibilitySources = [[NSMutableSet alloc] init];
         _lockScreenVisibilitySources = [[NSMutableSet alloc] init];

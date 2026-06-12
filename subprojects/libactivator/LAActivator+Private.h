@@ -8,6 +8,8 @@
 
 #import <Activator/Activator.h>
 
+@class LARuntimeContext;
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LAActivator (Private)
@@ -15,6 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Lifecycle
 
 - (void)startIPCServerIfNeeded;
+- (nullable LARuntimeContext *)la_runtimeContext;
 
 #pragma mark - Legacy Preferences
 

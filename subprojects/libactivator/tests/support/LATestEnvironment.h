@@ -27,8 +27,11 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class LAActivator;
+@class LARuntimeContext;
 
 @interface LATestEnvironment : NSObject
+
++ (LARuntimeContext *)runtimeContextForActivator:(LAActivator *)activator;
 
 #pragma mark - Cleanup
 

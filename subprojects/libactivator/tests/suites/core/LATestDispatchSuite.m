@@ -131,19 +131,19 @@
     listenerA.needsPoweredDisplay = YES;
     listenerA.receiveCount = 0;
     listenerB.receiveCount = 0;
-    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeLockScreen
-                                 underneathLockScreen:LAEventModeSpringBoard
-                                    displayIdentifier:nil
-                                             screenOn:NO];
+    [[LATestEnvironment runtimeContextForActivator:activator] updateEventMode:LAEventModeLockScreen
+                                                         underneathLockScreen:LAEventModeSpringBoard
+                                                            displayIdentifier:nil
+                                                                     screenOn:NO];
     [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
         toListenersWithNames:@[ listenerAName, listenerBName ]];
     [recorder expect:listenerA.receiveCount == 0 && listenerB.receiveCount == 1
             caseName:@"needs-powered-display-skips-blank-screen"
               reason:@"Listener requiring powered display ran while the screen was blanked"];
-    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeSpringBoard
-                                 underneathLockScreen:LAEventModeSpringBoard
-                                    displayIdentifier:nil
-                                             screenOn:YES];
+    [[LATestEnvironment runtimeContextForActivator:activator] updateEventMode:LAEventModeSpringBoard
+                                                         underneathLockScreen:LAEventModeSpringBoard
+                                                            displayIdentifier:nil
+                                                                     screenOn:YES];
     [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
         toListenersWithNames:@[ listenerAName ]];
     [recorder expect:listenerA.receiveCount == 1

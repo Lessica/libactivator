@@ -30,26 +30,6 @@
 
 @implementation LARuntimeContext
 
-+ (nullable instancetype)sharedContext {
-    if (![self shouldCreateSharedContext]) {
-        return nil;
-    }
-    static LARuntimeContext *sSharedContext = nil;
-    static dispatch_once_t sOnceToken;
-    dispatch_once(&sOnceToken, ^{
-        sSharedContext = [[self alloc] init];
-    });
-    return sSharedContext;
-}
-
-+ (BOOL)shouldCreateSharedContext {
-    NSString *processName = NSProcessInfo.processInfo.processName;
-    if (![processName isEqualToString:@"SpringBoard"]) {
-        return NO;
-    }
-    return [NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.springboard"];
-}
-
 - (instancetype)init {
     self = [super init];
     if (self) {

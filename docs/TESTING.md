@@ -32,7 +32,7 @@ watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail �
 
 `run` 是默认稳定套件，允许包含 runner-owned tests 和 SpringBoard-owned tests，但必须稳定、可重复、不能污染用户配置或 SpringBoard runtime state。它覆盖 `ClientFacade`、`LAEvent`、`Persistence`、`SpringBoardCore`、`Dispatch`、`Resources`、`BuiltInActions` 等核心能力。已经迁到 tweak runtime layer 的内部采集组件不应为了早期单元测试继续留在 lib target；风险低的内部状态机测试可以移除，改由 dispatch 或 device runtime 行为覆盖。
 
-`run-runtime-input` 只测试 libactivator core 从 hidden `LARuntimeContext` 接收 runtime snapshot 后的 Public API 和 dispatch 条件效果，例如 mode、锁屏下层 mode、当前 app display identifier、screen-on gate。它不测试 tweak-side `LATRuntimeStateSource` 的内部 source set、reducer、touch drain 或 screen wake 细节；这些细节应通过真实 hook、手工观察或后续 tweak-owned 测试覆盖。
+`run-runtime-input` 只测试 libactivator core 从 SpringBoard-side `LAActivator` 持有的 hidden `LARuntimeContext` 接收 runtime snapshot 后的 Public API 和 dispatch 条件效果，例如 mode、锁屏下层 mode、当前 app display identifier、screen-on gate。它不测试 tweak-side `LATRuntimeStateSource` 的内部 source set、reducer、touch drain 或 screen wake 细节；这些细节应通过真实 hook、手工观察或后续 tweak-owned 测试覆盖。
 
 `run-device-runtime` 只测试真实 SpringBoard hook 和真实设备状态，严禁调用任何 `la_note*` 注入入口。它不属于默认提交门槛，失败说明设备自动化流程、当前设备状态或 hook 场景需要单独调查。
 

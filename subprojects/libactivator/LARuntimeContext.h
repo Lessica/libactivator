@@ -12,10 +12,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LARuntimeContext : NSObject
 
-#pragma mark - Lifecycle
-
-+ (nullable instancetype)sharedContext;
-
 #pragma mark - Setters
 
 - (nullable NSString *)updateEventMode:(NSString *)eventMode

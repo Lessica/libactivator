@@ -58,7 +58,8 @@
         return [self okReplyWithValue:[self runDeviceRuntimeTestsWithActivator:activator]];
     }
     if ([command isEqualToString:LAIPCTestingCommandRuntimeState]) {
-        return [self okReplyWithValue:[[LARuntimeContext sharedContext] testingDebugDictionary]];
+        return
+            [self okReplyWithValue:[[LATestEnvironment runtimeContextForActivator:activator] testingDebugDictionary]];
     }
     if ([command isEqualToString:LAIPCTestingCommandPrepareUserInfoProbe]) {
         NSString *eventName = [self userInfoProbeEventName];

@@ -29,8 +29,6 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
 @implementation LATestEnvironment
 
-#pragma mark - Cleanup
-
 + (NSArray<NSString *> *)testListenerNames {
     return @[
         @"libactivator.test.listener.a",
@@ -66,6 +64,14 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     ];
 }
 
++ (LARuntimeContext *)runtimeContextForActivator:(LAActivator *)activator {
+    LARuntimeContext *runtimeContext = [activator la_runtimeContext];
+    NSCAssert(runtimeContext, @"Runtime context must be available in SpringBoard-owned tests");
+    return runtimeContext;
+}
+
+#pragma mark - Cleanup
+
 + (void)cleanActivator:(LAActivator *)activator {
     for (NSString *listenerName in [self testListenerNames]) {
         [activator unregisterListenerWithName:listenerName];
@@ -84,10 +90,10 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 }
 
 + (void)cleanRuntimeInputStateWithActivator:(LAActivator *)activator {
-    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeSpringBoard
-                                 underneathLockScreen:LAEventModeSpringBoard
-                                    displayIdentifier:nil
-                                             screenOn:YES];
+    [[self runtimeContextForActivator:activator] updateEventMode:LAEventModeSpringBoard
+                                            underneathLockScreen:LAEventModeSpringBoard
+                                               displayIdentifier:nil
+                                                        screenOn:YES];
 }
 
 + (void)removeTestPlist {
@@ -336,7 +342,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 }
 
 + (NSString *)runtimeDebugReasonWithPrefix:(NSString *)prefix activator:(LAActivator *)activator {
-    NSDictionary *state = [[LARuntimeContext sharedContext] testingDebugDictionary];
+    NSDictionary *state = [[self runtimeContextForActivator:activator] testingDebugDictionary];
     return [NSString stringWithFormat:@"%@; mode=%@; homeSources=%@; springBoardSources=%@; lockSources=%@; "
                                       @"screenOn=%@; uiLocked=%@; frontMost=%@",
                                       prefix ?: @"Runtime mode mismatch", state[@"Mode"] ?: @"",

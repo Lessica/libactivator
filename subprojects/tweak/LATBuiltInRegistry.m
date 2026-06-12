@@ -8,6 +8,7 @@
 
 #import "LATBuiltInRegistry.h"
 
+#import "LAActivator+Private.h"
 #import "LARuntimeContext.h"
 #import "LATApplicationActionListener.h"
 #import "LATApplicationCatalog.h"
@@ -50,7 +51,9 @@
     if (self) {
         _applicationLauncher = [[LATApplicationLauncher alloc] init];
         _registeredListeners = [[NSMutableArray alloc] init];
-        _runtimeStateSource = [[LATRuntimeStateSource alloc] initWithRuntimeContext:[LARuntimeContext sharedContext]];
+        LARuntimeContext *runtimeContext = [activator la_runtimeContext];
+        NSParameterAssert(runtimeContext);
+        _runtimeStateSource = [[LATRuntimeStateSource alloc] initWithRuntimeContext:runtimeContext];
         _lockStateEventSource = [[LATLockStateEventSource alloc] initWithRuntimeStateSource:_runtimeStateSource];
         _powerStateEventSource = [[LATPowerStateEventSource alloc] init];
         _mediaEventSource = [[LATMediaEventSource alloc] init];

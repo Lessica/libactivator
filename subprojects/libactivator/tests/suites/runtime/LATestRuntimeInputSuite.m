@@ -17,10 +17,11 @@
     [recorder beginSuite:@"RuntimeInput"];
 
     [LATestEnvironment cleanRuntimeInputStateWithActivator:activator];
-    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeApplication
-                                 underneathLockScreen:LAEventModeApplication
-                                    displayIdentifier:@"com.apple.Preferences"
-                                             screenOn:YES];
+    LARuntimeContext *runtimeContext = [LATestEnvironment runtimeContextForActivator:activator];
+    [runtimeContext updateEventMode:LAEventModeApplication
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:@"com.apple.Preferences"
+                           screenOn:YES];
     [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeApplication]
             caseName:@"foreground-app-mode"
               reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Foreground app did not report application mode"
@@ -30,28 +31,28 @@
               reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Foreground app display identifier was not cached"
                                                            activator:activator]];
 
-    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeLockScreen
-                                 underneathLockScreen:LAEventModeApplication
-                                    displayIdentifier:nil
-                                             screenOn:YES];
+    [runtimeContext updateEventMode:LAEventModeLockScreen
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:nil
+                           screenOn:YES];
     [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeLockScreen] &&
                      [activator.currentEventModeUnderneathLockScreen isEqualToString:LAEventModeApplication]
             caseName:@"ui-locked-mode"
               reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"UI lock state did not report lockscreen mode"
                                                            activator:activator]];
-    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeApplication
-                                 underneathLockScreen:LAEventModeApplication
-                                    displayIdentifier:@"com.apple.Preferences"
-                                             screenOn:YES];
+    [runtimeContext updateEventMode:LAEventModeApplication
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:@"com.apple.Preferences"
+                           screenOn:YES];
     [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeApplication]
             caseName:@"ui-unlocked-underneath-mode"
               reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"UI unlock state did not restore underneath mode"
                                                            activator:activator]];
 
-    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeSpringBoard
-                                 underneathLockScreen:LAEventModeSpringBoard
-                                    displayIdentifier:nil
-                                             screenOn:YES];
+    [runtimeContext updateEventMode:LAEventModeSpringBoard
+               underneathLockScreen:LAEventModeSpringBoard
+                  displayIdentifier:nil
+                           screenOn:YES];
     [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeSpringBoard] &&
                      activator.displayIdentifierForCurrentApplication == nil
             caseName:@"foreground-app-clear"
@@ -59,18 +60,18 @@
                          runtimeDebugReasonWithPrefix:@"Cleared foreground app did not restore SpringBoard mode"
                                             activator:activator]];
 
-    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeLockScreen
-                                 underneathLockScreen:LAEventModeSpringBoard
-                                    displayIdentifier:nil
-                                             screenOn:NO];
+    [runtimeContext updateEventMode:LAEventModeLockScreen
+               underneathLockScreen:LAEventModeSpringBoard
+                  displayIdentifier:nil
+                           screenOn:NO];
     [recorder expect:[activator.currentEventMode isEqualToString:LAEventModeLockScreen]
             caseName:@"screen-blanked-mode"
               reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Blank screen did not report lockscreen mode"
                                                            activator:activator]];
-    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeSpringBoard
-                                 underneathLockScreen:LAEventModeSpringBoard
-                                    displayIdentifier:nil
-                                             screenOn:YES];
+    [runtimeContext updateEventMode:LAEventModeSpringBoard
+               underneathLockScreen:LAEventModeSpringBoard
+                  displayIdentifier:nil
+                           screenOn:YES];
 
     NSString *eventName = @"libactivator.test.dispatch";
     NSString *unlockingListenerName = @"libactivator.test.dispatch.unlock";
@@ -84,10 +85,10 @@
     [activator registerEventDataSource:dataSource forEventName:eventName];
     [activator registerListener:unlockingListener forName:unlockingListenerName];
     [activator registerListener:lockScreenListener forName:lockScreenListenerName];
-    [[LARuntimeContext sharedContext] updateEventMode:LAEventModeLockScreen
-                                 underneathLockScreen:LAEventModeSpringBoard
-                                    displayIdentifier:nil
-                                             screenOn:YES];
+    [runtimeContext updateEventMode:LAEventModeLockScreen
+               underneathLockScreen:LAEventModeSpringBoard
+                  displayIdentifier:nil
+                           screenOn:YES];
     [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeLockScreen]
         toListenersWithNames:@[ unlockingListenerName, lockScreenListenerName ]];
     [recorder expect:unlockingListener.unlockingCount == 1
