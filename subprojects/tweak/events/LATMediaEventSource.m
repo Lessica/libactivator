@@ -26,6 +26,10 @@ static AVSystemControllerKey const AVSystemController_ActiveAudioRouteDidChangeN
 static AVSystemControllerKey const AVSystemController_PickableRoutesDidChangeNotification =
     @"AVSystemController_PickableRoutesDidChangeNotification";
 
+static NSString *const LATNowPlayingInfoChangedEventName = @"libactivator.now-playing.info-changed";
+static NSString *const LATNowPlayingPlayingEventName = @"libactivator.now-playing.playing";
+static NSString *const LATNowPlayingPausedEventName = @"libactivator.now-playing.paused";
+
 extern void MRMediaRemoteGetNowPlayingApplicationDisplayID(dispatch_queue_t queue,
                                                            void (^completion)(CFStringRef displayID))
     __attribute__((weak_import));
@@ -42,10 +46,14 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 @property(nonatomic, assign, getter=isHeadsetConnected) BOOL headsetConnected;
 @property(nonatomic, strong) id routeStatusObserver;
 @property(nonatomic, strong) id pickableRoutesObserver;
+@property(nonatomic, strong) id nowPlayingInfoObserver;
+@property(nonatomic, strong) id nowPlayingApplicationIsPlayingObserver;
 @property(nonatomic, strong) id activeAudioRouteObserver;
 @property(nonatomic, strong) id systemPickableRoutesObserver;
 @property(nonatomic, strong) id headphoneStateObserver;
 @property(nonatomic, strong) dispatch_queue_t mediaRemoteQueue;
+@property(nonatomic, assign) BOOL hasKnownNowPlayingPlaybackState;
+@property(nonatomic, assign, getter=isNowPlayingApplicationPlaying) BOOL nowPlayingApplicationPlaying;
 @end
 
 @implementation LATMediaEventSource
@@ -71,6 +79,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
     [self refreshKnownHeadsetStateWithoutSendingEvent];
     [self startMediaRemoteRouteMonitoring];
+    [self startMediaRemoteNowPlayingMonitoring];
     [self startAVSystemControllerRouteMonitoring];
 }
 
@@ -81,6 +90,12 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
     }
     if (_pickableRoutesObserver) {
         [notificationCenter removeObserver:_pickableRoutesObserver];
+    }
+    if (_nowPlayingInfoObserver) {
+        [notificationCenter removeObserver:_nowPlayingInfoObserver];
+    }
+    if (_nowPlayingApplicationIsPlayingObserver) {
+        [notificationCenter removeObserver:_nowPlayingApplicationIsPlayingObserver];
     }
     if (_activeAudioRouteObserver) {
         [notificationCenter removeObserver:_activeAudioRouteObserver];
@@ -193,6 +208,33 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
     MRMediaRemoteSetWantsRouteChangeNotifications(true);
 }
 
+- (void)startMediaRemoteNowPlayingMonitoring {
+    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+
+    NSNotificationCenter *notificationCenter = NSNotificationCenter.defaultCenter;
+    __weak typeof(self) weakSelf = self;
+    self.nowPlayingInfoObserver = [notificationCenter
+        addObserverForName:(__bridge NSNotificationName)kMRMediaRemoteNowPlayingInfoDidChangeNotification
+                    object:nil
+                     queue:NSOperationQueue.mainQueue
+                usingBlock:^(__unused NSNotification *notification) {
+                    __strong typeof(weakSelf) strongSelf = weakSelf;
+                    [strongSelf handleNowPlayingInfoDidChangeNotification];
+                }];
+    self.nowPlayingApplicationIsPlayingObserver = [notificationCenter
+        addObserverForName:(__bridge NSNotificationName)
+                               kMRMediaRemoteNowPlayingApplicationIsPlayingDidChangeNotification
+                    object:nil
+                     queue:NSOperationQueue.mainQueue
+                usingBlock:^(NSNotification *notification) {
+                    __strong typeof(weakSelf) strongSelf = weakSelf;
+                    [strongSelf handleNowPlayingApplicationIsPlayingDidChangeNotification:notification];
+                }];
+
+    MRMediaRemoteSetWantsNowPlayingNotifications(true);
+    [self refreshKnownNowPlayingPlaybackStateWithoutSendingEvent];
+}
+
 - (void)startAVSystemControllerRouteMonitoring {
     NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
 
@@ -240,6 +282,49 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
     [self handlePotentialHeadsetStateChange];
 }
 
+- (void)handleNowPlayingInfoDidChangeNotification {
+    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+
+    __weak typeof(self) weakSelf = self;
+    MRMediaRemoteGetNowPlayingInfo(self.mediaRemoteQueue, ^(__unused CFDictionaryRef information) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            [strongSelf sendMediaEventWithName:LATNowPlayingInfoChangedEventName];
+        });
+    });
+}
+
+- (void)handleNowPlayingApplicationIsPlayingDidChangeNotification:(NSNotification *)notification {
+    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+
+    id value = notification.userInfo[(__bridge NSString *)kMRMediaRemoteNowPlayingApplicationIsPlayingUserInfoKey];
+    if ([value respondsToSelector:@selector(boolValue)]) {
+        [self handlePotentialNowPlayingPlaybackState:[value boolValue]];
+        return;
+    }
+
+    [self requestNowPlayingPlaybackStateWithCompletion:^(BOOL isPlaying) {
+        [self handlePotentialNowPlayingPlaybackState:isPlaying];
+    }];
+}
+
+- (void)handlePotentialNowPlayingPlaybackState:(BOOL)isPlaying {
+    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+
+    if (!self.hasKnownNowPlayingPlaybackState) {
+        self.hasKnownNowPlayingPlaybackState = YES;
+        self.nowPlayingApplicationPlaying = isPlaying;
+        return;
+    }
+
+    if (self.nowPlayingApplicationPlaying == isPlaying) {
+        return;
+    }
+
+    self.nowPlayingApplicationPlaying = isPlaying;
+    [self sendMediaEventWithName:isPlaying ? LATNowPlayingPlayingEventName : LATNowPlayingPausedEventName];
+}
+
 - (void)handlePotentialHeadsetStateChange {
     NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
 
@@ -274,6 +359,29 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
     self.headsetConnected = headsetConnected;
 }
 
+- (void)refreshKnownNowPlayingPlaybackStateWithoutSendingEvent {
+    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+
+    [self requestNowPlayingPlaybackStateWithCompletion:^(BOOL isPlaying) {
+        if (self.hasKnownNowPlayingPlaybackState) {
+            return;
+        }
+        self.hasKnownNowPlayingPlaybackState = YES;
+        self.nowPlayingApplicationPlaying = isPlaying;
+    }];
+}
+
+- (void)requestNowPlayingPlaybackStateWithCompletion:(void (^)(BOOL isPlaying))completion {
+    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    NSParameterAssert(completion);
+
+    MRMediaRemoteGetNowPlayingApplicationIsPlaying(self.mediaRemoteQueue, ^(Boolean isPlaying) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completion((BOOL)isPlaying);
+        });
+    });
+}
+
 - (BOOL)readHeadsetConnected:(BOOL *)headsetConnected {
     NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
 
@@ -303,10 +411,9 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 #pragma mark - Event Dispatch
 
-- (void)sendHeadsetEventForConnectedState:(BOOL)headsetConnected {
+- (void)sendMediaEventWithName:(NSString *)eventName {
     NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
 
-    NSString *eventName = headsetConnected ? LAEventNameHeadsetConnected : LAEventNameHeadsetDisconnected;
     NSString *eventMode = LASharedActivator.currentEventMode;
     if (eventMode.length == 0) {
         eventMode = LAEventModeSpringBoard;
@@ -314,6 +421,13 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
     LAEvent *event = [LAEvent eventWithName:eventName mode:eventMode];
     [LASharedActivator sendEventToListener:event];
+}
+
+- (void)sendHeadsetEventForConnectedState:(BOOL)headsetConnected {
+    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+
+    NSString *eventName = headsetConnected ? LAEventNameHeadsetConnected : LAEventNameHeadsetDisconnected;
+    [self sendMediaEventWithName:eventName];
 }
 
 @end

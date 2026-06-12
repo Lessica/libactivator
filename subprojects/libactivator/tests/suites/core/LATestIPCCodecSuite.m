@@ -38,12 +38,11 @@
                      [eventDictionary[LAIPCKeyEventHandled] boolValue]
             caseName:@"event-encoding"
               reason:@"Event payload did not include name, mode, and handled state"];
-    [recorder
-          expect:[encodedUserInfo[@"safe"] isEqual:@"value"] && [encodedUserInfo[@"nested"][@"safe"] isEqual:@42] &&
-                 [encodedUserInfo[@"array"] isEqualToArray:@[ @"keep", @{@"safe" : @"nested"} ]] &&
-                 encodedUserInfo[@"unsafe"] == nil && encodedUserInfo[@"nested"][@"unsafe"] == nil
-        caseName:@"event-user-info-plist-filter"
-          reason:@"Event payload did not recursively filter non-property-list userInfo values"];
+    [recorder expect:[encodedUserInfo[@"safe"] isEqual:@"value"] && [encodedUserInfo[@"nested"][@"safe"] isEqual:@42] &&
+                     [encodedUserInfo[@"array"] isEqualToArray:@[ @"keep", @{@"safe" : @"nested"} ]] &&
+                     encodedUserInfo[@"unsafe"] == nil && encodedUserInfo[@"nested"][@"unsafe"] == nil
+            caseName:@"event-user-info-plist-filter"
+              reason:@"Event payload did not recursively filter non-property-list userInfo values"];
 
     LAEvent *decodedEvent = [LAIPCCodec eventWithUserInfo:eventDictionary];
     [recorder expect:[decodedEvent.name isEqualToString:event.name] && [decodedEvent.mode isEqualToString:event.mode] &&
@@ -69,7 +68,7 @@
               reason:@"Event reply did not carry handled state"];
 
     [recorder expect:[LAIPCCodec smallIconDataReplyWithData:nil scale:2.0][LAIPCKeyOK] &&
-                         ![[LAIPCCodec smallIconDataReplyWithData:nil scale:2.0][LAIPCKeyOK] boolValue]
+                     ![[LAIPCCodec smallIconDataReplyWithData:nil scale:2.0][LAIPCKeyOK] boolValue]
             caseName:@"empty-icon-reply-fails"
               reason:@"Empty icon data reply should fail safely"];
 }

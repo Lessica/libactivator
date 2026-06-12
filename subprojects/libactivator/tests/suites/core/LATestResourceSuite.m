@@ -31,9 +31,9 @@
     NSDictionary<NSString *, NSDictionary *> *bundledListeners =
         [self bundledListenerMetadataWithResourceManager:resourceManager];
 
-    [recorder expect:bundledEvents.count == 121
+    [recorder expect:bundledEvents.count == 123
             caseName:@"bundled-event-catalog-count"
-              reason:@"Bundled event catalog count did not match the 1.9.13 baseline"];
+              reason:@"Bundled event catalog count did not match the staged baseline"];
     [recorder expect:[resourceManager.availableEventNames containsObject:LAEventNameVolumeDownPress] &&
                      [resourceManager.availableEventNames containsObject:LAEventNameDeviceLocked] &&
                      [resourceManager.availableEventNames containsObject:LAEventNamePowerConnected]

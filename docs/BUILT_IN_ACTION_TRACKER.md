@@ -24,7 +24,7 @@ Telephony actions / listener family 现在只承载通话控制。`LATTelephonyA
 
 Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使用 `LSApplicationWorkspace` / `LSApplicationProxy` 枚举可见 System / User 应用并注册 bundle/display identifier listener；app 列表变化通过 Darwin notification `com.apple.LaunchServices.ApplicationsChanged` 触发，并用防抖策略延迟刷新。LaunchServices snapshot 构建放在后台 utility queue，main queue 只应用 added / removed listener 变更，不全量重建其他 listener family。refresh 阶段只保留注册所需的最小 descriptor，不读取 bundle `Info.plist`、不计算 display name、也不按 display name 排序；动态 title、description、group metadata 由 `LATApplicationActionListener` 在 metadata 查询时懒加载。实际启动统一交给 `LATApplicationLauncher`，通过 `SBSLaunchApplicationWithIdentifierAndLaunchOptions` 在专用非主队列提交。`com.apple.camera` 是唯一当前已实现的动态应用 special case：锁屏模式下不请求解锁打开 Camera App，而是通过 `CSCoverSheetViewController -activateCameraViewAnimated:sendingActions:completion:` 在主队列打开锁屏相机；屏幕未点亮时通过 tweak-side `LATRuntimeStateSource` 发送 Power HID 短按，等它 feed 的 screen-on runtime state 后再提交锁屏相机切换；该 SPI 不可用时退回普通解锁启动。`event.handled = YES` 表示 launch request 已被 listener 接受并提交，不表示目标 App 已完成前台切换。
 
-当前 built-in actions / listeners 的低风险实施面已经收束。后续阶段应从“继续补动作”转向 event source family。listener 划分仍按执行机制决定：URL action 归 `LATURLActionListener`，HID Consumer action 归 `LATHardwareActionListener`，SpringBoard/system-service action 归 `LATSystemActionListener`，通话控制归 `LATTelephonyActionListener`，动态 App 归 `LATApplicationActionListener`；新阶段不要把 event acquisition adapter 或 Settings UI 逻辑塞回现有 action listener。
+当前 built-in actions / listeners 的低风险实施面已经收束；阶段 3 的低风险状态/通知型 event source 也已完成第一批。listener 划分仍按执行机制决定：URL action 归 `LATURLActionListener`，HID Consumer action 归 `LATHardwareActionListener`，SpringBoard/system-service action 归 `LATSystemActionListener`，通话控制归 `LATTelephonyActionListener`，动态 App 归 `LATApplicationActionListener`；event acquisition 划分为独立 adapter：锁定状态归 `LATLockStateEventSource`，电源状态归 `LATPowerStateEventSource`，耳机/媒体 route 与 now-playing 状态归 `LATMediaEventSource`，网络状态归 `LATNetworkEventSource`。后续不要把 event acquisition adapter 或 Settings UI 逻辑塞回现有 action listener。
 
 ## 已处理完成项
 
@@ -39,30 +39,35 @@ Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使�
 | Phone tab URL actions | `LATURLActionListener` | `implemented` | Favorites、Recents、Contacts、Voicemail 已实现；Keypad 已确认失效并移除。 |
 | Telephony actions | `LATTelephonyActionListener` | `implemented` | Answer / Disconnect call 已实现；answer path 持有 `CTTelephonyCenter` observer 以维持 CoreTelephony call state。 |
 | Dynamic application listeners | `LATApplicationActionListener` + `LATApplicationListenerProvider` | `implemented` | 可见 System / User App listener 已动态注册；通过 `com.apple.LaunchServices.ApplicationsChanged` 刷新动态列表；WebClip 不注册。 |
+| Device locked / unlocked events | `LATLockStateEventSource` | `implemented` | `com.apple.springboard.lockstate` Darwin notification 触发，使用 `SBLockScreenManager isUILocked` 读取边沿状态；启动只 seed，不发送事件。 |
+| Power connected / disconnected events | `LATPowerStateEventSource` | `implemented` | `UIDeviceBatteryStateDidChangeNotification` 触发，按 `Charging` / `Full` 与 `Unplugged` 边沿发送事件；`Unknown` 忽略。 |
+| Headset connected / disconnected events | `LATMediaEventSource` | `implemented` | 监听 MediaRemote route notification、`AVSystemController` route/headset notifications，并用 `AVSystemController_HeadphoneJackIsConnectedAttribute` 读取有线耳机状态；当前语义不覆盖蓝牙耳机、CarPlay 或 AirPods。 |
+| Media playback events | `LATMediaEventSource` | `implemented` | `libactivator.now-playing.info-changed` 由 MediaRemote now-playing info notification 触发，收到通知后拉取最新 info 再派发且不做内容去重；`libactivator.now-playing.playing` / `paused` 使用 MediaRemote playback-state notification，启动只 seed，后续按状态边沿派发。 |
+| Network joined / left Wi-Fi events | `LATNetworkEventSource` | `implemented` | `SBWiFiManager` hook、`NWPathMonitor` 和旧 SpringBoard Wi-Fi/wake notification 触发状态重读；实际 Wi-Fi SSID 使用 `SBWiFiManager currentNetworkName` 读取；先尝试旧 per-SSID event name，再 fallback 到通用 joined/left event。 |
 | Music controls modal | 无 | `obsolete` | 旧 `SBNowPlayingAlertItem` modal 在现代 iOS 没有等价 UI，不作为当前 listener family 恢复。 |
 
 ## 下一阶段建议
 
-### 1. Low-Risk Event Sources
+### 1. 阶段 3 收口
 
-建议进入低风险 event source family，而不是继续补零散 action。优先考虑不依赖复杂触摸识别、能通过系统通知或 SpringBoard 状态稳定采集的事件。
+`device locked / unlocked`、`power connected / disconnected`、`headset connected / disconnected`、`media playback`、`network joined / left Wi-Fi` 已实现并纳入 `BuiltInEventSources` stable 覆盖。下一步不建议继续把阶段 3 无限扩大；剩余状态/通知型候选应按“已有现代信号证据优先、无证据先 probe”的方式小批量推进。
 
-当前 `device locked / unlocked` 已实现。`LATLockStateEventSource` 在 SpringBoard tweak 内承载 `com.apple.springboard.lockstate` Darwin notification，使用 `SBLockScreenManager isUILocked` 读取权威锁定状态，并只在锁定状态边沿变化时发送 `libactivator.device.locked` 或 `libactivator.device.unlocked`。adapter 在 `SpringBoard applicationDidFinishLaunching:` 后启动，启动时只 seed 当前锁定状态、不发送事件，避免在 tweak constructor 阶段提前创建 `SBLockScreenManager`；adapter 同时承接原先 `ActivatorTweak.m` 中 lockstate notification 触发 runtime state refresh 的职责，避免 tweak 入口重复注册同一通知。`power connected / disconnected` 也已实现，`LATPowerStateEventSource` 通过 `UIDeviceBatteryStateDidChangeNotification` 采集 `UIDeviceBatteryStateCharging` / `Full` 与 `Unplugged` 的边沿变化，`Unknown` 状态只忽略、不发送事件。`headset connected / disconnected` 已实现，`LATMediaEventSource` 监听 MediaRemote route notification、`AVSystemController_ActiveAudioRouteDidChangeNotification`、`AVSystemController_PickableRoutesDidChangeNotification` 和旧版 headset notification，然后使用 `AVSystemController_HeadphoneJackIsConnectedAttribute` 读取有线耳机连接状态；MediaRemote notification 的 object/userInfo 只作为诊断输出并触发一次 AVSystemController 状态重读。同一 source 也承接 `libactivator.audio.launch-playing-app` 所需的 MediaRemote now-playing app identity 查询，让 listener 只保留启动应用职责。
+建议优先评估：
 
-优先候选：
+- Network source 扩展：`LATNetworkEventSource` 已接入 `NWPathMonitor`，后续如果恢复蓝牙网络、VPN、蜂窝数据或特定网络变化事件，应继续放在该 source 内做状态机扩展，不新增旧 `SCNetworkReachability` 路径。
+- Car / watch / smart cover：先只做 probe 和设备 checklist，不直接实现。它们依赖设备能力、外设状态或私有服务，不能用 metadata presence 推断可用性。
+- Fingerprint / home indicator / gesture bar / 3D Touch：暂不进入实现。需要按设备能力和 iOS 版本逐项判断；没有 owner 确认前只保留 metadata。
 
-- device locked / unlocked：已实现，信号来源为 `com.apple.springboard.lockstate` + `SBLockScreenManager isUILocked`；仍需在真机 checklist 中覆盖手动锁定、自动锁定、回主屏幕解锁和回 App 解锁路径。
-- power connected / disconnected：已实现，信号来源为 `UIDeviceBatteryStateDidChangeNotification`；仍需在真机 checklist 中覆盖接入电源、断开电源、满电状态下重新接入等路径。
-- headset connected / disconnected：已实现，信号来源为 MediaRemote route notification 和 `AVSystemController` route/headset notifications；实际状态读取使用 `AVSystemController_HeadphoneJackIsConnectedAttribute`，MediaRemote notification payload 只作为诊断日志；当前语义限定为有线耳机，蓝牙、CarPlay、AirPods 等 route 不触发该事件。
-- Wi-Fi joined / left：已通过 Frida probe 确认现代 SpringBoard 仍提供 `SBWiFiManager +sharedInstance`、`-currentNetworkName`、`-isAssociated`、`-wiFiEnabled`、`-_updateCurrentNetwork` 和 `-_linkDidChange`；断开时 `-_linkDidChange` 可观测到 `currentNetworkName` 从当前 SSID 变为 `nil`。当前由 `LATNetworkEventSource` 承载，使用已验证的 `SBWiFiManager` hook 和现代 `NWPathMonitor` 触发状态重读，并保留旧 SpringBoard Wi-Fi / wake notification 作为低成本辅助触发；不使用旧 `SCNetworkReachability` fallback。
+### 2. 下一阶段主线：阶段 4 Hardware Button Event Sources
 
-实施边界：
+路线图下一大阶段是按钮与触摸手势 event sources。结合当前进展，建议先从硬件按钮事件源开始，而不是马上进入复杂触摸手势：
 
-- 每个 event family 使用独立 SpringBoard acquisition adapter，只负责采集信号并构造 `LAEvent`。
-- assignment、blacklist、mode、no-touch、unlock-to-send 继续交给现有 dispatch engine，不在 adapter 中重复实现。
-- 能模拟的 notification path 可进 stable tests；真实硬件状态变化进入 `RuntimeDevice` 或手工 checklist。
+- 先做 `volume up/down press` 和简单组合键 probe。已有 `LATHardwareActionListener` / `LATHIDEventSender` 只覆盖“发送 HID action”，不能复用为“采集物理按钮 event”；需要新建独立 button acquisition adapter，并通过 Frida 确认 SpringBoard / BackBoard 侧现代 hook 点。
+- 再评估 sleep/lock button press、double press、short hold。它和锁屏、电源 UI、SOS、Wallet/Apple Pay 等系统行为耦合更强，必须先确认不会吞掉系统默认行为或造成误触发。
+- Home/Menu button 仅在有 real home button 的设备上有意义，必须复用能力过滤结论；fake home indicator 设备不要注册 real-home-button-only 事件。
+- 所有按钮 event source 都只负责识别事件并提交 `LAEvent`，不要在 adapter 内处理 assignment、blacklist、mode、no-touch deferral 或 unlock-to-send。
 
-### 2. 暂缓 / 高风险
+### 3. 暂缓 / 高风险
 
 | Listener name | 标题 | 建议状态 | 说明 |
 | --- | --- | --- | --- |

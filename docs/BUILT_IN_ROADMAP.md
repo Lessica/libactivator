@@ -27,7 +27,7 @@
 
 - 1.9.13 Public API、常量、通知、headers、import 入口和 ABI skeleton 已对齐。
 - SpringBoard authoritative backend、state/config IPC、event dispatch IPC、runtime mode、no-touch deferral、unlock-to-send callback、metadata/resource lookup、localization fallback、listener metadata cache 已具备基础能力。
-- 1.9.13 event metadata 121 项已 staged。
+- event metadata 当前 123 项已 staged，其中 121 项来自 1.9.13，`libactivator.now-playing.playing` / `libactivator.now-playing.paused` 是阶段 3 明确新增的现代 MediaRemote 播放状态事件。
 - 1.9.13 listener/action metadata 过滤后 114 项已 staged；`libactivator.twitter.compose-tweet`、`libactivator.facebook.compose-post`、`libactivator.weibo.compose-post` 已排除。
 - `libactivator.system.nothing` 已实现并进入 stable tests。
 

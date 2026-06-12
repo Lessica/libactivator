@@ -964,6 +964,24 @@
 		<key>title</key>
 		<string>Current Track Changed</string>
 	</dict>
+	<key>libactivator.now-playing.paused</key>
+	<dict>
+		<key>description</key>
+		<string>Media playback paused</string>
+		<key>group</key>
+		<string>Media Playback</string>
+		<key>title</key>
+		<string>Paused</string>
+	</dict>
+	<key>libactivator.now-playing.playing</key>
+	<dict>
+		<key>description</key>
+		<string>Media playback started</string>
+		<key>group</key>
+		<string>Media Playback</string>
+		<key>title</key>
+		<string>Playing</string>
+	</dict>
 	<key>libactivator.power.connected</key>
 	<dict>
 		<key>description</key>
