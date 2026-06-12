@@ -10,10 +10,12 @@
 
 #import "LAActivator+Private.h"
 #import "LATBuiltInRegistry.h"
+#import "LATButtonEventSource.h"
 #import "LATNetworkEventSource.h"
 #import "LATRuntimeStateSource.h"
 
 #import <CaptainHook/CaptainHook.h>
+#import <HBLog.h>
 #import <UIKit/UIKit.h>
 
 CHDeclareClass(SpringBoard);
@@ -38,6 +40,8 @@ static Class gDashboardCameraPageViewControllerClass = nil;
 static Class gInCallTransientOverlayViewControllerClass = nil;
 static Class gLockScreenEmergencyCallViewControllerClass = nil;
 static Class gIconControllerClass = nil;
+
+static void LATNoteHIDEvent(IOHIDEventRef event) { [gBuiltInRegistry.buttonEventSource noteHIDEvent:event]; }
 
 static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
     if (gCoverSheetViewControllerClass && [viewController isKindOfClass:gCoverSheetViewControllerClass]) {
@@ -206,6 +210,16 @@ CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, eve
 
 #pragma mark - SpringBoard
 
+CHOptimizedMethod2(self, BOOL, SpringBoard, __handleHIDEvent, IOHIDEventRef, event, withUIEvent, id, uiEvent) {
+    LATNoteHIDEvent(event);
+    return CHSuper2(SpringBoard, __handleHIDEvent, event, withUIEvent, uiEvent);
+}
+
+CHOptimizedMethod1(self, BOOL, SpringBoard, __handleHIDEvent, IOHIDEventRef, event) {
+    LATNoteHIDEvent(event);
+    return CHSuper1(SpringBoard, __handleHIDEvent, event);
+}
+
 CHOptimizedMethod1(self, void, SpringBoard, applicationDidFinishLaunching, id, application) {
     CHSuper1(SpringBoard, applicationDidFinishLaunching, application);
     [gBuiltInRegistry startEventSources];
@@ -261,6 +275,17 @@ static void LATInstallHooks(void) {
         CHHook0(SBWiFiManager, _updateCurrentNetwork);
         CHHook0(SBWiFiManager, _linkDidChange);
         CHHook1(_UISystemGestureWindow, sendEvent);
+        Class springBoardClass = NSClassFromString(@"SpringBoard");
+        if ([springBoardClass instancesRespondToSelector:NSSelectorFromString(@"__handleHIDEvent:withUIEvent:")]) {
+            CHHook2(SpringBoard, __handleHIDEvent, withUIEvent);
+        } else {
+            HBLogWarn(@"Skipping SpringBoard __handleHIDEvent:withUIEvent: hook because selector is unavailable");
+        }
+        if ([springBoardClass instancesRespondToSelector:NSSelectorFromString(@"__handleHIDEvent:")]) {
+            CHHook1(SpringBoard, __handleHIDEvent);
+        } else {
+            HBLogWarn(@"Skipping SpringBoard __handleHIDEvent: hook because selector is unavailable");
+        }
         CHHook1(SpringBoard, applicationDidFinishLaunching);
     });
 }

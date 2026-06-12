@@ -44,15 +44,16 @@ Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使�
 | Headset connected / disconnected events | `LATMediaEventSource` | `implemented` | 监听 MediaRemote route notification、`AVSystemController` route/headset notifications，并用 `AVSystemController_HeadphoneJackIsConnectedAttribute` 读取有线耳机状态；当前语义不覆盖蓝牙耳机、CarPlay 或 AirPods。 |
 | Media playback events | `LATMediaEventSource` | `implemented` | `libactivator.now-playing.info-changed` 由 MediaRemote now-playing info notification 触发，收到通知后拉取最新 info 再派发且不做内容去重；`libactivator.now-playing.playing` / `paused` 使用 MediaRemote playback-state notification，启动只 seed，后续按状态边沿派发。 |
 | Network joined / left Wi-Fi events | `LATNetworkEventSource` | `implemented` | `SBWiFiManager` hook、`NWPathMonitor` 和旧 SpringBoard Wi-Fi/wake notification 触发状态重读；实际 Wi-Fi SSID 使用 `SBWiFiManager currentNetworkName` 读取；先尝试旧 per-SSID event name，再 fallback 到通用 joined/left event。 |
+| Volume button press events | `LATButtonEventSource` | `implemented` | SpringBoard `__handleHIDEvent*` hook 观察 Consumer page volume increment/decrement/Menu HID keyboard 事件；单键按 down/up 边沿在 release 时派发 `libactivator.volume.up.press` / `libactivator.volume.down.press`，两个音量键组合在第二个键 down 时派发 `libactivator.volume.both.press`，音量键 + Menu/Home 组合在第二个参与键 down 时派发 `libactivator.volume.up.press.with-menu` / `libactivator.volume.down.press.with-menu`；组合事件会消费本轮单键 press；不吞掉原始 HID，系统默认音量变化保持不变。 |
 | Music controls modal | 无 | `obsolete` | 旧 `SBNowPlayingAlertItem` modal 在现代 iOS 没有等价 UI，不作为当前 listener family 恢复。 |
 
 ## 下一阶段建议
 
 ### 1. 阶段 3 收口
 
-`device locked / unlocked`、`power connected / disconnected`、`headset connected / disconnected`、`media playback`、`network joined / left Wi-Fi` 已实现并纳入 `BuiltInEventSources` stable 覆盖。下一步不建议继续把阶段 3 无限扩大；剩余状态/通知型候选应按“已有现代信号证据优先、无证据先 probe”的方式小批量推进。
+`device locked / unlocked`、`power connected / disconnected`、`headset connected / disconnected`、`media playback`、`network joined / left Wi-Fi` 已实现并纳入 `BuiltInEventSources` stable 覆盖。阶段 3 当前视为收口完成；不要继续把状态/通知型候选作为主线无限扩大。
 
-建议优先评估：
+剩余状态/通知型候选进入 backlog，只在明确需要时小批量 probe：
 
 - Network source 扩展：`LATNetworkEventSource` 已接入 `NWPathMonitor`，后续如果恢复蓝牙网络、VPN、蜂窝数据或特定网络变化事件，应继续放在该 source 内做状态机扩展，不新增旧 `SCNetworkReachability` 路径。
 - Car / watch / smart cover：先只做 probe 和设备 checklist，不直接实现。它们依赖设备能力、外设状态或私有服务，不能用 metadata presence 推断可用性。
@@ -60,12 +61,29 @@ Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使�
 
 ### 2. 下一阶段主线：阶段 4 Hardware Button Event Sources
 
-路线图下一大阶段是按钮与触摸手势 event sources。结合当前进展，建议先从硬件按钮事件源开始，而不是马上进入复杂触摸手势：
+第一片 `volume up/down press` 已按独立采集 adapter 实现并通过真机验证。第二片 `volume both press` 已实现并通过真机验证。第三片 `volume up/down with menu` 已实现为同一 adapter 的 Menu/Home + 音量键组合状态机扩展。
 
-- 先做 `volume up/down press` 和简单组合键 probe。已有 `LATHardwareActionListener` / `LATHIDEventSender` 只覆盖“发送 HID action”，不能复用为“采集物理按钮 event”；需要新建独立 button acquisition adapter，并通过 Frida 确认 SpringBoard / BackBoard 侧现代 hook 点。
+已验证 / 待补充验收：
+
+- 已确认现代 iOS 上 SpringBoard hook 能稳定收到物理音量键 Consumer page `0x0c`、usage `0xe9` / `0xea`，并且单键 down/up 边沿可用。
+- 已确认按键后系统音量仍正常变化；本阶段即使 Activator assignment handled，也不吞掉原始音量行为。
+- 已确认先后按下两个音量键时只派发 `libactivator.volume.both.press`，松开两个键时不再额外派发单键 `press`。
+- `volume up/down with menu` 仍需真机确认：Menu/Home + 单个音量键先后按下时只派发对应 `with-menu` 事件，松开时不再额外派发单键 volume `press`；没有 real Home/Menu HID 的设备不应期望触发该事件。
+
+后续阶段：
+
+- 下一片再评估 `volume up/down hold short` 或 handled 后拦截默认音量行为；不要同时扩大太多按键语义。
 - 再评估 sleep/lock button press、double press、short hold。它和锁屏、电源 UI、SOS、Wallet/Apple Pay 等系统行为耦合更强，必须先确认不会吞掉系统默认行为或造成误触发。
 - Home/Menu button 仅在有 real home button 的设备上有意义，必须复用能力过滤结论；fake home indicator 设备不要注册 real-home-button-only 事件。
 - 所有按钮 event source 都只负责识别事件并提交 `LAEvent`，不要在 adapter 内处理 assignment、blacklist、mode、no-touch deferral 或 unlock-to-send。
+
+后续语义约束：
+
+- 当前 `volume up/down press` 是“保留默认音量行为”的第一片实现；后续需要恢复“如果 Activator event 被 handled，则拦截默认音量行为”的能力。实现前必须重新设计 hook 返回值和原始事件转发路径，避免重复调音量或误吞系统事件。
+- `press` 应当是未被更高优先级按键手势消费后的 fallback。如果后续同一轮按键序列被识别为 long press、double press、both press、with menu 或其他组合键，就不能再额外派发对应单键 `press`。
+- 按键 state machine 需要为每个物理键保存 down/up、是否已被组合键消费、是否已触发 hold，以及取消/丢失 up 的恢复路径；不要只靠单个布尔值扩展到复杂手势。
+- 组合键和 hold 的识别必须有确定的优先级和超时策略，并且这个策略需要能解释“先按上再按下”“先按下再按上”“按住后松开其中一个键”等顺序差异。
+- 如果未来开始吞掉默认行为，必须区分“事件已提交给 Activator dispatch engine”和“event.handled 为 YES”。前者不能作为拦截依据，只有 listener 真正 handled 后才能决定是否拦截原始系统行为。
 
 ### 3. 暂缓 / 高风险
 

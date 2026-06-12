@@ -11,6 +11,7 @@
 @class SBRingerControl;
 @class SBVolumeControl;
 @class CSCoverSheetViewController;
+@class LATButtonEventSource;
 @class LATLockStateEventSource;
 @class LATMediaEventSource;
 @class LATNetworkEventSource;
@@ -30,6 +31,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong, readonly) LATPowerStateEventSource *powerStateEventSource;
 @property(nonatomic, strong, readonly) LATMediaEventSource *mediaEventSource;
 @property(nonatomic, strong, readonly) LATNetworkEventSource *networkEventSource;
+@property(nonatomic, strong, readonly) LATButtonEventSource *buttonEventSource;
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithActivator:(LAActivator *)activator NS_DESIGNATED_INITIALIZER;

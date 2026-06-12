@@ -15,6 +15,7 @@
 #import "LATApplicationLauncher.h"
 #import "LATApplicationListenerProvider.h"
 #import "LATBuiltInListenerRegistrant.h"
+#import "LATButtonEventSource.h"
 #import "LATHardwareActionListener.h"
 #import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
@@ -41,6 +42,7 @@
 @property(nonatomic, strong, readwrite) LATPowerStateEventSource *powerStateEventSource;
 @property(nonatomic, strong, readwrite) LATMediaEventSource *mediaEventSource;
 @property(nonatomic, strong, readwrite) LATNetworkEventSource *networkEventSource;
+@property(nonatomic, strong, readwrite) LATButtonEventSource *buttonEventSource;
 
 @end
 
@@ -62,6 +64,7 @@
         _powerStateEventSource = [[LATPowerStateEventSource alloc] init];
         _mediaEventSource = [[LATMediaEventSource alloc] init];
         _networkEventSource = [[LATNetworkEventSource alloc] init];
+        _buttonEventSource = [[LATButtonEventSource alloc] init];
 
         [self registerBuiltInListenersWithActivator:activator];
     }
@@ -79,6 +82,7 @@
     [self.powerStateEventSource start];
     [self.mediaEventSource start];
     [self.networkEventSource start];
+    [self.buttonEventSource start];
 }
 
 - (NSArray<NSDictionary<NSString *, id> *> *)builtInListenerFactoryConfigurations {

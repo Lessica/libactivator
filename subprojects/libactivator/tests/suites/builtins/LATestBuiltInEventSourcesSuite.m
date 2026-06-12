@@ -29,6 +29,9 @@
     [recorder expect:NSClassFromString(@"LATNetworkEventSource") != Nil
             caseName:@"network-event-source-loaded"
               reason:@"LATNetworkEventSource class was not loaded in SpringBoard"];
+    [recorder expect:NSClassFromString(@"LATButtonEventSource") != Nil
+            caseName:@"button-event-source-loaded"
+              reason:@"LATButtonEventSource class was not loaded in SpringBoard"];
     [recorder expect:NSClassFromString(@"LATRuntimeStateSource") != Nil
             caseName:@"runtime-state-source-loaded"
               reason:@"LATRuntimeStateSource class was not loaded in SpringBoard"];
@@ -128,6 +131,52 @@
                      [activator eventWithName:LAEventNameNetworkLeftWiFi isCompatibleWithMode:LAEventModeLockScreen]
             caseName:@"wifi-left-all-modes-compatible"
               reason:@"Wi-Fi left event was not compatible with all event modes"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeUpPress]
+            caseName:@"volume-up-press-event-available"
+              reason:@"Volume up press event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeDownPress]
+            caseName:@"volume-down-press-event-available"
+              reason:@"Volume down press event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeBothPress]
+            caseName:@"volume-both-press-event-available"
+              reason:@"Volume both press event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeUpPressWithMenu]
+            caseName:@"volume-up-press-with-menu-event-available"
+              reason:@"Volume up press with menu event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeDownPressWithMenu]
+            caseName:@"volume-down-press-with-menu-event-available"
+              reason:@"Volume down press with menu event metadata was not available"];
+    [recorder expect:[activator eventWithName:LAEventNameVolumeUpPress isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameVolumeUpPress isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameVolumeUpPress isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"volume-up-press-all-modes-compatible"
+              reason:@"Volume up press event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameVolumeDownPress isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameVolumeDownPress isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameVolumeDownPress isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"volume-down-press-all-modes-compatible"
+              reason:@"Volume down press event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameVolumeBothPress isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameVolumeBothPress isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameVolumeBothPress isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"volume-both-press-all-modes-compatible"
+              reason:@"Volume both press event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameVolumeUpPressWithMenu
+                         isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameVolumeUpPressWithMenu
+                         isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameVolumeUpPressWithMenu
+                         isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"volume-up-press-with-menu-all-modes-compatible"
+              reason:@"Volume up press with menu event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameVolumeDownPressWithMenu
+                         isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameVolumeDownPressWithMenu
+                         isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameVolumeDownPressWithMenu
+                         isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"volume-down-press-with-menu-all-modes-compatible"
+              reason:@"Volume down press with menu event was not compatible with all event modes"];
 }
 
 @end
