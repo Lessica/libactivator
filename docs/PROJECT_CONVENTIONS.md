@@ -76,7 +76,8 @@
 - 目前已确认需要语义翻译的 flat key family 是 `LAEventListener(<mode>)-<eventName>`、`LABlacklisted-<displayIdentifier>` 和 `LAHasSeenListener-<listenerName>`。`LAMenuSettings`、`LAHideAds`、`LAHideIcon`、`LAShowHiddenEvents`、`LAIgnoreProtectedApplications`、`LAHasNewCydia`、`LASystemVersionPrompt-<systemVersion>` 以及第三方自定义 preference key 没有当前 v2 runtime 等价模型，应作为 legacy passthrough 数据处理，除非后续 Settings UI 或安装迁移阶段重新定义其语义。
 - 资源基线来自 1.9.13：event metadata 使用 `Library/Activator/Events/bundled.plist`，listener/action metadata 使用 `Library/Activator/Listeners/bundled.plist`，目录式 `Info.plist` lookup 只作为第三方扩展兼容路径。
 - runtime lookup 必须先走 `jbroot(...)` 后的路径；对历史 metadata 中的绝对路径，可先查 `jbroot(path)`，不存在时再尝试原路径。
-- `required-capabilities` 这类设备能力字段属于资源模型有效性，应通过 MobileGestalt 等能力查询参与过滤，不要引入无关重量级 API。
+- `required-capabilities` 这类设备能力字段属于资源模型有效性，应通过 MobileGestalt 等能力查询参与过滤，不要引入无关重量级 API。`real-home-button` / `fake-home-button` 不是可直接使用 `MGGetBoolAnswer` 的普通 key，应通过 `MGCopyAnswer(CFSTR("HomeButtonType"))` 特殊处理：真机验证中有实体 Home 键返回 `1`，无实体 Home 键返回 `2`；`0` 也是有效返回值，但当前尚未确认它对应哪类设备，不能把它当成未就绪状态或擅自映射。
+- 测试和 probe 不要为了构造场景随意写 production resource 目录、用户真实配置目录或没有命名空间的临时文件。优先使用纯内存输入或测试专用 backend/fake；确实需要在 SpringBoard 进程落盘时，使用原始路径 `/var/mobile/Library/Caches/libactivator.tests.*`，不要走 `jbroot`，必须检查写入/创建返回值，并在同一测试中清理。
 - listener localization、metadata、small icon 等高频查询应通过专门 cache/service 统一处理，缓存清理策略也应集中管理，例如内存警告时清理 listener metadata cache。
 - Dynamic application listener refresh 运行在 SpringBoard runtime 内，只能做注册所需的最小快照：应用 identifier、System/User 分类、LaunchServices 已提供的 hidden/launchProhibited 信号。refresh 阶段禁止读取每个 bundle 的 `Info.plist`、禁止计算或按 display name 排序、禁止为 Settings UI 展示提前准备 metadata。title/group 等展示字段必须在 metadata 查询时懒加载；Settings UI 需要排序时应在 Settings 层单独处理。
 
@@ -100,6 +101,7 @@
 - `unlock-to-send` 当前只实现 callback 兼容路径，不实现 passcode submit 或完整主动解锁流程。
 - 需要操作 SpringBoard / CoverSheet UI 层级的 SPI 必须在主队列执行；不能因为服务类 SPI 需要避开主队列，就把 UI 控制器方法也放到后台队列。动态应用中的 `com.apple.camera` 锁屏 special case 只表达“打开锁屏相机”，不表达 toggle 或返回锁屏；熄屏时应通过 tweak-side `LATRuntimeStateSource` 发送 Power HID 短按，并等待它接收到 screen-on runtime state 后再提交锁屏相机 UI 切换，不直接调用 `SBBacklightController -turnOnScreenFullyWithBacklightSource:`，也不通过 `LAActivator` facade 承接 screen wake command。
 - HID key down/up 事件应使用不同 timestamp 表达短按间隔；投递层仍连续 dispatch down/up，不要同时再用 `dispatch_after` 表达同一段按键时长。
+- tweak-side synthetic HID 必须通过 `LATHIDEventSender` 统一发送，并用高位 `senderID` 标记；HID event source 在解析物理按键前应过滤 `senderID` 最高位为 1 的事件，避免 action 发出的 HID 被 built-in event source 回流识别。不要用 `eventFlags` 标记 synthetic keyboard event；实测会导致事件失效。
 - `otherListenerDidHandleEvent:` 是全局 handled-edge notification：事件从未处理变成已处理时发送一次，通知除当前处理者以外的已注册 listener；不从当前待分发列表中移除后续 listener。
 - `LAEvent.handled` 表示事件已被 listener 消费，不表示 action 最终执行成功。built-in action listener 收到自己 allowlist 内的合法 listener name 后，应在 runtime 层消费事件；缺少目标状态、私有 SPI 不存在、系统调用失败、metadata 运行时失配等执行失败应记录英文诊断，但不应把原始事件继续泄漏出去。只有 unknown listener name、未注册能力、dispatch 前兼容性过滤失败这类“不属于该 listener 处理范围”的情况才保持 unhandled。
 

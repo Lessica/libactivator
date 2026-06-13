@@ -37,7 +37,7 @@
 
 范围：
 
-- `required-capabilities` 通过 MobileGestalt 能力 key 过滤，例如 `ipad`、`touch-id`、`real-home-button`、`fake-home-button`、`watch-companion`。
+- `required-capabilities` 通过 MobileGestalt 能力查询过滤，例如 `ipad`、`touch-id`、`watch-companion` 等普通 key 走 `MGGetBoolAnswer`；`real-home-button` / `fake-home-button` 走 `MGCopyAnswer(CFSTR("HomeButtonType"))` 特殊映射，已验证 `1` 表示实体 Home 键，`2` 表示无实体 Home 键；`0` 是有效返回值但语义尚未确认，不能当作查询未就绪状态。
 - `small-icons` 路径按 `jbroot(path)` 优先、原路径 fallback 的方式解析。
 - resource manager 缓存必须有并发保护，清理策略要集中。
 - resource tests 覆盖 bundled plist、目录式 third-party `Info.plist`、required capabilities、small-icons path fallback、excluded social compose actions。

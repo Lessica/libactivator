@@ -36,8 +36,13 @@ static uint64_t LATHIDMachTimeForTimeInterval(NSTimeInterval timeInterval) {
 }
 
 @interface LATHIDEventSender ()
+
+// Dispatch queue
 @property(nonatomic, strong) dispatch_queue_t queue;
-@property(nonatomic, assign) IOHIDEventSystemClientRef client;
+
+// Lazily initialized CoreFoundation client
+@property(nonatomic, assign, nullable) IOHIDEventSystemClientRef client;
+
 @end
 
 @implementation LATHIDEventSender

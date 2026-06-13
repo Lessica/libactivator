@@ -11,6 +11,7 @@
 #import <dispatch/dispatch.h>
 #import <roothide.h>
 
+extern CFTypeRef MGCopyAnswer(CFStringRef key);
 extern Boolean MGGetBoolAnswer(CFStringRef key);
 
 @interface LAResourceManager ()
@@ -21,6 +22,8 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 @property(nonatomic, strong) NSMutableDictionary *listenerBundles;
 @property(nonatomic, strong) NSDictionary *bundledEventInfo;
 @property(nonatomic, strong) NSDictionary *bundledListenerInfo;
+@property(nonatomic, assign) BOOL didReadHomeButtonType;
+@property(nonatomic, assign) NSInteger cachedHomeButtonType;
 
 // Concurrency
 @property(nonatomic, strong) dispatch_queue_t cacheQueue;
@@ -191,7 +194,7 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
         if (![value isKindOfClass:NSString.class] || [value length] == 0) {
             return NO;
         }
-        if (!MGGetBoolAnswer((__bridge CFStringRef)value)) {
+        if (![self requiredCapabilityIsSatisfied:value]) {
             return NO;
         }
     }
@@ -520,6 +523,46 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 
     UIImage *image = [UIImage imageWithData:data scale:actualScale > 0.0f ? actualScale : 1.0f];
     return image;
+}
+
+#pragma mark - Capabilities
+
+- (NSInteger)homeButtonType {
+    __block BOOL didReadHomeButtonType = NO;
+    __block NSInteger homeButtonType = 0;
+    dispatch_sync(self.cacheQueue, ^{
+        didReadHomeButtonType = self.didReadHomeButtonType;
+        homeButtonType = self.cachedHomeButtonType;
+    });
+    if (didReadHomeButtonType) {
+        return homeButtonType;
+    }
+
+    id value = CFBridgingRelease(MGCopyAnswer(CFSTR("HomeButtonType")));
+    NSInteger resolvedHomeButtonType = 0;
+    if ([value respondsToSelector:@selector(integerValue)]) {
+        resolvedHomeButtonType = [value integerValue];
+    }
+
+    dispatch_sync(self.cacheQueue, ^{
+        if (!self.didReadHomeButtonType) {
+            self.cachedHomeButtonType = resolvedHomeButtonType;
+            self.didReadHomeButtonType = YES;
+        }
+        homeButtonType = self.cachedHomeButtonType;
+    });
+    return homeButtonType;
+}
+
+- (BOOL)requiredCapabilityIsSatisfied:(NSString *)capability {
+    if ([capability isEqualToString:@"real-home-button"]) {
+        return [self homeButtonType] == 1;
+    }
+    if ([capability isEqualToString:@"fake-home-button"]) {
+        return [self homeButtonType] == 2;
+    }
+
+    return MGGetBoolAnswer((__bridge CFStringRef)capability);
 }
 
 @end

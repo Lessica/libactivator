@@ -16,11 +16,16 @@
 #import <HBLog.h>
 
 @interface LATApplicationActionListener ()
+
+// Dependencies
 @property(nonatomic, strong) LATApplicationLauncher *launcher;
 @property(nonatomic, strong) LATLockScreenCameraLauncher *lockScreenCameraLauncher;
-@property(nonatomic, weak) LATBuiltInRegistry *registry;
-@property(nonatomic, copy) NSDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier;
+@property(nonatomic, weak, nullable) LATBuiltInRegistry *registry;
+
+// Descriptor cache
 @property(nonatomic, strong) dispatch_queue_t descriptorQueue;
+@property(nonatomic, copy) NSDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier;
+
 @end
 
 @implementation LATApplicationActionListener

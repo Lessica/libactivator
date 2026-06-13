@@ -13,6 +13,11 @@
 @interface LAActivator (LegacyCompatibility)
 - (nullable id)_getObjectForPreference:(NSString *)preference;
 - (void)_setObject:(nullable id)value forPreference:(NSString *)preference;
+- (NSDictionary<NSString *, NSNumber *> *)la_eventDispatchCounts;
+- (NSDictionary<NSString *, NSNumber *> *)la_listenerReceiveCounts;
+- (NSDictionary<NSString *, NSNumber *> *)la_eventAbortCounts;
+- (NSDictionary<NSString *, NSNumber *> *)la_listenerAbortCounts;
+- (void)la_resetDispatchCounts;
 @end
 
 @interface LACommandLineTool : NSObject
@@ -87,7 +92,6 @@
     if ([command isEqualToString:@"postinst"]) {
         return [self runPostInstallCommand];
     }
-
     [self printUsage];
     return 0;
 }
@@ -119,6 +123,11 @@
             exitStatusForEvent:event
                 failureMessage:[NSString stringWithFormat:@"Deactivate event was not handled: %@", argument ?: @""]];
     }
+#if DEBUG
+    if ([command isEqualToString:@"counts"]) {
+        return [self runCountsCommandWithArgument:argument];
+    }
+#endif
 
     [self printUsage];
     return 0;
@@ -133,6 +142,9 @@
 #if DEBUG
     if ([command isEqualToString:@"set-all"]) {
         return [self runSetAllModesCommandWithEventName:firstArgument listenerName:secondArgument];
+    }
+    if ([command isEqualToString:@"counts"]) {
+        return [self runCountsCommandWithKind:firstArgument name:secondArgument];
     }
 #endif
     if ([command isEqualToString:@"activate"]) {
@@ -171,6 +183,52 @@
     }
     return 0;
 }
+
+- (int)runCountsCommandWithArgument:(NSString *)argument {
+    if ([argument isEqualToString:@"events"]) {
+        [self printCounts:self.activator.la_eventDispatchCounts];
+        return 0;
+    }
+    if ([argument isEqualToString:@"listeners"]) {
+        [self printCounts:self.activator.la_listenerReceiveCounts];
+        return 0;
+    }
+    if ([argument isEqualToString:@"abort-events"]) {
+        [self printCounts:self.activator.la_eventAbortCounts];
+        return 0;
+    }
+    if ([argument isEqualToString:@"abort-listeners"]) {
+        [self printCounts:self.activator.la_listenerAbortCounts];
+        return 0;
+    }
+    if ([argument isEqualToString:@"reset"]) {
+        [self.activator la_resetDispatchCounts];
+        return 0;
+    }
+    [self printUsage];
+    return 0;
+}
+
+- (int)runCountsCommandWithKind:(NSString *)kind name:(NSString *)name {
+    if ([kind isEqualToString:@"event"]) {
+        [self printCountForName:name counts:self.activator.la_eventDispatchCounts];
+        return 0;
+    }
+    if ([kind isEqualToString:@"listener"]) {
+        [self printCountForName:name counts:self.activator.la_listenerReceiveCounts];
+        return 0;
+    }
+    if ([kind isEqualToString:@"abort-event"]) {
+        [self printCountForName:name counts:self.activator.la_eventAbortCounts];
+        return 0;
+    }
+    if ([kind isEqualToString:@"abort-listener"]) {
+        [self printCountForName:name counts:self.activator.la_listenerAbortCounts];
+        return 0;
+    }
+    [self printUsage];
+    return 0;
+}
 #endif
 
 - (int)runPostInstallCommand {
@@ -205,6 +263,25 @@
 - (NSArray<NSString *> *)allAssignmentModes {
     return @[ LAEventModeSpringBoard, LAEventModeApplication, LAEventModeLockScreen ];
 }
+
+- (void)printCounts:(NSDictionary<NSString *, NSNumber *> *)counts {
+    NSArray<NSString *> *keys = [counts.allKeys sortedArrayUsingSelector:@selector(compare:)];
+    for (NSString *key in keys) {
+        NSNumber *count = counts[key];
+        if (![count isKindOfClass:NSNumber.class]) {
+            continue;
+        }
+        if ([count unsignedLongLongValue] == 0) {
+            continue;
+        }
+        printf("%llu\t%s\n", [count unsignedLongLongValue], [key UTF8String]);
+    }
+}
+
+- (void)printCountForName:(NSString *)name counts:(NSDictionary<NSString *, NSNumber *> *)counts {
+    NSNumber *count = counts[name ?: @""];
+    printf("%llu\n", [count isKindOfClass:NSNumber.class] ? [count unsignedLongLongValue] : 0);
+}
 #endif
 
 - (void)printUsage {
@@ -219,6 +296,15 @@
     fputs("\tactivator set <key> <value>\n", stderr);
 #if DEBUG
     fputs("\tactivator set-all <event> <listener>\n", stderr);
+    fputs("\tactivator counts event <event>\n", stderr);
+    fputs("\tactivator counts listener <listener>\n", stderr);
+    fputs("\tactivator counts abort-event <event>\n", stderr);
+    fputs("\tactivator counts abort-listener <listener>\n", stderr);
+    fputs("\tactivator counts events\n", stderr);
+    fputs("\tactivator counts listeners\n", stderr);
+    fputs("\tactivator counts abort-events\n", stderr);
+    fputs("\tactivator counts abort-listeners\n", stderr);
+    fputs("\tactivator counts reset\n", stderr);
 #endif
     fputs("\tactivator activate <event> [<listener>]\n", stderr);
     fputs("\tactivator send <listener>\n", stderr);

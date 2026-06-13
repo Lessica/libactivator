@@ -16,6 +16,7 @@
     NSString *nowPlayingInfoChangedEventName = @"libactivator.now-playing.info-changed";
     NSString *nowPlayingPlayingEventName = @"libactivator.now-playing.playing";
     NSString *nowPlayingPausedEventName = @"libactivator.now-playing.paused";
+    NSString *lockPressTripleEventName = @"libactivator.lock.press.triple";
 
     [recorder expect:NSClassFromString(@"LATLockStateEventSource") != Nil
             caseName:@"lock-state-event-source-loaded"
@@ -140,12 +141,60 @@
     [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeBothPress]
             caseName:@"volume-both-press-event-available"
               reason:@"Volume both press event metadata was not available"];
-    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeUpPressWithMenu]
-            caseName:@"volume-up-press-with-menu-event-available"
-              reason:@"Volume up press with menu event metadata was not available"];
-    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeDownPressWithMenu]
-            caseName:@"volume-down-press-with-menu-event-available"
-              reason:@"Volume down press with menu event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeUpDown]
+            caseName:@"volume-up-down-event-available"
+              reason:@"Volume up-down event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeDownUp]
+            caseName:@"volume-down-up-event-available"
+              reason:@"Volume down-up event metadata was not available"];
+    NSArray<NSString *> *availableEventNames = [activator availableEventNames];
+    BOOL volumeUpPressWithMenuIsAvailable = [availableEventNames containsObject:LAEventNameVolumeUpPressWithMenu];
+    BOOL volumeDownPressWithMenuIsAvailable = [availableEventNames containsObject:LAEventNameVolumeDownPressWithMenu];
+    BOOL lockPressWithMenuIsAvailable = [availableEventNames containsObject:LAEventNameLockPressWithMenu];
+    BOOL menuHoldLongIsAvailable = [availableEventNames containsObject:LAEventNameMenuHoldLong];
+    BOOL menuHoldShortIsAvailable = [availableEventNames containsObject:LAEventNameMenuHoldShort];
+    BOOL menuPressDoubleIsAvailable = [availableEventNames containsObject:LAEventNameMenuPressDouble];
+    BOOL menuPressSingleIsAvailable = [availableEventNames containsObject:LAEventNameMenuPressSingle];
+    BOOL menuPressTripleIsAvailable = [availableEventNames containsObject:LAEventNameMenuPressTriple];
+    [recorder expect:volumeUpPressWithMenuIsAvailable == volumeDownPressWithMenuIsAvailable
+            caseName:@"volume-with-menu-events-share-capability-filter"
+              reason:@"Volume with menu events did not share the same required-capabilities filter"];
+    [recorder expect:lockPressWithMenuIsAvailable == menuPressSingleIsAvailable
+            caseName:@"lock-press-with-menu-shares-menu-capability-filter"
+              reason:@"Lock press with menu event did not share the real home button capability filter"];
+    [recorder expect:menuHoldLongIsAvailable == menuHoldShortIsAvailable &&
+                     menuHoldShortIsAvailable == menuPressDoubleIsAvailable &&
+                     menuPressDoubleIsAvailable == menuPressSingleIsAvailable &&
+                     menuPressSingleIsAvailable == menuPressTripleIsAvailable
+            caseName:@"menu-button-events-share-capability-filter"
+              reason:@"Menu button events did not share the same required-capabilities filter"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeUpHoldShort]
+            caseName:@"volume-up-hold-short-event-available"
+              reason:@"Volume up short hold event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeDownHoldShort]
+            caseName:@"volume-down-hold-short-event-available"
+              reason:@"Volume down short hold event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeMuteOn]
+            caseName:@"volume-mute-event-available"
+              reason:@"Volume mute event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeMuteOff]
+            caseName:@"volume-unmute-event-available"
+              reason:@"Volume unmute event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeToggleMuteTwice]
+            caseName:@"volume-toggle-mute-twice-event-available"
+              reason:@"Volume toggle mute twice event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameLockHoldLong]
+            caseName:@"lock-hold-long-event-available"
+              reason:@"Lock long hold event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameLockHoldShort]
+            caseName:@"lock-hold-short-event-available"
+              reason:@"Lock short hold event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameLockPressDouble]
+            caseName:@"lock-press-double-event-available"
+              reason:@"Lock double press event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:lockPressTripleEventName]
+            caseName:@"lock-press-triple-event-available"
+              reason:@"Lock triple press event metadata was not available"];
     [recorder expect:[activator eventWithName:LAEventNameVolumeUpPress isCompatibleWithMode:LAEventModeSpringBoard] &&
                      [activator eventWithName:LAEventNameVolumeUpPress isCompatibleWithMode:LAEventModeApplication] &&
                      [activator eventWithName:LAEventNameVolumeUpPress isCompatibleWithMode:LAEventModeLockScreen]
@@ -161,22 +210,122 @@
                      [activator eventWithName:LAEventNameVolumeBothPress isCompatibleWithMode:LAEventModeLockScreen]
             caseName:@"volume-both-press-all-modes-compatible"
               reason:@"Volume both press event was not compatible with all event modes"];
-    [recorder expect:[activator eventWithName:LAEventNameVolumeUpPressWithMenu
+    [recorder expect:[activator eventWithName:LAEventNameVolumeUpDown isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameVolumeUpDown isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameVolumeUpDown isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"volume-up-down-all-modes-compatible"
+              reason:@"Volume up-down event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameVolumeDownUp isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameVolumeDownUp isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameVolumeDownUp isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"volume-down-up-all-modes-compatible"
+              reason:@"Volume down-up event was not compatible with all event modes"];
+    [recorder expect:!volumeUpPressWithMenuIsAvailable || ([activator eventWithName:LAEventNameVolumeUpPressWithMenu
+                                                               isCompatibleWithMode:LAEventModeSpringBoard] &&
+                                                           [activator eventWithName:LAEventNameVolumeUpPressWithMenu
+                                                               isCompatibleWithMode:LAEventModeApplication] &&
+                                                           [activator eventWithName:LAEventNameVolumeUpPressWithMenu
+                                                               isCompatibleWithMode:LAEventModeLockScreen])
+            caseName:@"volume-up-press-with-menu-all-modes-compatible-when-available"
+              reason:@"Available volume up press with menu event was not compatible with all event modes"];
+    [recorder expect:!volumeDownPressWithMenuIsAvailable || ([activator eventWithName:LAEventNameVolumeDownPressWithMenu
+                                                                 isCompatibleWithMode:LAEventModeSpringBoard] &&
+                                                             [activator eventWithName:LAEventNameVolumeDownPressWithMenu
+                                                                 isCompatibleWithMode:LAEventModeApplication] &&
+                                                             [activator eventWithName:LAEventNameVolumeDownPressWithMenu
+                                                                 isCompatibleWithMode:LAEventModeLockScreen])
+            caseName:@"volume-down-press-with-menu-all-modes-compatible-when-available"
+              reason:@"Available volume down press with menu event was not compatible with all event modes"];
+    [recorder expect:!menuHoldLongIsAvailable ||
+                     ([activator eventWithName:LAEventNameMenuHoldLong isCompatibleWithMode:LAEventModeSpringBoard] &&
+                      [activator eventWithName:LAEventNameMenuHoldLong isCompatibleWithMode:LAEventModeApplication] &&
+                      [activator eventWithName:LAEventNameMenuHoldLong isCompatibleWithMode:LAEventModeLockScreen])
+            caseName:@"menu-hold-long-all-modes-compatible-when-available"
+              reason:@"Available menu long hold event was not compatible with all event modes"];
+    [recorder expect:!menuHoldShortIsAvailable ||
+                     ([activator eventWithName:LAEventNameMenuHoldShort isCompatibleWithMode:LAEventModeSpringBoard] &&
+                      [activator eventWithName:LAEventNameMenuHoldShort isCompatibleWithMode:LAEventModeApplication] &&
+                      [activator eventWithName:LAEventNameMenuHoldShort isCompatibleWithMode:LAEventModeLockScreen])
+            caseName:@"menu-hold-short-all-modes-compatible-when-available"
+              reason:@"Available menu short hold event was not compatible with all event modes"];
+    [recorder
+          expect:!menuPressDoubleIsAvailable ||
+                 ([activator eventWithName:LAEventNameMenuPressDouble isCompatibleWithMode:LAEventModeSpringBoard] &&
+                  [activator eventWithName:LAEventNameMenuPressDouble isCompatibleWithMode:LAEventModeApplication] &&
+                  [activator eventWithName:LAEventNameMenuPressDouble isCompatibleWithMode:LAEventModeLockScreen])
+        caseName:@"menu-press-double-all-modes-compatible-when-available"
+          reason:@"Available menu double press event was not compatible with all event modes"];
+    [recorder
+          expect:!menuPressSingleIsAvailable ||
+                 ([activator eventWithName:LAEventNameMenuPressSingle isCompatibleWithMode:LAEventModeSpringBoard] &&
+                  [activator eventWithName:LAEventNameMenuPressSingle isCompatibleWithMode:LAEventModeApplication] &&
+                  [activator eventWithName:LAEventNameMenuPressSingle isCompatibleWithMode:LAEventModeLockScreen])
+        caseName:@"menu-press-single-all-modes-compatible-when-available"
+          reason:@"Available menu single press event was not compatible with all event modes"];
+    [recorder
+          expect:!menuPressTripleIsAvailable ||
+                 ([activator eventWithName:LAEventNameMenuPressTriple isCompatibleWithMode:LAEventModeSpringBoard] &&
+                  [activator eventWithName:LAEventNameMenuPressTriple isCompatibleWithMode:LAEventModeApplication] &&
+                  [activator eventWithName:LAEventNameMenuPressTriple isCompatibleWithMode:LAEventModeLockScreen])
+        caseName:@"menu-press-triple-all-modes-compatible-when-available"
+          reason:@"Available menu triple press event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameLockHoldLong isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameLockHoldLong isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameLockHoldLong isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"lock-hold-long-all-modes-compatible"
+              reason:@"Lock long hold event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameLockHoldShort isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameLockHoldShort isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameLockHoldShort isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"lock-hold-short-all-modes-compatible"
+              reason:@"Lock short hold event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameLockPressDouble isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameLockPressDouble isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameLockPressDouble isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"lock-press-double-all-modes-compatible"
+              reason:@"Lock double press event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:lockPressTripleEventName isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:lockPressTripleEventName isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:lockPressTripleEventName isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"lock-press-triple-all-modes-compatible"
+              reason:@"Lock triple press event was not compatible with all event modes"];
+    [recorder
+          expect:!lockPressWithMenuIsAvailable ||
+                 ([activator eventWithName:LAEventNameLockPressWithMenu isCompatibleWithMode:LAEventModeSpringBoard] &&
+                  [activator eventWithName:LAEventNameLockPressWithMenu isCompatibleWithMode:LAEventModeApplication] &&
+                  [activator eventWithName:LAEventNameLockPressWithMenu isCompatibleWithMode:LAEventModeLockScreen])
+        caseName:@"lock-press-with-menu-all-modes-compatible-when-available"
+          reason:@"Available lock press with menu event was not compatible with all event modes"];
+    [recorder
+          expect:[activator eventWithName:LAEventNameVolumeUpHoldShort isCompatibleWithMode:LAEventModeSpringBoard] &&
+                 [activator eventWithName:LAEventNameVolumeUpHoldShort isCompatibleWithMode:LAEventModeApplication] &&
+                 [activator eventWithName:LAEventNameVolumeUpHoldShort isCompatibleWithMode:LAEventModeLockScreen]
+        caseName:@"volume-up-hold-short-all-modes-compatible"
+          reason:@"Volume up short hold event was not compatible with all event modes"];
+    [recorder
+          expect:[activator eventWithName:LAEventNameVolumeDownHoldShort isCompatibleWithMode:LAEventModeSpringBoard] &&
+                 [activator eventWithName:LAEventNameVolumeDownHoldShort isCompatibleWithMode:LAEventModeApplication] &&
+                 [activator eventWithName:LAEventNameVolumeDownHoldShort isCompatibleWithMode:LAEventModeLockScreen]
+        caseName:@"volume-down-hold-short-all-modes-compatible"
+          reason:@"Volume down short hold event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameVolumeMuteOn isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameVolumeMuteOn isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameVolumeMuteOn isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"volume-mute-all-modes-compatible"
+              reason:@"Volume mute event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameVolumeMuteOff isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameVolumeMuteOff isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameVolumeMuteOff isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"volume-unmute-all-modes-compatible"
+              reason:@"Volume unmute event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameVolumeToggleMuteTwice
                          isCompatibleWithMode:LAEventModeSpringBoard] &&
-                     [activator eventWithName:LAEventNameVolumeUpPressWithMenu
+                     [activator eventWithName:LAEventNameVolumeToggleMuteTwice
                          isCompatibleWithMode:LAEventModeApplication] &&
-                     [activator eventWithName:LAEventNameVolumeUpPressWithMenu
+                     [activator eventWithName:LAEventNameVolumeToggleMuteTwice
                          isCompatibleWithMode:LAEventModeLockScreen]
-            caseName:@"volume-up-press-with-menu-all-modes-compatible"
-              reason:@"Volume up press with menu event was not compatible with all event modes"];
-    [recorder expect:[activator eventWithName:LAEventNameVolumeDownPressWithMenu
-                         isCompatibleWithMode:LAEventModeSpringBoard] &&
-                     [activator eventWithName:LAEventNameVolumeDownPressWithMenu
-                         isCompatibleWithMode:LAEventModeApplication] &&
-                     [activator eventWithName:LAEventNameVolumeDownPressWithMenu
-                         isCompatibleWithMode:LAEventModeLockScreen]
-            caseName:@"volume-down-press-with-menu-all-modes-compatible"
-              reason:@"Volume down press with menu event was not compatible with all event modes"];
+            caseName:@"volume-toggle-mute-twice-all-modes-compatible"
+              reason:@"Volume toggle mute twice event was not compatible with all event modes"];
 }
 
 @end

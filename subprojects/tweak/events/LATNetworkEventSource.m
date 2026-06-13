@@ -25,14 +25,23 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 @end
 
 @interface LATNetworkEventSource ()
+
+// Lifecycle
 @property(nonatomic, assign) BOOL started;
+@property(nonatomic, assign) BOOL refreshScheduled;
+
+// Wi-Fi state
 @property(nonatomic, assign) BOOL hasKnownWiFiNetworkName;
 @property(nonatomic, copy, nullable) NSString *currentWiFiNetworkName;
-@property(nonatomic, strong, nullable) id signalStrengthObserver;
-@property(nonatomic, strong, nullable) id wakeFromSleepObserver;
+
+// Observation tokens
+@property(nonatomic, strong, nullable) id<NSObject> signalStrengthObserver;
+@property(nonatomic, strong, nullable) id<NSObject> wakeFromSleepObserver;
+
+// Path monitoring
 @property(nonatomic, strong, nullable) nw_path_monitor_t pathMonitor;
 @property(nonatomic, strong) dispatch_queue_t pathMonitorQueue;
-@property(nonatomic, assign) BOOL refreshScheduled;
+
 @end
 
 @implementation LATNetworkEventSource

@@ -42,9 +42,9 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 @property(nonatomic, strong) dispatch_queue_t touchQueue;
 
 // Visibility source trackers
-@property(nonatomic, strong) NSMutableSet *homeScreenVisibilitySources;
-@property(nonatomic, strong) NSMutableSet *springBoardInterfaceVisibilitySources;
-@property(nonatomic, strong) NSMutableSet *lockScreenVisibilitySources;
+@property(nonatomic, strong) NSMutableSet<NSString *> *homeScreenVisibilitySources;
+@property(nonatomic, strong) NSMutableSet<NSString *> *lockScreenVisibilitySources;
+@property(nonatomic, strong) NSMutableSet<NSString *> *springBoardInterfaceVisibilitySources;
 
 // Derived runtime state cache
 @property(nonatomic, assign) BOOL screenBlanked;
@@ -57,8 +57,8 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 @property(nonatomic, assign) NSUInteger stateGeneration;
 
 // Touch tracking
-@property(nonatomic, strong) NSHashTable *activeTouches;
-@property(nonatomic, strong) NSMutableArray *pendingTouchBlocks;
+@property(nonatomic, strong) NSHashTable<UITouch *> *activeTouches;
+@property(nonatomic, strong) NSMutableArray<dispatch_block_t> *pendingTouchBlocks;
 
 // Screen wake request lifecycle
 @property(nonatomic, assign) BOOL wakeRequestInFlight;

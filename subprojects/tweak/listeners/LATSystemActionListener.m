@@ -20,12 +20,17 @@
 #import <HBLog.h>
 
 @interface LATSystemActionListener ()
-@property(nonatomic, weak) LATBuiltInRegistry *registry;
-@property(nonatomic, strong) LATSystemVolumeHUDPresenter *volumeHUDPresenter;
-@property(nonatomic, strong) LATSystemNowPlayingApplicationLauncher *nowPlayingApplicationLauncher;
-@property(nonatomic, strong) LATSystemRingerStateResetter *ringerStateResetter;
-@property(nonatomic, strong) LATSystemRingerMuteController *ringerMuteController;
+
+// Dependencies
+@property(nonatomic, weak, nullable) LATBuiltInRegistry *registry;
+
+// Action executors
 @property(nonatomic, strong) LATSystemHomeScreenController *homeScreenController;
+@property(nonatomic, strong) LATSystemNowPlayingApplicationLauncher *nowPlayingApplicationLauncher;
+@property(nonatomic, strong) LATSystemRingerMuteController *ringerMuteController;
+@property(nonatomic, strong) LATSystemRingerStateResetter *ringerStateResetter;
+@property(nonatomic, strong) LATSystemVolumeHUDPresenter *volumeHUDPresenter;
+
 @end
 
 @implementation LATSystemActionListener

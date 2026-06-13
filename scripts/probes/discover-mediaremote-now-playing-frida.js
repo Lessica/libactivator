@@ -31,9 +31,33 @@ function loadFramework(path) {
     }
 }
 
+function findGlobalExport(symbol) {
+    if (typeof Module.getGlobalExportByName === "function") {
+        try {
+            return Module.getGlobalExportByName(symbol);
+        } catch (_) {}
+    }
+
+    if (typeof Module.findGlobalExportByName === "function") {
+        const address = Module.findGlobalExportByName(symbol);
+        if (address) {
+            return address;
+        }
+    }
+
+    if (typeof Module.findExportByName === "function") {
+        const address = Module.findExportByName(null, symbol);
+        if (address) {
+            return address;
+        }
+    }
+
+    return null;
+}
+
 function findExport(symbols) {
     for (const symbol of symbols) {
-        const address = Module.findGlobalExportByName(symbol);
+        const address = findGlobalExport(symbol);
         if (address) {
             console.log("[mediaremote-probe] resolved " + symbol + " => " + address);
             return { name: symbol, address: address };

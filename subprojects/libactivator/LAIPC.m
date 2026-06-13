@@ -120,3 +120,11 @@ NSString *const LAIPCKeyTestingPassCount = @"TestingPassCount";
 NSString *const LAIPCKeyTestingFailureCount = @"TestingFailureCount";
 NSString *const LAIPCKeyTestingSkipCount = @"TestingSkipCount";
 #endif
+
+#if DEBUG
+NSString *const LAIPCMessageEventDispatchCounts = @"libactivator.request.event-dispatch-counts";
+NSString *const LAIPCMessageListenerReceiveCounts = @"libactivator.request.listener-receive-counts";
+NSString *const LAIPCMessageEventAbortCounts = @"libactivator.request.event-abort-counts";
+NSString *const LAIPCMessageListenerAbortCounts = @"libactivator.request.listener-abort-counts";
+NSString *const LAIPCMessageResetDispatchCounts = @"libactivator.request.reset-dispatch-counts";
+#endif

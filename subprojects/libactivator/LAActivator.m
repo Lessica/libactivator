@@ -42,6 +42,16 @@
 // Caches
 @property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
 
+#if DEBUG
+// Dispatch diagnostics
+@property(nonatomic, strong) dispatch_queue_t dispatchDiagnosticsQueue;
+@property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *eventDispatchCounts;
+@property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *listenerReceiveCounts;
+@property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *eventAbortCounts;
+@property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *listenerAbortCounts;
+#endif
+
+// Only this method should be declared. Do not declare any other methods here!
 - (void)la_handleSystemNotificationNamed:(NSString *)darwinName;
 
 @end
@@ -105,6 +115,15 @@ LAActivator *LASharedActivator;
             _remoteListener = [[LARemoteListener alloc] init];
             [self la_registerSystemNotificationBridgeIfNeeded];
         }
+
+#if DEBUG
+        _dispatchDiagnosticsQueue =
+            dispatch_queue_create("libactivator.dispatch-diagnostics", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+        _eventDispatchCounts = [NSMutableDictionary dictionary];
+        _listenerReceiveCounts = [NSMutableDictionary dictionary];
+        _eventAbortCounts = [NSMutableDictionary dictionary];
+        _listenerAbortCounts = [NSMutableDictionary dictionary];
+#endif
     }
     return self;
 }
@@ -438,6 +457,9 @@ LAActivator *LASharedActivator;
     if (!self.runningInsideSpringBoard || !event) {
         return;
     }
+#if DEBUG
+    [self la_incrementEventDispatchCountForEvent:event];
+#endif
 
     NSString *eventMode = event.mode ?: self.currentEventMode;
     if ([eventMode isEqualToString:LAEventModeLockScreen] && [self la_sendUnlockingEvent:event
@@ -472,14 +494,24 @@ LAActivator *LASharedActivator;
         }
 
         BOOL wasHandled = event.handled;
-        if ([listener respondsToSelector:@selector(activator:receiveEvent:forListenerName:)]) {
-            [listener activator:self receiveEvent:event forListenerName:listenerName];
-        } else if ([listener respondsToSelector:@selector(activator:receiveEvent:)]) {
-            [listener activator:self receiveEvent:event];
-        }
+        [self la_deliverEvent:event toListener:listener listenerName:listenerName];
         if (!wasHandled && event.handled) {
             [self la_notifyListenersThatListener:listener handledEvent:event];
         }
+    }
+}
+
+- (void)la_deliverEvent:(LAEvent *)event toListener:(id<LAListener>)listener listenerName:(NSString *)listenerName {
+    if ([listener respondsToSelector:@selector(activator:receiveEvent:forListenerName:)]) {
+#if DEBUG
+        [self la_incrementListenerReceiveCountForName:listenerName];
+#endif
+        [listener activator:self receiveEvent:event forListenerName:listenerName];
+    } else if ([listener respondsToSelector:@selector(activator:receiveEvent:)]) {
+#if DEBUG
+        [self la_incrementListenerReceiveCountForName:listenerName];
+#endif
+        [listener activator:self receiveEvent:event];
     }
 }
 
@@ -542,12 +574,21 @@ LAActivator *LASharedActivator;
     if (!self.runningInsideSpringBoard || !event) {
         return;
     }
+#if DEBUG
+    [self la_incrementEventAbortCountForEvent:event];
+#endif
 
     for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
         id<LAListener> listener = [self listenerForName:listenerName];
         if ([listener respondsToSelector:@selector(activator:abortEvent:forListenerName:)]) {
+#if DEBUG
+            [self la_incrementListenerAbortCountForName:listenerName];
+#endif
             [listener activator:self abortEvent:event forListenerName:listenerName];
         } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
+#if DEBUG
+            [self la_incrementListenerAbortCountForName:listenerName];
+#endif
             [listener activator:self abortEvent:event];
         }
     }
@@ -570,17 +611,21 @@ LAActivator *LASharedActivator;
     }
     if (abort) {
         if ([listener respondsToSelector:@selector(activator:abortEvent:forListenerName:)]) {
+#if DEBUG
+            [self la_incrementEventAbortCountForEvent:event];
+            [self la_incrementListenerAbortCountForName:listenerName];
+#endif
             [listener activator:self abortEvent:event forListenerName:listenerName];
         } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
+#if DEBUG
+            [self la_incrementEventAbortCountForEvent:event];
+            [self la_incrementListenerAbortCountForName:listenerName];
+#endif
             [listener activator:self abortEvent:event];
         }
         return;
     }
-    if ([listener respondsToSelector:@selector(activator:receiveEvent:forListenerName:)]) {
-        [listener activator:self receiveEvent:event forListenerName:listenerName];
-    } else if ([listener respondsToSelector:@selector(activator:receiveEvent:)]) {
-        [listener activator:self receiveEvent:event];
-    }
+    [self la_deliverEvent:event toListener:listener listenerName:listenerName];
 }
 
 - (void)la_notifyEventModeChanged:(NSString *)eventMode {
@@ -1740,5 +1785,88 @@ LAActivator *LASharedActivator;
     return [LAResourceManager.sharedManager localizedDescriptionForListenerName:listenerName]
                ?: [self localizedTitleForListenerName:listenerName];
 }
+
+#pragma mark - Statistics
+
+#if DEBUG
+- (NSDictionary<NSString *, NSNumber *> *)la_snapshotDispatchCounts:
+    (NSMutableDictionary<NSString *, NSNumber *> *)counts {
+    __block NSDictionary<NSString *, NSNumber *> *snapshot = nil;
+    dispatch_sync(self.dispatchDiagnosticsQueue, ^{
+        snapshot = [counts copy];
+    });
+    return snapshot ?: @{};
+}
+
+- (NSDictionary<NSString *, NSNumber *> *)la_eventDispatchCounts {
+    if (!self.runningInsideSpringBoard) {
+        id value = [self.ipcClient propertyListValueForMessageName:LAIPCMessageEventDispatchCounts userInfo:nil];
+        return [value isKindOfClass:NSDictionary.class] ? value : @{};
+    }
+    return [self la_snapshotDispatchCounts:self.eventDispatchCounts];
+}
+
+- (NSDictionary<NSString *, NSNumber *> *)la_listenerReceiveCounts {
+    if (!self.runningInsideSpringBoard) {
+        id value = [self.ipcClient propertyListValueForMessageName:LAIPCMessageListenerReceiveCounts userInfo:nil];
+        return [value isKindOfClass:NSDictionary.class] ? value : @{};
+    }
+    return [self la_snapshotDispatchCounts:self.listenerReceiveCounts];
+}
+
+- (NSDictionary<NSString *, NSNumber *> *)la_eventAbortCounts {
+    if (!self.runningInsideSpringBoard) {
+        id value = [self.ipcClient propertyListValueForMessageName:LAIPCMessageEventAbortCounts userInfo:nil];
+        return [value isKindOfClass:NSDictionary.class] ? value : @{};
+    }
+    return [self la_snapshotDispatchCounts:self.eventAbortCounts];
+}
+
+- (NSDictionary<NSString *, NSNumber *> *)la_listenerAbortCounts {
+    if (!self.runningInsideSpringBoard) {
+        id value = [self.ipcClient propertyListValueForMessageName:LAIPCMessageListenerAbortCounts userInfo:nil];
+        return [value isKindOfClass:NSDictionary.class] ? value : @{};
+    }
+    return [self la_snapshotDispatchCounts:self.listenerAbortCounts];
+}
+
+- (void)la_resetDispatchCounts {
+    if (!self.runningInsideSpringBoard) {
+        [self.ipcClient sendMessageName:LAIPCMessageResetDispatchCounts userInfo:nil];
+        return;
+    }
+    dispatch_sync(self.dispatchDiagnosticsQueue, ^{
+        [self.eventDispatchCounts removeAllObjects];
+        [self.listenerReceiveCounts removeAllObjects];
+        [self.eventAbortCounts removeAllObjects];
+        [self.listenerAbortCounts removeAllObjects];
+    });
+}
+
+- (void)la_incrementCountForKey:(NSString *)key inCounts:(NSMutableDictionary<NSString *, NSNumber *> *)counts {
+    if (key.length == 0 || !counts) {
+        return;
+    }
+    dispatch_sync(self.dispatchDiagnosticsQueue, ^{
+        counts[key] = @([counts[key] unsignedLongLongValue] + 1);
+    });
+}
+
+- (void)la_incrementEventDispatchCountForEvent:(LAEvent *)event {
+    [self la_incrementCountForKey:event.name inCounts:self.eventDispatchCounts];
+}
+
+- (void)la_incrementListenerReceiveCountForName:(NSString *)listenerName {
+    [self la_incrementCountForKey:listenerName inCounts:self.listenerReceiveCounts];
+}
+
+- (void)la_incrementEventAbortCountForEvent:(LAEvent *)event {
+    [self la_incrementCountForKey:event.name inCounts:self.eventAbortCounts];
+}
+
+- (void)la_incrementListenerAbortCountForName:(NSString *)listenerName {
+    [self la_incrementCountForKey:listenerName inCounts:self.listenerAbortCounts];
+}
+#endif
 
 @end

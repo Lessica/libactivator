@@ -16,10 +16,17 @@
 #define kLATPowerStateEventSourceMainQueueReason @"LATPowerStateEventSource must only be used on the main thread"
 
 @interface LATPowerStateEventSource ()
+
+// Lifecycle
 @property(nonatomic, assign) BOOL started;
+
+// External power state
 @property(nonatomic, assign) BOOL hasKnownExternalPowerState;
 @property(nonatomic, assign, getter=isExternallyPowered) BOOL externallyPowered;
-@property(nonatomic, strong) id batteryStateObserver;
+
+// Observation token
+@property(nonatomic, strong, nullable) id<NSObject> batteryStateObserver;
+
 @end
 
 @implementation LATPowerStateEventSource

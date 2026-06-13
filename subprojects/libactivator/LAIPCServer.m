@@ -114,6 +114,13 @@
 #if LA_TESTING
         LAIPCMessageTesting,
 #endif
+#if DEBUG
+        LAIPCMessageEventDispatchCounts,
+        LAIPCMessageListenerReceiveCounts,
+        LAIPCMessageEventAbortCounts,
+        LAIPCMessageListenerAbortCounts,
+        LAIPCMessageResetDispatchCounts,
+#endif
     ];
 }
 
@@ -284,6 +291,24 @@
     if ([messageName isEqualToString:LAIPCMessageCurrentApplicationDisplayIdentifier]) {
         return [LAIPCCodec replyWithOK:YES value:_activator.displayIdentifierForCurrentApplication ?: @""];
     }
+#if DEBUG
+    if ([messageName isEqualToString:LAIPCMessageEventDispatchCounts]) {
+        return [LAIPCCodec replyWithOK:YES value:[_activator la_eventDispatchCounts]];
+    }
+    if ([messageName isEqualToString:LAIPCMessageListenerReceiveCounts]) {
+        return [LAIPCCodec replyWithOK:YES value:[_activator la_listenerReceiveCounts]];
+    }
+    if ([messageName isEqualToString:LAIPCMessageEventAbortCounts]) {
+        return [LAIPCCodec replyWithOK:YES value:[_activator la_eventAbortCounts]];
+    }
+    if ([messageName isEqualToString:LAIPCMessageListenerAbortCounts]) {
+        return [LAIPCCodec replyWithOK:YES value:[_activator la_listenerAbortCounts]];
+    }
+    if ([messageName isEqualToString:LAIPCMessageResetDispatchCounts]) {
+        [_activator la_resetDispatchCounts];
+        return [LAIPCCodec replyWithOK:YES value:nil];
+    }
+#endif
     return nil;
 }
 

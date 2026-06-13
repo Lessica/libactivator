@@ -33,6 +33,19 @@
 - 不要在 Frida JS 线程直接查询 UIKit/SpringBoard UI 状态；涉及 UI 状态的 probe 必须切到 SpringBoard 主队列。
 - 避免把 Frida 动态创建的 ObjC object 长期注册进 SpringBoard registry。优先使用临时 hook 或短生命周期调用，并在结束前清理。
 
+## Frida 主机工具版本
+
+- 连接 Frida server `16.1.4` 的设备时，项目内 `.venv-16` 应固定安装 `frida==16.1.4` 和 `frida-tools==12.3.0`。安装命令使用 `.venv-16/bin/python -m pip install 'frida==16.1.4' 'frida-tools==12.3.0'`，不要只写 `frida-tools` 或宽泛上界让 pip resolver 在不兼容的新版本上反复回溯。
+
+## Frida 17.x 脚本约定
+
+- Frida 17 不再把 `frida-objc-bridge`、`frida-swift-bridge`、`frida-java-bridge` 打包进 GumJS runtime；一次性 CLI / REPL probe 可以依赖 frida-tools 14.x 提供的 bridge，但需要长期保存或复用的 agent 应按 Frida 17 的 ESM/`frida-compile` 工作流显式处理 bridge 依赖。
+- 保存到仓库的 probe 必须同时支持 Frida 16.x 和 17.x 运行时。涉及导出符号查找时应使用兼容 helper：优先尝试 Frida 17 的 `Module.getGlobalExportByName(name)` / module object `getExportByName()`，再回退 Frida 16 的 `Module.findGlobalExportByName(name)` / module object `findExportByName()`，最后才回退旧静态 `Module.findExportByName(moduleNameOrNull, name)`。
+- 新 probe 不要使用旧的 callback-style enumeration API，例如 `Process.enumerateModules({ onMatch, onComplete })`；应使用 `for (const module of Process.enumerateModules()) { ... }` 这类返回数组的现代写法。
+- 新 probe 不要直接调用已移除或版本差异明显的静态 `Module.*` API，例如 `Module.findExportByName()` / `Module.getExportByName()`；应通过上述兼容 helper 调用，避免脚本只能在某一个 Frida 大版本上运行。
+- 新 probe 不要使用旧的 `Memory.read*` / `Memory.write*` API；应使用 `NativePointer` 方法，例如 `ptrValue.readU32()`、`ptrValue.writeU32(value)`。
+- 需要兼容用户临时运行环境时，probe 应优先采用 Frida 17.x 现代 API，并为 Frida 16.x 当前设备工具链提供明确 fallback；不要为了照顾旧博客示例退回只支持 legacy API 的写法。给 owner 的脚本示例也必须遵守这个兼容策略。
+
 ## 手工场景观察
 
 - `scripts/watch-runtime-state.sh` 用于实时观察 runtime state，它不是 pass/fail 测试。

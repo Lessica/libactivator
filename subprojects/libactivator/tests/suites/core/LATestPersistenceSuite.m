@@ -15,7 +15,7 @@
 + (void)runWithRecorder:(LATestRecorder *)recorder {
     [recorder beginSuite:@"Persistence"];
 
-    NSString *path = jbroot(@"/var/mobile/Library/Preferences/libactivator.tests.plist");
+    NSString *path = [LATestEnvironment testCachePathWithFileName:@"libactivator.tests.plist"];
     [NSFileManager.defaultManager removeItemAtPath:path error:nil];
     LAPersistence *persistence = [[LAPersistence alloc] initWithFilePath:path];
     [recorder expect:[persistence loadDictionary] == nil

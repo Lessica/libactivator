@@ -22,11 +22,18 @@
 @end
 
 @interface LATLockStateEventSource ()
+
+// Dependencies
 @property(nonatomic, strong) LATRuntimeStateSource *runtimeStateSource;
+
+// Lifecycle and notification token
 @property(nonatomic, assign) BOOL started;
+@property(nonatomic, assign) int lockStateToken;
+
+// Lock state
 @property(nonatomic, assign) BOOL hasKnownLockState;
 @property(nonatomic, assign, getter=isUILocked) BOOL uiLocked;
-@property(nonatomic, assign) int lockStateToken;
+
 @end
 
 @implementation LATLockStateEventSource

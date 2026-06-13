@@ -10,6 +10,12 @@
 
 #import "LATestEnvironment.h"
 
+extern CFTypeRef MGCopyAnswer(CFStringRef key);
+
+@interface LAResourceManager (TestResourceCompatibility)
+- (BOOL)resourceInfoDictionaryIsCompatible:(NSDictionary *)info;
+@end
+
 @interface LATestResourceSuite ()
 + (NSDictionary<NSString *, NSDictionary *> *)bundledEventMetadataWithResourceManager:
     (LAResourceManager *)resourceManager;
@@ -17,6 +23,7 @@
     (LAResourceManager *)resourceManager;
 + (BOOL)allBundledListenersHaveActionMetadata:(NSDictionary<NSString *, NSDictionary *> *)listeners;
 + (BOOL)bundledListenerSelectorsHaveOnlyExpectedDuplicates:(NSDictionary<NSString *, NSDictionary *> *)listeners;
++ (NSInteger)mobileGestaltHomeButtonType;
 @end
 
 @implementation LATestResourceSuite
@@ -48,22 +55,34 @@
             caseName:@"excluded-social-compose-actions"
               reason:@"Excluded legacy social compose actions were present in bundled listener metadata"];
 
-    NSString *eventName = @"libactivator.test.resource.capability";
-    NSString *eventPath = [[resourceManager eventsDirectoryPath] stringByAppendingPathComponent:eventName];
-    [fileManager removeItemAtPath:eventPath error:nil];
-    [fileManager createDirectoryAtPath:eventPath withIntermediateDirectories:YES attributes:nil error:nil];
     NSDictionary *eventInfo = @{
         @"title" : @"Unsupported Test Event",
         @"group" : @"Testing",
         @"required-capabilities" : @[ @"libactivator.test.missing-capability" ],
     };
-    [eventInfo writeToFile:[eventPath stringByAppendingPathComponent:@"Info.plist"] atomically:YES];
-    [recorder expect:![resourceManager.availableEventNames containsObject:eventName] &&
-                     [resourceManager eventInfoDictionaryForName:eventName] == nil
+    [recorder expect:![resourceManager resourceInfoDictionaryIsCompatible:eventInfo]
             caseName:@"required-capability-filter"
               reason:@"Unsupported resource capability should hide event metadata"];
 
-    [fileManager removeItemAtPath:eventPath error:nil];
+    NSInteger homeButtonType = [self mobileGestaltHomeButtonType];
+    if (homeButtonType == 1 || homeButtonType == 2) {
+        NSDictionary *realHomeEventInfo = @{
+            @"title" : @"Real Home Button Test Event",
+            @"group" : @"Testing",
+            @"required-capabilities" : @[ @"real-home-button" ],
+        };
+        NSDictionary *fakeHomeEventInfo = @{
+            @"title" : @"Fake Home Button Test Event",
+            @"group" : @"Testing",
+            @"required-capabilities" : @[ @"fake-home-button" ],
+        };
+        BOOL realHomeEventIsCompatible = [resourceManager resourceInfoDictionaryIsCompatible:realHomeEventInfo];
+        BOOL fakeHomeEventIsCompatible = [resourceManager resourceInfoDictionaryIsCompatible:fakeHomeEventInfo];
+        [recorder expect:realHomeEventIsCompatible == (homeButtonType == 1) &&
+                         fakeHomeEventIsCompatible == (homeButtonType == 2)
+                caseName:@"home-button-required-capabilities"
+                  reason:@"Home button semantic capabilities did not match MobileGestalt HomeButtonType"];
+    }
 
     NSArray *smallIcons = [resourceManager infoDictionaryValueOfKey:@"small-icons"
                                                     forListenerName:@"libactivator.settings.wifi"];
@@ -78,13 +97,14 @@
             caseName:@"bundled-listener-selector-duplicates"
               reason:@"Bundled listener selector metadata has an unexpected duplicate"];
 
-    NSString *resourceRootPath = @"/var/mobile/Library/Caches/libactivator-resource-path-test.dat";
-    NSString *resourcePath = jbroot(resourceRootPath);
+    NSString *resourceRootPath = [LATestEnvironment testCachePathWithFileName:@"libactivator.tests.resource-path.dat"];
+    NSString *resourcePath = resourceRootPath;
     NSData *resourceData = [@"libactivator-resource-path-test" dataUsingEncoding:NSUTF8StringEncoding];
-    [resourceData writeToFile:resourcePath atomically:YES];
+    BOOL wroteResourceData = [resourceData writeToFile:resourcePath atomically:YES];
     NSString *resolvedPath = [resourceManager resolvedPathForResourcePath:resourceRootPath];
     NSData *resolvedData = resolvedPath.length > 0 ? [NSData dataWithContentsOfFile:resolvedPath] : nil;
-    [recorder expect:[resolvedPath isEqualToString:resourcePath] && [resolvedData isEqualToData:resourceData]
+    [recorder expect:wroteResourceData && [resolvedPath isEqualToString:resourcePath] &&
+                     [resolvedData isEqualToData:resourceData]
             caseName:@"absolute-path-resolution"
               reason:@"Absolute resource path did not resolve through jbroot before the original path"];
 
@@ -148,6 +168,11 @@
         }
     }
     return YES;
+}
+
++ (NSInteger)mobileGestaltHomeButtonType {
+    id value = CFBridgingRelease(MGCopyAnswer(CFSTR("HomeButtonType")));
+    return [value respondsToSelector:@selector(integerValue)] ? [value integerValue] : 0;
 }
 
 @end

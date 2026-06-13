@@ -39,7 +39,7 @@
             caseName:@"event-registry"
               reason:@"Event was not registered"];
     [recorder expect:[activator hasEventWithName:LAEventNameVolumeMuteOn] &&
-                     [activator hasEventWithName:LAEventNameVolumeDownPressWithMenu] &&
+                     [activator hasEventWithName:LAEventNameVolumeDownPress] &&
                      [activator hasEventWithName:LAEventNameStatusBarTapSingle]
             caseName:@"bundled-event-registry"
               reason:@"1.9.13 bundled event metadata was not registered"];

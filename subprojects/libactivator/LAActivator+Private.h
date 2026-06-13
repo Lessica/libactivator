@@ -46,6 +46,16 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable NSData *)la_smallIconDataForListenerName:(NSString *)listenerName scale:(nullable CGFloat *)scale;
 - (void)la_sendEvent:(LAEvent *)event directlyToListenerWithName:(NSString *)listenerName abort:(BOOL)abort;
 
+#pragma mark - Statistics
+
+#if DEBUG
+- (NSDictionary<NSString *, NSNumber *> *)la_eventDispatchCounts;
+- (NSDictionary<NSString *, NSNumber *> *)la_listenerReceiveCounts;
+- (NSDictionary<NSString *, NSNumber *> *)la_eventAbortCounts;
+- (NSDictionary<NSString *, NSNumber *> *)la_listenerAbortCounts;
+- (void)la_resetDispatchCounts;
+#endif
+
 @end
 
 NS_ASSUME_NONNULL_END

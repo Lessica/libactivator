@@ -421,7 +421,7 @@
 		<string>3D Touch</string>
 		<key>required-capabilities</key>
 		<array>
-			<string>eQd5mlz0BN0amTp/2ccMoA</string>
+			<string>SupportsForceTouch</string>
 		</array>
 		<key>settings-view-controller-CoreFoundationVersion</key>
 		<array>
@@ -442,7 +442,7 @@
 		<string>3D Touch</string>
 		<key>required-capabilities</key>
 		<array>
-			<string>eQd5mlz0BN0amTp/2ccMoA</string>
+			<string>SupportsForceTouch</string>
 		</array>
 		<key>settings-view-controller-CoreFoundationVersion</key>
 		<array>
@@ -463,7 +463,7 @@
 		<string>3D Touch</string>
 		<key>required-capabilities</key>
 		<array>
-			<string>eQd5mlz0BN0amTp/2ccMoA</string>
+			<string>SupportsForceTouch</string>
 		</array>
 		<key>settings-view-controller-CoreFoundationVersion</key>
 		<array>
@@ -484,7 +484,7 @@
 		<string>3D Touch</string>
 		<key>required-capabilities</key>
 		<array>
-			<string>eQd5mlz0BN0amTp/2ccMoA</string>
+			<string>SupportsForceTouch</string>
 		</array>
 		<key>settings-view-controller-CoreFoundationVersion</key>
 		<array>
@@ -505,7 +505,7 @@
 		<string>3D Touch</string>
 		<key>required-capabilities</key>
 		<array>
-			<string>eQd5mlz0BN0amTp/2ccMoA</string>
+			<string>SupportsForceTouch</string>
 		</array>
 		<key>settings-view-controller-CoreFoundationVersion</key>
 		<array>
@@ -526,7 +526,7 @@
 		<string>3D Touch</string>
 		<key>required-capabilities</key>
 		<array>
-			<string>eQd5mlz0BN0amTp/2ccMoA</string>
+			<string>SupportsForceTouch</string>
 		</array>
 		<key>settings-view-controller-CoreFoundationVersion</key>
 		<array>

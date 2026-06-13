@@ -41,19 +41,30 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 @end
 
 @interface LATMediaEventSource ()
+
+// Lifecycle
 @property(nonatomic, assign) BOOL started;
+
+// Headset state
 @property(nonatomic, assign) BOOL hasKnownHeadsetState;
 @property(nonatomic, assign, getter=isHeadsetConnected) BOOL headsetConnected;
-@property(nonatomic, strong) id routeStatusObserver;
-@property(nonatomic, strong) id pickableRoutesObserver;
-@property(nonatomic, strong) id nowPlayingInfoObserver;
-@property(nonatomic, strong) id nowPlayingApplicationIsPlayingObserver;
-@property(nonatomic, strong) id activeAudioRouteObserver;
-@property(nonatomic, strong) id systemPickableRoutesObserver;
-@property(nonatomic, strong) id headphoneStateObserver;
-@property(nonatomic, strong) dispatch_queue_t mediaRemoteQueue;
+
+// Now playing playback state
 @property(nonatomic, assign) BOOL hasKnownNowPlayingPlaybackState;
 @property(nonatomic, assign, getter=isNowPlayingApplicationPlaying) BOOL nowPlayingApplicationPlaying;
+
+// Observation tokens
+@property(nonatomic, strong, nullable) id<NSObject> activeAudioRouteObserver;
+@property(nonatomic, strong, nullable) id<NSObject> headphoneStateObserver;
+@property(nonatomic, strong, nullable) id<NSObject> nowPlayingApplicationIsPlayingObserver;
+@property(nonatomic, strong, nullable) id<NSObject> nowPlayingInfoObserver;
+@property(nonatomic, strong, nullable) id<NSObject> pickableRoutesObserver;
+@property(nonatomic, strong, nullable) id<NSObject> routeStatusObserver;
+@property(nonatomic, strong, nullable) id<NSObject> systemPickableRoutesObserver;
+
+// Dispatch queues
+@property(nonatomic, strong) dispatch_queue_t mediaRemoteQueue;
+
 @end
 
 @implementation LATMediaEventSource

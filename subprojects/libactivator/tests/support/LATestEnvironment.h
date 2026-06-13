@@ -35,6 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Cleanup
 
++ (NSString *)testCachePathWithFileName:(NSString *)fileName;
 + (void)cleanActivator:(LAActivator *)activator;
 + (void)cleanRuntimeInputStateWithActivator:(LAActivator *)activator;
 + (void)removeTestPlist;

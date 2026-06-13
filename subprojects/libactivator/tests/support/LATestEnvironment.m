@@ -17,7 +17,6 @@
 #import <IOKit/hid/IOHIDEventSystemClient.h>
 #import <UIKit/UIKit.h>
 #import <mach/mach_time.h>
-#import <roothide.h>
 
 extern IOHIDEventSystemClientRef IOHIDEventSystemClientCreate(CFAllocatorRef allocator);
 extern void IOHIDEventSystemClientDispatchEvent(IOHIDEventSystemClientRef client, IOHIDEventRef event);
@@ -74,6 +73,13 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 
 #pragma mark - Cleanup
 
++ (NSString *)testCachePathWithFileName:(NSString *)fileName {
+    if (fileName.length == 0) {
+        return nil;
+    }
+    return [@"/var/mobile/Library/Caches" stringByAppendingPathComponent:fileName];
+}
+
 + (void)cleanActivator:(LAActivator *)activator {
     for (NSString *listenerName in [self testListenerNames]) {
         [activator unregisterListenerWithName:listenerName];
@@ -99,7 +105,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
 }
 
 + (void)removeTestPlist {
-    [NSFileManager.defaultManager removeItemAtPath:jbroot(@"/var/mobile/Library/Preferences/libactivator.tests.plist")
+    [NSFileManager.defaultManager removeItemAtPath:[self testCachePathWithFileName:@"libactivator.tests.plist"]
                                              error:nil];
 }
 

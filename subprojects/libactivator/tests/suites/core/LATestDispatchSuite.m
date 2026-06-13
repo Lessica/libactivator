@@ -38,10 +38,24 @@
 
     LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [activator assignEvent:event toListenersWithNames:@[ listenerAName, listenerBName ]];
+    [activator la_resetDispatchCounts];
+    [recorder expect:activator.la_eventDispatchCounts.count == 0 && activator.la_listenerReceiveCounts.count == 0 &&
+                     activator.la_eventAbortCounts.count == 0 && activator.la_listenerAbortCounts.count == 0
+            caseName:@"dispatch-counts-reset"
+              reason:@"Dispatch counts were not reset"];
     [activator sendEventToListener:event];
     [recorder expect:event.handled && listenerA.receiveCount == 1 && listenerB.receiveCount == 1
             caseName:@"assigned-dispatch"
               reason:@"Assigned dispatch did not reach expected listeners"];
+    NSDictionary<NSString *, NSNumber *> *eventDispatchCounts = [activator la_eventDispatchCounts];
+    NSDictionary<NSString *, NSNumber *> *listenerReceiveCounts = [activator la_listenerReceiveCounts];
+    [recorder expect:[eventDispatchCounts[eventName] unsignedLongLongValue] == 1
+            caseName:@"event-dispatch-count"
+              reason:@"Event dispatch count did not increment once"];
+    [recorder expect:[listenerReceiveCounts[listenerAName] unsignedLongLongValue] == 1 &&
+                     [listenerReceiveCounts[listenerBName] unsignedLongLongValue] == 1
+            caseName:@"listener-receive-count"
+              reason:@"Listener receive counts did not increment once per delivered listener"];
     [recorder expect:listenerB.otherHandledCount == 1
             caseName:@"other-listener-handled"
               reason:@"Other listener was not notified"];
@@ -71,6 +85,14 @@
     [recorder expect:simpleAbort.abortCount == 1
             caseName:@"abort-fallback"
               reason:@"Simple abort selector was not used"];
+    NSDictionary<NSString *, NSNumber *> *eventAbortCounts = [activator la_eventAbortCounts];
+    NSDictionary<NSString *, NSNumber *> *listenerAbortCounts = [activator la_listenerAbortCounts];
+    [recorder expect:[eventAbortCounts[eventName] unsignedLongLongValue] == 1
+            caseName:@"event-abort-count"
+              reason:@"Event abort count did not increment once"];
+    [recorder expect:[listenerAbortCounts[simpleAbortName] unsignedLongLongValue] == 1
+            caseName:@"listener-abort-count"
+              reason:@"Listener abort count did not increment once"];
 
     [activator sendPreviewEventToListenerWithName:listenerAName];
     [recorder expect:listenerA.previewCount == 1 && listenerB.previewCount == 0
@@ -149,6 +171,7 @@
     [recorder expect:listenerA.receiveCount == 1
             caseName:@"needs-powered-display-runs-with-screen-on"
               reason:@"Listener requiring powered display did not run after the screen powered on"];
+    [activator la_resetDispatchCounts];
 }
 
 @end

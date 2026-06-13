@@ -136,6 +136,14 @@ LA_IPC_EXTERN NSString *const LAIPCKeyTestingFailureCount;
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingSkipCount;
 #endif
 
+#if DEBUG
+LA_IPC_EXTERN NSString *const LAIPCMessageEventDispatchCounts;
+LA_IPC_EXTERN NSString *const LAIPCMessageListenerReceiveCounts;
+LA_IPC_EXTERN NSString *const LAIPCMessageEventAbortCounts;
+LA_IPC_EXTERN NSString *const LAIPCMessageListenerAbortCounts;
+LA_IPC_EXTERN NSString *const LAIPCMessageResetDispatchCounts;
+#endif
+
 #undef LA_IPC_EXTERN
 
 __attribute__((visibility("hidden")))
