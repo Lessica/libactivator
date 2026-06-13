@@ -61,7 +61,7 @@ Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使�
 
 ### 2. 下一阶段主线：阶段 4 Hardware Button Event Sources
 
-第一片 `volume up/down press` 已按独立采集 adapter 实现并通过真机验证。第二片 `volume both press` 已实现并通过真机验证。第三片 `volume up/down with menu` 已实现并通过真机验证。第四片 `volume up/down hold short` 已实现并通过真机验证。第五片 `volume up-down/down-up` 已实现并通过真机验证。第六片 `volume mute/unmute/toggle-mute-twice` 已通过 HID `0x0b/0x2e` 方向实现并通过真机验证。第七片 `menu.hold.long` / `menu.hold.short` / `menu.press.single` / `menu.press.double` / `menu.press.triple` 已按 HID adapter 实现并通过真机验证。第八片 `lock.hold.long` / `lock.hold.short` / `lock.press.double` / `lock.press.triple` / `lock.press.with-menu` 已按 HID adapter 实现，仍需真机验证。
+第一片 `volume up/down press` 已按独立采集 adapter 实现并通过真机验证。第二片 `volume both press` 已实现并通过真机验证。第三片 `volume up/down with menu` 已实现并通过真机验证。第四片 `volume up/down hold short` 已实现并通过真机验证。第五片 `volume up-down/down-up` 已实现并通过真机验证。第六片 `volume mute/unmute/toggle-mute-twice` 已通过 HID `0x0b/0x2e` 方向实现并通过真机验证。第七片 `menu.hold.long` / `menu.hold.short` / `menu.press.single` / `menu.press.double` / `menu.press.triple` 已按 HID adapter 实现并通过真机验证。第八片 `lock.hold.long` / `lock.hold.short` / `lock.press.double` / `lock.press.triple` / `lock.press.with-menu` 已按 HID adapter 实现并通过真机验证。
 
 已验证 / 待补充验收：
 
@@ -73,15 +73,15 @@ Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使�
 - 已确认单个音量键按住约 0.45 秒后只派发对应 hold short，松开时不再额外派发单键 volume `press`；如果按住期间进入 both press 或 with-menu 组合，会取消 hold 识别。
 - 已确认 `volume up-down/down-up` 语义：首个音量键 release 时立即派发对应单键 `press`；如果 0.45 秒窗口内相反音量键 release，再派发顺序事件且不派发第二个单键 `press`；如果 0.45 秒窗口内同方向再次 release，不派发第二个单键 `press`；超过窗口时表现为两个独立单键 press。
 - 已确认拨到静音派发 `volume.mute`，拨到响铃派发 `volume.unmute`，1 秒内来回拨动时在第二次状态事件后额外派发 `volume.toggle-mute-twice`。
-- 已确认 Menu/Home 单击、双击、三击、short hold、long hold 行为可用；没有 double/triple assignment 时 single 在 release 后立即派发，存在 double/triple assignment 时 single 延迟 0.45 秒等待升级，存在 triple assignment 时第二次 release 后再等待 0.45 秒，第三次 release 派发 triple，否则派发 double；short hold 在 down 后约 0.45 秒派发并消费 single；Frida 校准显示实体 Home 初始 down 到 `SBHomeHardwareButton -longPress:` 约 0.40 秒，到 Siri presentation 约 0.42 秒，因此 short hold 继续使用旧 `kButtonHoldDelay` 0.45 秒；long hold 以 HID 侧 2.5 秒 timer 派发，避免在现代 iOS 上与 Siri/Home 系统 long press 阈值重叠。
+- 已确认 Menu/Home 单击、双击、三击、short hold、long hold 行为可用；没有 double/triple assignment 时 single 在 release 后立即派发，存在 double/triple assignment 时 single 延迟 0.45 秒等待升级，存在 triple assignment 时第二次 release 后再等待 0.45 秒，第三次 release 派发 triple，否则派发 double；short hold 在 down 后约 0.45 秒派发并消费 single；Frida 校准显示实体 Home 初始 down 到 `SBHomeHardwareButton -longPress:` 约 0.40 秒，到 Siri presentation 约 0.42 秒，因此 short hold 继续使用旧 `kButtonHoldDelay` 0.45 秒；long hold 以 HID 侧 2.5 秒 timer 派发，避免在现代 iOS 上与 Siri/Home 系统 long press 阈值重叠；已确认 short hold 被兼容 listener handled 后，升级到 long hold 时会发送对应 short hold abort。
 - 已实现 Menu/Home 与 `volume.*.press.with-menu` 的互斥：只要同一轮按键进入音量 + Menu/Home 组合，pending menu press/hold 会取消，松开 Home/Menu 时不再额外派发 menu single/hold。
-- Sleep/Lock 单键仍需真机确认：Consumer page `0x0c` usage `0x30` 应稳定收到 down/up；`lock.hold.short` 在 down 后约 0.45 秒派发并消费 double/triple press；Frida 校准显示 Power/Sleep 初始 down 到 `SBLockHardwareButton -longPress:` 约 2.50 秒，到 `SBPowerDownViewController -powerDownViewWillAnimateIn:` 约 2.56 秒，因此 `lock.hold.long` 以 HID 侧 2.5 秒 timer 派发并 abort 已 handled 的 short hold；有 double/triple assignment 时两次 release 在 0.45 秒窗口内派发 `lock.press.double`，有 triple assignment 时第三次 release 派发 `lock.press.triple`；没有 double/triple assignment 时不为普通电源键 release 派发 lock press event。
-- Sleep/Lock + Menu/Home 仍需真机确认：先后按下 Sleep/Lock 和 Menu/Home 时只派发 `lock.press.with-menu`，并取消 pending lock/menu press/hold，松开时不再额外派发 menu single、lock double/triple 或 hold。
+- 已确认 Sleep/Lock 单键行为：Consumer page `0x0c` usage `0x30` 可稳定收到 down/up；`lock.hold.short` 在 down 后约 0.45 秒派发并消费 double/triple press；Frida 校准显示 Power/Sleep 初始 down 到 `SBLockHardwareButton -longPress:` 约 2.50 秒，到 `SBPowerDownViewController -powerDownViewWillAnimateIn:` 约 2.56 秒，因此 `lock.hold.long` 以 HID 侧 2.5 秒 timer 派发；short hold 被兼容 listener handled 后，升级到 long hold 时会发送对应 short hold abort；有 double/triple assignment 时两次 release 在 0.45 秒窗口内派发 `lock.press.double`，有 triple assignment 时第三次 release 派发 `lock.press.triple`；没有 double/triple assignment 时不为普通电源键 release 派发 lock press event。
+- 已确认 Sleep/Lock + Menu/Home：先后按下 Sleep/Lock 和 Menu/Home 时只派发 `lock.press.with-menu`，并取消 pending lock/menu press/hold，松开时不再额外派发 menu single、lock double/triple 或 hold。
 
 后续阶段：
 
 - handled 后拦截默认音量行为暂不进入本阶段；`libactivator.volume.*` 在 1.9.13 资源中没有 double press 事件，不作为 volume 路线项。
-- 再评估 sleep/lock button press、double press、short hold。它和锁屏、电源 UI、SOS、Wallet/Apple Pay 等系统行为耦合更强，必须先确认不会吞掉系统默认行为或造成误触发。
+- Hardware button event source 的 volume、ringer、Menu/Home、Sleep/Lock 主路径已完成实现和真机验收；`volume.display-tap` 依赖音量 HUD 触摸，不归入当前 HID 按键切片。
 - Home/Menu button 仅在有 real home button 的设备上有意义，必须复用能力过滤结论；已验证 `HomeButtonType == 1` 表示实体 Home 键，`HomeButtonType == 2` 表示无实体 Home 键；`HomeButtonType == 0` 是有效值但语义尚未确认，不要当成未就绪状态或擅自映射；fake home indicator 设备不要注册 real-home-button-only 事件。
 - 所有按钮 event source 都只负责识别事件并提交 `LAEvent`，不要在 adapter 内处理 assignment、blacklist、mode、no-touch deferral 或 unlock-to-send。
 

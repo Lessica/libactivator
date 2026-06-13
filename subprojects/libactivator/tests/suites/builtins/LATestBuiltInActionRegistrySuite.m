@@ -36,6 +36,9 @@
     [recorder expect:[activator hasSeenListenerWithName:nothingName]
             caseName:@"nothing-seen"
               reason:@"Built-in nothing listener was not recorded as seen"];
+    [recorder expect:[activator listenerWithName:nothingName isCompatibleWithEventName:LAEventNameLockPressDouble]
+            caseName:@"nothing-compatible-with-lock-double-press"
+              reason:@"Built-in nothing listener should be assignable to lock double press for no-op suppression"];
     [recorder
           expect:[[activator availableListenerNames] containsObject:urlName] && [activator hasListenerWithName:urlName]
         caseName:@"url-action-registered"

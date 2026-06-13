@@ -2234,71 +2234,8 @@
 	<dict>
 		<key>description</key>
 		<string>Suppress original action</string>
-		<key>exclusive-assignment-groups</key>
-		<array/>
 		<key>group</key>
 		<string>System Actions</string>
-		<key>incompatible-events</key>
-		<array>
-			<string>libactivator.lock.hold.short</string>
-			<string>libactivator.lock.press.double</string>
-			<string>libactivator.menu.press.single</string>
-			<string>libactivator.five-finger-pinch</string>
-			<string>libactivator.five-finger-spread</string>
-			<string>libactivator.five-finger-tap</string>
-			<string>libactivator.four-finger.pinch</string>
-			<string>libactivator.four-finger.spread</string>
-			<string>libactivator.four-finger.tap</string>
-			<string>libactivator.headset.connected</string>
-			<string>libactivator.headset.disconnected</string>
-			<string>libactivator.lockscreen.clock.double-tap</string>
-			<string>libactivator.power.connected</string>
-			<string>libactivator.power.disconnected</string>
-			<string>libactivator.slide-in.left</string>
-			<string>libactivator.slide-in.left-bottom</string>
-			<string>libactivator.slide-in.left-top</string>
-			<string>libactivator.slide-in.right</string>
-			<string>libactivator.slide-in.right-bottom</string>
-			<string>libactivator.slide-in.right-top</string>
-			<string>libactivator.slide-in.top-left</string>
-			<string>libactivator.slide-in.top-right</string>
-			<string>libactivator.springboard.pinch</string>
-			<string>libactivator.springboard.spread</string>
-			<string>libactivator.statusbar.hold.left</string>
-			<string>libactivator.statusbar.hold.right</string>
-			<string>libactivator.statusbar.swipe.left</string>
-			<string>libactivator.statusbar.swipe.right</string>
-			<string>libactivator.statusbar.tap.double</string>
-			<string>libactivator.statusbar.tap.double.left</string>
-			<string>libactivator.statusbar.tap.double.right</string>
-			<string>libactivator.statusbar.tap.single</string>
-			<string>libactivator.statusbar.tap.single.left</string>
-			<string>libactivator.statusbar.tap.single.right</string>
-			<string>libactivator.three-finger.pinch</string>
-			<string>libactivator.three-finger.spread</string>
-			<string>libactivator.three-finger.tap</string>
-			<string>libactivator.two-finger-slide-in.left</string>
-			<string>libactivator.two-finger-slide-in.left-bottom</string>
-			<string>libactivator.two-finger-slide-in.left-top</string>
-			<string>libactivator.two-finger-slide-in.right</string>
-			<string>libactivator.two-finger-slide-in.right-bottom</string>
-			<string>libactivator.two-finger-slide-in.right-top</string>
-			<string>libactivator.two-finger-slide-in.top-left</string>
-			<string>libactivator.two-finger-slide-in.top-right</string>
-			<string>libactivator.volume.both-press</string>
-			<string>libactivator.volume.display-tap</string>
-			<string>libactivator.volume.toggle-mute-twice</string>
-			<string>libactivator.volume.up-down</string>
-			<string>libactivator.volume.down-up</string>
-			<string>libactivator.volume.mute</string>
-			<string>libactivator.volume.unmute</string>
-			<string>libactivator.force-touch.screen-bottom</string>
-			<string>libactivator.force-touch.screen-bottom-left</string>
-			<string>libactivator.force-touch.screen-bottom-right</string>
-			<string>libactivator.force-touch.statusbar</string>
-		</array>
-		<key>needs-powered-display</key>
-		<string>0</string>
 		<key>selector</key>
 		<string>doNothing</string>
 		<key>title</key>
