@@ -130,7 +130,7 @@ LAActivator *LASharedActivator;
 
 - (LAPersistence *)defaultPersistence {
     LAPersistence *persistence;
-#if LA_TESTING
+#if DEBUG
     persistence = [LAPersistence testingPersistence];
 #else
     persistence = [LAPersistence defaultPersistence];

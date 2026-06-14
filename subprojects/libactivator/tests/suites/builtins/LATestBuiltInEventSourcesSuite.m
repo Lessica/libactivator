@@ -10,6 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LATEdgeGestureClassifier.h"
+#import "LATEdgeGestureEventSource.h"
 #import "LATStatusBarEventSource.h"
 #import "LATestEnvironment.h"
 
@@ -367,6 +368,7 @@
 
     [self runStatusBarRecognizerTestsWithRecorder:recorder activator:activator];
     [self runEdgeGestureClassifierTestsWithRecorder:recorder];
+    [self runEdgeGestureEventSourceDispatchTestsWithRecorder:recorder activator:activator];
 }
 
 + (NSUInteger)dispatchCountForEventName:(NSString *)eventName activator:(LAActivator *)activator {
@@ -863,6 +865,86 @@
     [recorder expect:[landscapeEventName isEqualToString:LAEventNameSlideInFromBottom]
             caseName:@"edge-gesture-classifies-landscape-bottom"
               reason:@"Landscape bounds did not classify a bottom edge gesture"];
+}
+
++ (void)runEdgeGestureEventSourceDispatchTestsWithRecorder:(LATestRecorder *)recorder
+                                                 activator:(LAActivator *)activator {
+    Class sourceClass = NSClassFromString(@"LATEdgeGestureEventSource");
+    if (!sourceClass) {
+        [recorder skip:@"edge-gesture-event-source-dispatch" reason:@"LATEdgeGestureEventSource was not loaded"];
+        return;
+    }
+
+    CGRect bounds = CGRectMake(0.0, 0.0, 400.0, 800.0);
+
+    LATEdgeGestureEventSource *notStartedSource = [[sourceClass alloc] init];
+    [activator la_resetDispatchCounts];
+    [notStartedSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
+                                             [self edgeGesturePointWithX:200.0 y:798.0],
+                                         ]
+                                                                                     phase:0]
+                                           bounds:bounds
+                                        timestamp:0.0];
+    NSString *notStartedEventName =
+        [notStartedSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
+                                                 [self edgeGesturePointWithX:200.0 y:700.0]
+                                             ]
+                                                                                         phase:1]
+                                               bounds:bounds
+                                            timestamp:0.1];
+    [recorder expect:notStartedEventName == nil &&
+                     [self dispatchCountForEventName:LAEventNameSlideInFromBottom activator:activator] == 0
+            caseName:@"edge-gesture-event-source-ignores-events-before-start"
+              reason:@"Edge gesture event source dispatched before it was started"];
+
+    LATEdgeGestureEventSource *dispatchSource = [[sourceClass alloc] init];
+    [dispatchSource start];
+    [activator la_resetDispatchCounts];
+    [dispatchSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
+                                          [self edgeGesturePointWithX:200.0 y:798.0],
+                                      ]
+                                                                                  phase:0]
+                                        bounds:bounds
+                                     timestamp:0.0];
+    NSString *firstEventName =
+        [dispatchSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
+                                               [self edgeGesturePointWithX:200.0 y:700.0]
+                                           ]
+                                                                                       phase:1]
+                                             bounds:bounds
+                                          timestamp:0.1];
+    NSString *secondEventName =
+        [dispatchSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
+                                               [self edgeGesturePointWithX:200.0 y:650.0]
+                                           ]
+                                                                                       phase:1]
+                                             bounds:bounds
+                                          timestamp:0.2];
+    [recorder expect:[firstEventName isEqualToString:LAEventNameSlideInFromBottom] && secondEventName == nil &&
+                     [self dispatchCountForEventName:LAEventNameSlideInFromBottom activator:activator] == 1
+            caseName:@"edge-gesture-event-source-dispatches-once"
+              reason:@"Edge gesture event source did not dispatch exactly once for a classified gesture"];
+
+    LATEdgeGestureEventSource *shortMoveSource = [[sourceClass alloc] init];
+    [shortMoveSource start];
+    [activator la_resetDispatchCounts];
+    [shortMoveSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
+                                           [self edgeGesturePointWithX:200.0 y:798.0],
+                                       ]
+                                                                                   phase:0]
+                                         bounds:bounds
+                                      timestamp:0.0];
+    NSString *shortMoveEventName =
+        [shortMoveSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
+                                                [self edgeGesturePointWithX:200.0 y:750.0]
+                                            ]
+                                                                                        phase:1]
+                                              bounds:bounds
+                                           timestamp:0.1];
+    [recorder expect:shortMoveEventName == nil &&
+                     [self dispatchCountForEventName:LAEventNameSlideInFromBottom activator:activator] == 0
+            caseName:@"edge-gesture-event-source-ignores-unclassified-move"
+              reason:@"Edge gesture event source dispatched for an unclassified gesture"];
 }
 
 + (NSString *)classifiedEdgeGestureEventNameWithClassifier:(LATEdgeGestureClassifier *)classifier

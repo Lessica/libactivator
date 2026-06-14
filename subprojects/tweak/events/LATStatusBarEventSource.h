@@ -24,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)noteStatusBarView:(UIView *)view touchesEnded:(NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
 - (void)noteStatusBarView:(UIView *)view touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
 
-#if LA_TESTING
+#if DEBUG
 // Testing hooks
 - (void)la_testingNoteTouchBeganInStatusBarView:(id)view
                                          bounds:(CGRect)bounds

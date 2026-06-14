@@ -82,7 +82,7 @@ NSString *const LAIPCMessageListenerSmallIconData = @"libactivator.request.liste
 NSString *const LAIPCMessageRequestListenerRemoval = @"libactivator.request.listener-request-removal";
 NSString *const LAIPCMessageRemoveEvent = @"libactivator.request.remove-event";
 
-#if LA_TESTING
+#if DEBUG
 NSString *const LAIPCMessageTesting = @"libactivator.testing";
 NSString *const LAIPCTestingCommandPing = @"ping";
 NSString *const LAIPCTestingCommandCleanup = @"cleanup";
@@ -110,7 +110,7 @@ NSString *const LAIPCKeyPreferenceValue = @"PreferenceValue";
 NSString *const LAIPCKeyInfoDictionaryKey = @"InfoDictionaryKey";
 NSString *const LAIPCKeyScale = @"Scale";
 
-#if LA_TESTING
+#if DEBUG
 NSString *const LAIPCKeyTestingCommand = @"TestingCommand";
 NSString *const LAIPCKeyTestingSuites = @"TestingSuites";
 NSString *const LAIPCKeyTestingFailures = @"TestingFailures";

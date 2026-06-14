@@ -33,7 +33,7 @@
 - 阶段 1 低风险 static actions 已完成当前实施面：No-op、URL actions、HID-backed hardware actions、低风险 system actions 和 telephony call control 已按独立 listener family 注册并覆盖基础测试或手工验证边界。
 - 阶段 2 dynamic application listeners 已完成，动态 App listener 由独立 provider 注册，真实启动统一走 SpringBoard-side launcher，`com.apple.camera` 锁屏 special case 已单独处理。
 - 阶段 3 第一批低风险状态/通知型 event sources 已完成并收口：device locked/unlocked、power connected/disconnected、headset connected/disconnected、media playback、network joined/left Wi-Fi 已纳入 `BuiltInEventSources` stable 覆盖或明确手工验证边界。
-- 阶段 4 当前已完成 hardware button 主路径和 status bar gestures：Volume/Menu/Sleep/Ringer 相关 HID 事件已完成真机验收，`LATStatusBarEventSource` 已实现并完成 stable 逻辑覆盖与真机验收。Top slide / edge gesture family 的第一片 observe-only classifier 已接入 `_UISystemGestureWindow sendEvent:`，当前只做 24 个 slide-in / two-finger-slide-in event name 分类和日志观测，不 dispatch、不拦截。本阶段继续向 edge gesture 日志验收、drag-along screen-side、multitouch、SpringBoard/icon 和 lock screen gesture family 切片推进。
+- 阶段 4 当前已完成 hardware button 主路径和 status bar gestures：Volume/Menu/Sleep/Ringer 相关 HID 事件已完成真机验收，`LATStatusBarEventSource` 已实现并完成 stable 逻辑覆盖与真机验收。Top slide / edge gesture family 已接入 `_UISystemGestureWindow sendEvent:`，纯分类器 24 组真机验证已通过并覆盖 SpringBoard、LockScreen、Application 三类 mode；当前实现已从 observe-only 推进到 dispatch-no-intercept，分类成功后提交对应 `LAEvent`，仍不拦截原始系统手势。本阶段继续向 edge gesture dispatch 真机验收、drag-along screen-side、multitouch、SpringBoard/icon 和 lock screen gesture family 切片推进。
 
 ## 阶段 0：资源模型补强
 
@@ -134,7 +134,7 @@
 - `get` / `set` 只负责调用 libactivator compatibility facade，不在 CLI 内实现 flat key 解析或直接读写 plist。
 - 事件触发命令使用当前 event mode 构造 `LAEvent`，按旧语义以 `event.handled ? 0 : 1` 作为退出状态。
 
-边界：CLI 是 production tool，不是 test runner；不能依赖 `LA_TESTING`、hidden testing IPC 或测试 plist。
+边界：CLI 是 production tool，不是 test runner；不能依赖 DEBUG-only testing IPC、hidden testing IPC 或测试 plist。
 
 已确认的 1.9.13 逆向结论：
 
@@ -156,7 +156,7 @@ legacy preference 兼容边界：
 
 阶段 4 后续切片顺序：
 
-1. Top slide / edge gesture family：第一片已落地为 `LATEdgeGestureEventSource` + `LATEdgeGestureClassifier` observe-only 链路，复用 `_UISystemGestureWindow sendEvent:` 的 `UIEvent` 做 snapshot 分类，覆盖 24 个 slide-in / two-finger-slide-in event name；下一步先做真机日志验收，再进入 dispatch 切片。Drag-along screen-side 仍需单独确认现代语义；如需 handled 后拦截默认行为，必须先为具体 hook 设计返回值、原始事件转发和 `event.handled` 回传路径。
+1. Top slide / edge gesture family：已落地为 `LATEdgeGestureEventSource` + `LATEdgeGestureClassifier` dispatch-no-intercept 链路，复用 `_UISystemGestureWindow sendEvent:` 的 `UIEvent` 做 snapshot 分类，覆盖 24 个 slide-in / two-finger-slide-in event name；下一步做 dispatch 绑定动作真机验收。Drag-along screen-side 仍需单独确认现代语义；如需 handled 后拦截默认行为，必须先为具体 hook 设计返回值、原始事件转发和 `event.handled` 回传路径。
 2. Multitouch gesture family：恢复 three/four/five finger tap、pinch、spread 等事件前，先确认 SpringBoard 或系统手势层能否在不注入用户 App 的前提下观察多指触摸；无法满足不注入用户 App 约束的事件保持 metadata-only 或 blocked。
 3. SpringBoard/icon gesture family：home screen pinch/spread、icon flick 等只针对 SpringBoard UI 层实现，先确认现代 icon list / home screen view hook 点和 iOS 15+ 兼容性，再进入 adapter 设计。
 4. Lock screen gesture family：CoverSheet/lock screen clock gestures 与锁屏、passcode、通知中心和相机入口强相关，应单独 probe 并记录风险，不与普通 edge gestures 混在一个切片里。

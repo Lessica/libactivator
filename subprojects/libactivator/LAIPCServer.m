@@ -9,7 +9,7 @@
 #import "LAActivator+Private.h"
 #import "LAIPC.h"
 #import "LAIPCCodec.h"
-#if LA_TESTING
+#if DEBUG
 #import "LAActivatorTestSupport.h"
 #endif
 
@@ -111,7 +111,7 @@
         LAIPCMessageListenerSmallIconData,
         LAIPCMessageRequestListenerRemoval,
         LAIPCMessageRemoveEvent,
-#if LA_TESTING
+#if DEBUG
         LAIPCMessageTesting,
 #endif
 #if DEBUG
@@ -168,7 +168,7 @@
 #pragma mark - Message Handling
 
 - (NSDictionary *)handleTestingMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
-#if LA_TESTING
+#if DEBUG
     if ([messageName isEqualToString:LAIPCMessageTesting]) {
         return [LAActivatorTestSupport handleCommandWithUserInfo:userInfo activator:_activator];
     }

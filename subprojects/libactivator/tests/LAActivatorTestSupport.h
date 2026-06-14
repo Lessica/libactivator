@@ -6,7 +6,7 @@
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#if LA_TESTING
+#if DEBUG
 
 #import <Foundation/Foundation.h>
 

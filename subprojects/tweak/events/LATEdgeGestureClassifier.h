@@ -17,9 +17,12 @@ extern NSString *const LATEdgeGestureTouchLocationKey;
 
 @interface LATEdgeGestureClassifier : NSObject
 
+// Recognition
 - (nullable NSString *)updateWithTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)touchSnapshots
                                          bounds:(CGRect)bounds
                                       timestamp:(NSTimeInterval)timestamp;
+
+// State
 - (void)reset;
 
 @end

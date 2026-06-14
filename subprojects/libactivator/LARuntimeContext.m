@@ -130,7 +130,7 @@
     dispatch_async(dispatch_get_main_queue(), block);
 }
 
-#if LA_TESTING
+#if DEBUG
 - (NSDictionary *)testingDebugDictionary {
     __block NSString *mode = nil;
     __block NSString *underneathMode = nil;

@@ -8,6 +8,7 @@
 
 #import "LATEdgeGestureEventSource.h"
 
+#import "LAActivator+Private.h"
 #import "LATEdgeGestureClassifier.h"
 #import "LATQueueAssertions.h"
 
@@ -17,13 +18,15 @@
 
 @property(nonatomic, assign, getter=isStarted) BOOL started;
 @property(nonatomic, strong) LATEdgeGestureClassifier *classifier;
-#if LA_TESTING
+#if DEBUG
 @property(nonatomic, assign) NSTimeInterval lastSideDiagnosticTimestamp;
 #endif
 
 @end
 
 @implementation LATEdgeGestureEventSource
+
+#pragma mark - Lifecycle
 
 - (instancetype)init {
     self = [super init];
@@ -41,6 +44,8 @@
     self.started = YES;
 }
 
+#pragma mark - Touch Entry Points
+
 - (void)noteSystemGestureWindow:(UIWindow *)window event:(UIEvent *)event {
     LATAssertMainQueue();
     if (!self.started || !window || !event) {
@@ -52,20 +57,56 @@
         return;
     }
 
-#if LA_TESTING
+#if DEBUG
     [self logSideGestureDiagnosticForTouchSnapshots:snapshots bounds:window.bounds timestamp:event.timestamp];
 #endif
 
-    NSString *eventName = [self.classifier updateWithTouchSnapshots:snapshots
-                                                             bounds:window.bounds
-                                                          timestamp:event.timestamp];
-    if (eventName.length > 0) {
-        HBLogInfo(@"Classified edge gesture event=%@ touchCount=%lu bounds=%@",
-                  eventName,
-                  (unsigned long)snapshots.count,
-                  NSStringFromCGRect(window.bounds));
-    }
+    [self handleTouchSnapshots:snapshots bounds:window.bounds timestamp:event.timestamp];
 }
+
+#pragma mark - Recognition
+
+- (nullable NSString *)handleTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
+                                     bounds:(CGRect)bounds
+                                  timestamp:(NSTimeInterval)timestamp {
+    LATAssertMainQueue();
+    if (!self.started || snapshots.count == 0) {
+        return nil;
+    }
+
+    NSString *eventName = [self.classifier updateWithTouchSnapshots:snapshots
+                                                             bounds:bounds
+                                                          timestamp:timestamp];
+    if (eventName.length > 0) {
+        [self sendEventWithName:eventName touchCount:snapshots.count bounds:bounds];
+    }
+    return eventName;
+}
+
+#pragma mark - Event Dispatch
+
+- (void)sendEventWithName:(NSString *)eventName touchCount:(NSUInteger)touchCount bounds:(CGRect)bounds {
+    LATAssertMainQueue();
+    if (eventName.length == 0) {
+        return;
+    }
+
+    LAEvent *event = [LAEvent eventWithName:eventName mode:[self currentEventMode]];
+    [LASharedActivator sendEventToListener:event];
+    HBLogInfo(@"Classified and dispatched edge gesture event=%@ touchCount=%lu bounds=%@",
+              eventName,
+              (unsigned long)touchCount,
+              NSStringFromCGRect(bounds));
+}
+
+- (NSString *)currentEventMode {
+    LATAssertMainQueue();
+
+    NSString *eventMode = LASharedActivator.currentEventMode;
+    return eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;
+}
+
+#pragma mark - Touch Snapshots
 
 - (NSArray<NSDictionary<NSString *, id> *> *)touchSnapshotsFromEvent:(UIEvent *)event inWindow:(UIWindow *)window {
     NSMutableArray<NSDictionary<NSString *, id> *> *snapshots = [[NSMutableArray alloc] init];
@@ -80,7 +121,9 @@
     return snapshots;
 }
 
-#if LA_TESTING
+#if DEBUG
+#pragma mark - Debug Diagnostics
+
 - (void)logSideGestureDiagnosticForTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
                                            bounds:(CGRect)bounds
                                         timestamp:(NSTimeInterval)timestamp {
@@ -140,6 +183,14 @@
               NSStringFromCGPoint(centroid),
               NSStringFromCGRect(bounds),
               [touchDescriptions componentsJoinedByString:@"; "]);
+}
+
+#pragma mark - Testing Hooks
+
+- (nullable NSString *)la_testingNoteTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
+                                             bounds:(CGRect)bounds
+                                          timestamp:(NSTimeInterval)timestamp {
+    return [self handleTouchSnapshots:snapshots bounds:bounds timestamp:timestamp];
 }
 #endif
 

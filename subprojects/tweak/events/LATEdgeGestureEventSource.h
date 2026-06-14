@@ -12,9 +12,21 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LATEdgeGestureEventSource : NSObject
 
-// Main-queue confined. The first implementation only classifies and logs edge slide gestures.
+// Main-queue confined. This source observes system gesture window events and dispatches
+// Activator edge slide events without consuming the original system touch handling.
+
+// Lifecycle
 - (void)start;
+
+// Touch ingestion
 - (void)noteSystemGestureWindow:(UIWindow *)window event:(nullable UIEvent *)event;
+
+#if DEBUG
+// Testing hooks
+- (nullable NSString *)la_testingNoteTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
+                                             bounds:(CGRect)bounds
+                                          timestamp:(NSTimeInterval)timestamp;
+#endif
 
 @end
 

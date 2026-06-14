@@ -28,7 +28,7 @@ libactivator_FILES += UIImageView+Activator.m
 libactivator_CFLAGS += -fobjc-arc
 libactivator_CFLAGS += -I../../include
 
-ifeq ($(LA_TESTING),1)
+ifeq ($(DEBUG),1)
 libactivator_FILES += tests/LAActivatorTestSupport.m
 libactivator_FILES += tests/support/LATestEnvironment.m
 libactivator_FILES += tests/support/LATestRecorder.m
@@ -53,7 +53,7 @@ libactivator_FILES += tests/suites/builtins/LATestBuiltInDynamicApplicationListe
 libactivator_FILES += tests/suites/builtins/LATestBuiltInEventSourcesSuite.m
 libactivator_FILES += tests/suites/runtime/LATestRuntimeInputSuite.m
 libactivator_FILES += tests/suites/runtime/LATestRuntimeDeviceSuite.m
-libactivator_CFLAGS += -DLA_TESTING=1
+libactivator_CFLAGS += -DDEBUG=1
 libactivator_CFLAGS += -I.
 libactivator_CFLAGS += -Itests
 libactivator_CFLAGS += -Itests/support

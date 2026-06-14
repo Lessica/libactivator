@@ -12,7 +12,7 @@
 ## 构建与安装
 
 - rootless/rootful/roothide 的包布局由 Theos 和对应环境脚本处理；实现代码只关心运行时路径转换。
-- 测试构建使用 `LA_TESTING=1`，普通包不能包含 testing IPC、test runner、测试持久化路径或测试自动化入口。
+- 测试构建使用 `DEBUG=1`，普通包不能包含 DEBUG-only testing IPC、test runner、测试持久化路径或测试自动化入口。
 - 安装后需要重启 SpringBoard，尤其是 IPC server、tweak hook 和 dylib ABI 发生变化时。
 - 判断 SpringBoard 是否崩溃或重启，第一信号是 SpringBoard pid 是否变化；crash report 用于随后定位栈。
 

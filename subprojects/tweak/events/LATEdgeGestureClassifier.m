@@ -51,6 +51,8 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
 
 @implementation LATEdgeGestureClassifier
 
+#pragma mark - Lifecycle
+
 - (instancetype)init {
     self = [super init];
     if (self) {
@@ -58,6 +60,8 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
     }
     return self;
 }
+
+#pragma mark - Recognition
 
 - (nullable NSString *)updateWithTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)touchSnapshots
                                          bounds:(CGRect)bounds
@@ -104,12 +108,6 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
     return classifiedEventName;
 }
 
-- (void)reset {
-    [self.activeTouchLocations removeAllObjects];
-    self.session = nil;
-    self.trackingUnrecognizedSession = NO;
-}
-
 - (void)startSessionIfNeededWithBounds:(CGRect)bounds {
     if (self.session || self.isTrackingUnrecognizedSession || self.activeTouchLocations.count == 0) {
         return;
@@ -148,6 +146,16 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
     return eventName;
 }
 
+#pragma mark - State
+
+- (void)reset {
+    [self.activeTouchLocations removeAllObjects];
+    self.session = nil;
+    self.trackingUnrecognizedSession = NO;
+}
+
+#pragma mark - Geometry
+
 - (CGPoint)centroidForActiveTouches {
     CGFloat x = 0.0;
     CGFloat y = 0.0;
@@ -163,6 +171,13 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
     }
     return CGPointMake(x / (CGFloat)count, y / (CGFloat)count);
 }
+
+- (BOOL)triggerRect:(CGRect)triggerRect containsPointInclusively:(CGPoint)point {
+    return point.x >= CGRectGetMinX(triggerRect) && point.x <= CGRectGetMaxX(triggerRect) &&
+           point.y >= CGRectGetMinY(triggerRect) && point.y <= CGRectGetMaxY(triggerRect);
+}
+
+#pragma mark - Session Configuration
 
 - (nullable LATEdgeGestureSession *)sessionForStartCentroid:(CGPoint)centroid bounds:(CGRect)bounds {
     CGFloat width = CGRectGetWidth(bounds);
@@ -205,11 +220,6 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
     }
 
     return session.singleFingerEventName.length > 0 && session.twoFingerEventName.length > 0 ? session : nil;
-}
-
-- (BOOL)triggerRect:(CGRect)triggerRect containsPointInclusively:(CGPoint)point {
-    return point.x >= CGRectGetMinX(triggerRect) && point.x <= CGRectGetMaxX(triggerRect) &&
-           point.y >= CGRectGetMinY(triggerRect) && point.y <= CGRectGetMaxY(triggerRect);
 }
 
 - (void)configureBottomSession:(LATEdgeGestureSession *)session

@@ -49,8 +49,8 @@ ActivatorTweak_CFLAGS += -Iruntime
 ActivatorTweak_CFLAGS += -I../../include
 ActivatorTweak_CFLAGS += -I../libactivator
 
-ifeq ($(LA_TESTING),1)
-ActivatorTweak_CFLAGS += -DLA_TESTING=1
+ifeq ($(DEBUG),1)
+ActivatorTweak_CFLAGS += -DDEBUG=1
 endif
 
 ActivatorTweak_FRAMEWORKS += Foundation

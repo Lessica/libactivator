@@ -29,7 +29,7 @@ __attribute__((visibility("hidden")))
 
 #pragma mark - Testing
 
-#if LA_TESTING
+#if DEBUG
 + (instancetype)testingPersistence;
 #endif
 

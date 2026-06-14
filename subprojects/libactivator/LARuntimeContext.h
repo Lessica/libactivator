@@ -34,7 +34,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Testing
 
-#if LA_TESTING
+#if DEBUG
 - (NSDictionary<NSString *, id> *)testingDebugDictionary;
 #endif
 

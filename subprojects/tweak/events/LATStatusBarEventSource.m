@@ -376,7 +376,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
     return eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;
 }
 
-#if LA_TESTING
+#if DEBUG
 - (void)la_testingNoteTouchBeganInStatusBarView:(id)view
                                          bounds:(CGRect)bounds
                                        location:(CGPoint)location
