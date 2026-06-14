@@ -8,6 +8,24 @@
 
 #import "LATestBuiltInEventSourcesSuite.h"
 
+#import "LAActivator+Private.h"
+#import "LATestEnvironment.h"
+
+@interface NSObject (LATStatusBarEventSourceTesting)
+- (void)start;
+- (void)la_testingNoteTouchBeganInStatusBarView:(id)view
+                                         bounds:(CGRect)bounds
+                                       location:(CGPoint)location
+                                       tapCount:(NSUInteger)tapCount;
+- (void)la_testingNoteTouchMovedInStatusBarView:(id)view bounds:(CGRect)bounds location:(CGPoint)location;
+- (void)la_testingNoteTouchEndedInStatusBarView:(id)view tapCount:(NSUInteger)tapCount;
+- (void)la_testingNoteTouchCancelledInStatusBarView:(id)view;
+- (void)la_testingNoteTouchCancelledInStatusBarView:(id)view
+                                             bounds:(CGRect)bounds
+                                           location:(CGPoint)location
+                                           tapCount:(NSUInteger)tapCount;
+@end
+
 @implementation LATestBuiltInEventSourcesSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
@@ -17,6 +35,20 @@
     NSString *nowPlayingPlayingEventName = @"libactivator.now-playing.playing";
     NSString *nowPlayingPausedEventName = @"libactivator.now-playing.paused";
     NSString *lockPressTripleEventName = @"libactivator.lock.press.triple";
+    NSArray<NSString *> *statusBarEventNames = @[
+        LAEventNameStatusBarTapSingle,
+        LAEventNameStatusBarTapSingleLeft,
+        LAEventNameStatusBarTapSingleRight,
+        LAEventNameStatusBarTapDouble,
+        LAEventNameStatusBarTapDoubleLeft,
+        LAEventNameStatusBarTapDoubleRight,
+        LAEventNameStatusBarHold,
+        LAEventNameStatusBarHoldLeft,
+        LAEventNameStatusBarHoldRight,
+        LAEventNameStatusBarSwipeLeft,
+        LAEventNameStatusBarSwipeRight,
+        LAEventNameStatusBarSwipeDown,
+    ];
 
     [recorder expect:NSClassFromString(@"LATLockStateEventSource") != Nil
             caseName:@"lock-state-event-source-loaded"
@@ -33,9 +65,22 @@
     [recorder expect:NSClassFromString(@"LATButtonEventSource") != Nil
             caseName:@"button-event-source-loaded"
               reason:@"LATButtonEventSource class was not loaded in SpringBoard"];
+    [recorder expect:NSClassFromString(@"LATStatusBarEventSource") != Nil
+            caseName:@"status-bar-event-source-loaded"
+              reason:@"LATStatusBarEventSource class was not loaded in SpringBoard"];
     [recorder expect:NSClassFromString(@"LATRuntimeStateSource") != Nil
             caseName:@"runtime-state-source-loaded"
               reason:@"LATRuntimeStateSource class was not loaded in SpringBoard"];
+    for (NSString *eventName in statusBarEventNames) {
+        [recorder expect:[[activator availableEventNames] containsObject:eventName]
+                caseName:[NSString stringWithFormat:@"status-bar-event-available-%@", eventName]
+                  reason:[NSString stringWithFormat:@"%@ metadata was not available", eventName]];
+        [recorder expect:[activator eventWithName:eventName isCompatibleWithMode:LAEventModeSpringBoard] &&
+                         [activator eventWithName:eventName isCompatibleWithMode:LAEventModeApplication] &&
+                         [activator eventWithName:eventName isCompatibleWithMode:LAEventModeLockScreen]
+                caseName:[NSString stringWithFormat:@"status-bar-event-all-modes-compatible-%@", eventName]
+                  reason:[NSString stringWithFormat:@"%@ was not compatible with all event modes", eventName]];
+    }
     [recorder expect:[[activator availableEventNames] containsObject:LAEventNameDeviceLocked]
             caseName:@"device-locked-event-available"
               reason:@"Device locked event metadata was not available"];
@@ -326,6 +371,198 @@
                          isCompatibleWithMode:LAEventModeLockScreen]
             caseName:@"volume-toggle-mute-twice-all-modes-compatible"
               reason:@"Volume toggle mute twice event was not compatible with all event modes"];
+
+    [self runStatusBarRecognizerTestsWithRecorder:recorder activator:activator];
+}
+
++ (NSUInteger)dispatchCountForEventName:(NSString *)eventName activator:(LAActivator *)activator {
+    return [activator.la_eventDispatchCounts[eventName] unsignedIntegerValue];
+}
+
++ (void)runStatusBarRecognizerTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    Class sourceClass = NSClassFromString(@"LATStatusBarEventSource");
+    if (!sourceClass) {
+        [recorder skip:@"status-bar-recognizer-logic" reason:@"LATStatusBarEventSource was not loaded"];
+        return;
+    }
+
+    NSObject *source = [[sourceClass alloc] init];
+    [source start];
+    CGRect bounds = CGRectMake(0.0, 0.0, 400.0, 40.0);
+
+    [activator la_resetDispatchCounts];
+    NSObject *leftView = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:leftView bounds:bounds location:CGPointMake(40.0, 10.0) tapCount:1];
+    [source la_testingNoteTouchEndedInStatusBarView:leftView tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarTapSingleLeft activator:activator] == 1
+            caseName:@"status-bar-single-tap-left"
+              reason:@"Left status bar single tap did not dispatch after the tap delay"];
+
+    [activator la_resetDispatchCounts];
+    NSObject *centerView = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:centerView
+                                             bounds:bounds
+                                           location:CGPointMake(200.0, 10.0)
+                                           tapCount:1];
+    [source la_testingNoteTouchEndedInStatusBarView:centerView tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.1];
+    [source la_testingNoteTouchBeganInStatusBarView:centerView
+                                             bounds:bounds
+                                           location:CGPointMake(200.0, 10.0)
+                                           tapCount:2];
+    [source la_testingNoteTouchEndedInStatusBarView:centerView tapCount:2];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarTapDouble activator:activator] == 1 &&
+                     [self dispatchCountForEventName:LAEventNameStatusBarTapSingle activator:activator] == 0
+            caseName:@"status-bar-double-tap-cancels-single"
+              reason:@"Double tap did not cancel the pending center single tap"];
+
+    [activator la_resetDispatchCounts];
+    NSObject *cancelledTapView = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:cancelledTapView
+                                             bounds:bounds
+                                           location:CGPointMake(200.0, 10.0)
+                                           tapCount:1];
+    [source la_testingNoteTouchMovedInStatusBarView:cancelledTapView bounds:bounds location:CGPointMake(201.0, 10.0)];
+    [source la_testingNoteTouchCancelledInStatusBarView:cancelledTapView
+                                                 bounds:bounds
+                                               location:CGPointMake(201.0, 10.0)
+                                               tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarTapSingle activator:activator] == 1
+            caseName:@"status-bar-cancelled-touch-can-dispatch-single-tap"
+              reason:@"Tap-like status bar cancellation did not dispatch a delayed single tap"];
+
+    [activator la_resetDispatchCounts];
+    NSObject *cancelledDoubleTapView = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:cancelledDoubleTapView
+                                             bounds:bounds
+                                           location:CGPointMake(360.0, 10.0)
+                                           tapCount:1];
+    [source la_testingNoteTouchCancelledInStatusBarView:cancelledDoubleTapView
+                                                 bounds:bounds
+                                               location:CGPointMake(360.0, 10.0)
+                                               tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.1];
+    [source la_testingNoteTouchBeganInStatusBarView:cancelledDoubleTapView
+                                             bounds:bounds
+                                           location:CGPointMake(360.0, 10.0)
+                                           tapCount:2];
+    [source la_testingNoteTouchCancelledInStatusBarView:cancelledDoubleTapView
+                                                 bounds:bounds
+                                               location:CGPointMake(360.0, 10.0)
+                                               tapCount:2];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarTapDoubleRight activator:activator] == 1 &&
+                     [self dispatchCountForEventName:LAEventNameStatusBarTapSingleRight activator:activator] == 0
+            caseName:@"status-bar-cancelled-touch-can-dispatch-double-tap"
+              reason:@"Tap-like status bar cancellation did not dispatch double tap or suppress pending single tap"];
+
+    [activator la_resetDispatchCounts];
+    NSObject *rightView = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:rightView
+                                             bounds:bounds
+                                           location:CGPointMake(360.0, 10.0)
+                                           tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.6];
+    [source la_testingNoteTouchEndedInStatusBarView:rightView tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarHoldRight activator:activator] == 1 &&
+                     [self dispatchCountForEventName:LAEventNameStatusBarTapSingleRight activator:activator] == 0
+            caseName:@"status-bar-hold-right-consumes-tap"
+              reason:@"Right status bar hold did not consume the follow-up tap"];
+
+    [activator la_resetDispatchCounts];
+    NSObject *jitterHoldView = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:jitterHoldView
+                                             bounds:bounds
+                                           location:CGPointMake(200.0, 10.0)
+                                           tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.1];
+    [source la_testingNoteTouchMovedInStatusBarView:jitterHoldView bounds:bounds location:CGPointMake(202.0, 11.0)];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.5];
+    [source la_testingNoteTouchEndedInStatusBarView:jitterHoldView tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarHold activator:activator] == 1 &&
+                     [self dispatchCountForEventName:LAEventNameStatusBarTapSingle activator:activator] == 0
+            caseName:@"status-bar-hold-survives-small-move"
+              reason:@"Small status bar touch movement cancelled hold and fell back to tap"];
+
+    [activator la_resetDispatchCounts];
+    NSObject *swipeRightView = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:swipeRightView
+                                             bounds:bounds
+                                           location:CGPointMake(180.0, 10.0)
+                                           tapCount:1];
+    [source la_testingNoteTouchMovedInStatusBarView:swipeRightView bounds:bounds location:CGPointMake(231.0, 12.0)];
+    [source la_testingNoteTouchEndedInStatusBarView:swipeRightView tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarSwipeRight activator:activator] == 1 &&
+                     [self dispatchCountForEventName:LAEventNameStatusBarTapSingle activator:activator] == 0
+            caseName:@"status-bar-horizontal-swipe"
+              reason:@"Horizontal status bar swipe did not dispatch once and suppress tap"];
+
+    [activator la_resetDispatchCounts];
+    NSObject *swipeThenCancelView = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:swipeThenCancelView
+                                             bounds:bounds
+                                           location:CGPointMake(180.0, 10.0)
+                                           tapCount:1];
+    [source la_testingNoteTouchMovedInStatusBarView:swipeThenCancelView
+                                             bounds:bounds
+                                           location:CGPointMake(231.0, 12.0)];
+    [source la_testingNoteTouchCancelledInStatusBarView:swipeThenCancelView
+                                                 bounds:bounds
+                                               location:CGPointMake(231.0, 12.0)
+                                               tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarSwipeRight activator:activator] == 1 &&
+                     [self dispatchCountForEventName:LAEventNameStatusBarTapSingle activator:activator] == 0
+            caseName:@"status-bar-cancel-after-swipe-does-not-fallback-to-tap"
+              reason:@"Cancelled status bar swipe fell back to tap after dispatching swipe"];
+
+    [activator la_resetDispatchCounts];
+    NSObject *swipeDownView = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:swipeDownView
+                                             bounds:bounds
+                                           location:CGPointMake(180.0, 10.0)
+                                           tapCount:1];
+    [source la_testingNoteTouchMovedInStatusBarView:swipeDownView bounds:bounds location:CGPointMake(181.0, 22.0)];
+    [source la_testingNoteTouchEndedInStatusBarView:swipeDownView tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarSwipeDown activator:activator] == 1 &&
+                     [self dispatchCountForEventName:LAEventNameStatusBarHold activator:activator] == 0
+            caseName:@"status-bar-vertical-swipe-down"
+              reason:@"Vertical status bar swipe down did not dispatch once and suppress hold"];
+
+    [activator la_resetDispatchCounts];
+    NSObject *cancelledView = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:cancelledView
+                                             bounds:bounds
+                                           location:CGPointMake(200.0, 10.0)
+                                           tapCount:1];
+    [source la_testingNoteTouchCancelledInStatusBarView:cancelledView];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.6];
+    [source la_testingNoteTouchEndedInStatusBarView:cancelledView tapCount:1];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarHold activator:activator] == 0 &&
+                     [self dispatchCountForEventName:LAEventNameStatusBarTapSingle activator:activator] == 0
+            caseName:@"status-bar-cancel-clears-session"
+              reason:@"Cancelled status bar touch dispatched a delayed hold or tap"];
+
+    [activator la_resetDispatchCounts];
+    NSObject *viewA = [[NSObject alloc] init];
+    NSObject *viewB = [[NSObject alloc] init];
+    [source la_testingNoteTouchBeganInStatusBarView:viewA bounds:bounds location:CGPointMake(40.0, 10.0) tapCount:1];
+    [source la_testingNoteTouchBeganInStatusBarView:viewB bounds:bounds location:CGPointMake(360.0, 10.0) tapCount:1];
+    [source la_testingNoteTouchEndedInStatusBarView:viewA tapCount:1];
+    [source la_testingNoteTouchCancelledInStatusBarView:viewB];
+    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.4];
+    [recorder expect:[self dispatchCountForEventName:LAEventNameStatusBarTapSingleLeft activator:activator] == 1 &&
+                     [self dispatchCountForEventName:LAEventNameStatusBarTapSingleRight activator:activator] == 0
+            caseName:@"status-bar-sessions-are-per-view"
+              reason:@"A second status bar view cancelled or polluted the first view session"];
 }
 
 @end

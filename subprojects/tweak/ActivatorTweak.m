@@ -13,6 +13,7 @@
 #import "LATButtonEventSource.h"
 #import "LATNetworkEventSource.h"
 #import "LATRuntimeStateSource.h"
+#import "LATStatusBarEventSource.h"
 
 #import <CaptainHook/CaptainHook.h>
 #import <HBLog.h>
@@ -27,6 +28,7 @@ CHDeclareClass(SBVolumeControl);
 CHDeclareClass(SBHIconManager);
 CHDeclareClass(SBWiFiManager);
 CHDeclareClass(_UISystemGestureWindow);
+CHDeclareClass(UIStatusBar_Modern);
 
 static NSString *const LATRuntimeStateSourceCoverSheetTransition = @"cover-sheet-transition";
 static NSString *const LATRuntimeStateSourceIconManagerRootFolder = @"icon-manager-root-folder";
@@ -208,6 +210,28 @@ CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, eve
     [gBuiltInRegistry.runtimeStateSource noteSystemTouchEvent:event];
 }
 
+#pragma mark - UIStatusBar_Modern
+
+CHOptimizedMethod2(self, void, UIStatusBar_Modern, touchesBegan, NSSet *, touches, withEvent, UIEvent *, event) {
+    [gBuiltInRegistry.statusBarEventSource noteStatusBarView:(UIView *)self touchesBegan:touches withEvent:event];
+    CHSuper2(UIStatusBar_Modern, touchesBegan, touches, withEvent, event);
+}
+
+CHOptimizedMethod2(self, void, UIStatusBar_Modern, touchesMoved, NSSet *, touches, withEvent, UIEvent *, event) {
+    [gBuiltInRegistry.statusBarEventSource noteStatusBarView:(UIView *)self touchesMoved:touches withEvent:event];
+    CHSuper2(UIStatusBar_Modern, touchesMoved, touches, withEvent, event);
+}
+
+CHOptimizedMethod2(self, void, UIStatusBar_Modern, touchesEnded, NSSet *, touches, withEvent, UIEvent *, event) {
+    [gBuiltInRegistry.statusBarEventSource noteStatusBarView:(UIView *)self touchesEnded:touches withEvent:event];
+    CHSuper2(UIStatusBar_Modern, touchesEnded, touches, withEvent, event);
+}
+
+CHOptimizedMethod2(self, void, UIStatusBar_Modern, touchesCancelled, NSSet *, touches, withEvent, UIEvent *, event) {
+    [gBuiltInRegistry.statusBarEventSource noteStatusBarView:(UIView *)self touchesCancelled:touches withEvent:event];
+    CHSuper2(UIStatusBar_Modern, touchesCancelled, touches, withEvent, event);
+}
+
 #pragma mark - SpringBoard
 
 CHOptimizedMethod2(self, BOOL, SpringBoard, __handleHIDEvent, IOHIDEventRef, event, withUIEvent, id, uiEvent) {
@@ -248,6 +272,7 @@ static void LATLoadSpringBoardClasses(void) {
     CHLoadClass_(&SBHIconManager$, NSClassFromString(@"SBHIconManager"));
     CHLoadClass_(&SBWiFiManager$, NSClassFromString(@"SBWiFiManager"));
     CHLoadClass_(&_UISystemGestureWindow$, NSClassFromString(@"_UISystemGestureWindow"));
+    CHLoadClass_(&UIStatusBar_Modern$, NSClassFromString(@"UIStatusBar_Modern"));
 }
 
 static void LATInstallHooks(void) {
@@ -268,25 +293,33 @@ static void LATInstallHooks(void) {
         CHHook2(SBMainSwitcherControllerCoordinator, layoutStateTransitionCoordinator,
                 transitionDidEndWithTransitionContext);
         CHHook4(SBVolumeControl, initWithHUDController, ringerControl, telephonyManager, conferenceManager);
+
         if (@available(iOS 17, *)) {
             CHHook1(SBHIconManager, rootFolderControllerViewWillAppear);
             CHHook1(SBHIconManager, rootFolderControllerViewDidDisappear);
         }
+
         CHHook0(SBWiFiManager, _updateCurrentNetwork);
         CHHook0(SBWiFiManager, _linkDidChange);
         CHHook1(_UISystemGestureWindow, sendEvent);
-        Class springBoardClass = NSClassFromString(@"SpringBoard");
-        if ([springBoardClass instancesRespondToSelector:NSSelectorFromString(@"__handleHIDEvent:withUIEvent:")]) {
-            CHHook2(SpringBoard, __handleHIDEvent, withUIEvent);
-        } else {
-            HBLogWarn(@"Skipping SpringBoard __handleHIDEvent:withUIEvent: hook because selector is unavailable");
-        }
-        if ([springBoardClass instancesRespondToSelector:NSSelectorFromString(@"__handleHIDEvent:")]) {
-            CHHook1(SpringBoard, __handleHIDEvent);
-        } else {
-            HBLogWarn(@"Skipping SpringBoard __handleHIDEvent: hook because selector is unavailable");
-        }
+        CHHook2(SpringBoard, __handleHIDEvent, withUIEvent);
+        CHHook1(SpringBoard, __handleHIDEvent);
         CHHook1(SpringBoard, applicationDidFinishLaunching);
+
+        Class modernStatusBarClass = NSClassFromString(@"UIStatusBar_Modern");
+        BOOL isSafeToHookStatusBarTouches =
+            ([modernStatusBarClass instancesRespondToSelector:@selector(touchesBegan:withEvent:)] &&
+             [modernStatusBarClass instancesRespondToSelector:@selector(touchesMoved:withEvent:)] &&
+             [modernStatusBarClass instancesRespondToSelector:@selector(touchesEnded:withEvent:)] &&
+             [modernStatusBarClass instancesRespondToSelector:@selector(touchesCancelled:withEvent:)]);
+        if (isSafeToHookStatusBarTouches) {
+            CHHook2(UIStatusBar_Modern, touchesBegan, withEvent);
+            CHHook2(UIStatusBar_Modern, touchesMoved, withEvent);
+            CHHook2(UIStatusBar_Modern, touchesEnded, withEvent);
+            CHHook2(UIStatusBar_Modern, touchesCancelled, withEvent);
+        } else {
+            HBLogWarn(@"Skipping UIStatusBar_Modern touch hooks because one or more touch methods are not present");
+        }
     });
 }
 

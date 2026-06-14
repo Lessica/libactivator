@@ -95,6 +95,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
     [activator setCurrentProfileName:@"Default"];
     [self sendSyntheticTouchWithTouching:NO];
     [self waitForSyntheticTouchDelivery];
+    [activator la_resetDispatchCounts];
 }
 
 + (void)cleanRuntimeInputStateWithActivator:(LAActivator *)activator {

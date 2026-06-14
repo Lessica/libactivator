@@ -30,6 +30,16 @@ for (uint64_t offset = rangeStart; offset < rangeEnd; offset++) {
 
 解混淆后再用 IDA 分析 `references/latest/analysis/ActivatorSpringBoard/ActivatorSpringBoard.arm64.decrypted.i64`。后续引用旧实现时，应说明证据来自这个解混淆后的本地分析产物，避免把原始混淆二进制中的缺失字符串误判为旧版没有实现。
 
+## Status bar gestures
+
+旧 master 中状态栏触摸分为两条路径：SpringBoard 端 `Events.x` hook `SBStatusBar`，只能派发通用 `libactivator.statusbar.tap.single`、`tap.double`、`hold`、`swipe.left`、`swipe.right`、`swipe.down`；UIKit everywhere 注入端 `EverywhereHooks.x` hook `UIStatusBar`，按触摸起点的 `x < width * 0.25`、`width * 0.25 <= x < width * 0.75`、`x >= width * 0.75` 分别派发 left、base、right 的 tap/hold/double-tap 事件。旧阈值来自 `references/master/Constants.h`：hold delay `0.5` 秒，single tap delay `0.33` 秒，horizontal swipe threshold `50.0pt`，vertical swipe threshold `10.0pt`；移动方向使用 `deltaX^2 > deltaY^2` 决定横向优先还是纵向优先。
+
+旧 master 的 `EverywhereHooks.x` 在 `touchesBegan:` 中启动 hold timer 并记录起点；`touchesMoved:` 会取消 hold/tap timer，达到横向阈值时派发 `statusbar.swipe.right/left`，达到向下纵向阈值时在旧 CoreFoundation 版本下派发 `statusbar.swipe.down`；`touchesEnded:` 中 `tapCount == 2` 立即派发 double tap，否则延迟 `0.33` 秒派发 single tap。该 hook 在 single tap fallback 中通过 `passThroughStatusBar` 重新调用一次 `touchesBegan:` 并继续 `%orig`，说明旧实现也尽量保留系统状态栏默认行为，而不是在事件识别阶段直接吞掉触摸。
+
+1.9.13 的解混淆 `ActivatorSpringBoard` 中仍可见 `ActivatorSlideGestureRecognizer`、`ActivatorSystemGestureRecognizer`、`UIStatusBarWindow`、`UIStatusBar`、`SBOffscreenSwipeGestureRecognizer`、`libactivator.statusbar.swipe.down` 和 `libactivator.statusbar.` 前缀。IDA 中 `UIStatusBar initWithFrame:showForegroundView:` 的 replacement 会在原始初始化后创建并 `addGestureRecognizer:` 一个 recognizer；`UIStatusBarWindow initWithFrame:` 在存在 `SBOffscreenSwipeGestureRecognizer` 时也会向 window 加 recognizer。`libactivator.statusbar.swipe.down` 的 xref 落在 slide/edge gesture 计算逻辑，符合 public header 中 “Now a slide in gesture on iOS5.0+; extern and name kept for backwards compatibility” 的注释。因此现代实现应把 `statusbar.swipe.down` 当作历史兼容事件保留，但完整 top slide / edge gesture family 应单独实现。
+
+当前项目不使用旧 `com.apple.UIKit` filter 注入用户 App 进程。现代 iOS 目标点位改为 SpringBoard 进程内多个 `UIStatusBar_Modern` 实例：主屏幕、锁屏和前台 App 界面各自可能有独立实例。实现时应在 SpringBoard tweak 内 hook `UIStatusBar_Modern` 的 touch 方法，并让每个 status bar view 实例拥有独立识别 session，避免旧 master 的全局状态在多实例现代状态栏下串扰。
+
 ## `libactivator.audio.launch-playing-app`
 
 1.9.13 中该 listener name 对应 `_LANowPlayingApplicationListener`，关键方法是 `-applicationForListenerName:`。解混淆后的引用可以看到 `_LANowPlayingApplicationListener`、`nowPlayingApplication`、`SBMediaController`、`SBApplicationController`、`com.apple.Music` 和 `libactivator.audio.launch-playing-app`。

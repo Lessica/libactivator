@@ -23,6 +23,7 @@
 #import "LATNothingListener.h"
 #import "LATPowerStateEventSource.h"
 #import "LATRuntimeStateSource.h"
+#import "LATStatusBarEventSource.h"
 #import "LATSystemActionListener.h"
 #import "LATTelephonyActionListener.h"
 #import "LATURLActionListener.h"
@@ -31,18 +32,24 @@
 
 @interface LATBuiltInRegistry ()
 
+// Dependencies
 @property(nonatomic, strong) LATApplicationLauncher *applicationLauncher;
 
+// Listener registration
 @property(nonatomic, strong) LATApplicationListenerProvider *dynamicApplicationListenerProvider;
 @property(nonatomic, strong) NSMutableArray<id<LAListener>> *registeredListeners;
 
+// Lifecycle
 @property(nonatomic, assign) BOOL eventSourcesStarted;
+
+// Event sources
 @property(nonatomic, strong, readwrite) LATRuntimeStateSource *runtimeStateSource;
+@property(nonatomic, strong, readwrite) LATButtonEventSource *buttonEventSource;
 @property(nonatomic, strong, readwrite) LATLockStateEventSource *lockStateEventSource;
-@property(nonatomic, strong, readwrite) LATPowerStateEventSource *powerStateEventSource;
 @property(nonatomic, strong, readwrite) LATMediaEventSource *mediaEventSource;
 @property(nonatomic, strong, readwrite) LATNetworkEventSource *networkEventSource;
-@property(nonatomic, strong, readwrite) LATButtonEventSource *buttonEventSource;
+@property(nonatomic, strong, readwrite) LATPowerStateEventSource *powerStateEventSource;
+@property(nonatomic, strong, readwrite) LATStatusBarEventSource *statusBarEventSource;
 
 @end
 
@@ -65,6 +72,7 @@
         _mediaEventSource = [[LATMediaEventSource alloc] init];
         _networkEventSource = [[LATNetworkEventSource alloc] init];
         _buttonEventSource = [[LATButtonEventSource alloc] init];
+        _statusBarEventSource = [[LATStatusBarEventSource alloc] init];
 
         [self registerBuiltInListenersWithActivator:activator];
     }
@@ -83,6 +91,7 @@
     [self.mediaEventSource start];
     [self.networkEventSource start];
     [self.buttonEventSource start];
+    [self.statusBarEventSource start];
 }
 
 - (NSArray<NSDictionary<NSString *, id> *> *)builtInListenerFactoryConfigurations {

@@ -19,6 +19,7 @@ ActivatorTweak_FILES += events/LATMediaEventSource.m
 ActivatorTweak_FILES += events/LATLockStateEventSource.m
 ActivatorTweak_FILES += events/LATPowerStateEventSource.m
 ActivatorTweak_FILES += events/LATNetworkEventSource.m
+ActivatorTweak_FILES += events/LATStatusBarEventSource.m
 ActivatorTweak_FILES += listeners/LATApplicationActionListener.m
 ActivatorTweak_FILES += listeners/LATHardwareActionListener.m
 ActivatorTweak_FILES += listeners/LATNothingListener.m
