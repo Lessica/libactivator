@@ -9,11 +9,10 @@
 #import "LATPowerStateEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LATQueueAssertions.h"
 
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
-
-#define kLATPowerStateEventSourceMainQueueReason @"LATPowerStateEventSource must only be used on the main thread"
 
 @interface LATPowerStateEventSource ()
 
@@ -34,7 +33,7 @@
 #pragma mark - Lifecycle
 
 - (void)start {
-    NSAssert(NSThread.isMainThread, kLATPowerStateEventSourceMainQueueReason);
+    LATAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -66,7 +65,7 @@
 #pragma mark - Notifications
 
 - (void)handleBatteryStateDidChangeForDevice:(UIDevice *)device {
-    NSAssert(NSThread.isMainThread, kLATPowerStateEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     BOOL externallyPowered = NO;
     if (![self readExternalPowerState:&externallyPowered forDevice:device]) {
@@ -89,7 +88,7 @@
 }
 
 - (void)refreshKnownPowerStateWithoutSendingEventForDevice:(UIDevice *)device {
-    NSAssert(NSThread.isMainThread, kLATPowerStateEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     BOOL externallyPowered = NO;
     if (![self readExternalPowerState:&externallyPowered forDevice:device]) {
@@ -102,7 +101,7 @@
 #pragma mark - State
 
 - (BOOL)readExternalPowerState:(BOOL *)externallyPowered forDevice:(UIDevice *)device {
-    NSAssert(NSThread.isMainThread, kLATPowerStateEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     switch (device.batteryState) {
     case UIDeviceBatteryStateCharging:
@@ -125,7 +124,7 @@
 #pragma mark - Event Dispatch
 
 - (void)sendPowerEventForExternalPowerState:(BOOL)externallyPowered {
-    NSAssert(NSThread.isMainThread, kLATPowerStateEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     NSString *eventName = externallyPowered ? LAEventNamePowerConnected : LAEventNamePowerDisconnected;
     NSString *eventMode = LASharedActivator.currentEventMode;

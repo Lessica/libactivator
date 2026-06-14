@@ -11,6 +11,7 @@
 #import "LAActivator+Private.h"
 #import "LATBuiltInRegistry.h"
 #import "LATButtonEventSource.h"
+#import "LATEdgeGestureEventSource.h"
 #import "LATNetworkEventSource.h"
 #import "LATRuntimeStateSource.h"
 #import "LATStatusBarEventSource.h"
@@ -206,6 +207,7 @@ CHOptimizedMethod0(self, void, SBWiFiManager, _linkDidChange) {
 #pragma mark - _UISystemGestureWindow
 
 CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, event) {
+    [gBuiltInRegistry.edgeGestureEventSource noteSystemGestureWindow:(UIWindow *)self event:event];
     CHSuper1(_UISystemGestureWindow, sendEvent, event);
     [gBuiltInRegistry.runtimeStateSource noteSystemTouchEvent:event];
 }

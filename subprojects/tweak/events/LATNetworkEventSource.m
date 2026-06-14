@@ -9,11 +9,10 @@
 #import "LATNetworkEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LATQueueAssertions.h"
 
 #import <HBLog.h>
 #import <Network/Network.h>
-
-#define kLATNetworkEventSourceMainQueueReason @"LATNetworkEventSource must only read network state on the main thread"
 
 static NSString *const LATNetworkWiFiSignalStrengthChangedNotification = @"SBWifiSignalStrengthChangedNotification";
 static NSString *const LATNetworkWakeFromSleepNotification = @"BKSPowerUtilitiesSystemDidWakeFromSleepNotification";
@@ -59,7 +58,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 }
 
 - (void)start {
-    NSAssert(NSThread.isMainThread, kLATNetworkEventSourceMainQueueReason);
+    LATAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -86,7 +85,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 #pragma mark - Monitoring
 
 - (void)startSpringBoardNetworkNotificationMonitoring {
-    NSAssert(NSThread.isMainThread, kLATNetworkEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     NSNotificationCenter *notificationCenter = NSNotificationCenter.defaultCenter;
     __weak typeof(self) weakSelf = self;
@@ -136,7 +135,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 }
 
 - (void)scheduleNetworkStateRefreshWithReason:(NSString *)reason {
-    NSAssert(NSThread.isMainThread, kLATNetworkEventSourceMainQueueReason);
+    LATAssertMainQueue();
     if (self.refreshScheduled) {
         return;
     }
@@ -152,7 +151,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 #pragma mark - Wi-Fi State
 
 - (void)handlePotentialNetworkStateChangeWithReason:(NSString *)reason {
-    NSAssert(NSThread.isMainThread, kLATNetworkEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     NSString *networkName = [self readCurrentWiFiNetworkName];
     if (!self.hasKnownWiFiNetworkName) {
@@ -179,13 +178,13 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 }
 
 - (void)refreshKnownWiFiNetworkNameWithoutSendingEvent {
-    NSAssert(NSThread.isMainThread, kLATNetworkEventSourceMainQueueReason);
+    LATAssertMainQueue();
     self.hasKnownWiFiNetworkName = YES;
     self.currentWiFiNetworkName = [self readCurrentWiFiNetworkName];
 }
 
 - (nullable NSString *)readCurrentWiFiNetworkName {
-    NSAssert(NSThread.isMainThread, kLATNetworkEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     Class managerClass = NSClassFromString(@"SBWiFiManager");
     if (![managerClass respondsToSelector:@selector(sharedInstance)]) {
@@ -204,7 +203,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 #pragma mark - Event Dispatch
 
 - (void)sendWiFiEventWithBaseName:(NSString *)baseEventName networkName:(NSString *)networkName {
-    NSAssert(NSThread.isMainThread, kLATNetworkEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     NSString *eventMode = LASharedActivator.currentEventMode;
     if (eventMode.length == 0) {

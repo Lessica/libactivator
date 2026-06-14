@@ -45,7 +45,8 @@ Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使�
 | Media playback events | `LATMediaEventSource` | `implemented` | `libactivator.now-playing.info-changed` 由 MediaRemote now-playing info notification 触发，收到通知后拉取最新 info 再派发且不做内容去重；`libactivator.now-playing.playing` / `paused` 使用 MediaRemote playback-state notification，启动只 seed，后续按状态边沿派发。 |
 | Network joined / left Wi-Fi events | `LATNetworkEventSource` | `implemented` | `SBWiFiManager` hook、`NWPathMonitor` 和旧 SpringBoard Wi-Fi/wake notification 触发状态重读；实际 Wi-Fi SSID 使用 `SBWiFiManager currentNetworkName` 读取；先尝试旧 per-SSID event name，再 fallback 到通用 joined/left event。 |
 | Volume / Menu / Sleep button press events | `LATButtonEventSource` | `implemented` | SpringBoard `__handleHIDEvent*` hook 观察 Consumer page power/menu/volume HID keyboard 事件和 Telephony page ringer switch 事件；单键音量按 down/up 边沿在 release 时立即派发 `libactivator.volume.up.press` / `libactivator.volume.down.press`；两个音量键组合在第二个键 down 时派发 `libactivator.volume.both.press`；音量键 + Menu/Home 组合在第二个参与键 down 时派发 `libactivator.volume.up.press.with-menu` / `libactivator.volume.down.press.with-menu`；单个音量键保持 down 超过旧 `kButtonHoldDelay` 0.45 秒时派发 `libactivator.volume.up.hold.short` / `libactivator.volume.down.hold.short`；相反音量键在首个 release 后 0.45 秒窗口内顺序 release 时派发 `libactivator.volume.up-down` / `libactivator.volume.down-up`，且不派发第二个单键 press；同方向快速重复 release 在 0.45 秒窗口内不派发第二个单键 press；静音拨片 HID `0x0b/0x2e` 中 `down=NO` 派发 `libactivator.volume.mute`，`down=YES` 派发 `libactivator.volume.unmute`，两次变化在 1 秒内时额外派发 `libactivator.volume.toggle-mute-twice`；Menu/Home 单击在 release 时派发，若当前 mode 有 double/triple listener 则按旧实现延迟 0.45 秒等待升级；double 在第二次 release 派发，但若有 triple listener 会再等待 0.45 秒，第三次 release 派发 triple，否则 timeout 后派发 double；Menu/Home short hold 在 down 后 0.45 秒派发，long hold 使用 HID 侧 2.5 秒 timer 派发并 abort 已 handled 的 short hold；Sleep/Lock short hold 在 down 后 0.45 秒派发，long hold 使用 HID 侧 2.5 秒 timer 派发并 abort 已 handled 的 short hold；Sleep/Lock double press 只在当前 mode 有 double/triple assignment 时进入 0.45 秒窗口，triple press 使用内部字符串 `libactivator.lock.press.triple`；Sleep/Lock + Menu/Home 在第二个参与键 down 时派发 `libactivator.lock.press.with-menu`；both、with-menu 和 hold 会消费本轮单键 press；不吞掉原始 HID，系统默认行为保持不变。 |
-| Status bar gestures | `LATStatusBarEventSource` | `implemented` | SpringBoard 内 hook `UIStatusBar_Modern` 的 `touchesBegan/Moved/Ended/Cancelled:withEvent:`，对每个 status bar view 实例维护独立 session；hold delay 使用旧 `0.5s`，single tap delay 使用旧 `0.33s`，横向/纵向 swipe 阈值分别为 `50pt` / `10pt`，横纵方向按 `deltaX^2 > deltaY^2` 判定；起点 `x < width * 0.25` 派发 left tap/hold/double，`x >= width * 0.75` 派发 right tap/hold/double，中间派发 base tap/hold/double；横向 swipe 派发 `statusbar.swipe.left/right`，向下 swipe 派发历史兼容 `statusbar.swipe.down`；前台 App 状态栏 tap 被系统 scroll-to-top 路径转成 `touchesCancelled` 时，会在短时、未滑动、仍在 bounds 内的窄条件下按 tap/double 处理；touch hook 继续调用原始实现，本阶段不做 handled 后默认行为拦截，也不注入用户 App 进程。 |
+| Status bar gestures | `LATStatusBarEventSource` | `implemented` | SpringBoard 内 hook `UIStatusBar_Modern` 的 `touchesBegan/Moved/Ended/Cancelled:withEvent:`，对每个 status bar view 实例维护独立 session；hold delay 使用旧 `0.5s`，single tap delay 使用旧 `0.33s`，横向/纵向 swipe 阈值分别为 `50pt` / `10pt`，横纵方向按 `deltaX^2 > deltaY^2` 判定；起点 `x < width * 0.25` 派发 left tap/hold/double，`x >= width * 0.75` 派发 right tap/hold/double，中间派发 base tap/hold/double；横向 swipe 派发 `statusbar.swipe.left/right`，向下 swipe 派发历史兼容 `statusbar.swipe.down`；前台 App 状态栏 tap 被系统 scroll-to-top 路径转成 `touchesCancelled` 时，会在短时、未滑动、仍在 bounds 内的窄条件下按 tap/double 处理；touch hook 继续调用原始实现，本阶段不做 handled 后默认行为拦截，也不注入用户 App 进程。已完成真机验收：主屏幕、锁屏和前台 App 场景下 status bar tap / double tap / hold / horizontal swipe / downward swipe 均可观测，前台 App scroll-to-top 与顶部下拉等系统默认行为仍可用。 |
+| Top slide / edge gesture classifier | `LATEdgeGestureEventSource` + `LATEdgeGestureClassifier` | `implemented-observe-only` | SpringBoard 内复用 `_UISystemGestureWindow sendEvent:` hook，把 `UIEvent.allTouches` 转成 touch snapshot 后交给纯分类器；当前只识别和日志观测，不 dispatch `LAEvent`，不拦截原始系统手势。分类器覆盖 24 个 slide-in / two-finger-slide-in event name：top-left/top/top-right、bottom-left/bottom/bottom-right、left-top/left/left-bottom、right-top/right/right-bottom 及其双指版本；left/right top/bottom 使用旧实现存在但 public header 未导出的字符串。stable 覆盖验证边缘起点、最小内移距离、单 session 只分类一次、横屏 bottom，以及非边缘起点不会后续补分类。 |
 | Music controls modal | 无 | `obsolete` | 旧 `SBNowPlayingAlertItem` modal 在现代 iOS 没有等价 UI，不作为当前 listener family 恢复。 |
 
 ## 下一阶段建议
@@ -64,9 +65,11 @@ Dynamic application listeners 已实现。`LATApplicationListenerProvider` 使�
 
 第一片 `volume up/down press` 已按独立采集 adapter 实现并通过真机验证。第二片 `volume both press` 已实现并通过真机验证。第三片 `volume up/down with menu` 已实现并通过真机验证。第四片 `volume up/down hold short` 已实现并通过真机验证。第五片 `volume up-down/down-up` 已实现并通过真机验证。第六片 `volume mute/unmute/toggle-mute-twice` 已通过 HID `0x0b/0x2e` 方向实现并通过真机验证。第七片 `menu.hold.long` / `menu.hold.short` / `menu.press.single` / `menu.press.double` / `menu.press.triple` 已按 HID adapter 实现并通过真机验证。第八片 `lock.hold.long` / `lock.hold.short` / `lock.press.double` / `lock.press.triple` / `lock.press.with-menu` 已按 HID adapter 实现并通过真机验证。
 
-Status bar gestures 已按 `LATStatusBarEventSource` 实现并纳入 stable 逻辑覆盖，真机仍需验收。验收时应分别在主屏幕、锁屏和前台 App 界面确认 `statusbar.tap.single` / `.left` / `.right`、`statusbar.tap.double` / `.left` / `.right`、`statusbar.hold` / `.left` / `.right`、`statusbar.swipe.left` / `.right` / `.down` 都能通过 `activator counts events` 观测；前台 App tap/double 需同时确认 App 的 status-bar scroll-to-top 默认行为仍可用；切换三类界面后重复操作，确认多个 `UIStatusBar_Modern` 实例之间不会串扰；同时确认顶部下拉等系统默认行为仍可触发。本阶段不实现 handled 后拦截默认状态栏行为，完整 top slide / edge gesture family 后续单独切片。
+Status bar gestures 已按 `LATStatusBarEventSource` 实现并纳入 stable 逻辑覆盖，且已完成真机验收。验收覆盖主屏幕、锁屏和前台 App 界面中的 `statusbar.tap.single` / `.left` / `.right`、`statusbar.tap.double` / `.left` / `.right`、`statusbar.hold` / `.left` / `.right`、`statusbar.swipe.left` / `.right` / `.down`；前台 App tap/double 场景已确认 status-bar scroll-to-top 默认行为仍可用；切换三类界面后未观察到多个 `UIStatusBar_Modern` 实例串扰；顶部下拉等系统默认行为仍可触发。本阶段不实现 handled 后拦截默认状态栏行为。
 
-已验证 / 待补充验收：
+Top slide / edge gesture family 已完成第一片 observe-only classifier：`LATEdgeGestureEventSource` 接在 `_UISystemGestureWindow sendEvent:` 上，只把 `UIEvent` 转 snapshot 并记录分类日志；`LATEdgeGestureClassifier` 负责 24 个 slide-in / two-finger-slide-in event name 的纯分类，当前不 dispatch、不 handled、不吞掉原始触摸。stable 测试已覆盖全部 24 个 event name、非边缘起点、移动距离不足、单 session 一次分类和横屏 bottom。下一步是真机日志验收分类效果，再决定 dispatch 时机、drag-along screen-side 细分和 handled 后默认行为拦截层。
+
+已验证：
 
 - 已确认现代 iOS 上 SpringBoard hook 能稳定收到物理音量键 Consumer page `0x0c`、usage `0xe9` / `0xea`，并且单键 down/up 边沿可用。
 - 已确认按键后系统音量仍正常变化；本阶段即使 Activator assignment handled，也不吞掉原始音量行为。
@@ -80,10 +83,17 @@ Status bar gestures 已按 `LATStatusBarEventSource` 实现并纳入 stable 逻�
 - 已实现 Menu/Home 与 `volume.*.press.with-menu` 的互斥：只要同一轮按键进入音量 + Menu/Home 组合，pending menu press/hold 会取消，松开 Home/Menu 时不再额外派发 menu single/hold。
 - 已确认 Sleep/Lock 单键行为：Consumer page `0x0c` usage `0x30` 可稳定收到 down/up；`lock.hold.short` 在 down 后约 0.45 秒派发并消费 double/triple press；Frida 校准显示 Power/Sleep 初始 down 到 `SBLockHardwareButton -longPress:` 约 2.50 秒，到 `SBPowerDownViewController -powerDownViewWillAnimateIn:` 约 2.56 秒，因此 `lock.hold.long` 以 HID 侧 2.5 秒 timer 派发；short hold 被兼容 listener handled 后，升级到 long hold 时会发送对应 short hold abort；有 double/triple assignment 时两次 release 在 0.45 秒窗口内派发 `lock.press.double`，有 triple assignment 时第三次 release 派发 `lock.press.triple`；没有 double/triple assignment 时不为普通电源键 release 派发 lock press event。
 - 已确认 Sleep/Lock + Menu/Home：先后按下 Sleep/Lock 和 Menu/Home 时只派发 `lock.press.with-menu`，并取消 pending lock/menu press/hold，松开时不再额外派发 menu single、lock double/triple 或 hold。
+- 已确认 status bar gestures 真机路径：主屏幕、锁屏、前台 App 三类界面均可观测 tap、left/right tap、double tap、left/right double tap、hold、left/right hold、left/right/down swipe；前台 App 的 status-bar scroll-to-top 默认行为与系统顶部下拉行为未被本阶段 hook 破坏。
+- 已确认 top slide / edge gesture classifier 通过 stable 测试覆盖 24 个 slide-in / two-finger-slide-in event name；当前仅完成分类器与日志观测链路，尚未进行真机手势日志验收，也尚未 dispatch 或拦截默认行为。
 
 后续阶段：
 
-- handled 后拦截默认音量行为暂不进入本阶段；`libactivator.volume.*` 在 1.9.13 资源中没有 double press 事件，不作为 volume 路线项。
+- 下一切片是 top slide / edge gesture 的真机日志验收：在主屏幕、锁屏、前台 App、横竖屏场景中观察 `LATEdgeGestureEventSource` 输出的分类日志，确认 top / bottom / left / right 与 two-finger slide 的命中率和误报情况。
+- 日志验收通过后再进入 dispatch 切片：为 `LATEdgeGestureEventSource` 增加 `LAEvent` 提交路径，并明确哪些 event name 先启用、哪些 hidden left/right top/bottom 只保留 metadata 或继续观察。
+- Drag-along screen-side 仍需独立切片：`LAEventScreen*Swipe*` 常量已按 1.9.13 映射到 `libactivator.drag-along.*`，但当前 classifier 只覆盖 slide-in / two-finger-slide-in，不代表 drag-along 行为已恢复。
+- Top slide / edge gesture 当前继续保持“不拦截默认行为”；如果需要 handled 后拦截，必须为具体 hook 设计返回值、原始事件转发和 `event.handled` 回传路径。
+- Edge gesture 之后再评估 multitouch gestures、SpringBoard/icon gestures 和 lock screen gestures；它们分别需要独立 probe 和验收清单，不与 status bar 或 button adapter 混写。
+- handled 后拦截默认音量行为暂不进入当前切片；`libactivator.volume.*` 在 1.9.13 资源中没有 double press 事件，不作为 volume 路线项。
 - Hardware button event source 的 volume、ringer、Menu/Home、Sleep/Lock 主路径已完成实现和真机验收；`volume.display-tap` 依赖音量 HUD 触摸，不归入当前 HID 按键切片。
 - Home/Menu button 仅在有 real home button 的设备上有意义，必须复用能力过滤结论；已验证 `HomeButtonType == 1` 表示实体 Home 键，`HomeButtonType == 2` 表示无实体 Home 键；`HomeButtonType == 0` 是有效值但语义尚未确认，不要当成未就绪状态或擅自映射；fake home indicator 设备不要注册 real-home-button-only 事件。
 - 所有按钮 event source 都只负责识别事件并提交 `LAEvent`，不要在 adapter 内处理 assignment、blacklist、mode、no-touch deferral 或 unlock-to-send。
@@ -114,6 +124,12 @@ Status bar gestures 已按 `LATStatusBarEventSource` 实现并纳入 stable 逻�
 | `libactivator.system.local-back` / `libactivator.system.back` | Local Back / Back | `out-of-scope` | 1.9.13 旧语义依赖 `com.apple.UIKit` filter 把 `libactivator.dylib` 注入到 App 进程；SpringBoard 端只 `notify_post("libactivator.system.back")`，真正的 `dismissViewControllerAnimated:` / `popViewControllerAnimated:` 在 App 进程内执行。本项目基本约束是不注入用户 App 进程，因此该 family 只保留资源和逆向记录，暂不实现，也不阻塞下一阶段。 |
 | SBSettings toggles | Legacy toggles | `obsolete` | 旧 SBSettings ABI 已过时；除非 owner 明确要求现代兼容层，否则不恢复。 |
 | 旧 social compose actions | Twitter / Facebook / Weibo compose | `obsolete` | 资源和 runtime 已排除；旧服务入口不再作为内置 action 恢复。 |
+
+### 5. 阶段 4 完成后的大阶段
+
+阶段 4 的 top slide / edge gesture、multitouch、SpringBoard/icon gesture 和 lock screen gesture 切片稳定后，下一大阶段是 Settings UI 与菜单：实现 `libactivatorsettings.dylib`，覆盖 modes/events/listeners 列表、搜索、assignments、profiles、blacklist、listener/event configuration controller factory、menu editor、menu listener runtime provider、glyph/small icon 展示和 metadata/localization 展示。Settings UI 仍只通过 Public API/IPC 操作 SpringBoard authoritative backend，不拥有 event acquisition 或 runtime state。
+
+Settings UI 与菜单主路径稳定后，再推进 CLI 兼容工具：实现 `/usr/bin/activator` 的 1.9.13 命令面，覆盖 `listeners`、`events`、`modes`、`current-mode`、`current-app`、`get`、`set`、`activate`、`send`、`deactivate` 和隐藏 `postinst` no-op 边界。CLI 是 production compatibility tool，不能依赖 `LA_TESTING`、hidden testing IPC 或测试 plist。
 
 ## 下一阶段验收要求
 

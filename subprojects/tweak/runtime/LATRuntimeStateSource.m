@@ -8,14 +8,13 @@
 
 #import "LATRuntimeStateSource.h"
 
+#import "LATQueueAssertions.h"
 #import "LARuntimeContext.h"
 #import "LATHIDEventSender.h"
 
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
 #import <notify.h>
-
-#define kLATRuntimeStateSourceMainQueueReason @"LATRuntimeStateSource must only be used on the main thread"
 
 static NSString *const LATRuntimeStateDefaultSource = @"default";
 static const uint32_t LATRuntimeStateHIDPageConsumer = 0x0C;
@@ -111,7 +110,7 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (void)start {
-    NSAssert(NSThread.isMainThread, kLATRuntimeStateSourceMainQueueReason);
+    LATAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -180,7 +179,7 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (void)startObservingScreenBlankedState {
-    NSAssert(NSThread.isMainThread, kLATRuntimeStateSourceMainQueueReason);
+    LATAssertMainQueue();
 
     __weak typeof(self) weakSelf = self;
     int token = 0;
@@ -199,7 +198,7 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (void)handleScreenBlankedNotificationWithToken:(int)token {
-    NSAssert(NSThread.isMainThread, kLATRuntimeStateSourceMainQueueReason);
+    LATAssertMainQueue();
     uint64_t blanked = 1;
     int status = notify_get_state(token, &blanked);
     if (status != NOTIFY_STATUS_OK) {
@@ -296,7 +295,7 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 #pragma mark - Foreground Application
 
 - (void)refreshForegroundDisplayIdentifierOnMainThread {
-    NSAssert(NSThread.isMainThread, kLATRuntimeStateSourceMainQueueReason);
+    LATAssertMainQueue();
 
     UIApplication *application = UIApplication.sharedApplication;
     if (![application respondsToSelector:@selector(_accessibilityFrontMostApplication)]) {

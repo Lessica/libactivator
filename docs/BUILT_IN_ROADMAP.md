@@ -23,13 +23,17 @@
 | SBSettings toggles | 暂不实现 | 旧 SBSettings ABI 过时，除非 owner 明确要求现代兼容层，否则标为 obsolete。 |
 | CLI | `subprojects/cli` 的 `/usr/bin/activator` | 生产工具 target，使用 Public API 和生产 IPC，不依赖 testing IPC，也不是 test runner。 |
 
-## 已完成基础
+## 当前完成状态
 
 - 1.9.13 Public API、常量、通知、headers、import 入口和 ABI skeleton 已对齐。
 - SpringBoard authoritative backend、state/config IPC、event dispatch IPC、runtime mode、no-touch deferral、unlock-to-send callback、metadata/resource lookup、localization fallback、listener metadata cache 已具备基础能力。
 - event metadata 当前 123 项已 staged，其中 121 项来自 1.9.13，`libactivator.now-playing.playing` / `libactivator.now-playing.paused` 是阶段 3 明确新增的现代 MediaRemote 播放状态事件。
 - 1.9.13 listener/action metadata 过滤后 114 项已 staged；`libactivator.twitter.compose-tweet`、`libactivator.facebook.compose-post`、`libactivator.weibo.compose-post` 已排除。
-- `libactivator.system.nothing` 已实现并进入 stable tests。
+- 阶段 0 资源模型补强已完成，`Resources` stable suite 覆盖 bundled catalog、目录式 third-party `Info.plist`、required capabilities、small-icons path fallback 和排除项。
+- 阶段 1 低风险 static actions 已完成当前实施面：No-op、URL actions、HID-backed hardware actions、低风险 system actions 和 telephony call control 已按独立 listener family 注册并覆盖基础测试或手工验证边界。
+- 阶段 2 dynamic application listeners 已完成，动态 App listener 由独立 provider 注册，真实启动统一走 SpringBoard-side launcher，`com.apple.camera` 锁屏 special case 已单独处理。
+- 阶段 3 第一批低风险状态/通知型 event sources 已完成并收口：device locked/unlocked、power connected/disconnected、headset connected/disconnected、media playback、network joined/left Wi-Fi 已纳入 `BuiltInEventSources` stable 覆盖或明确手工验证边界。
+- 阶段 4 当前已完成 hardware button 主路径和 status bar gestures：Volume/Menu/Sleep/Ringer 相关 HID 事件已完成真机验收，`LATStatusBarEventSource` 已实现并完成 stable 逻辑覆盖与真机验收。Top slide / edge gesture family 的第一片 observe-only classifier 已接入 `_UISystemGestureWindow sendEvent:`，当前只做 24 个 slide-in / two-finger-slide-in event name 分类和日志观测，不 dispatch、不拦截。本阶段继续向 edge gesture 日志验收、drag-along screen-side、multitouch、SpringBoard/icon 和 lock screen gesture family 切片推进。
 
 ## 阶段 0：资源模型补强
 
@@ -148,4 +152,14 @@ legacy preference 兼容边界：
 
 ## 当前建议的下一步
 
-先完成阶段 0 的资源模型补强与测试，然后从阶段 1 的 URL actions 开始逐个实现。每实现一个 built-in action 或 event family，都要同时更新本路线图中的状态、补充所属测试类别，并明确是否需要 owner-assisted SPI probe。
+当前主线是继续推进阶段 4，不再把阶段 0、阶段 1、阶段 2 或阶段 3 第一批能力作为默认主线。每个新 event source family 仍必须先确认现代 hook/SPI、承载 adapter、测试分类和手工验收方式，再实现和注册。
+
+阶段 4 后续切片顺序：
+
+1. Top slide / edge gesture family：第一片已落地为 `LATEdgeGestureEventSource` + `LATEdgeGestureClassifier` observe-only 链路，复用 `_UISystemGestureWindow sendEvent:` 的 `UIEvent` 做 snapshot 分类，覆盖 24 个 slide-in / two-finger-slide-in event name；下一步先做真机日志验收，再进入 dispatch 切片。Drag-along screen-side 仍需单独确认现代语义；如需 handled 后拦截默认行为，必须先为具体 hook 设计返回值、原始事件转发和 `event.handled` 回传路径。
+2. Multitouch gesture family：恢复 three/four/five finger tap、pinch、spread 等事件前，先确认 SpringBoard 或系统手势层能否在不注入用户 App 的前提下观察多指触摸；无法满足不注入用户 App 约束的事件保持 metadata-only 或 blocked。
+3. SpringBoard/icon gesture family：home screen pinch/spread、icon flick 等只针对 SpringBoard UI 层实现，先确认现代 icon list / home screen view hook 点和 iOS 15+ 兼容性，再进入 adapter 设计。
+4. Lock screen gesture family：CoverSheet/lock screen clock gestures 与锁屏、passcode、通知中心和相机入口强相关，应单独 probe 并记录风险，不与普通 edge gestures 混在一个切片里。
+5. Handled-default interception backlog：status bar 和 button event source 当前都保留系统默认行为；如需恢复 handled 后拦截默认行为，必须先为具体 family 设计 hook 返回值、原始事件转发和 `event.handled` 回传路径，不能把“已提交 dispatch”当成“应拦截”。
+
+阶段 3 backlog 只在明确需要时小批量 probe：蓝牙网络、VPN、蜂窝数据、Car、watch、smart cover、fingerprint、home indicator、gesture bar、3D Touch 等不作为当前主线。阶段 5 Settings UI 与菜单、阶段 6 CLI 兼容工具仍是阶段 4 主线稳定后的下一大阶段。

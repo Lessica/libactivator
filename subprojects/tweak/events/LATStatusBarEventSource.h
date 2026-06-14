@@ -33,6 +33,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)la_testingNoteTouchMovedInStatusBarView:(id)view bounds:(CGRect)bounds location:(CGPoint)location;
 - (void)la_testingNoteTouchEndedInStatusBarView:(id)view tapCount:(NSUInteger)tapCount;
 - (void)la_testingNoteTouchCancelledInStatusBarView:(id)view;
+- (void)la_testingNoteTouchCancelledInStatusBarView:(id)view
+                                             bounds:(CGRect)bounds
+                                           location:(CGPoint)location
+                                           tapCount:(NSUInteger)tapCount;
 #endif
 
 @end

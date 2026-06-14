@@ -9,11 +9,10 @@
 #import "LATMediaEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LATQueueAssertions.h"
 #import "MediaRemote+Private.h"
 
 #import <HBLog.h>
-
-#define kLATMediaEventSourceMainQueueReason @"LATMediaEventSource must only be used on the main thread"
 
 typedef NSString *AVSystemControllerKey;
 
@@ -82,7 +81,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)start {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -123,7 +122,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 - (BOOL)requestNowPlayingApplicationDisplayIdentifierWithCompletion:
     (LATNowPlayingApplicationDisplayIdentifierCompletion)completion {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
     if (!completion) {
         return NO;
     }
@@ -195,7 +194,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 #pragma mark - Monitoring
 
 - (void)startMediaRemoteRouteMonitoring {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     NSNotificationCenter *notificationCenter = NSNotificationCenter.defaultCenter;
     __weak typeof(self) weakSelf = self;
@@ -220,7 +219,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)startMediaRemoteNowPlayingMonitoring {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     NSNotificationCenter *notificationCenter = NSNotificationCenter.defaultCenter;
     __weak typeof(self) weakSelf = self;
@@ -247,7 +246,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)startAVSystemControllerRouteMonitoring {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     AVSystemController *systemController = [self sharedAVSystemController];
     if (!systemController) {
@@ -286,7 +285,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 #pragma mark - State
 
 - (void)handleMediaRemoteRouteNotification:(NSNotification *)notification {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     HBLogInfo(@"MediaRemote route notification for media event source: name=%@ object=%@ userInfo=%@",
               notification.name ?: @"", notification.object ?: @"", notification.userInfo ?: @{});
@@ -294,7 +293,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)handleNowPlayingInfoDidChangeNotification {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     __weak typeof(self) weakSelf = self;
     MRMediaRemoteGetNowPlayingInfo(self.mediaRemoteQueue, ^(__unused CFDictionaryRef information) {
@@ -306,7 +305,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)handleNowPlayingApplicationIsPlayingDidChangeNotification:(NSNotification *)notification {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     id value = notification.userInfo[(__bridge NSString *)kMRMediaRemoteNowPlayingApplicationIsPlayingUserInfoKey];
     if ([value respondsToSelector:@selector(boolValue)]) {
@@ -320,7 +319,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)handlePotentialNowPlayingPlaybackState:(BOOL)isPlaying {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (!self.hasKnownNowPlayingPlaybackState) {
         self.hasKnownNowPlayingPlaybackState = YES;
@@ -337,7 +336,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)handlePotentialHeadsetStateChange {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     BOOL headsetConnected = NO;
     if (![self readHeadsetConnected:&headsetConnected]) {
@@ -360,7 +359,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)refreshKnownHeadsetStateWithoutSendingEvent {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     BOOL headsetConnected = NO;
     if (![self readHeadsetConnected:&headsetConnected]) {
@@ -371,7 +370,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)refreshKnownNowPlayingPlaybackStateWithoutSendingEvent {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     [self requestNowPlayingPlaybackStateWithCompletion:^(BOOL isPlaying) {
         if (self.hasKnownNowPlayingPlaybackState) {
@@ -383,7 +382,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)requestNowPlayingPlaybackStateWithCompletion:(void (^)(BOOL isPlaying))completion {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
     NSParameterAssert(completion);
 
     MRMediaRemoteGetNowPlayingApplicationIsPlaying(self.mediaRemoteQueue, ^(Boolean isPlaying) {
@@ -394,7 +393,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (BOOL)readHeadsetConnected:(BOOL *)headsetConnected {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     AVSystemController *systemController = [self sharedAVSystemController];
     if (![systemController respondsToSelector:@selector(attributeForKey:)]) {
@@ -423,7 +422,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 #pragma mark - Event Dispatch
 
 - (void)sendMediaEventWithName:(NSString *)eventName {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     NSString *eventMode = LASharedActivator.currentEventMode;
     if (eventMode.length == 0) {
@@ -435,7 +434,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)sendHeadsetEventForConnectedState:(BOOL)headsetConnected {
-    NSAssert(NSThread.isMainThread, kLATMediaEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     NSString *eventName = headsetConnected ? LAEventNameHeadsetConnected : LAEventNameHeadsetDisconnected;
     [self sendMediaEventWithName:eventName];

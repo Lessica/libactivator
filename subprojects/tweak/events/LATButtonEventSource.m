@@ -9,8 +9,7 @@
 #import "LATButtonEventSource.h"
 
 #import "LAActivator+Private.h"
-
-#define kLATButtonEventSourceMainQueueReason @"LATButtonEventSource must only be used on the main thread"
+#import "LATQueueAssertions.h"
 
 static NSTimeInterval const LATButtonEventSourceHoldDelay = 0.45;
 static NSTimeInterval const LATButtonEventSourceMenuLongHoldDelay = 2.5;
@@ -97,7 +96,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 #pragma mark - Lifecycle
 
 - (void)start {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -107,7 +106,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 #pragma mark - HID Events
 
 - (void)noteHIDEvent:(IOHIDEventRef)event {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
     if (!self.started || !event) {
         return;
     }
@@ -136,7 +135,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)handleConsumerKeyboardUsage:(CFIndex)usage keyDown:(BOOL)keyDown {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     switch (usage) {
     case kLATHIDUsageConsumerPower:
@@ -157,7 +156,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)handleLockButtonDown:(BOOL)keyDown {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (keyDown) {
         if (self.lockButtonDown) {
@@ -183,7 +182,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)handleVolumeUpButtonDown:(BOOL)keyDown {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (keyDown) {
         if (self.volumeUpButtonDown) {
@@ -211,7 +210,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)handleVolumeDownButtonDown:(BOOL)keyDown {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (keyDown) {
         if (self.volumeDownButtonDown) {
@@ -239,7 +238,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)handleMenuButtonDown:(BOOL)keyDown {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (keyDown) {
         if (self.menuButtonDown) {
@@ -266,7 +265,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)sendLockMenuPressIfNeeded {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (self.buttonSequenceConsumed || !self.lockButtonDown || !self.menuButtonDown) {
         return;
@@ -277,7 +276,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)sendVolumeBothPressIfNeeded {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (self.buttonSequenceConsumed || !self.volumeUpButtonDown || !self.volumeDownButtonDown) {
         return;
@@ -288,7 +287,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)sendVolumeMenuPressForCurrentVolumeButtonIfNeeded {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (self.volumeUpButtonDown && !self.volumeDownButtonDown) {
         [self sendVolumeMenuPressIfNeededWithEventName:LAEventNameVolumeUpPressWithMenu];
@@ -298,7 +297,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)sendVolumeMenuPressIfNeededWithEventName:(NSString *)eventName {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (self.buttonSequenceConsumed || !self.menuButtonDown ||
         (!self.volumeUpButtonDown && !self.volumeDownButtonDown)) {
@@ -310,7 +309,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)resetButtonSequenceConsumedIfNoButtonsAreDown {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (!self.lockButtonDown && !self.menuButtonDown && !self.volumeUpButtonDown && !self.volumeDownButtonDown) {
         self.buttonSequenceConsumed = NO;
@@ -320,7 +319,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 #pragma mark - Lock Press Recognition
 
 - (void)noteLockPressRelease {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (![self shouldRecognizeLockPressSequence]) {
         [self cancelLockPressRecognition];
@@ -348,7 +347,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)scheduleLockPressResolutionForPressCount:(NSUInteger)pressCount {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.lockPressGeneration += 1;
     NSUInteger generation = self.lockPressGeneration;
@@ -361,7 +360,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)resolveLockPressSequenceWithPressCount:(NSUInteger)pressCount generation:(NSUInteger)generation {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (generation != self.lockPressGeneration || self.lockButtonDown || self.buttonSequenceConsumed ||
         self.lockPressCount != pressCount) {
@@ -375,14 +374,14 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (BOOL)shouldRecognizeLockPressSequence {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     return [self hasAssignedListenerForEventName:LAEventNameLockPressDouble] ||
            [self hasAssignedListenerForEventName:LATLockPressTripleEventName];
 }
 
 - (void)cancelLockPressRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.lockPressGeneration += 1;
     self.lockPressCount = 0;
@@ -391,7 +390,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 #pragma mark - Menu Press Recognition
 
 - (void)noteMenuPressRelease {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (![self shouldDelayMenuSinglePress]) {
         [self cancelMenuPressRecognition];
@@ -420,7 +419,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)scheduleMenuPressResolutionForPressCount:(NSUInteger)pressCount {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.menuPressGeneration += 1;
     NSUInteger generation = self.menuPressGeneration;
@@ -433,7 +432,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)resolveMenuPressSequenceWithPressCount:(NSUInteger)pressCount generation:(NSUInteger)generation {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (generation != self.menuPressGeneration || self.menuButtonDown || self.buttonSequenceConsumed ||
         self.menuPressCount != pressCount) {
@@ -449,14 +448,14 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (BOOL)shouldDelayMenuSinglePress {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     return [self hasAssignedListenerForEventName:LAEventNameMenuPressDouble] ||
            [self hasAssignedListenerForEventName:LAEventNameMenuPressTriple];
 }
 
 - (BOOL)hasAssignedListenerForEventName:(NSString *)eventName {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     NSString *eventMode = [self currentEventMode];
     LAEvent *event = [LAEvent eventWithName:eventName mode:eventMode];
@@ -464,7 +463,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)cancelMenuPressRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.menuPressGeneration += 1;
     self.menuPressCount = 0;
@@ -473,7 +472,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 #pragma mark - Volume Sequence Recognition
 
 - (void)sendVolumePressOrSequenceWithPressEventName:(NSString *)pressEventName usage:(CFIndex)usage {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     CFAbsoluteTime currentTime = CFAbsoluteTimeGetCurrent();
     if (currentTime - self.lastVolumePressTime > LATButtonEventSourceHoldDelay) {
@@ -503,7 +502,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 #pragma mark - Ringer Switch Recognition
 
 - (void)handleRingerSwitchIsUnmuted:(BOOL)isUnmuted {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     CFAbsoluteTime currentTime = CFAbsoluteTimeGetCurrent();
     BOOL toggledTwice = currentTime - self.lastRingerSwitchTime < LATButtonEventSourceRingerToggleTwiceDelay;
@@ -518,7 +517,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 #pragma mark - Hold Recognition
 
 - (void)scheduleVolumeUpHoldRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.volumeUpHoldGeneration += 1;
     NSUInteger generation = self.volumeUpHoldGeneration;
@@ -534,7 +533,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)scheduleVolumeDownHoldRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.volumeDownHoldGeneration += 1;
     NSUInteger generation = self.volumeDownHoldGeneration;
@@ -550,23 +549,23 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)cancelVolumeUpHoldRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
     self.volumeUpHoldGeneration += 1;
 }
 
 - (void)cancelVolumeDownHoldRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
     self.volumeDownHoldGeneration += 1;
 }
 
 - (void)cancelVolumeHoldRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
     [self cancelVolumeUpHoldRecognition];
     [self cancelVolumeDownHoldRecognition];
 }
 
 - (void)scheduleLockHoldRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.lockHoldGeneration += 1;
     self.lockShortHoldRecognized = NO;
@@ -586,14 +585,14 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)cancelLockHoldRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.lockHoldGeneration += 1;
     self.lockShortHoldRecognized = NO;
 }
 
 - (void)scheduleMenuHoldRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.menuHoldGeneration += 1;
     self.menuShortHoldRecognized = NO;
@@ -613,7 +612,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)cancelMenuHoldRecognition {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.menuHoldGeneration += 1;
     self.menuShortHoldRecognized = NO;
@@ -623,7 +622,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
                                   keyIsDown:(BOOL)keyIsDown
                                  generation:(NSUInteger)generation
                           currentGeneration:(NSUInteger)currentGeneration {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (generation != currentGeneration || !keyIsDown || self.buttonSequenceConsumed) {
         return;
@@ -634,7 +633,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)consumeButtonSequence {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.buttonSequenceConsumed = YES;
     [self cancelLockHoldRecognition];
@@ -649,7 +648,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)sendLockShortHoldEventIfNeededWithGeneration:(NSUInteger)generation {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (generation != self.lockHoldGeneration || !self.lockButtonDown || self.buttonSequenceConsumed) {
         return;
@@ -663,7 +662,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)sendLockLongHoldEventIfNeededWithGeneration:(NSUInteger)generation {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (generation != self.lockHoldGeneration || !self.lockButtonDown || !self.lockShortHoldRecognized) {
         return;
@@ -677,7 +676,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)abortLockHoldShortEventIfNeeded {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     LAEvent *event = self.lockHoldShortEventToAbort;
     self.lockHoldShortEventToAbort = nil;
@@ -687,13 +686,13 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)clearLockHoldShortEventWithoutAborting {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.lockHoldShortEventToAbort = nil;
 }
 
 - (void)sendMenuShortHoldEventIfNeededWithGeneration:(NSUInteger)generation {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (generation != self.menuHoldGeneration || !self.menuButtonDown || self.buttonSequenceConsumed) {
         return;
@@ -707,7 +706,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)sendMenuLongHoldEventIfNeededWithGeneration:(NSUInteger)generation {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     if (generation != self.menuHoldGeneration || !self.menuButtonDown || !self.menuShortHoldRecognized) {
         return;
@@ -721,7 +720,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)abortMenuHoldShortEventIfNeeded {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     LAEvent *event = self.menuHoldShortEventToAbort;
     self.menuHoldShortEventToAbort = nil;
@@ -731,7 +730,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (void)clearMenuHoldShortEventWithoutAborting {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     self.menuHoldShortEventToAbort = nil;
 }
@@ -739,7 +738,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 #pragma mark - Event Dispatch
 
 - (LAEvent *)sendMenuSinglePressEvent {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     LAEvent *event = [self buttonEventWithName:LAEventNameMenuPressSingle];
     [LASharedActivator sendDeactivateEventToListeners:event];
@@ -750,7 +749,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (LAEvent *)sendButtonEventWithName:(NSString *)eventName {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     LAEvent *event = [self buttonEventWithName:eventName];
     [LASharedActivator sendEventToListener:event];
@@ -758,13 +757,13 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 }
 
 - (LAEvent *)buttonEventWithName:(NSString *)eventName {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     return [LAEvent eventWithName:eventName mode:[self currentEventMode]];
 }
 
 - (NSString *)currentEventMode {
-    NSAssert(NSThread.isMainThread, kLATButtonEventSourceMainQueueReason);
+    LATAssertMainQueue();
 
     NSString *eventMode = LASharedActivator.currentEventMode;
     return eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;

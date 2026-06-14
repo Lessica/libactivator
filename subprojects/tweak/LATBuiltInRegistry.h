@@ -12,6 +12,7 @@
 @class SBVolumeControl;
 @class CSCoverSheetViewController;
 @class LATButtonEventSource;
+@class LATEdgeGestureEventSource;
 @class LATLockStateEventSource;
 @class LATMediaEventSource;
 @class LATNetworkEventSource;
@@ -31,6 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 // Event sources
 @property(nonatomic, strong, readonly) LATRuntimeStateSource *runtimeStateSource;
 @property(nonatomic, strong, readonly) LATButtonEventSource *buttonEventSource;
+@property(nonatomic, strong, readonly) LATEdgeGestureEventSource *edgeGestureEventSource;
 @property(nonatomic, strong, readonly) LATLockStateEventSource *lockStateEventSource;
 @property(nonatomic, strong, readonly) LATMediaEventSource *mediaEventSource;
 @property(nonatomic, strong, readonly) LATNetworkEventSource *networkEventSource;

@@ -9,22 +9,9 @@
 #import "LATestBuiltInEventSourcesSuite.h"
 
 #import "LAActivator+Private.h"
+#import "LATEdgeGestureClassifier.h"
+#import "LATStatusBarEventSource.h"
 #import "LATestEnvironment.h"
-
-@interface NSObject (LATStatusBarEventSourceTesting)
-- (void)start;
-- (void)la_testingNoteTouchBeganInStatusBarView:(id)view
-                                         bounds:(CGRect)bounds
-                                       location:(CGPoint)location
-                                       tapCount:(NSUInteger)tapCount;
-- (void)la_testingNoteTouchMovedInStatusBarView:(id)view bounds:(CGRect)bounds location:(CGPoint)location;
-- (void)la_testingNoteTouchEndedInStatusBarView:(id)view tapCount:(NSUInteger)tapCount;
-- (void)la_testingNoteTouchCancelledInStatusBarView:(id)view;
-- (void)la_testingNoteTouchCancelledInStatusBarView:(id)view
-                                             bounds:(CGRect)bounds
-                                           location:(CGPoint)location
-                                           tapCount:(NSUInteger)tapCount;
-@end
 
 @implementation LATestBuiltInEventSourcesSuite
 
@@ -68,6 +55,12 @@
     [recorder expect:NSClassFromString(@"LATStatusBarEventSource") != Nil
             caseName:@"status-bar-event-source-loaded"
               reason:@"LATStatusBarEventSource class was not loaded in SpringBoard"];
+    [recorder expect:NSClassFromString(@"LATEdgeGestureClassifier") != Nil
+            caseName:@"edge-gesture-classifier-loaded"
+              reason:@"LATEdgeGestureClassifier class was not loaded in SpringBoard"];
+    [recorder expect:NSClassFromString(@"LATEdgeGestureEventSource") != Nil
+            caseName:@"edge-gesture-event-source-loaded"
+              reason:@"LATEdgeGestureEventSource class was not loaded in SpringBoard"];
     [recorder expect:NSClassFromString(@"LATRuntimeStateSource") != Nil
             caseName:@"runtime-state-source-loaded"
               reason:@"LATRuntimeStateSource class was not loaded in SpringBoard"];
@@ -373,6 +366,7 @@
               reason:@"Volume toggle mute twice event was not compatible with all event modes"];
 
     [self runStatusBarRecognizerTestsWithRecorder:recorder activator:activator];
+    [self runEdgeGestureClassifierTestsWithRecorder:recorder];
 }
 
 + (NSUInteger)dispatchCountForEventName:(NSString *)eventName activator:(LAActivator *)activator {
@@ -386,7 +380,7 @@
         return;
     }
 
-    NSObject *source = [[sourceClass alloc] init];
+    LATStatusBarEventSource *source = [[sourceClass alloc] init];
     [source start];
     CGRect bounds = CGRectMake(0.0, 0.0, 400.0, 40.0);
 
@@ -563,6 +557,344 @@
                      [self dispatchCountForEventName:LAEventNameStatusBarTapSingleRight activator:activator] == 0
             caseName:@"status-bar-sessions-are-per-view"
               reason:@"A second status bar view cancelled or polluted the first view session"];
+}
+
++ (void)runEdgeGestureClassifierTestsWithRecorder:(LATestRecorder *)recorder {
+    Class classifierClass = NSClassFromString(@"LATEdgeGestureClassifier");
+    if (!classifierClass) {
+        [recorder skip:@"edge-gesture-classifier-logic" reason:@"LATEdgeGestureClassifier was not loaded"];
+        return;
+    }
+
+    LATEdgeGestureClassifier *classifier = [[classifierClass alloc] init];
+    CGRect bounds = CGRectMake(0.0, 0.0, 400.0, 800.0);
+    NSArray<NSDictionary<NSString *, id> *> *cases = @[
+        @{
+            @"Case" : @"edge-gesture-classifies-top-left",
+            @"EventName" : LAEventNameSlideInFromTopLeft,
+            @"Start" : @[ [self edgeGesturePointWithX:40.0 y:2.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:40.0 y:80.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-top",
+            @"EventName" : LAEventNameStatusBarSwipeDown,
+            @"Start" : @[ [self edgeGesturePointWithX:200.0 y:2.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:200.0 y:80.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-top-right",
+            @"EventName" : LAEventNameSlideInFromTopRight,
+            @"Start" : @[ [self edgeGesturePointWithX:360.0 y:2.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:360.0 y:80.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-bottom-left",
+            @"EventName" : LAEventNameSlideInFromBottomLeft,
+            @"Start" : @[ [self edgeGesturePointWithX:40.0 y:798.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:40.0 y:700.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-bottom",
+            @"EventName" : LAEventNameSlideInFromBottom,
+            @"Start" : @[ [self edgeGesturePointWithX:200.0 y:798.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:200.0 y:700.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-bottom-right",
+            @"EventName" : LAEventNameSlideInFromBottomRight,
+            @"Start" : @[ [self edgeGesturePointWithX:360.0 y:798.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:360.0 y:700.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-left-top",
+            @"EventName" : @"libactivator.slide-in.left-top",
+            @"Start" : @[ [self edgeGesturePointWithX:2.0 y:80.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:80.0 y:80.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-left",
+            @"EventName" : LAEventNameSlideInFromLeft,
+            @"Start" : @[ [self edgeGesturePointWithX:2.0 y:400.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:80.0 y:400.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-left-bottom",
+            @"EventName" : @"libactivator.slide-in.left-bottom",
+            @"Start" : @[ [self edgeGesturePointWithX:2.0 y:720.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:80.0 y:720.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-right-top",
+            @"EventName" : @"libactivator.slide-in.right-top",
+            @"Start" : @[ [self edgeGesturePointWithX:398.0 y:80.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:300.0 y:80.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-right",
+            @"EventName" : LAEventNameSlideInFromRight,
+            @"Start" : @[ [self edgeGesturePointWithX:398.0 y:400.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:300.0 y:400.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-right-bottom",
+            @"EventName" : @"libactivator.slide-in.right-bottom",
+            @"Start" : @[ [self edgeGesturePointWithX:398.0 y:720.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:300.0 y:720.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-top-left",
+            @"EventName" : LAEventNameTwoFingerSlideInFromTopLeft,
+            @"Start" : @[ [self edgeGesturePointWithX:36.0 y:2.0], [self edgeGesturePointWithX:44.0 y:2.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:36.0 y:80.0], [self edgeGesturePointWithX:44.0 y:80.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-top",
+            @"EventName" : LAEventNameTwoFingerSlideInFromTop,
+            @"Start" : @[ [self edgeGesturePointWithX:196.0 y:2.0], [self edgeGesturePointWithX:204.0 y:2.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:196.0 y:80.0], [self edgeGesturePointWithX:204.0 y:80.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-top-right",
+            @"EventName" : LAEventNameTwoFingerSlideInFromTopRight,
+            @"Start" : @[ [self edgeGesturePointWithX:356.0 y:2.0], [self edgeGesturePointWithX:364.0 y:2.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:356.0 y:80.0], [self edgeGesturePointWithX:364.0 y:80.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-bottom-left",
+            @"EventName" : LAEventNameTwoFingerSlideInFromBottomLeft,
+            @"Start" : @[ [self edgeGesturePointWithX:36.0 y:798.0], [self edgeGesturePointWithX:44.0 y:798.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:36.0 y:700.0], [self edgeGesturePointWithX:44.0 y:700.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-bottom",
+            @"EventName" : LAEventNameTwoFingerSlideInFromBottom,
+            @"Start" : @[ [self edgeGesturePointWithX:196.0 y:798.0], [self edgeGesturePointWithX:204.0 y:798.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:196.0 y:700.0], [self edgeGesturePointWithX:204.0 y:700.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-bottom-right",
+            @"EventName" : LAEventNameTwoFingerSlideInFromBottomRight,
+            @"Start" : @[ [self edgeGesturePointWithX:356.0 y:798.0], [self edgeGesturePointWithX:364.0 y:798.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:356.0 y:700.0], [self edgeGesturePointWithX:364.0 y:700.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-left-top",
+            @"EventName" : @"libactivator.two-finger-slide-in.left-top",
+            @"Start" : @[ [self edgeGesturePointWithX:2.0 y:76.0], [self edgeGesturePointWithX:2.0 y:84.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:80.0 y:76.0], [self edgeGesturePointWithX:80.0 y:84.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-left",
+            @"EventName" : LAEventNameTwoFingerSlideInFromLeft,
+            @"Start" : @[ [self edgeGesturePointWithX:2.0 y:396.0], [self edgeGesturePointWithX:2.0 y:404.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:80.0 y:396.0], [self edgeGesturePointWithX:80.0 y:404.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-left-bottom",
+            @"EventName" : @"libactivator.two-finger-slide-in.left-bottom",
+            @"Start" : @[ [self edgeGesturePointWithX:2.0 y:716.0], [self edgeGesturePointWithX:2.0 y:724.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:80.0 y:716.0], [self edgeGesturePointWithX:80.0 y:724.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-right-top",
+            @"EventName" : @"libactivator.two-finger-slide-in.right-top",
+            @"Start" : @[ [self edgeGesturePointWithX:398.0 y:76.0], [self edgeGesturePointWithX:398.0 y:84.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:300.0 y:76.0], [self edgeGesturePointWithX:300.0 y:84.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-right",
+            @"EventName" : LAEventNameTwoFingerSlideInFromRight,
+            @"Start" : @[ [self edgeGesturePointWithX:398.0 y:396.0], [self edgeGesturePointWithX:398.0 y:404.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:300.0 y:396.0], [self edgeGesturePointWithX:300.0 y:404.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-two-finger-right-bottom",
+            @"EventName" : @"libactivator.two-finger-slide-in.right-bottom",
+            @"Start" : @[ [self edgeGesturePointWithX:398.0 y:716.0], [self edgeGesturePointWithX:398.0 y:724.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:300.0 y:716.0], [self edgeGesturePointWithX:300.0 y:724.0] ],
+        },
+    ];
+
+    for (NSDictionary<NSString *, id> *testCase in cases) {
+        NSString *eventName = [self classifiedEdgeGestureEventNameWithClassifier:classifier
+                                                                          bounds:bounds
+                                                                  startLocations:testCase[@"Start"]
+                                                                   moveLocations:testCase[@"Move"]];
+        NSString *expectedEventName = testCase[@"EventName"];
+        [recorder expect:[eventName isEqualToString:expectedEventName]
+                caseName:testCase[@"Case"]
+                  reason:[NSString stringWithFormat:@"Expected %@ but classified %@", expectedEventName, eventName]];
+    }
+
+    CGRect deviceBounds = CGRectMake(0.0, 0.0, 414.0, 736.0);
+    NSArray<NSDictionary<NSString *, id> *> *observedSideCases = @[
+        @{
+            @"Case" : @"edge-gesture-classifies-observed-two-finger-left-top",
+            @"EventName" : @"libactivator.two-finger-slide-in.left-top",
+            @"Start" : @[ [self edgeGesturePointWithX:41.3 y:32.3], [self edgeGesturePointWithX:47.3 y:112.7] ],
+            @"Move" : @[ [self edgeGesturePointWithX:74.0 y:32.3], [self edgeGesturePointWithX:75.3 y:112.7] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-observed-two-finger-left",
+            @"EventName" : LAEventNameTwoFingerSlideInFromLeft,
+            @"Start" : @[ [self edgeGesturePointWithX:39.3 y:413.7], [self edgeGesturePointWithX:36.3 y:323.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:74.0 y:413.7], [self edgeGesturePointWithX:75.3 y:323.3] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-observed-two-finger-left-bottom",
+            @"EventName" : @"libactivator.two-finger-slide-in.left-bottom",
+            @"Start" : @[ [self edgeGesturePointWithX:35.0 y:626.7], [self edgeGesturePointWithX:39.0 y:705.3] ],
+            @"Move" : @[ [self edgeGesturePointWithX:71.3 y:703.3], [self edgeGesturePointWithX:68.3 y:626.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-observed-two-finger-right-top",
+            @"EventName" : @"libactivator.two-finger-slide-in.right-top",
+            @"Start" : @[ [self edgeGesturePointWithX:379.7 y:33.7], [self edgeGesturePointWithX:379.7 y:103.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:337.7 y:104.0], [self edgeGesturePointWithX:330.7 y:35.7] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-observed-two-finger-right",
+            @"EventName" : LAEventNameTwoFingerSlideInFromRight,
+            @"Start" : @[ [self edgeGesturePointWithX:375.7 y:312.3], [self edgeGesturePointWithX:378.3 y:381.7] ],
+            @"Move" : @[ [self edgeGesturePointWithX:346.3 y:314.0], [self edgeGesturePointWithX:352.7 y:383.3] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-observed-two-finger-right-bottom",
+            @"EventName" : @"libactivator.two-finger-slide-in.right-bottom",
+            @"Start" : @[ [self edgeGesturePointWithX:377.3 y:624.3], [self edgeGesturePointWithX:377.3 y:692.7] ],
+            @"Move" : @[ [self edgeGesturePointWithX:345.0 y:692.7], [self edgeGesturePointWithX:341.0 y:623.3] ],
+        },
+    ];
+
+    for (NSDictionary<NSString *, id> *testCase in observedSideCases) {
+        NSString *eventName = [self classifiedEdgeGestureEventNameWithClassifier:classifier
+                                                                          bounds:deviceBounds
+                                                                  startLocations:testCase[@"Start"]
+                                                                   moveLocations:testCase[@"Move"]];
+        NSString *expectedEventName = testCase[@"EventName"];
+        [recorder expect:[eventName isEqualToString:expectedEventName]
+                caseName:testCase[@"Case"]
+                  reason:[NSString stringWithFormat:@"Expected %@ but classified %@", expectedEventName, eventName]];
+    }
+
+    NSArray<NSDictionary<NSString *, id> *> *observedSingleFingerSideCases = @[
+        @{
+            @"Case" : @"edge-gesture-classifies-observed-single-finger-left-top",
+            @"EventName" : @"libactivator.slide-in.left-top",
+            @"Start" : @[ [self edgeGesturePointWithX:14.3 y:46.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:63.0 y:46.0] ],
+        },
+        @{
+            @"Case" : @"edge-gesture-classifies-observed-single-finger-right-bottom",
+            @"EventName" : @"libactivator.slide-in.right-bottom",
+            @"Start" : @[ [self edgeGesturePointWithX:400.7 y:696.0] ],
+            @"Move" : @[ [self edgeGesturePointWithX:351.0 y:696.0] ],
+        },
+    ];
+
+    for (NSDictionary<NSString *, id> *testCase in observedSingleFingerSideCases) {
+        NSString *eventName = [self classifiedEdgeGestureEventNameWithClassifier:classifier
+                                                                          bounds:deviceBounds
+                                                                  startLocations:testCase[@"Start"]
+                                                                   moveLocations:testCase[@"Move"]];
+        NSString *expectedEventName = testCase[@"EventName"];
+        [recorder expect:[eventName isEqualToString:expectedEventName]
+                caseName:testCase[@"Case"]
+                  reason:[NSString stringWithFormat:@"Expected %@ but classified %@", expectedEventName, eventName]];
+    }
+
+    NSString *nonEdgeEventName =
+        [self classifiedEdgeGestureEventNameWithClassifier:classifier
+                                                    bounds:bounds
+                                            startLocations:@[ [self edgeGesturePointWithX:200.0 y:400.0] ]
+                                             moveLocations:@[ [self edgeGesturePointWithX:2.0 y:400.0] ]];
+    [recorder expect:nonEdgeEventName == nil
+            caseName:@"edge-gesture-ignores-non-edge-start"
+              reason:@"A gesture that began away from the edge was classified after moving to the edge"];
+
+    NSString *wideSingleFingerLeftEventName =
+        [self classifiedEdgeGestureEventNameWithClassifier:classifier
+                                                    bounds:deviceBounds
+                                            startLocations:@[ [self edgeGesturePointWithX:41.3 y:368.3] ]
+                                             moveLocations:@[ [self edgeGesturePointWithX:74.0 y:368.3] ]];
+    NSString *wideSingleFingerRightEventName =
+        [self classifiedEdgeGestureEventNameWithClassifier:classifier
+                                                    bounds:deviceBounds
+                                            startLocations:@[ [self edgeGesturePointWithX:377.3 y:368.3] ]
+                                             moveLocations:@[ [self edgeGesturePointWithX:345.0 y:368.3] ]];
+    [recorder expect:wideSingleFingerLeftEventName == nil && wideSingleFingerRightEventName == nil
+            caseName:@"edge-gesture-keeps-single-finger-side-edge-band-narrow"
+              reason:@"Single-finger side gestures used the widened two-finger side edge band"];
+
+    NSString *shortMoveEventName =
+        [self classifiedEdgeGestureEventNameWithClassifier:classifier
+                                                    bounds:bounds
+                                            startLocations:@[ [self edgeGesturePointWithX:200.0 y:798.0] ]
+                                             moveLocations:@[ [self edgeGesturePointWithX:200.0 y:750.0] ]];
+    [recorder expect:shortMoveEventName == nil
+            caseName:@"edge-gesture-ignores-short-move"
+              reason:@"A gesture that did not cross the interior trigger distance was classified"];
+
+    [classifier reset];
+    [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0 y:798.0] ]
+                                                                           phase:0]
+                                  bounds:bounds
+                               timestamp:0.0];
+    NSString *firstEventName =
+        [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0 y:700.0] ]
+                                                                               phase:1]
+                                      bounds:bounds
+                                   timestamp:0.1];
+    NSString *secondEventName =
+        [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0 y:650.0] ]
+                                                                               phase:1]
+                                      bounds:bounds
+                                   timestamp:0.2];
+    [recorder expect:[firstEventName isEqualToString:LAEventNameSlideInFromBottom] && secondEventName == nil
+            caseName:@"edge-gesture-classifies-once-per-session"
+              reason:@"A single edge gesture session did not classify exactly once"];
+
+    CGRect landscapeBounds = CGRectMake(0.0, 0.0, 812.0, 375.0);
+    NSString *landscapeEventName =
+        [self classifiedEdgeGestureEventNameWithClassifier:classifier
+                                                    bounds:landscapeBounds
+                                            startLocations:@[ [self edgeGesturePointWithX:406.0 y:373.0] ]
+                                             moveLocations:@[ [self edgeGesturePointWithX:406.0 y:300.0] ]];
+    [recorder expect:[landscapeEventName isEqualToString:LAEventNameSlideInFromBottom]
+            caseName:@"edge-gesture-classifies-landscape-bottom"
+              reason:@"Landscape bounds did not classify a bottom edge gesture"];
+}
+
++ (NSString *)classifiedEdgeGestureEventNameWithClassifier:(LATEdgeGestureClassifier *)classifier
+                                                    bounds:(CGRect)bounds
+                                            startLocations:(NSArray<NSValue *> *)startLocations
+                                             moveLocations:(NSArray<NSValue *> *)moveLocations {
+    [classifier reset];
+    [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:startLocations phase:0]
+                                  bounds:bounds
+                               timestamp:0.0];
+    return [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:moveLocations phase:1]
+                                         bounds:bounds
+                                      timestamp:0.1];
+}
+
++ (NSValue *)edgeGesturePointWithX:(CGFloat)x y:(CGFloat)y {
+    return [NSValue valueWithCGPoint:CGPointMake(x, y)];
+}
+
++ (NSArray<NSDictionary<NSString *, id> *> *)edgeGestureSnapshotsWithLocations:(NSArray<NSValue *> *)locations
+                                                                         phase:(NSInteger)phase {
+    NSMutableArray<NSDictionary<NSString *, id> *> *snapshots = [[NSMutableArray alloc] init];
+    [locations enumerateObjectsUsingBlock:^(NSValue *locationValue, NSUInteger index, BOOL *stop) {
+        (void)stop;
+        NSString *identifier = [NSString stringWithFormat:@"touch-%lu", (unsigned long)index];
+        [snapshots addObject:@{
+            @"Identifier" : identifier,
+            @"Phase" : @(phase),
+            @"Location" : locationValue,
+        }];
+    }];
+    return snapshots;
 }
 
 @end

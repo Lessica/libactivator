@@ -40,7 +40,9 @@
               reason:@"Event was not registered"];
     [recorder expect:[activator hasEventWithName:LAEventNameVolumeMuteOn] &&
                      [activator hasEventWithName:LAEventNameVolumeDownPress] &&
-                     [activator hasEventWithName:LAEventNameStatusBarTapSingle]
+                     [activator hasEventWithName:LAEventNameStatusBarTapSingle] &&
+                     [activator hasEventWithName:LAEventScreenBottomSwipeLeft] &&
+                     [activator hasEventWithName:LAEventScreenRightSwipeUp]
             caseName:@"bundled-event-registry"
               reason:@"1.9.13 bundled event metadata was not registered"];
     [recorder expect:[activator eventWithNameSupportsUnlockingDeviceToSend:LAEventNameFingerprintSensorHold] == NO

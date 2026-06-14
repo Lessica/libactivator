@@ -9,12 +9,11 @@
 #import "LATLockStateEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LATQueueAssertions.h"
 #import "LATRuntimeStateSource.h"
 
 #import <HBLog.h>
 #import <notify.h>
-
-#define kLATLockStateEventSourceMainQueueReason @"LATLockStateEventSource must only be used on the main thread"
 
 @interface SBLockScreenManager : NSObject
 + (instancetype)sharedInstance;
@@ -49,7 +48,7 @@
 }
 
 - (void)start {
-    NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
+    LATAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -68,7 +67,7 @@
 #pragma mark - Notifications
 
 - (void)handleLockStateNotification {
-    NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
+    LATAssertMainQueue();
     BOOL locked = NO;
     if (![self readUILocked:&locked]) {
         HBLogDebug(@"Unable to read lock state for device lock event source");
@@ -91,7 +90,7 @@
 }
 
 - (void)refreshKnownLockStateWithoutSendingEvent {
-    NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
+    LATAssertMainQueue();
     BOOL locked = NO;
     if (![self readUILocked:&locked]) {
         return;
@@ -104,7 +103,7 @@
 #pragma mark - State
 
 - (BOOL)readUILocked:(BOOL *)locked {
-    NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
+    LATAssertMainQueue();
     Class managerClass = NSClassFromString(@"SBLockScreenManager");
     if (![managerClass respondsToSelector:@selector(sharedInstance)]) {
         return NO;
@@ -124,7 +123,7 @@
 #pragma mark - Event Dispatch
 
 - (void)sendDeviceLockEventForLockedState:(BOOL)locked {
-    NSAssert(NSThread.isMainThread, kLATLockStateEventSourceMainQueueReason);
+    LATAssertMainQueue();
     NSString *eventName = locked ? LAEventNameDeviceLocked : LAEventNameDeviceUnlocked;
     NSString *eventMode = locked ? LAEventModeLockScreen : LASharedActivator.currentEventMode;
     if (!locked && [eventMode isEqualToString:LAEventModeLockScreen]) {

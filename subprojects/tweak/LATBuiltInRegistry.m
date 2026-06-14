@@ -16,6 +16,7 @@
 #import "LATApplicationListenerProvider.h"
 #import "LATBuiltInListenerRegistrant.h"
 #import "LATButtonEventSource.h"
+#import "LATEdgeGestureEventSource.h"
 #import "LATHardwareActionListener.h"
 #import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
@@ -45,6 +46,7 @@
 // Event sources
 @property(nonatomic, strong, readwrite) LATRuntimeStateSource *runtimeStateSource;
 @property(nonatomic, strong, readwrite) LATButtonEventSource *buttonEventSource;
+@property(nonatomic, strong, readwrite) LATEdgeGestureEventSource *edgeGestureEventSource;
 @property(nonatomic, strong, readwrite) LATLockStateEventSource *lockStateEventSource;
 @property(nonatomic, strong, readwrite) LATMediaEventSource *mediaEventSource;
 @property(nonatomic, strong, readwrite) LATNetworkEventSource *networkEventSource;
@@ -73,6 +75,7 @@
         _networkEventSource = [[LATNetworkEventSource alloc] init];
         _buttonEventSource = [[LATButtonEventSource alloc] init];
         _statusBarEventSource = [[LATStatusBarEventSource alloc] init];
+        _edgeGestureEventSource = [[LATEdgeGestureEventSource alloc] init];
 
         [self registerBuiltInListenersWithActivator:activator];
     }
@@ -92,6 +95,7 @@
     [self.networkEventSource start];
     [self.buttonEventSource start];
     [self.statusBarEventSource start];
+    [self.edgeGestureEventSource start];
 }
 
 - (NSArray<NSDictionary<NSString *, id> *> *)builtInListenerFactoryConfigurations {

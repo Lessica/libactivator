@@ -83,12 +83,12 @@ NSString *const LAEventNameDragOffLeft = @"libactivator.drag-off.left";
 NSString *const LAEventNameDragOffRight = @"libactivator.drag-off.right";
 NSString *const LAEventNameDragOffTop = @"libactivator.drag-off.top";
 
-NSString *const LAEventScreenBottomSwipeLeft = @"libactivator.screen.bottom.swipe.left";
-NSString *const LAEventScreenBottomSwipeRight = @"libactivator.screen.bottom.swipe.right";
-NSString *const LAEventScreenLeftSwipeDown = @"libactivator.screen.left.swipe.down";
-NSString *const LAEventScreenLeftSwipeUp = @"libactivator.screen.left.swipe.up";
-NSString *const LAEventScreenRightSwipeDown = @"libactivator.screen.right.swipe.down";
-NSString *const LAEventScreenRightSwipeUp = @"libactivator.screen.right.swipe.up";
+NSString *const LAEventScreenBottomSwipeLeft = @"libactivator.drag-along.screen-bottom.right-to-left";
+NSString *const LAEventScreenBottomSwipeRight = @"libactivator.drag-along.screen-bottom.left-to-right";
+NSString *const LAEventScreenLeftSwipeDown = @"libactivator.drag-along.screen-left.top-to-bottom";
+NSString *const LAEventScreenLeftSwipeUp = @"libactivator.drag-along.screen-left.bottom-to-top";
+NSString *const LAEventScreenRightSwipeDown = @"libactivator.drag-along.screen-right.top-to-bottom";
+NSString *const LAEventScreenRightSwipeUp = @"libactivator.drag-along.screen-right.bottom-to-top";
 
 NSString *const LAEventNameMotionShake = @"libactivator.motion.shake";
 

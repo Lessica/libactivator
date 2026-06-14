@@ -26,6 +26,14 @@
     [recorder expect:[event.userInfo[@"Key"] isEqualToString:@"Value"]
             caseName:@"user-info"
               reason:@"User info mismatch"];
+    [recorder expect:[LAEventScreenBottomSwipeLeft isEqualToString:@"libactivator.drag-along.screen-bottom.right-to-left"] &&
+                     [LAEventScreenBottomSwipeRight isEqualToString:@"libactivator.drag-along.screen-bottom.left-to-right"] &&
+                     [LAEventScreenLeftSwipeDown isEqualToString:@"libactivator.drag-along.screen-left.top-to-bottom"] &&
+                     [LAEventScreenLeftSwipeUp isEqualToString:@"libactivator.drag-along.screen-left.bottom-to-top"] &&
+                     [LAEventScreenRightSwipeDown isEqualToString:@"libactivator.drag-along.screen-right.top-to-bottom"] &&
+                     [LAEventScreenRightSwipeUp isEqualToString:@"libactivator.drag-along.screen-right.bottom-to-top"]
+            caseName:@"screen-side-swipe-constant-values"
+              reason:@"Screen-side swipe constants did not match the 1.9.13 drag-along event names"];
 
     NSError *archiveError = nil;
     NSData *data = [NSKeyedArchiver archivedDataWithRootObject:event requiringSecureCoding:NO error:&archiveError];
