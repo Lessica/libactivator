@@ -2,7 +2,7 @@
 //  LATEdgeGestureClassifier.m
 //  libactivator
 //
-//  Created by OpenAI on 6/14/26.
+//  Created by Lessica on 6/14/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
