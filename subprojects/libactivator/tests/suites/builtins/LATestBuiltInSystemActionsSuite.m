@@ -51,7 +51,7 @@
                   reason:@"System action selector mapping did not match bundled metadata"];
     }
 
-    [recorder expect:![activator hasListenerWithName:@"libactivator.volume.mute"]
+    [recorder expect:![activator hasListenerWithName:LAEventNameVolumeMuteOn]
             caseName:@"system-ringer-event-name-not-registered-as-listener"
               reason:@"Legacy event name was registered as a system listener"];
 

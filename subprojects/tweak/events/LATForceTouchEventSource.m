@@ -11,14 +11,8 @@
 #import "LAActivator+Private.h"
 #import "LATQueueAssertions.h"
 
+#import <Activator/Activator.h>
 #import <HBLog.h>
-
-static NSString *const LATForceTouchScreenBottomEventName = @"libactivator.force-touch.screen-bottom";
-static NSString *const LATForceTouchScreenBottomLeftEventName = @"libactivator.force-touch.screen-bottom-left";
-static NSString *const LATForceTouchScreenBottomRightEventName = @"libactivator.force-touch.screen-bottom-right";
-static NSString *const LATForceTouchScreenLeftEventName = @"libactivator.force-touch.screen-left";
-static NSString *const LATForceTouchScreenRightEventName = @"libactivator.force-touch.screen-right";
-static NSString *const LATForceTouchStatusBarEventName = @"libactivator.force-touch.statusbar";
 
 static NSString *const LATForceTouchSnapshotIdentifierKey = @"Identifier";
 static NSString *const LATForceTouchSnapshotForceKey = @"Force";
@@ -265,25 +259,25 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
     }
 
     if (location.y < LATForceTouchStatusBarBand) {
-        return LATForceTouchStatusBarEventName;
+        return LAEventNameForceTouchStatusBar;
     }
 
     if (location.y >= height - LATForceTouchBottomBand) {
         if (location.x < width * 0.25) {
-            return LATForceTouchScreenBottomLeftEventName;
+            return LAEventNameForceTouchScreenBottomLeft;
         }
         if (location.x < width * 0.75) {
-            return LATForceTouchScreenBottomEventName;
+            return LAEventNameForceTouchScreenBottom;
         }
-        return LATForceTouchScreenBottomRightEventName;
+        return LAEventNameForceTouchScreenBottomRight;
     }
 
     if (location.x < LATForceTouchSideBand) {
-        return LATForceTouchScreenLeftEventName;
+        return LAEventNameForceTouchScreenLeft;
     }
 
     if (location.x > width - LATForceTouchSideBand) {
-        return LATForceTouchScreenRightEventName;
+        return LAEventNameForceTouchScreenRight;
     }
 
     return nil;

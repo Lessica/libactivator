@@ -25,10 +25,6 @@ static AVSystemControllerKey const AVSystemController_ActiveAudioRouteDidChangeN
 static AVSystemControllerKey const AVSystemController_PickableRoutesDidChangeNotification =
     @"AVSystemController_PickableRoutesDidChangeNotification";
 
-static NSString *const LATNowPlayingInfoChangedEventName = @"libactivator.now-playing.info-changed";
-static NSString *const LATNowPlayingPlayingEventName = @"libactivator.now-playing.playing";
-static NSString *const LATNowPlayingPausedEventName = @"libactivator.now-playing.paused";
-
 extern void MRMediaRemoteGetNowPlayingApplicationDisplayID(dispatch_queue_t queue,
                                                            void (^completion)(CFStringRef displayID))
     __attribute__((weak_import));
@@ -299,7 +295,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
     MRMediaRemoteGetNowPlayingInfo(self.mediaRemoteQueue, ^(__unused CFDictionaryRef information) {
         dispatch_async(dispatch_get_main_queue(), ^{
             __strong typeof(weakSelf) strongSelf = weakSelf;
-            [strongSelf sendMediaEventWithName:LATNowPlayingInfoChangedEventName];
+            [strongSelf sendMediaEventWithName:LAEventNameNowPlayingInfoChanged];
         });
     });
 }
@@ -332,7 +328,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
     }
 
     self.nowPlayingApplicationPlaying = isPlaying;
-    [self sendMediaEventWithName:isPlaying ? LATNowPlayingPlayingEventName : LATNowPlayingPausedEventName];
+    [self sendMediaEventWithName:isPlaying ? LAEventNameNowPlayingPlaying : LAEventNameNowPlayingPaused];
 }
 
 - (void)handlePotentialHeadsetStateChange {

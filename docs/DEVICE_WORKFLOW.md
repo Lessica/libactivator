@@ -13,6 +13,7 @@
 
 - rootless/rootful/roothide 的包布局由 Theos 和对应环境脚本处理；实现代码只关心运行时路径转换。
 - 测试构建使用 `DEBUG=1`，普通包不能包含 DEBUG-only testing IPC、test runner、测试持久化路径或测试自动化入口。
+- 如果新增或修改 `libactivator.dylib` 的 public symbols 后，tweak target 链接阶段出现这些新符号 undefined，先执行 `gmake -C subprojects/libactivator stage DEBUG=1` 把 libactivator target 安装到 Theos staging/sysroot，再重跑 tweak 或整包构建。
 - 安装后需要重启 SpringBoard，尤其是 IPC server、tweak hook 和 dylib ABI 发生变化时。
 - 判断 SpringBoard 是否崩溃或重启，第一信号是 SpringBoard pid 是否变化；crash report 用于随后定位栈。
 

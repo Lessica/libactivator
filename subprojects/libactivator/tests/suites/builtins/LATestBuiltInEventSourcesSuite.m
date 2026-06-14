@@ -21,10 +21,10 @@
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInEventSources"];
 
-    NSString *nowPlayingInfoChangedEventName = @"libactivator.now-playing.info-changed";
-    NSString *nowPlayingPlayingEventName = @"libactivator.now-playing.playing";
-    NSString *nowPlayingPausedEventName = @"libactivator.now-playing.paused";
-    NSString *lockPressTripleEventName = @"libactivator.lock.press.triple";
+    NSString *nowPlayingInfoChangedEventName = LAEventNameNowPlayingInfoChanged;
+    NSString *nowPlayingPlayingEventName = LAEventNameNowPlayingPlaying;
+    NSString *nowPlayingPausedEventName = LAEventNameNowPlayingPaused;
+    NSString *lockPressTripleEventName = LAEventNameLockPressTriple;
     NSArray<NSString *> *statusBarEventNames = @[
         LAEventNameStatusBarTapSingle,
         LAEventNameStatusBarTapSingleLeft,
@@ -650,32 +650,32 @@
     NSArray<NSDictionary<NSString *, id> *> *regionCases = @[
         @{
             @"Case" : @"force-touch-classifies-statusbar",
-            @"EventName" : @"libactivator.force-touch.statusbar",
+            @"EventName" : LAEventNameForceTouchStatusBar,
             @"Location" : [self forceTouchPointWithX:200.0 y:37.0],
         },
         @{
             @"Case" : @"force-touch-classifies-left-edge",
-            @"EventName" : @"libactivator.force-touch.screen-left",
+            @"EventName" : LAEventNameForceTouchScreenLeft,
             @"Location" : [self forceTouchPointWithX:13.0 y:400.0],
         },
         @{
             @"Case" : @"force-touch-classifies-right-edge",
-            @"EventName" : @"libactivator.force-touch.screen-right",
+            @"EventName" : LAEventNameForceTouchScreenRight,
             @"Location" : [self forceTouchPointWithX:387.0 y:400.0],
         },
         @{
             @"Case" : @"force-touch-classifies-bottom-left",
-            @"EventName" : @"libactivator.force-touch.screen-bottom-left",
+            @"EventName" : LAEventNameForceTouchScreenBottomLeft,
             @"Location" : [self forceTouchPointWithX:90.0 y:762.0],
         },
         @{
             @"Case" : @"force-touch-classifies-bottom",
-            @"EventName" : @"libactivator.force-touch.screen-bottom",
+            @"EventName" : LAEventNameForceTouchScreenBottom,
             @"Location" : [self forceTouchPointWithX:200.0 y:762.0],
         },
         @{
             @"Case" : @"force-touch-classifies-bottom-right",
-            @"EventName" : @"libactivator.force-touch.screen-bottom-right",
+            @"EventName" : LAEventNameForceTouchScreenBottomRight,
             @"Location" : [self forceTouchPointWithX:310.0 y:762.0],
         },
     ];
@@ -713,7 +713,7 @@
                                                bounds:bounds
                                             timestamp:0.1];
     [recorder expect:notStartedEventName == nil &&
-                     [self dispatchCountForEventName:@"libactivator.force-touch.screen-bottom" activator:activator] == 0
+                     [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom activator:activator] == 0
             caseName:@"force-touch-ignores-events-before-start"
               reason:@"Force touch event source dispatched before it was started"];
 
@@ -753,9 +753,9 @@
                                              bounds:bounds
                                           timestamp:0.3];
     [recorder expect:belowThresholdEventName == nil &&
-                     [firstEventName isEqualToString:@"libactivator.force-touch.screen-bottom"] &&
+                     [firstEventName isEqualToString:LAEventNameForceTouchScreenBottom] &&
                      secondEventName == nil &&
-                     [self dispatchCountForEventName:@"libactivator.force-touch.screen-bottom" activator:activator] == 1
+                     [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom activator:activator] == 1
             caseName:@"force-touch-dispatches-on-threshold-once"
               reason:@"Force touch did not dispatch exactly once when force crossed the threshold"];
 
@@ -777,7 +777,7 @@
                                           bounds:bounds
                                        timestamp:0.1];
     [recorder expect:endedEventName == nil &&
-                     [self dispatchCountForEventName:@"libactivator.force-touch.screen-bottom" activator:activator] == 0
+                     [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom activator:activator] == 0
             caseName:@"force-touch-ignores-ended-threshold-crossing"
               reason:@"Force touch dispatched after the touch had already ended"];
 
@@ -799,7 +799,7 @@
                                              bounds:bounds
                                           timestamp:0.1];
     [recorder expect:movedAwayEventName == nil &&
-                     [self dispatchCountForEventName:@"libactivator.force-touch.screen-bottom" activator:activator] == 0
+                     [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom activator:activator] == 0
             caseName:@"force-touch-requires-same-region-at-threshold"
               reason:@"Force touch dispatched after the touch moved outside its starting region"];
 }
@@ -963,7 +963,7 @@
         },
         @{
             @"Case" : @"edge-gesture-classifies-left-top",
-            @"EventName" : @"libactivator.slide-in.left-top",
+            @"EventName" : LAEventNameSlideInFromLeftTop,
             @"Start" : @[ [self edgeGesturePointWithX:2.0 y:80.0] ],
             @"Move" : @[ [self edgeGesturePointWithX:80.0 y:80.0] ],
         },
@@ -975,13 +975,13 @@
         },
         @{
             @"Case" : @"edge-gesture-classifies-left-bottom",
-            @"EventName" : @"libactivator.slide-in.left-bottom",
+            @"EventName" : LAEventNameSlideInFromLeftBottom,
             @"Start" : @[ [self edgeGesturePointWithX:2.0 y:720.0] ],
             @"Move" : @[ [self edgeGesturePointWithX:80.0 y:720.0] ],
         },
         @{
             @"Case" : @"edge-gesture-classifies-right-top",
-            @"EventName" : @"libactivator.slide-in.right-top",
+            @"EventName" : LAEventNameSlideInFromRightTop,
             @"Start" : @[ [self edgeGesturePointWithX:398.0 y:80.0] ],
             @"Move" : @[ [self edgeGesturePointWithX:300.0 y:80.0] ],
         },
@@ -993,7 +993,7 @@
         },
         @{
             @"Case" : @"edge-gesture-classifies-right-bottom",
-            @"EventName" : @"libactivator.slide-in.right-bottom",
+            @"EventName" : LAEventNameSlideInFromRightBottom,
             @"Start" : @[ [self edgeGesturePointWithX:398.0 y:720.0] ],
             @"Move" : @[ [self edgeGesturePointWithX:300.0 y:720.0] ],
         },
@@ -1035,7 +1035,7 @@
         },
         @{
             @"Case" : @"edge-gesture-classifies-two-finger-left-top",
-            @"EventName" : @"libactivator.two-finger-slide-in.left-top",
+            @"EventName" : LAEventNameTwoFingerSlideInFromLeftTop,
             @"Start" : @[ [self edgeGesturePointWithX:2.0 y:76.0], [self edgeGesturePointWithX:2.0 y:84.0] ],
             @"Move" : @[ [self edgeGesturePointWithX:80.0 y:76.0], [self edgeGesturePointWithX:80.0 y:84.0] ],
         },
@@ -1047,13 +1047,13 @@
         },
         @{
             @"Case" : @"edge-gesture-classifies-two-finger-left-bottom",
-            @"EventName" : @"libactivator.two-finger-slide-in.left-bottom",
+            @"EventName" : LAEventNameTwoFingerSlideInFromLeftBottom,
             @"Start" : @[ [self edgeGesturePointWithX:2.0 y:716.0], [self edgeGesturePointWithX:2.0 y:724.0] ],
             @"Move" : @[ [self edgeGesturePointWithX:80.0 y:716.0], [self edgeGesturePointWithX:80.0 y:724.0] ],
         },
         @{
             @"Case" : @"edge-gesture-classifies-two-finger-right-top",
-            @"EventName" : @"libactivator.two-finger-slide-in.right-top",
+            @"EventName" : LAEventNameTwoFingerSlideInFromRightTop,
             @"Start" : @[ [self edgeGesturePointWithX:398.0 y:76.0], [self edgeGesturePointWithX:398.0 y:84.0] ],
             @"Move" : @[ [self edgeGesturePointWithX:300.0 y:76.0], [self edgeGesturePointWithX:300.0 y:84.0] ],
         },
@@ -1065,7 +1065,7 @@
         },
         @{
             @"Case" : @"edge-gesture-classifies-two-finger-right-bottom",
-            @"EventName" : @"libactivator.two-finger-slide-in.right-bottom",
+            @"EventName" : LAEventNameTwoFingerSlideInFromRightBottom,
             @"Start" : @[ [self edgeGesturePointWithX:398.0 y:716.0], [self edgeGesturePointWithX:398.0 y:724.0] ],
             @"Move" : @[ [self edgeGesturePointWithX:300.0 y:716.0], [self edgeGesturePointWithX:300.0 y:724.0] ],
         },
@@ -1518,12 +1518,12 @@
 
 + (NSArray<NSString *> *)forceTouchEventNames {
     return @[
-        @"libactivator.force-touch.screen-bottom",
-        @"libactivator.force-touch.screen-bottom-left",
-        @"libactivator.force-touch.screen-bottom-right",
-        @"libactivator.force-touch.screen-left",
-        @"libactivator.force-touch.screen-right",
-        @"libactivator.force-touch.statusbar",
+        LAEventNameForceTouchScreenBottom,
+        LAEventNameForceTouchScreenBottomLeft,
+        LAEventNameForceTouchScreenBottomRight,
+        LAEventNameForceTouchScreenLeft,
+        LAEventNameForceTouchScreenRight,
+        LAEventNameForceTouchStatusBar,
     ];
 }
 

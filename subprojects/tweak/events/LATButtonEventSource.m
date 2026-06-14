@@ -15,7 +15,6 @@ static NSTimeInterval const LATButtonEventSourceHoldDelay = 0.45;
 static NSTimeInterval const LATButtonEventSourceMenuLongHoldDelay = 2.5;
 static NSTimeInterval const LATButtonEventSourceLockLongHoldDelay = 2.5;
 static NSTimeInterval const LATButtonEventSourceRingerToggleTwiceDelay = 1.0;
-static NSString *const LATLockPressTripleEventName = @"libactivator.lock.press.triple";
 
 static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x8000000000000000;
 
@@ -298,7 +297,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     }
 
     if (self.lockPressCount == 2) {
-        if ([self hasAssignedListenerForEventName:LATLockPressTripleEventName]) {
+        if ([self hasAssignedListenerForEventName:LAEventNameLockPressTriple]) {
             [self scheduleLockPressResolutionForPressCount:2];
         } else {
             [self cancelLockPressRecognition];
@@ -308,7 +307,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     }
 
     [self cancelLockPressRecognition];
-    [self sendButtonEventWithName:LATLockPressTripleEventName];
+    [self sendButtonEventWithName:LAEventNameLockPressTriple];
 }
 
 - (void)scheduleLockPressResolutionForPressCount:(NSUInteger)pressCount {
@@ -342,7 +341,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     LATAssertMainQueue();
 
     return [self hasAssignedListenerForEventName:LAEventNameLockPressDouble] ||
-           [self hasAssignedListenerForEventName:LATLockPressTripleEventName];
+           [self hasAssignedListenerForEventName:LAEventNameLockPressTriple];
 }
 
 - (void)cancelLockPressRecognition {

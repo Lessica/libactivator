@@ -385,14 +385,14 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureDragAxis) {
                       height:(CGFloat)height
                 triggerInset:(CGFloat)triggerInset {
     if (centroid.y < height * 0.25) {
-        session.singleFingerEventName = @"libactivator.slide-in.left-top";
-        session.twoFingerEventName = @"libactivator.two-finger-slide-in.left-top";
+        session.singleFingerEventName = LAEventNameSlideInFromLeftTop;
+        session.twoFingerEventName = LAEventNameTwoFingerSlideInFromLeftTop;
     } else if (centroid.y < height * 0.75) {
         session.singleFingerEventName = LAEventNameSlideInFromLeft;
         session.twoFingerEventName = LAEventNameTwoFingerSlideInFromLeft;
     } else {
-        session.singleFingerEventName = @"libactivator.slide-in.left-bottom";
-        session.twoFingerEventName = @"libactivator.two-finger-slide-in.left-bottom";
+        session.singleFingerEventName = LAEventNameSlideInFromLeftBottom;
+        session.twoFingerEventName = LAEventNameTwoFingerSlideInFromLeftBottom;
     }
     session.triggerRect = CGRectMake(MIN(triggerInset, width), 0.0, MAX(0.0, width - triggerInset), height);
 }
@@ -403,14 +403,14 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureDragAxis) {
                        height:(CGFloat)height
                  triggerInset:(CGFloat)triggerInset {
     if (centroid.y < height * 0.25) {
-        session.singleFingerEventName = @"libactivator.slide-in.right-top";
-        session.twoFingerEventName = @"libactivator.two-finger-slide-in.right-top";
+        session.singleFingerEventName = LAEventNameSlideInFromRightTop;
+        session.twoFingerEventName = LAEventNameTwoFingerSlideInFromRightTop;
     } else if (centroid.y < height * 0.75) {
         session.singleFingerEventName = LAEventNameSlideInFromRight;
         session.twoFingerEventName = LAEventNameTwoFingerSlideInFromRight;
     } else {
-        session.singleFingerEventName = @"libactivator.slide-in.right-bottom";
-        session.twoFingerEventName = @"libactivator.two-finger-slide-in.right-bottom";
+        session.singleFingerEventName = LAEventNameSlideInFromRightBottom;
+        session.twoFingerEventName = LAEventNameTwoFingerSlideInFromRightBottom;
     }
     session.triggerRect = CGRectMake(0.0, 0.0, MAX(0.0, width - triggerInset), height);
 }

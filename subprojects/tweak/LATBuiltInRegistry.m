@@ -117,7 +117,7 @@
 }
 
 - (BOOL)forceTouchEventSourceShouldBeRegisteredWithActivator:(LAActivator *)activator {
-    return [[activator availableEventNames] containsObject:@"libactivator.force-touch.screen-bottom"];
+    return [[activator availableEventNames] containsObject:LAEventNameForceTouchScreenBottom];
 }
 
 - (NSArray<NSDictionary<NSString *, id> *> *)builtInListenerFactoryConfigurations {

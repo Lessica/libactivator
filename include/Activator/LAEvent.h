@@ -43,6 +43,7 @@ extern NSString *const LAEventNameMenuHoldLong;
 extern NSString *const LAEventNameLockHoldShort;
 extern NSString *const LAEventNameLockHoldLong;
 extern NSString *const LAEventNameLockPressDouble;
+extern NSString *const LAEventNameLockPressTriple;
 extern NSString *const LAEventNameLockPressWithMenu;
 
 extern NSString *const LAEventNameSpringBoardPinch;
@@ -78,8 +79,12 @@ extern NSString *const LAEventNameSlideInFromBottom;
 extern NSString *const LAEventNameSlideInFromBottomLeft;
 extern NSString *const LAEventNameSlideInFromBottomRight;
 extern NSString *const LAEventNameSlideInFromLeft;
+extern NSString *const LAEventNameSlideInFromLeftTop;
+extern NSString *const LAEventNameSlideInFromLeftBottom;
 extern NSString *const LAEventNameSlideInFromRight;
-// Now a slide gesture in iOS5.0+; extern and name kept for backwards compatibility
+extern NSString *const LAEventNameSlideInFromRightTop;
+extern NSString *const LAEventNameSlideInFromRightBottom;
+// Now a slide gesture in iOS 5.0+; extern and name kept for backwards compatibility
 extern NSString *const LAEventNameStatusBarSwipeDown;
 #define LAEventNameSlideInFromTop LAEventNameStatusBarSwipeDown
 extern NSString *const LAEventNameSlideInFromTopLeft;
@@ -89,7 +94,11 @@ extern NSString *const LAEventNameTwoFingerSlideInFromBottom;
 extern NSString *const LAEventNameTwoFingerSlideInFromBottomLeft;
 extern NSString *const LAEventNameTwoFingerSlideInFromBottomRight;
 extern NSString *const LAEventNameTwoFingerSlideInFromLeft;
+extern NSString *const LAEventNameTwoFingerSlideInFromLeftTop;
+extern NSString *const LAEventNameTwoFingerSlideInFromLeftBottom;
 extern NSString *const LAEventNameTwoFingerSlideInFromRight;
+extern NSString *const LAEventNameTwoFingerSlideInFromRightTop;
+extern NSString *const LAEventNameTwoFingerSlideInFromRightBottom;
 extern NSString *const LAEventNameTwoFingerSlideInFromTop;
 extern NSString *const LAEventNameTwoFingerSlideInFromTopLeft;
 extern NSString *const LAEventNameTwoFingerSlideInFromTopRight;
@@ -106,6 +115,13 @@ extern NSString *const LAEventScreenLeftSwipeUp;
 extern NSString *const LAEventScreenRightSwipeDown;
 extern NSString *const LAEventScreenRightSwipeUp;
 
+extern NSString *const LAEventNameForceTouchStatusBar;
+extern NSString *const LAEventNameForceTouchScreenLeft;
+extern NSString *const LAEventNameForceTouchScreenRight;
+extern NSString *const LAEventNameForceTouchScreenBottomLeft;
+extern NSString *const LAEventNameForceTouchScreenBottom;
+extern NSString *const LAEventNameForceTouchScreenBottomRight;
+
 extern NSString *const LAEventNameMotionShake;
 
 extern NSString *const LAEventNameHeadsetButtonPressSingle;
@@ -113,14 +129,23 @@ extern NSString *const LAEventNameHeadsetButtonHoldShort;
 extern NSString *const LAEventNameHeadsetConnected;
 extern NSString *const LAEventNameHeadsetDisconnected;
 
+extern NSString *const LAEventNameGestureBarTapDouble;
+
 extern NSString *const LAEventNameLockScreenClockDoubleTap;
 extern NSString *const LAEventNameLockScreenClockTapHold;
 extern NSString *const LAEventNameLockScreenClockSwipeLeft;
 extern NSString *const LAEventNameLockScreenClockSwipeRight;
 extern NSString *const LAEventNameLockScreenClockSwipeDown;
 
+extern NSString *const LAEventNameNowPlayingInfoChanged;
+extern NSString *const LAEventNameNowPlayingPlaying;
+extern NSString *const LAEventNameNowPlayingPaused;
+
 extern NSString *const LAEventNamePowerConnected;
 extern NSString *const LAEventNamePowerDisconnected;
+
+extern NSString *const LAEventNameScheduledSunrise;
+extern NSString *const LAEventNameScheduledSunset;
 
 extern NSString *const LAEventNameThreeFingerTap;
 extern NSString *const LAEventNameThreeFingerPinch;
@@ -137,6 +162,9 @@ extern NSString *const LAEventNameFiveFingerSpread;
 extern NSString *const LAEventNameClamshellOpen;
 extern NSString *const LAEventNameClamshellClose;
 
+extern NSString *const LAEventNameCarConnected;
+extern NSString *const LAEventNameCarDisconnected;
+
 extern NSString *const LAEventNameSpringBoardIconFlickUp;
 extern NSString *const LAEventNameSpringBoardIconFlickDown;
 extern NSString *const LAEventNameSpringBoardIconFlickLeft;
@@ -144,6 +172,9 @@ extern NSString *const LAEventNameSpringBoardIconFlickRight;
 
 extern NSString *const LAEventNameDeviceLocked;
 extern NSString *const LAEventNameDeviceUnlocked;
+
+extern NSString *const LAEventNameWatchConnected;
+extern NSString *const LAEventNameWatchDisconnected;
 
 extern NSString *const LAEventNameNetworkJoinedWiFi;
 extern NSString *const LAEventNameNetworkLeftWiFi;
@@ -155,7 +186,6 @@ extern NSString *const LAEventNameFingerprintSensorHoldLong;
 extern NSString *const LAEventNameFingerprintSensorPressSingleAndSlideIn;
 extern NSString *const LAEventNameFingerprintSensorPressSingleAndHold;
 
-// Icon Gestures
 extern NSString *const LAEventUserInfoDisplayIdentifier;
 extern NSString *const LAEventUserInfoIconView;
 
