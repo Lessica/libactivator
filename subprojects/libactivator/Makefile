@@ -62,6 +62,7 @@ libactivator_CFLAGS += -Itests/suites/core
 libactivator_CFLAGS += -Itests/suites/builtins
 libactivator_CFLAGS += -Itests/suites/runtime
 libactivator_CFLAGS += -I../tweak/events
+libactivator_CFLAGS += -I../tweak/private
 endif
 
 libactivator_FRAMEWORKS += Foundation

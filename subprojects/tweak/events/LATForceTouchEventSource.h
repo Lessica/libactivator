@@ -1,23 +1,19 @@
 //
-//  LATEdgeGestureEventSource.h
+//  LATForceTouchEventSource.h
 //  libactivator
 //
-//  Created by Lessica on 6/14/26.
+//  Created by Lessica on 6/15/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
 
-@class LATFingerprintSensorEventSource;
-
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATEdgeGestureEventSource : NSObject
-
-@property(nonatomic, weak, nullable) LATFingerprintSensorEventSource *fingerprintSensorEventSource;
+@interface LATForceTouchEventSource : NSObject
 
 // Main-queue confined. This source observes system gesture window events and dispatches
-// Activator edge slide events without consuming the original system touch handling.
+// Activator force-touch events without consuming the original system touch handling.
 
 // Lifecycle
 - (void)start;
@@ -30,6 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable NSString *)la_testingNoteTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
                                              bounds:(CGRect)bounds
                                           timestamp:(NSTimeInterval)timestamp;
+- (nullable NSString *)la_testingEventNameForLocation:(CGPoint)location bounds:(CGRect)bounds;
 #endif
 
 @end

@@ -10,15 +10,23 @@
 
 #import <Activator/Activator.h>
 #import <UIKit/UIKit.h>
+#import <math.h>
 
 NSString *const LATEdgeGestureTouchIdentifierKey = @"Identifier";
 NSString *const LATEdgeGestureTouchPhaseKey = @"Phase";
 NSString *const LATEdgeGestureTouchLocationKey = @"Location";
 
 static CGFloat const LATEdgeGestureClassifierTopBottomStartBand = 13.0;
-static CGFloat const LATEdgeGestureClassifierSingleFingerSideStartBand = 18.0;
-static CGFloat const LATEdgeGestureClassifierTwoFingerSideStartBand = 56.0;
+static CGFloat const LATEdgeGestureClassifierSingleFingerSideStartBand = 13.0;
+static CGFloat const LATEdgeGestureClassifierTwoFingerSideStartBand = 26.0;
 static CGFloat const LATEdgeGestureClassifierTriggerInset = 63.0;
+static CGFloat const LATEdgeGestureClassifierDragAlongEdgeBand = 13.0;
+static CGFloat const LATEdgeGestureClassifierDragAlongBottomFudge = 2.0;
+static CGFloat const LATEdgeGestureClassifierDragAlongTriggerDistance = 30.0;
+static CGFloat const LATEdgeGestureClassifierDragAlongPerpendicularTolerance = 5.0;
+static CGFloat const LATEdgeGestureClassifierDragOffStartInset = 25.0;
+static CGFloat const LATEdgeGestureClassifierDragOffTriggerInset = 20.0;
+static CGFloat const LATEdgeGestureClassifierDragOffCornerInset = 50.0;
 
 typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
     LATEdgeGestureTouchPhaseBegan = 0,
@@ -28,12 +36,31 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
     LATEdgeGestureTouchPhaseCancelled = 4,
 };
 
+typedef NS_ENUM(NSInteger, LATEdgeGestureDragAxis) {
+    LATEdgeGestureDragAxisHorizontal = 0,
+    LATEdgeGestureDragAxisVertical = 1,
+};
+
+@interface LATEdgeGestureDragCandidate : NSObject
+
+@property(nonatomic, assign) LATEdgeGestureDragAxis axis;
+@property(nonatomic, copy) NSString *negativeEventName;
+@property(nonatomic, copy) NSString *positiveEventName;
+
+@end
+
+@implementation LATEdgeGestureDragCandidate
+@end
+
 @interface LATEdgeGestureSession : NSObject
 
 @property(nonatomic, assign) CGPoint startCentroid;
+@property(nonatomic, assign) CGRect bounds;
 @property(nonatomic, assign) CGRect triggerRect;
 @property(nonatomic, copy) NSString *singleFingerEventName;
 @property(nonatomic, copy) NSString *twoFingerEventName;
+@property(nonatomic, copy) NSArray<LATEdgeGestureDragCandidate *> *dragCandidates;
+@property(nonatomic, assign, getter=isDragOffEligible) BOOL dragOffEligible;
 @property(nonatomic, assign, getter=hasClassified) BOOL classified;
 
 @end
@@ -44,6 +71,8 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
 @interface LATEdgeGestureClassifier ()
 
 @property(nonatomic, strong) NSMutableDictionary<id<NSCopying>, NSValue *> *activeTouchLocations;
+@property(nonatomic, strong) NSMutableSet<id<NSCopying>> *endedTouchIdentifiers;
+@property(nonatomic, strong) NSMutableSet<id<NSCopying>> *finishedTouchIdentifiers;
 @property(nonatomic, strong, nullable) LATEdgeGestureSession *session;
 @property(nonatomic, assign, getter=isTrackingUnrecognizedSession) BOOL trackingUnrecognizedSession;
 
@@ -57,6 +86,8 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
     self = [super init];
     if (self) {
         _activeTouchLocations = [[NSMutableDictionary alloc] init];
+        _endedTouchIdentifiers = [[NSMutableSet alloc] init];
+        _finishedTouchIdentifiers = [[NSMutableSet alloc] init];
     }
     return self;
 }
@@ -86,11 +117,19 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
         case LATEdgeGestureTouchPhaseMoved:
         case LATEdgeGestureTouchPhaseStationary:
             self.activeTouchLocations[identifier] = locationValue;
+            [self.endedTouchIdentifiers removeObject:identifier];
+            [self.finishedTouchIdentifiers removeObject:identifier];
             break;
         case LATEdgeGestureTouchPhaseEnded:
+            self.activeTouchLocations[identifier] = locationValue;
+            [endedTouchIdentifiers addObject:identifier];
+            [self.endedTouchIdentifiers addObject:identifier];
+            [self.finishedTouchIdentifiers addObject:identifier];
+            break;
         case LATEdgeGestureTouchPhaseCancelled:
             self.activeTouchLocations[identifier] = locationValue;
             [endedTouchIdentifiers addObject:identifier];
+            [self.finishedTouchIdentifiers addObject:identifier];
             break;
         }
     }
@@ -132,24 +171,90 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
     }
 
     CGPoint centroid = [self centroidForActiveTouches];
-    if (![self triggerRect:session.triggerRect containsPointInclusively:centroid]) {
-        return nil;
+    if ([self triggerRect:session.triggerRect containsPointInclusively:centroid]) {
+        NSString *slideInEventName = nil;
+        if (self.activeTouchLocations.count == 2) {
+            slideInEventName = session.twoFingerEventName;
+        } else if (self.activeTouchLocations.count == 1) {
+            slideInEventName = session.singleFingerEventName;
+        }
+        if (slideInEventName.length > 0) {
+            session.classified = YES;
+            return slideInEventName;
+        }
     }
 
-    NSString *eventName = nil;
-    if (self.activeTouchLocations.count == 2) {
-        eventName = session.twoFingerEventName;
-    } else if (self.activeTouchLocations.count == 1) {
-        eventName = session.singleFingerEventName;
+    NSString *eventName = [self dragAlongEventNameForSession:session centroid:centroid];
+    if (eventName.length == 0) {
+        eventName = [self dragOffEventNameForSession:session centroid:centroid];
     }
     session.classified = eventName.length > 0;
     return eventName;
+}
+
+- (nullable NSString *)dragAlongEventNameForSession:(LATEdgeGestureSession *)session centroid:(CGPoint)centroid {
+    if (self.activeTouchLocations.count != 1 || self.finishedTouchIdentifiers.count > 0) {
+        return nil;
+    }
+
+    for (LATEdgeGestureDragCandidate *candidate in session.dragCandidates) {
+        CGFloat delta = candidate.axis == LATEdgeGestureDragAxisHorizontal ? centroid.x - session.startCentroid.x
+                                                                           : centroid.y - session.startCentroid.y;
+        CGFloat perpendicularDelta = candidate.axis == LATEdgeGestureDragAxisHorizontal ? centroid.y - session.startCentroid.y
+                                                                                       : centroid.x - session.startCentroid.x;
+        if (fabs(perpendicularDelta) >= LATEdgeGestureClassifierDragAlongPerpendicularTolerance) {
+            continue;
+        }
+
+        if (delta > LATEdgeGestureClassifierDragAlongTriggerDistance) {
+            return candidate.positiveEventName;
+        }
+        if (delta < -LATEdgeGestureClassifierDragAlongTriggerDistance) {
+            return candidate.negativeEventName;
+        }
+    }
+
+    return nil;
+}
+
+- (nullable NSString *)dragOffEventNameForSession:(LATEdgeGestureSession *)session centroid:(CGPoint)centroid {
+    if (!session.isDragOffEligible || self.activeTouchLocations.count != 1 ||
+        self.endedTouchIdentifiers.count != 1 || self.finishedTouchIdentifiers.count != 1) {
+        return nil;
+    }
+
+    CGFloat width = CGRectGetWidth(session.bounds);
+    CGFloat height = CGRectGetHeight(session.bounds);
+    if (width <= 0.0 || height <= 0.0) {
+        return nil;
+    }
+
+    BOOL yAwayFromCorners = centroid.y > LATEdgeGestureClassifierDragOffTriggerInset &&
+                            centroid.y < height - LATEdgeGestureClassifierDragOffCornerInset;
+    BOOL xAwayFromCorners = centroid.x > LATEdgeGestureClassifierDragOffTriggerInset &&
+                            centroid.x < width - LATEdgeGestureClassifierDragOffCornerInset;
+    if (centroid.x < LATEdgeGestureClassifierDragOffTriggerInset && yAwayFromCorners) {
+        return LAEventNameDragOffLeft;
+    }
+    if (centroid.x > width - LATEdgeGestureClassifierDragOffTriggerInset && yAwayFromCorners) {
+        return LAEventNameDragOffRight;
+    }
+    if (centroid.y < LATEdgeGestureClassifierDragOffTriggerInset && xAwayFromCorners) {
+        return LAEventNameDragOffTop;
+    }
+    if (centroid.y > height - LATEdgeGestureClassifierDragOffTriggerInset && xAwayFromCorners) {
+        return LAEventNameDragOffBottom;
+    }
+
+    return nil;
 }
 
 #pragma mark - State
 
 - (void)reset {
     [self.activeTouchLocations removeAllObjects];
+    [self.endedTouchIdentifiers removeAllObjects];
+    [self.finishedTouchIdentifiers removeAllObjects];
     self.session = nil;
     self.trackingUnrecognizedSession = NO;
 }
@@ -173,6 +278,10 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
 }
 
 - (BOOL)triggerRect:(CGRect)triggerRect containsPointInclusively:(CGPoint)point {
+    if (CGRectIsNull(triggerRect) || CGRectIsEmpty(triggerRect)) {
+        return NO;
+    }
+
     return point.x >= CGRectGetMinX(triggerRect) && point.x <= CGRectGetMaxX(triggerRect) &&
            point.y >= CGRectGetMinY(triggerRect) && point.y <= CGRectGetMaxY(triggerRect);
 }
@@ -188,6 +297,8 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
 
     LATEdgeGestureSession *session = [[LATEdgeGestureSession alloc] init];
     session.startCentroid = centroid;
+    session.bounds = bounds;
+    NSMutableArray<LATEdgeGestureDragCandidate *> *dragCandidates = [[NSMutableArray alloc] init];
     CGFloat sideStartBand = self.activeTouchLocations.count == 2 ? LATEdgeGestureClassifierTwoFingerSideStartBand
                                                                  : LATEdgeGestureClassifierSingleFingerSideStartBand;
 
@@ -216,10 +327,20 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
                               height:height
                         triggerInset:LATEdgeGestureClassifierTriggerInset];
     } else {
-        return nil;
+        session.triggerRect = CGRectNull;
     }
 
-    return session.singleFingerEventName.length > 0 && session.twoFingerEventName.length > 0 ? session : nil;
+    if (self.activeTouchLocations.count == 1) {
+        [self appendDragAlongCandidatesToArray:dragCandidates centroid:centroid width:width height:height];
+        session.dragOffEligible = [self dragOffEligibleForStartCentroid:centroid width:width height:height];
+    }
+    session.dragCandidates = dragCandidates;
+
+    BOOL hasSlideInGesture = session.singleFingerEventName.length > 0 && session.twoFingerEventName.length > 0 &&
+                             !CGRectIsNull(session.triggerRect);
+    BOOL hasDragAlongGesture = session.dragCandidates.count > 0;
+    BOOL hasDragOffGesture = session.isDragOffEligible;
+    return hasSlideInGesture || hasDragAlongGesture || hasDragOffGesture ? session : nil;
 }
 
 - (void)configureBottomSession:(LATEdgeGestureSession *)session
@@ -292,6 +413,44 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureTouchPhase) {
         session.twoFingerEventName = @"libactivator.two-finger-slide-in.right-bottom";
     }
     session.triggerRect = CGRectMake(0.0, 0.0, MAX(0.0, width - triggerInset), height);
+}
+
+- (void)appendDragAlongCandidatesToArray:(NSMutableArray<LATEdgeGestureDragCandidate *> *)dragCandidates
+                                centroid:(CGPoint)centroid
+                                   width:(CGFloat)width
+                                  height:(CGFloat)height {
+    CGFloat edgeBand = LATEdgeGestureClassifierDragAlongEdgeBand;
+    if (centroid.y + LATEdgeGestureClassifierDragAlongBottomFudge + edgeBand >= height) {
+        LATEdgeGestureDragCandidate *bottomCandidate = [[LATEdgeGestureDragCandidate alloc] init];
+        bottomCandidate.axis = LATEdgeGestureDragAxisHorizontal;
+        bottomCandidate.negativeEventName = LAEventScreenBottomSwipeLeft;
+        bottomCandidate.positiveEventName = LAEventScreenBottomSwipeRight;
+        [dragCandidates addObject:bottomCandidate];
+    }
+
+    if (centroid.x < edgeBand) {
+        LATEdgeGestureDragCandidate *leftCandidate = [[LATEdgeGestureDragCandidate alloc] init];
+        leftCandidate.axis = LATEdgeGestureDragAxisVertical;
+        leftCandidate.negativeEventName = LAEventScreenLeftSwipeUp;
+        leftCandidate.positiveEventName = LAEventScreenLeftSwipeDown;
+        [dragCandidates addObject:leftCandidate];
+    }
+
+    if (centroid.x >= width - edgeBand) {
+        LATEdgeGestureDragCandidate *rightCandidate = [[LATEdgeGestureDragCandidate alloc] init];
+        rightCandidate.axis = LATEdgeGestureDragAxisVertical;
+        rightCandidate.negativeEventName = LAEventScreenRightSwipeUp;
+        rightCandidate.positiveEventName = LAEventScreenRightSwipeDown;
+        [dragCandidates addObject:rightCandidate];
+    }
+}
+
+- (BOOL)dragOffEligibleForStartCentroid:(CGPoint)centroid width:(CGFloat)width height:(CGFloat)height {
+    CGRect startRect = CGRectMake(LATEdgeGestureClassifierDragOffStartInset,
+                                  LATEdgeGestureClassifierDragOffStartInset,
+                                  MAX(0.0, width - LATEdgeGestureClassifierDragOffStartInset * 2.0),
+                                  MAX(0.0, height - LATEdgeGestureClassifierDragOffStartInset * 2.0));
+    return [self triggerRect:startRect containsPointInclusively:centroid];
 }
 
 @end

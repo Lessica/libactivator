@@ -10,6 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LATEdgeGestureClassifier.h"
+#import "LATFingerprintSensorEventSource.h"
 #import "LATQueueAssertions.h"
 
 #import <HBLog.h>
@@ -78,9 +79,19 @@
                                                              bounds:bounds
                                                           timestamp:timestamp];
     if (eventName.length > 0) {
+        if ([self shouldRouteEventNameToFingerprintSlideIn:eventName] &&
+            [self.fingerprintSensorEventSource consumePendingSinglePressForSlideInAtTimestamp:timestamp]) {
+            return LAEventNameFingerprintSensorPressSingleAndSlideIn;
+        }
         [self sendEventWithName:eventName touchCount:snapshots.count bounds:bounds];
     }
     return eventName;
+}
+
+- (BOOL)shouldRouteEventNameToFingerprintSlideIn:(NSString *)eventName {
+    return [eventName isEqualToString:LAEventNameSlideInFromBottom] ||
+           [eventName isEqualToString:LAEventNameSlideInFromBottomLeft] ||
+           [eventName isEqualToString:LAEventNameSlideInFromBottomRight];
 }
 
 #pragma mark - Event Dispatch

@@ -11,8 +11,11 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class LATRuntimeStateSource;
+@class LATFingerprintSensorEventSource;
 
 @interface LATLockStateEventSource : NSObject
+
+@property(nonatomic, weak, nullable) LATFingerprintSensorEventSource *fingerprintSensorEventSource;
 
 - (instancetype)initWithRuntimeStateSource:(LATRuntimeStateSource *)runtimeStateSource;
 

@@ -40,7 +40,17 @@ for (uint64_t offset = rangeStart; offset < rangeEnd; offset++) {
 
 1.9.13 中 screen-side swipe public constants 是旧 API 名称保留，但实际字符串已更名到 `drag-along` event namespace，而不是新增一套 `screen.*.swipe.*` 事件。证据来自 `references/latest/package/usr/lib/libactivator.dylib` arm64 slice：导出符号 `_LAEventScreenBottomSwipeLeft` 到 `_LAEventScreenRightSwipeUp` 仍存在，`__TEXT,__cstring` 中不存在 `libactivator.screen.*.swipe.*` 字符串，只存在 `libactivator.drag-along.*`；`__DATA_CONST,__const` 中这些 symbol 依次指向 `libactivator.drag-along.screen-bottom.right-to-left`、`libactivator.drag-along.screen-bottom.left-to-right`、`libactivator.drag-along.screen-left.top-to-bottom`、`libactivator.drag-along.screen-left.bottom-to-top`、`libactivator.drag-along.screen-right.top-to-bottom` 和 `libactivator.drag-along.screen-right.bottom-to-top`。因此当前项目的 `LAEventScreen*Swipe*` 常量值必须以 1.9.13 为准映射到 `drag-along` 名称，不能保留旧推测的 `libactivator.screen.*.swipe.*`。
 
+1.9.13 的解混淆 `ActivatorSpringBoard` 中，`ActivatorSlideGestureRecognizer` 与 `ActivatorSystemGestureRecognizer` 共享一组 slide / drag helper。IDA 中 `ActivatorSlideGestureRecognizer touchesBegan:` 进入 `sub_4FFC`，该函数记录起点并读取旧偏好倍率，默认得到 `13.0pt` edge band；slide-in 内移触发 rect 继续使用 `13 + 50 = 63pt`。同一函数只为单指起点挂载 `drag-along` candidate：bottom、left、right 三条边，不存在 top drag-along；bottom 起点判断带 `2pt` fudge，即默认约 `height - 15pt` 内。`sub_4C1C` 在 moved path 先判断 slide-in，未触发时再判断 drag-along：bottom 横向 delta 需超过 `30pt` 且 y 保持在起点约 `5pt` 内；left/right 纵向 delta 需超过 `30pt` 且 x 保持在起点约 `5pt` 内。`ActivatorSlideGestureRecognizer touchesEnded:` 与 `ActivatorSystemGestureRecognizer touchesEnded:` 都会进入 `sub_4A0C` 处理 `drag-off`：起点必须先落在 `(25,25,width-50,height-50)` 内部区域；结束点进入 left/right/top/bottom 的 `20pt` 边缘区才派发 `libactivator.drag-off.left/right/top/bottom`，同时用另一轴的 `20pt` / `height-or-width - 50pt` 范围排除角落。`touchesCancelled:` 只清理状态，不走 `drag-off` 分类。
+
+需要注意，旧实现的这些阈值是在 recognizer 自己的 view 坐标里计算：旧 master 中 `ActivatorSlideGestureRecognizer` 使用 `[touch locationInView:self.view]`，并按 `SpringBoard activeInterfaceOrientation` 对 `UIScreen.mainScreen.bounds.size` 做横竖屏归一化；1.9.13 的解混淆实现也保持 recognizer/view helper 结构。当前项目的 runtime 数据源是 `_UISystemGestureWindow sendEvent:` 中 `[touch locationInView:window]` 与 `window.bounds`，该 window 坐标与旧 recognizer view 坐标不完全等价；但 drag-along / drag-off 当前仍选择直接对齐 1.9.13 阈值，后续只有在真机验收明确证明需要时再调整。
+
 当前项目不使用旧 `com.apple.UIKit` filter 注入用户 App 进程。现代 iOS 目标点位改为 SpringBoard 进程内多个 `UIStatusBar_Modern` 实例：主屏幕、锁屏和前台 App 界面各自可能有独立实例。实现时应在 SpringBoard tweak 内 hook `UIStatusBar_Modern` 的 touch 方法，并让每个 status bar view 实例拥有独立识别 session，避免旧 master 的全局状态在多实例现代状态栏下串扰。
+
+## Force touch events
+
+1.9.13 的解混淆 `ActivatorSpringBoard` 中，force touch 由 `ActivatorSystemGestureRecognizer` 承载。相关字符串使用固定 XOR `0x1e` 混淆，解出后可见六个 runtime event name：`libactivator.force-touch.statusbar`、`libactivator.force-touch.screen-left`、`libactivator.force-touch.screen-right`、`libactivator.force-touch.screen-bottom-left`、`libactivator.force-touch.screen-bottom`、`libactivator.force-touch.screen-bottom-right`。旧实现从 `UITouch` 读取 `force`，而不是直接读取 HID digitizer pressure；当前 Frida probe 额外确认底层 HID pressure 与 `UITouch.force` 近似线性对应，但实现应以 `UITouch.force` 为语义来源。
+
+旧实现的区域划分来自同一 recognizer 的 region helper：`y < 38pt` 为 statusbar；`y >= height - 38pt` 为 bottom 区域，其中 `x < width * 0.25` 是 bottom-left，`x < width * 0.75` 是 bottom，其余是 bottom-right；非 bottom/statusbar 时，`x < 14pt` 是 left，`x > width - 14pt` 是 right。force 阈值约为 `5.0`；旧反编译比较接近 `force > 5.0`，当前实现使用 `force >= 5.0` 作为可测试阈值，避免浮点边界让 stable 测试依赖不可表达的“略大于”。旧实现路径没有显示出要拦截原始系统触摸的行为，当前阶段也继续调用原始 `_UISystemGestureWindow sendEvent:`。
 
 ## `libactivator.audio.launch-playing-app`
 

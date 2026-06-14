@@ -17,41 +17,6 @@ static NSTimeInterval const LATButtonEventSourceLockLongHoldDelay = 2.5;
 static NSTimeInterval const LATButtonEventSourceRingerToggleTwiceDelay = 1.0;
 static NSString *const LATLockPressTripleEventName = @"libactivator.lock.press.triple";
 
-typedef uint32_t IOHIDEventField;
-typedef uint32_t IOHIDEventType;
-
-#define LATIOHIDEventFieldBase(type) ((type) << 16)
-
-enum {
-    kLATIOHIDEventTypeKeyboard = 3,
-};
-
-enum {
-    kLATIOHIDEventFieldKeyboardUsagePage = LATIOHIDEventFieldBase(kLATIOHIDEventTypeKeyboard),
-    kLATIOHIDEventFieldKeyboardUsage,
-    kLATIOHIDEventFieldKeyboardDown,
-};
-
-enum {
-    kLATHIDPageTelephony = 0x0B,
-    kLATHIDPageConsumer = 0x0C,
-};
-
-enum {
-    kLATHIDUsageTelephonyMute = 0x2E,
-};
-
-enum {
-    kLATHIDUsageConsumerPower = 0x30,
-    kLATHIDUsageConsumerMenu = 0x40,
-    kLATHIDUsageConsumerVolumeIncrement = 0xE9,
-    kLATHIDUsageConsumerVolumeDecrement = 0xEA,
-};
-
-extern IOHIDEventType IOHIDEventGetType(IOHIDEventRef event);
-extern CFIndex IOHIDEventGetIntegerValue(IOHIDEventRef event, IOHIDEventField field);
-extern uint64_t IOHIDEventGetSenderID(IOHIDEventRef event);
-
 static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x8000000000000000;
 
 @interface LATButtonEventSource ()
@@ -115,19 +80,19 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
         return;
     }
 
-    if (IOHIDEventGetType(event) != kLATIOHIDEventTypeKeyboard) {
+    if (IOHIDEventGetType(event) != kIOHIDEventTypeKeyboard) {
         return;
     }
 
-    CFIndex usagePage = IOHIDEventGetIntegerValue(event, kLATIOHIDEventFieldKeyboardUsagePage);
-    CFIndex usage = IOHIDEventGetIntegerValue(event, kLATIOHIDEventFieldKeyboardUsage);
-    BOOL keyDown = IOHIDEventGetIntegerValue(event, kLATIOHIDEventFieldKeyboardDown) != 0;
-    if (usagePage == kLATHIDPageTelephony && usage == kLATHIDUsageTelephonyMute) {
+    CFIndex usagePage = IOHIDEventGetIntegerValue(event, kIOHIDEventFieldKeyboardUsagePage);
+    CFIndex usage = IOHIDEventGetIntegerValue(event, kIOHIDEventFieldKeyboardUsage);
+    BOOL keyDown = IOHIDEventGetIntegerValue(event, kIOHIDEventFieldKeyboardDown) != 0;
+    if (usagePage == kHIDPage_Telephony && usage == kHIDUsage_Telephony_Mute) {
         [self handleRingerSwitchIsUnmuted:keyDown];
         return;
     }
 
-    if (usagePage != kLATHIDPageConsumer) {
+    if (usagePage != kHIDPage_Consumer) {
         return;
     }
 
@@ -138,16 +103,16 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     LATAssertMainQueue();
 
     switch (usage) {
-    case kLATHIDUsageConsumerPower:
+    case kHIDUsage_Csmr_Power:
         [self handleLockButtonDown:keyDown];
         break;
-    case kLATHIDUsageConsumerMenu:
+    case kHIDUsage_Csmr_Menu:
         [self handleMenuButtonDown:keyDown];
         break;
-    case kLATHIDUsageConsumerVolumeIncrement:
+    case kHIDUsage_Csmr_VolumeIncrement:
         [self handleVolumeUpButtonDown:keyDown];
         break;
-    case kLATHIDUsageConsumerVolumeDecrement:
+    case kHIDUsage_Csmr_VolumeDecrement:
         [self handleVolumeDownButtonDown:keyDown];
         break;
     default:
@@ -206,7 +171,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
         return;
     }
     [self sendVolumePressOrSequenceWithPressEventName:LAEventNameVolumeUpPress
-                                                usage:kLATHIDUsageConsumerVolumeIncrement];
+                                                usage:kHIDUsage_Csmr_VolumeIncrement];
 }
 
 - (void)handleVolumeDownButtonDown:(BOOL)keyDown {
@@ -234,7 +199,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
         return;
     }
     [self sendVolumePressOrSequenceWithPressEventName:LAEventNameVolumeDownPress
-                                                usage:kLATHIDUsageConsumerVolumeDecrement];
+                                                usage:kHIDUsage_Csmr_VolumeDecrement];
 }
 
 - (void)handleMenuButtonDown:(BOOL)keyDown {
@@ -483,11 +448,11 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     }
 
     NSString *sequenceEventName = nil;
-    if (self.lastVolumePressUsage == kLATHIDUsageConsumerVolumeIncrement &&
-        usage == kLATHIDUsageConsumerVolumeDecrement) {
+    if (self.lastVolumePressUsage == kHIDUsage_Csmr_VolumeIncrement &&
+        usage == kHIDUsage_Csmr_VolumeDecrement) {
         sequenceEventName = LAEventNameVolumeUpDown;
-    } else if (self.lastVolumePressUsage == kLATHIDUsageConsumerVolumeDecrement &&
-               usage == kLATHIDUsageConsumerVolumeIncrement) {
+    } else if (self.lastVolumePressUsage == kHIDUsage_Csmr_VolumeDecrement &&
+               usage == kHIDUsage_Csmr_VolumeIncrement) {
         sequenceEventName = LAEventNameVolumeDownUp;
     }
 

@@ -8,28 +8,12 @@
 
 #import "LATHardwareActionListener.h"
 
+#import "IOKitSPI.h"
 #import "LATHIDEventSender.h"
 #import "hardware/LATHardwareActionCommand.h"
 
 #import <AudioToolbox/AudioToolbox.h>
 #import <HBLog.h>
-
-static const uint32_t LATHardwareHIDPageConsumer = 0x0C;
-static const uint32_t LATHardwareHIDUsagePower = 0x30;
-static const uint32_t LATHardwareHIDUsageMenu = 0x40;
-static const uint32_t LATHardwareHIDUsageSnapshot = 0x65;
-static const uint32_t LATHardwareHIDUsageDisplayBrightnessIncrement = 0x6F;
-static const uint32_t LATHardwareHIDUsageDisplayBrightnessDecrement = 0x70;
-static const uint32_t LATHardwareHIDUsagePlay = 0xB0;
-static const uint32_t LATHardwareHIDUsagePause = 0xB1;
-static const uint32_t LATHardwareHIDUsageScanNextTrack = 0xB5;
-static const uint32_t LATHardwareHIDUsageScanPreviousTrack = 0xB6;
-static const uint32_t LATHardwareHIDUsagePlayOrPause = 0xCD;
-static const uint32_t LATHardwareHIDUsageMute = 0xE2;
-static const uint32_t LATHardwareHIDUsageVolumeIncrement = 0xE9;
-static const uint32_t LATHardwareHIDUsageVolumeDecrement = 0xEA;
-static const uint32_t LATHardwareHIDUsageALKeyboardLayout = 0x1AE;
-static const uint32_t LATHardwareHIDUsageACSearch = 0x221;
 
 @interface LATHardwareActionListener ()
 @property(nonatomic, strong) LATHIDEventSender *sender;
@@ -100,64 +84,64 @@ static const uint32_t LATHardwareHIDUsageACSearch = 0x221;
         NSArray<LATHardwareActionCommand *> *commandList = @[
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.ipod.toggle-playback"
                                                       selectorName:@"togglePlayback"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsagePlayOrPause],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_PlayOrPause],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.ipod.pause-playback"
                                                       selectorName:@"pauseMedia"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsagePause],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_Pause],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.ipod.resume-playback"
                                                       selectorName:@"playMedia"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsagePlay],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_Play],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.ipod.next-track"
                                                       selectorName:@"nextTrack"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageScanNextTrack],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_ScanNextTrack],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.ipod.previous-track"
                                                       selectorName:@"previousTrack"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageScanPreviousTrack],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_ScanPreviousTrack],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.audio.increase-volume"
                                                       selectorName:@"increaseVolume"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageVolumeIncrement],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_VolumeIncrement],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.audio.decrease-volume"
                                                       selectorName:@"decreaseVolume"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageVolumeDecrement],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_VolumeDecrement],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.audio.toggle-output-mute"
                                                       selectorName:@"toggleOutputMute"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageMute],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_Mute],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.screen.brightness.increase"
                                                       selectorName:@"increaseBrightness"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageDisplayBrightnessIncrement],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_DisplayBrightnessIncrement],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.screen.brightness.decrease"
                                                       selectorName:@"decreaseBrightness"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageDisplayBrightnessDecrement],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_DisplayBrightnessDecrement],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.system.homebutton"
                                                       selectorName:@"homeButton"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageMenu],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_Menu],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.system.sleepbutton"
                                                       selectorName:@"sleepButtonFromActivator:event:"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsagePower],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_Power],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.keyboard.toggle-on-screen-keyboard"
                                                       selectorName:@"toggleOnScreenKeyboard"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageALKeyboardLayout],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_ALKeyboardLayout],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.system.take-screenshot"
                                                       selectorName:@"takeScreenshot"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageSnapshot],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_Snapshot],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.system.spotlight"
                                                       selectorName:@"spotlight"
-                                                              page:LATHardwareHIDPageConsumer
-                                                             usage:LATHardwareHIDUsageACSearch],
+                                                              page:kHIDPage_Consumer
+                                                             usage:kHIDUsage_Csmr_ACSearch],
             [[LATHardwareActionCommand alloc] initWithVibrateListenerName:@"libactivator.system.vibrate"
                                                              selectorName:@"vibrate"],
         ];

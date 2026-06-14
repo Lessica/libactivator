@@ -8,20 +8,12 @@
 
 #import "LATHIDEventSender.h"
 
+#import "IOKitSPI.h"
+
 #import <CoreFoundation/CoreFoundation.h>
 #import <HBLog.h>
 #import <mach/mach_time.h>
 
-typedef const struct __IOHIDEvent *IOHIDEventRef;
-typedef const struct __IOHIDEventSystemClient *IOHIDEventSystemClientRef;
-
-extern IOHIDEventRef IOHIDEventCreateKeyboardEvent(CFAllocatorRef allocator, uint64_t timeStamp, uint32_t usagePage,
-                                                   uint32_t usage, Boolean down, uint32_t flags);
-extern IOHIDEventSystemClientRef IOHIDEventSystemClientCreate(CFAllocatorRef allocator);
-extern void IOHIDEventSystemClientDispatchEvent(IOHIDEventSystemClientRef client, IOHIDEventRef event);
-extern void IOHIDEventSetSenderID(IOHIDEventRef event, uint64_t senderID);
-
-static const uint32_t LATHIDEventOptionNone = 0;
 static const uint64_t LATHIDEventSenderID = 0x8000000817319371;
 static const NSTimeInterval LATHIDEventPressDuration = 0.05;
 
@@ -106,7 +98,7 @@ static uint64_t LATHIDMachTimeForTimeInterval(NSTimeInterval timeInterval) {
                                     keyDown:(BOOL)keyDown
                                   timestamp:(uint64_t)timestamp {
     IOHIDEventRef event =
-        IOHIDEventCreateKeyboardEvent(kCFAllocatorDefault, timestamp, usagePage, usage, keyDown, LATHIDEventOptionNone);
+        IOHIDEventCreateKeyboardEvent(kCFAllocatorDefault, timestamp, usagePage, usage, keyDown, kIOHIDEventOptionNone);
     if (event) {
         IOHIDEventSetSenderID(event, LATHIDEventSenderID);
     }

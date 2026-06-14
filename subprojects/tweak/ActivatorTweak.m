@@ -12,6 +12,8 @@
 #import "LATBuiltInRegistry.h"
 #import "LATButtonEventSource.h"
 #import "LATEdgeGestureEventSource.h"
+#import "LATFingerprintSensorEventSource.h"
+#import "LATForceTouchEventSource.h"
 #import "LATNetworkEventSource.h"
 #import "LATRuntimeStateSource.h"
 #import "LATStatusBarEventSource.h"
@@ -44,7 +46,10 @@ static Class gInCallTransientOverlayViewControllerClass = nil;
 static Class gLockScreenEmergencyCallViewControllerClass = nil;
 static Class gIconControllerClass = nil;
 
-static void LATNoteHIDEvent(IOHIDEventRef event) { [gBuiltInRegistry.buttonEventSource noteHIDEvent:event]; }
+static void LATNoteHIDEvent(IOHIDEventRef event) {
+    [gBuiltInRegistry.buttonEventSource noteHIDEvent:event];
+    [gBuiltInRegistry.fingerprintSensorEventSource noteHIDEvent:event];
+}
 
 static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
     if (gCoverSheetViewControllerClass && [viewController isKindOfClass:gCoverSheetViewControllerClass]) {
@@ -208,6 +213,7 @@ CHOptimizedMethod0(self, void, SBWiFiManager, _linkDidChange) {
 
 CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, event) {
     [gBuiltInRegistry.edgeGestureEventSource noteSystemGestureWindow:(UIWindow *)self event:event];
+    [gBuiltInRegistry.forceTouchEventSource noteSystemGestureWindow:(UIWindow *)self event:event];
     CHSuper1(_UISystemGestureWindow, sendEvent, event);
     [gBuiltInRegistry.runtimeStateSource noteSystemTouchEvent:event];
 }

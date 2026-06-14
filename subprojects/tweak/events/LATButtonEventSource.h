@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-typedef struct __IOHIDEvent *IOHIDEventRef;
+#import "IOKitSPI.h"
 
 NS_ASSUME_NONNULL_BEGIN
 

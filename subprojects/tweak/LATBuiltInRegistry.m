@@ -17,6 +17,8 @@
 #import "LATBuiltInListenerRegistrant.h"
 #import "LATButtonEventSource.h"
 #import "LATEdgeGestureEventSource.h"
+#import "LATFingerprintSensorEventSource.h"
+#import "LATForceTouchEventSource.h"
 #import "LATHardwareActionListener.h"
 #import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
@@ -47,6 +49,8 @@
 @property(nonatomic, strong, readwrite) LATRuntimeStateSource *runtimeStateSource;
 @property(nonatomic, strong, readwrite) LATButtonEventSource *buttonEventSource;
 @property(nonatomic, strong, readwrite) LATEdgeGestureEventSource *edgeGestureEventSource;
+@property(nonatomic, strong, readwrite, nullable) LATFingerprintSensorEventSource *fingerprintSensorEventSource;
+@property(nonatomic, strong, readwrite, nullable) LATForceTouchEventSource *forceTouchEventSource;
 @property(nonatomic, strong, readwrite) LATLockStateEventSource *lockStateEventSource;
 @property(nonatomic, strong, readwrite) LATMediaEventSource *mediaEventSource;
 @property(nonatomic, strong, readwrite) LATNetworkEventSource *networkEventSource;
@@ -74,8 +78,16 @@
         _mediaEventSource = [[LATMediaEventSource alloc] init];
         _networkEventSource = [[LATNetworkEventSource alloc] init];
         _buttonEventSource = [[LATButtonEventSource alloc] init];
+        if ([self fingerprintSensorEventSourceShouldBeRegisteredWithActivator:activator]) {
+            _fingerprintSensorEventSource = [[LATFingerprintSensorEventSource alloc] init];
+        }
+        if ([self forceTouchEventSourceShouldBeRegisteredWithActivator:activator]) {
+            _forceTouchEventSource = [[LATForceTouchEventSource alloc] init];
+        }
+        _lockStateEventSource.fingerprintSensorEventSource = _fingerprintSensorEventSource;
         _statusBarEventSource = [[LATStatusBarEventSource alloc] init];
         _edgeGestureEventSource = [[LATEdgeGestureEventSource alloc] init];
+        _edgeGestureEventSource.fingerprintSensorEventSource = _fingerprintSensorEventSource;
 
         [self registerBuiltInListenersWithActivator:activator];
     }
@@ -94,8 +106,18 @@
     [self.mediaEventSource start];
     [self.networkEventSource start];
     [self.buttonEventSource start];
+    [self.fingerprintSensorEventSource start];
+    [self.forceTouchEventSource start];
     [self.statusBarEventSource start];
     [self.edgeGestureEventSource start];
+}
+
+- (BOOL)fingerprintSensorEventSourceShouldBeRegisteredWithActivator:(LAActivator *)activator {
+    return [[activator availableEventNames] containsObject:LAEventNameFingerprintSensorPressSingle];
+}
+
+- (BOOL)forceTouchEventSourceShouldBeRegisteredWithActivator:(LAActivator *)activator {
+    return [[activator availableEventNames] containsObject:@"libactivator.force-touch.screen-bottom"];
 }
 
 - (NSArray<NSDictionary<NSString *, id> *> *)builtInListenerFactoryConfigurations {

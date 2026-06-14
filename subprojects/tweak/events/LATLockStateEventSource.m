@@ -9,6 +9,7 @@
 #import "LATLockStateEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LATFingerprintSensorEventSource.h"
 #import "LATQueueAssertions.h"
 #import "LATRuntimeStateSource.h"
 
@@ -86,6 +87,9 @@
     }
 
     self.uiLocked = locked;
+    if (!locked) {
+        [self.fingerprintSensorEventSource noteDeviceUnlockedAtTimestamp:NSProcessInfo.processInfo.systemUptime];
+    }
     [self sendDeviceLockEventForLockedState:locked];
 }
 
