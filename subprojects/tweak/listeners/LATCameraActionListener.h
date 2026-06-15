@@ -1,8 +1,8 @@
 //
-//  LATSystemActionListener.h
+//  LATCameraActionListener.h
 //  libactivator
 //
-//  Created by Lessica on 6/10/26.
+//  Created by Lessica on 6/15/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
@@ -15,11 +15,13 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATSystemActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
+@interface LATCameraActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher
                         registry:(nullable LATBuiltInRegistry *)registry NS_DESIGNATED_INITIALIZER;
+
++ (nullable NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
 
 @end
 

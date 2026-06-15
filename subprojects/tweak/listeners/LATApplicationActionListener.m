@@ -12,6 +12,7 @@
 #import "LATApplicationLauncher.h"
 #import "LATBuiltInRegistry.h"
 #import "LATLockScreenCameraLauncher.h"
+#import "LATRuntimeStateSource.h"
 
 #import <HBLog.h>
 
@@ -94,7 +95,11 @@
     }
 
     NSString *eventMode = event.mode ?: activator.currentEventMode;
-    return [eventMode isEqualToString:LAEventModeLockScreen];
+    if ([eventMode isEqualToString:LAEventModeLockScreen]) {
+        return YES;
+    }
+
+    return self.registry.runtimeStateSource.isUILocked;
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName {

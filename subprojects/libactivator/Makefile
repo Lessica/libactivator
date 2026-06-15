@@ -48,6 +48,7 @@ libactivator_FILES += tests/suites/builtins/LATestBuiltInActionRegistrySuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInURLActionsSuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInHardwareActionsSuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInSystemActionsSuite.m
+libactivator_FILES += tests/suites/builtins/LATestBuiltInCameraActionsSuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInComposeActionsSuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInTelephonyActionsSuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInDynamicApplicationListenersSuite.m

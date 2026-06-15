@@ -4,6 +4,7 @@ ARCHS := arm64 arm64e
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME := ActivatorTweak
+TWEAK_NAME += ActivatorAppTweak
 
 ActivatorTweak_FILES += ActivatorTweak.m
 ActivatorTweak_FILES += LATBuiltInRegistry.m
@@ -26,6 +27,7 @@ ActivatorTweak_FILES += events/LATEdgeGestureEventSource.m
 ActivatorTweak_FILES += events/LATFingerprintSensorEventSource.m
 ActivatorTweak_FILES += events/LATForceTouchEventSource.m
 ActivatorTweak_FILES += listeners/LATApplicationActionListener.m
+ActivatorTweak_FILES += listeners/LATCameraActionListener.m
 ActivatorTweak_FILES += listeners/LATComposeActionListener.m
 ActivatorTweak_FILES += listeners/LATHardwareActionListener.m
 ActivatorTweak_FILES += listeners/LATNothingListener.m
@@ -83,5 +85,12 @@ ActivatorTweak_PRIVATE_FRAMEWORKS += BackBoardServices
 ActivatorTweak_PRIVATE_FRAMEWORKS += IOKit
 ActivatorTweak_PRIVATE_FRAMEWORKS += MediaRemote
 ActivatorTweak_PRIVATE_FRAMEWORKS += SpringBoardServices
+
+ActivatorAppTweak_FILES += ActivatorAppTweak.m
+ActivatorAppTweak_CFLAGS += -fobjc-arc
+ActivatorAppTweak_CFLAGS += -I.
+ActivatorAppTweak_CFLAGS += -I../../include
+ActivatorAppTweak_FRAMEWORKS += Foundation
+ActivatorAppTweak_FRAMEWORKS += UIKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk

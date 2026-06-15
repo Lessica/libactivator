@@ -18,6 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithRegistry:(nullable LATBuiltInRegistry *)registry NS_DESIGNATED_INITIALIZER;
 
 - (BOOL)enqueueOpenLockScreenCamera;
+- (BOOL)enqueueOpenLockScreenCameraWithCompletion:(nullable dispatch_block_t)completion;
+- (BOOL)isLockScreenCameraVisible;
 
 @end
 

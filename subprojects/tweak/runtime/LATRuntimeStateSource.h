@@ -36,6 +36,8 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Runtime Queries And Commands
 
 - (BOOL)screenIsOn;
+- (BOOL)isUILocked;
+- (nullable NSString *)displayIdentifierForCurrentApplication;
 - (BOOL)wakeScreenForReason:(NSString *)reason completion:(dispatch_block_t)completion;
 
 @end

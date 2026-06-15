@@ -178,6 +178,22 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
     return screenOn;
 }
 
+- (BOOL)isUILocked {
+    __block BOOL uiLocked = NO;
+    dispatch_sync(self.stateQueue, ^{
+        uiLocked = self.cachedUILocked;
+    });
+    return uiLocked;
+}
+
+- (NSString *)displayIdentifierForCurrentApplication {
+    __block NSString *displayIdentifier = nil;
+    dispatch_sync(self.stateQueue, ^{
+        displayIdentifier = [self.cachedDisplayIdentifier copy];
+    });
+    return displayIdentifier;
+}
+
 - (void)startObservingScreenBlankedState {
     LATAssertMainQueue();
 

@@ -16,6 +16,7 @@
 #import "LATApplicationListenerProvider.h"
 #import "LATBuiltInListenerRegistrant.h"
 #import "LATButtonEventSource.h"
+#import "LATCameraActionListener.h"
 #import "LATComposeActionListener.h"
 #import "LATEdgeGestureEventSource.h"
 #import "LATEventSourceInterestGate.h"
@@ -147,6 +148,10 @@
             @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
         },
         @{
+            @"RegistrantClass" : LATCameraActionListener.class,
+            @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
+        },
+        @{
             @"RegistrantClass" : LATTelephonyActionListener.class,
             @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
         },
@@ -156,6 +161,9 @@
 - (id<LAListener>)createListenerForRegistrantClass:(Class<LATBuiltInListenerRegistrant>)registrantClass {
     if (registrantClass == LATSystemActionListener.class) {
         return [[LATSystemActionListener alloc] initWithLauncher:self.applicationLauncher registry:self];
+    }
+    if (registrantClass == LATCameraActionListener.class) {
+        return [[LATCameraActionListener alloc] initWithLauncher:self.applicationLauncher registry:self];
     }
     return [[(Class)registrantClass alloc] init];
 }

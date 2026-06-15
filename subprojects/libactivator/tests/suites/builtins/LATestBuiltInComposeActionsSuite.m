@@ -47,10 +47,6 @@
                   reason:@"Compose action selector mapping did not match bundled metadata"];
     }
 
-    [recorder expect:![activator hasListenerWithName:@"libactivator.camera.invoke-shutter"]
-            caseName:@"camera-shutter-not-owned-by-compose-listener"
-              reason:@"Camera shutter must remain deferred until its runtime semantics are implemented"];
-
     id<LAListener> composeAction = [[(Class)composeActionClass alloc] init];
     LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.compose"
                                                   mode:LAEventModeSpringBoard];

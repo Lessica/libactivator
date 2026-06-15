@@ -60,13 +60,20 @@
 @end
 
 @interface LATComposeActionPresenter ()
+
+// Presentation window state
 @property(nonatomic, strong, nullable) UIWindow *presentationWindow;
 @property(nonatomic, strong, nullable) UIWindow *previousKeyWindow;
 @property(nonatomic, strong, nullable) UIViewController *presentedComposeViewController;
+
+// System Paper remote alert state
 @property(nonatomic, strong, nullable) SBSRemoteAlertHandle *systemPaperRemoteAlertHandle;
+
 @end
 
 @implementation LATComposeActionPresenter
+
+#pragma mark - Public API
 
 - (BOOL)performComposeAction:(LATComposeActionKind)kind listenerName:(NSString *)listenerName {
     if (kind == LATComposeActionKindNote) {
@@ -86,6 +93,8 @@
     return YES;
 }
 
+#pragma mark - MessageUI Compose
+
 - (nullable UIViewController *)composeViewControllerForKind:(LATComposeActionKind)kind
                                                listenerName:(NSString *)listenerName {
     switch (kind) {
@@ -96,6 +105,22 @@
     case LATComposeActionKindNote:
         return nil;
     }
+}
+
+- (BOOL)loadFrameworkAtPath:(NSString *)frameworkPath listenerName:(NSString *)listenerName {
+    NSBundle *frameworkBundle = [NSBundle bundleWithPath:frameworkPath];
+    if (frameworkBundle.loaded) {
+        return YES;
+    }
+
+    NSError *error = nil;
+    if ([frameworkBundle loadAndReturnError:&error]) {
+        return YES;
+    }
+
+    HBLogError(@"Failed to load framework %@ for compose action %@: %@", frameworkPath ?: @"", listenerName ?: @"",
+               error.localizedDescription ?: @"unknown error");
+    return NO;
 }
 
 - (nullable UIViewController *)mailComposeViewControllerForListenerName:(NSString *)listenerName {
@@ -139,6 +164,8 @@
     }
     return composeViewController;
 }
+
+#pragma mark - System Paper
 
 - (void)activateSystemPaperForListenerName:(NSString *)listenerName {
     if ([self shouldUseSystemNotesPresentation]) {
@@ -209,6 +236,18 @@
     HBLogDebug(@"Activated System Paper remote alert for compose action %@", listenerName ?: @"");
 }
 
+- (void)cleanupSystemPaperRemoteAlertHandle:(SBSRemoteAlertHandle *)handle {
+    if (handle != self.systemPaperRemoteAlertHandle) {
+        return;
+    }
+    if ([handle respondsToSelector:@selector(unregisterObserver:)]) {
+        [handle unregisterObserver:self];
+    }
+    self.systemPaperRemoteAlertHandle = nil;
+}
+
+#pragma mark - Presentation Window
+
 - (void)presentComposeViewController:(UIViewController *)composeViewController listenerName:(NSString *)listenerName {
     UIWindow *keyWindow = [self currentKeyWindow];
     UIWindow *presentationWindow = self.presentationWindow;
@@ -275,21 +314,7 @@
     return YES;
 }
 
-- (BOOL)loadFrameworkAtPath:(NSString *)frameworkPath listenerName:(NSString *)listenerName {
-    NSBundle *frameworkBundle = [NSBundle bundleWithPath:frameworkPath];
-    if (frameworkBundle.loaded) {
-        return YES;
-    }
-
-    NSError *error = nil;
-    if ([frameworkBundle loadAndReturnError:&error]) {
-        return YES;
-    }
-
-    HBLogError(@"Failed to load framework %@ for compose action %@: %@", frameworkPath ?: @"", listenerName ?: @"",
-               error.localizedDescription ?: @"unknown error");
-    return NO;
-}
+#pragma mark - MessageUI Delegates
 
 - (void)messageComposeViewController:(UIViewController *)controller didFinishWithResult:(NSInteger)result {
     (void)controller;
@@ -306,6 +331,8 @@
     [self dismissPresentedComposeViewControllerAnimated:YES];
 }
 
+#pragma mark - Remote Alert Observer
+
 - (void)remoteAlertHandleDidActivate:(SBSRemoteAlertHandle *)handle {
     (void)handle;
     HBLogDebug(@"System Paper remote alert did activate");
@@ -318,16 +345,6 @@
 - (void)remoteAlertHandle:(SBSRemoteAlertHandle *)handle didInvalidateWithError:(NSError *)error {
     HBLogError(@"System Paper remote alert invalidated: %@", error.localizedDescription ?: @"unknown error");
     [self cleanupSystemPaperRemoteAlertHandle:handle];
-}
-
-- (void)cleanupSystemPaperRemoteAlertHandle:(SBSRemoteAlertHandle *)handle {
-    if (handle != self.systemPaperRemoteAlertHandle) {
-        return;
-    }
-    if ([handle respondsToSelector:@selector(unregisterObserver:)]) {
-        [handle unregisterObserver:self];
-    }
-    self.systemPaperRemoteAlertHandle = nil;
 }
 
 @end

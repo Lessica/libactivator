@@ -15,12 +15,17 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATApplicationListenerProvider : NSObject
+
+- (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithActivator:(LAActivator *)activator
                           catalog:(LATApplicationCatalog *)catalog
                          listener:(LATApplicationActionListener *)listener;
+
 - (void)start;
 - (void)refreshApplications;
+
 + (NSArray<LATApplicationDescriptor *> *)visibleApplicationDescriptors;
+
 @end
 
 NS_ASSUME_NONNULL_END

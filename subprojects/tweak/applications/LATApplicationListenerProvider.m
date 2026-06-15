@@ -18,16 +18,21 @@
 static NSTimeInterval const LATApplicationRefreshDebounceDelay = 1.0;
 
 @interface LATApplicationListenerProvider ()
+
+// Dependencies
 @property(nonatomic, weak) LAActivator *activator;
 @property(nonatomic, strong) LATApplicationCatalog *catalog;
 @property(nonatomic, strong) LATApplicationActionListener *listener;
+
+// Registered application listener state
 @property(nonatomic, strong) NSMutableDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier;
 @property(nonatomic, strong) NSMutableSet<NSString *> *registeredListenerNames;
+
+// Refresh scheduling state
 @property(nonatomic, assign) NSUInteger refreshGeneration;
+
 - (void)launchServicesApplicationsDidChange;
-- (void)scheduleRefreshApplicationsAfterDelay:(NSTimeInterval)delay;
-- (void)applyApplicationDescriptorsByIdentifier:
-    (NSDictionary<NSString *, LATApplicationDescriptor *> *)descriptorsByIdentifier;
+
 @end
 
 static void LATLaunchServicesApplicationsChangedCallback(__unused CFNotificationCenterRef center, void *observer,
@@ -113,6 +118,8 @@ static void LATLaunchServicesApplicationsChangedCallback(__unused CFNotification
     [self performSelector:@selector(refreshApplications) withObject:nil afterDelay:delay];
 }
 
+#pragma mark - Application Listener Registration
+
 - (void)applyApplicationDescriptorsByIdentifier:
     (NSDictionary<NSString *, LATApplicationDescriptor *> *)snapshotDescriptorsByIdentifier {
     NSMutableDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier =
@@ -136,6 +143,8 @@ static void LATLaunchServicesApplicationsChangedCallback(__unused CFNotification
         [self.registeredListenerNames addObject:identifier];
     }
 }
+
+#pragma mark - Application Catalog Snapshot
 
 + (NSArray<LATApplicationDescriptor *> *)visibleApplicationDescriptors {
     return [[[LATApplicationCatalog alloc] init] visibleApplicationDescriptors];

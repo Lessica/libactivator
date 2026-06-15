@@ -46,7 +46,7 @@ extern CFTypeRef MGCopyAnswer(CFStringRef key);
                      [resourceManager.availableEventNames containsObject:LAEventNamePowerConnected]
             caseName:@"available-events-include-representative-bundled-events"
               reason:@"Available event names did not include representative bundled event metadata"];
-    [recorder expect:bundledListeners.count == 111
+    [recorder expect:bundledListeners.count == 112
             caseName:@"bundled-listener-catalog-count"
               reason:@"Bundled listener catalog count did not match the staged baseline"];
     [recorder expect:bundledListeners[@"libactivator.twitter.compose-tweet"] == nil &&

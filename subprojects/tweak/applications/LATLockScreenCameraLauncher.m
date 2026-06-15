@@ -36,6 +36,10 @@
 }
 
 - (BOOL)enqueueOpenLockScreenCamera {
+    return [self enqueueOpenLockScreenCameraWithCompletion:nil];
+}
+
+- (BOOL)enqueueOpenLockScreenCameraWithCompletion:(dispatch_block_t)completion {
     CSCoverSheetViewController *coverSheetViewController = self.registry.coverSheetViewControllerInstance;
     if (!coverSheetViewController) {
         HBLogWarn(@"Unable to open lock screen camera because CoverSheet controller is unavailable");
@@ -59,18 +63,29 @@
         }
 
         if (!screenIsOn && runtimeStateSource) {
-            [runtimeStateSource wakeScreenForReason:@"lock screen camera"
-                                         completion:^{
-                                             [self activateLockScreenCameraIfNeededWithCoverSheetViewController:
-                                                       strongCoverSheetViewController];
-                                         }];
+            [runtimeStateSource
+                wakeScreenForReason:@"lock screen camera"
+                         completion:^{
+                             [self activateLockScreenCameraIfNeededWithCoverSheetViewController:
+                                       strongCoverSheetViewController
+                                                                                     completion:completion];
+                         }];
             return;
         }
 
-        [self activateLockScreenCameraIfNeededWithCoverSheetViewController:strongCoverSheetViewController];
+        [self activateLockScreenCameraIfNeededWithCoverSheetViewController:strongCoverSheetViewController
+                                                                completion:completion];
     });
 
     return YES;
+}
+
+- (BOOL)isLockScreenCameraVisible {
+    CSCoverSheetViewController *coverSheetViewController = self.registry.coverSheetViewControllerInstance;
+    if (!coverSheetViewController) {
+        return NO;
+    }
+    return [self lockScreenCameraIsVisibleForCoverSheetViewController:coverSheetViewController];
 }
 
 - (BOOL)lockScreenCameraIsVisibleForCoverSheetViewController:(CSCoverSheetViewController *)coverSheetViewController {
@@ -83,7 +98,8 @@
 }
 
 - (void)activateLockScreenCameraIfNeededWithCoverSheetViewController:
-    (CSCoverSheetViewController *)coverSheetViewController {
+            (CSCoverSheetViewController *)coverSheetViewController
+                                                          completion:(dispatch_block_t)completion {
     if (![coverSheetViewController
             respondsToSelector:@selector(activateCameraViewAnimated:sendingActions:completion:)]) {
         HBLogWarn(@"Unable to open lock screen camera because CoverSheet camera activation became unavailable");
@@ -92,10 +108,13 @@
 
     if ([self lockScreenCameraIsVisibleForCoverSheetViewController:coverSheetViewController]) {
         HBLogDebug(@"Lock screen camera is already visible");
+        if (completion) {
+            completion();
+        }
         return;
     }
 
-    [coverSheetViewController activateCameraViewAnimated:YES sendingActions:nil completion:nil];
+    [coverSheetViewController activateCameraViewAnimated:YES sendingActions:nil completion:completion];
 }
 
 @end
