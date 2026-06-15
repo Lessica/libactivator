@@ -50,6 +50,7 @@
 - 允许链接已明确决策的私有 framework，例如 `CoreTelephony`、`BackBoardServices`、`MediaRemote` 和 `SpringBoardServices`；不要为了回避链接而默认改用 `dlopen` / `dlsym`。只有 framework 不可直接链接、符号跨系统版本高度不稳定、或确实需要 weak runtime probing 时，才使用动态解析，并记录原因。
 - UIKit、SpringBoard、FrontBoard 私有 UI API 默认在主队列调用，除非已经确认该 API 线程安全。
 - SpringBoard 内的 SBS/FBS 启动类 SPI 不得从主队列发起，也不得在同步 IPC handler 中同步等待其返回；listener 应只提交异步请求并按 `LAEvent.handled` 语义消费事件，实际失败用英文日志诊断。
+- 默认线程模型是 SpringBoard main queue confined：event source、listener dispatch、registry、hook 回调后的状态归约和 UI/SpringBoard SPI 访问都应回到主队列。允许的非主队列只有两类：对象内部私有串行队列用于保护自己的缓存/状态，且不得在队列内反调 listener 或 UI/SpringBoard SPI；以及少数 listener/action 为避免外部 `LaunchServices`、`FrontBoardServices`、`SpringBoardServices`、`BackBoardServices` 等 IPC 反向同步卡住 SpringBoard 主队列而提交的异步系统服务调用。其他后台队列使用必须在代码或文档中说明理由。
 - 用 GCD 和 `dispatch_once` 管理并发与单例，不使用 `@synchronized(self)`。
 - 只有全局兼容入口或天然进程级 service 才保留单例，例如 `LAActivator` facade 和 resource manager。有明确生命周期 owner 的 helper/service 应由 owner 持有或注入，并通过现有 facade 暴露必要能力；不要为了调用方便新增 `shared...` 入口，尤其不要让 tweak 直接越级调用 hidden helper。
 - 一个实现文件默认只放一个主要类。多个类堆在一个 `.m` 里只允许用于明确记录过的兼容 shim 或极小私有局部类型。

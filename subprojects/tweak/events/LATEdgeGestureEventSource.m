@@ -10,6 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LATEdgeGestureClassifier.h"
+#import "LATEventSourceInterestGate.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATQueueAssertions.h"
 
@@ -53,6 +54,11 @@
         return;
     }
 
+    if (![self shouldProcessEvents]) {
+        [self.classifier reset];
+        return;
+    }
+
     NSArray<NSDictionary<NSString *, id> *> *snapshots = [self touchSnapshotsFromEvent:event inWindow:window];
     if (snapshots.count == 0) {
         return;
@@ -65,6 +71,14 @@
     [self handleTouchSnapshots:snapshots bounds:window.bounds timestamp:event.timestamp];
 }
 
+#pragma mark - Interest
+
+- (BOOL)shouldProcessEvents {
+    LATAssertMainQueue();
+    LATEventSourceInterestGate *interestGate = self.interestGate;
+    return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture];
+}
+
 #pragma mark - Recognition
 
 - (nullable NSString *)handleTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
@@ -75,9 +89,7 @@
         return nil;
     }
 
-    NSString *eventName = [self.classifier updateWithTouchSnapshots:snapshots
-                                                             bounds:bounds
-                                                          timestamp:timestamp];
+    NSString *eventName = [self.classifier updateWithTouchSnapshots:snapshots bounds:bounds timestamp:timestamp];
     if (eventName.length > 0) {
         if ([self shouldRouteEventNameToFingerprintSlideIn:eventName] &&
             [self.fingerprintSensorEventSource consumePendingSinglePressForSlideInAtTimestamp:timestamp]) {
@@ -104,10 +116,8 @@
 
     LAEvent *event = [LAEvent eventWithName:eventName mode:[self currentEventMode]];
     [LASharedActivator sendEventToListener:event];
-    HBLogInfo(@"Classified and dispatched edge gesture event=%@ touchCount=%lu bounds=%@",
-              eventName,
-              (unsigned long)touchCount,
-              NSStringFromCGRect(bounds));
+    HBLogInfo(@"Classified and dispatched edge gesture event=%@ touchCount=%lu bounds=%@", eventName,
+              (unsigned long)touchCount, NSStringFromCGRect(bounds));
 }
 
 - (NSString *)currentEventMode {
@@ -160,8 +170,8 @@
 
         NSInteger phase = phaseNumber.integerValue;
         CGPoint location = locationValue.CGPointValue;
-        [touchDescriptions addObject:[NSString stringWithFormat:@"phase=%ld location=%@", (long)phase,
-                                                                NSStringFromCGPoint(location)]];
+        [touchDescriptions
+            addObject:[NSString stringWithFormat:@"phase=%ld location=%@", (long)phase, NSStringFromCGPoint(location)]];
         if (phase == 3 || phase == 4) {
             continue;
         }
@@ -187,12 +197,8 @@
     CGPoint centroid = CGPointMake(xTotal / (CGFloat)activeTouchCount, yTotal / (CGFloat)activeTouchCount);
     HBLogInfo(@"Edge gesture diagnostic activeTouchCount=%lu totalTouchCount=%lu minX=%.1f maxX=%.1f centroid=%@ "
               @"bounds=%@ touches=[%@]",
-              (unsigned long)activeTouchCount,
-              (unsigned long)snapshots.count,
-              minX,
-              maxX,
-              NSStringFromCGPoint(centroid),
-              NSStringFromCGRect(bounds),
+              (unsigned long)activeTouchCount, (unsigned long)snapshots.count, minX, maxX,
+              NSStringFromCGPoint(centroid), NSStringFromCGRect(bounds),
               [touchDescriptions componentsJoinedByString:@"; "]);
 }
 

@@ -167,11 +167,12 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
     self.singlePressGeneration += 1;
     NSUInteger generation = self.singlePressGeneration;
     __weak typeof(self) weakSelf = self;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LATFingerprintSensorEventSourcePressDelay * NSEC_PER_SEC)),
-                   dispatch_get_main_queue(), ^{
-                       __strong typeof(weakSelf) strongSelf = weakSelf;
-                       [strongSelf resolveSinglePressIfNeededWithGeneration:generation];
-                   });
+    dispatch_after(
+        dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LATFingerprintSensorEventSourcePressDelay * NSEC_PER_SEC)),
+        dispatch_get_main_queue(), ^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            [strongSelf resolveSinglePressIfNeededWithGeneration:generation];
+        });
 }
 
 - (void)resolveSinglePressIfNeededWithGeneration:(NSUInteger)generation {
@@ -208,12 +209,12 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
                        __strong typeof(weakSelf) strongSelf = weakSelf;
                        [strongSelf sendShortHoldEventIfNeededWithGeneration:generation];
                    });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
-                                 (int64_t)(LATFingerprintSensorEventSourceLongHoldDelay * NSEC_PER_SEC)),
-                   dispatch_get_main_queue(), ^{
-                       __strong typeof(weakSelf) strongSelf = weakSelf;
-                       [strongSelf sendLongHoldEventIfNeededWithGeneration:generation];
-                   });
+    dispatch_after(
+        dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LATFingerprintSensorEventSourceLongHoldDelay * NSEC_PER_SEC)),
+        dispatch_get_main_queue(), ^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            [strongSelf sendLongHoldEventIfNeededWithGeneration:generation];
+        });
 }
 
 - (void)cancelHoldRecognition {
@@ -231,8 +232,8 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 
     self.sequenceConsumed = YES;
     self.shortHoldRecognized = YES;
-    NSString *eventName = self.secondPressDown ? LAEventNameFingerprintSensorPressSingleAndHold
-                                               : LAEventNameFingerprintSensorHold;
+    NSString *eventName =
+        self.secondPressDown ? LAEventNameFingerprintSensorPressSingleAndHold : LAEventNameFingerprintSensorHold;
     LAEvent *event = [self sendFingerprintEventWithName:eventName];
     self.shortHoldEventToAbort = event.handled ? event : nil;
 }

@@ -9,12 +9,17 @@
 #import "LATestBuiltInEventSourcesSuite.h"
 
 #import "LAActivator+Private.h"
+#import "LARuntimeContext.h"
 #import "LATEdgeGestureClassifier.h"
 #import "LATEdgeGestureEventSource.h"
+#import "LATEventSourceInterestGate.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
 #import "LATStatusBarEventSource.h"
 #import "LATestEnvironment.h"
+#import "LATestEventDataSource.h"
+#import "LATestListener.h"
+#import "LATestTouchEvent.h"
 
 @implementation LATestBuiltInEventSourcesSuite
 
@@ -376,6 +381,7 @@
 
     [self runFingerprintSensorAvailabilityTestsWithRecorder:recorder activator:activator];
     [self runForceTouchAvailabilityTestsWithRecorder:recorder activator:activator];
+    [self runEventSourceInterestGateTestsWithRecorder:recorder activator:activator];
     [self runStatusBarRecognizerTestsWithRecorder:recorder activator:activator];
     [self runEdgeGestureClassifierTestsWithRecorder:recorder];
     [self runFingerprintSensorRecognizerTestsWithRecorder:recorder activator:activator];
@@ -387,7 +393,8 @@
     return [activator.la_eventDispatchCounts[eventName] unsignedIntegerValue];
 }
 
-+ (void)runFingerprintSensorAvailabilityTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
++ (void)runFingerprintSensorAvailabilityTestsWithRecorder:(LATestRecorder *)recorder
+                                                activator:(LAActivator *)activator {
     NSArray<NSString *> *eventNames = @[
         LAEventNameFingerprintSensorPressSingle,
         LAEventNameFingerprintSensorPressTwice,
@@ -448,6 +455,176 @@
                          [activator eventWithName:eventName isCompatibleWithMode:LAEventModeLockScreen]
                 caseName:[NSString stringWithFormat:@"force-touch-event-all-modes-compatible-%@", eventName]
                   reason:[NSString stringWithFormat:@"%@ was not compatible with all event modes", eventName]];
+    }
+}
+
++ (void)runEventSourceInterestGateTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    Class gateClass = NSClassFromString(@"LATEventSourceInterestGate");
+    if (!gateClass) {
+        [recorder skip:@"event-source-interest-gate" reason:@"LATEventSourceInterestGate was not loaded"];
+        return;
+    }
+
+    LATEventSourceInterestGate *catalogGate = [[gateClass alloc] initWithActivator:activator];
+    NSArray<NSString *> *edgeCatalog =
+        [catalogGate la_testingEventNamesForFamily:LATEventSourceInterestFamilyEdgeGesture];
+    NSArray<NSString *> *statusBarCatalog =
+        [catalogGate la_testingEventNamesForFamily:LATEventSourceInterestFamilyStatusBar];
+    [recorder expect:[edgeCatalog containsObject:LAEventNameStatusBarSwipeDown] &&
+                     [statusBarCatalog containsObject:LAEventNameStatusBarSwipeDown]
+            caseName:@"interest-gate-shares-statusbar-swipe-down"
+              reason:@"Status bar swipe down was not present in both edge and status bar interest families"];
+
+    NSString *testEventName = @"libactivator.test.core";
+    NSString *testListenerName = @"libactivator.test.listener.a";
+    LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+    LATestListener *listener = [[LATestListener alloc] init];
+    LARuntimeContext *runtimeContext = [LATestEnvironment runtimeContextForActivator:activator];
+    [activator registerEventDataSource:dataSource forEventName:testEventName];
+    [activator registerListener:listener forName:testListenerName];
+    for (NSString *mode in activator.availableEventModes) {
+        [activator unassignEvent:[LAEvent eventWithName:testEventName mode:mode]];
+    }
+    [runtimeContext updateEventMode:LAEventModeSpringBoard
+               underneathLockScreen:LAEventModeSpringBoard
+                  displayIdentifier:nil
+                           screenOn:YES];
+
+    LATEventSourceInterestGate *gate = [[gateClass alloc] initWithActivator:activator];
+    [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilyEdgeGesture];
+    [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilyForceTouch];
+    [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilyStatusBar];
+    [gate start];
+
+    [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture]
+            caseName:@"interest-gate-no-assignment"
+              reason:@"Interest gate was enabled without a current-mode assignment"];
+
+    [activator assignEvent:[LAEvent eventWithName:testEventName mode:LAEventModeSpringBoard]
+        toListenerWithName:testListenerName];
+    [recorder expect:[gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
+                     [gate isInterestedInFamily:LATEventSourceInterestFamilyForceTouch] &&
+                     [gate isInterestedInFamily:LATEventSourceInterestFamilyStatusBar]
+            caseName:@"interest-gate-current-mode-assignment"
+              reason:@"Interest gate did not enable families with a current-mode assignment"];
+
+    [runtimeContext updateEventMode:LAEventModeApplication
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:@"com.apple.Preferences"
+                           screenOn:YES];
+    [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture]
+            caseName:@"interest-gate-mode-change-invalidates"
+              reason:@"Interest gate did not refresh after the current event mode changed"];
+
+    [runtimeContext updateEventMode:LAEventModeSpringBoard
+               underneathLockScreen:LAEventModeSpringBoard
+                  displayIdentifier:nil
+                           screenOn:YES];
+    [recorder expect:[gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture]
+            caseName:@"interest-gate-mode-change-restores"
+              reason:@"Interest gate did not restore interest after returning to the assigned event mode"];
+
+    [activator unregisterListenerWithName:testListenerName];
+    [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture]
+            caseName:@"interest-gate-listener-change-invalidates"
+              reason:@"Interest gate did not refresh after the assigned listener became unavailable"];
+
+    for (NSString *mode in activator.availableEventModes) {
+        [activator unassignEvent:[LAEvent eventWithName:testEventName mode:mode]];
+    }
+    [activator unregisterEventDataSourceWithEventName:testEventName];
+
+    [self runEventSourceInterestGatePlacementTestsWithRecorder:recorder activator:activator gateClass:gateClass];
+}
+
++ (void)runEventSourceInterestGatePlacementTestsWithRecorder:(LATestRecorder *)recorder
+                                                   activator:(LAActivator *)activator
+                                                   gateClass:(Class)gateClass {
+    CGRect bounds = CGRectMake(0.0, 0.0, 400.0, 800.0);
+    UIWindow *window = [[UIWindow alloc] initWithFrame:bounds];
+
+    Class edgeSourceClass = NSClassFromString(@"LATEdgeGestureEventSource");
+    if (edgeSourceClass) {
+        LATEventSourceInterestGate *edgeGate = [[gateClass alloc] initWithActivator:activator];
+        [edgeGate la_testingSetEventNames:@[] forFamily:LATEventSourceInterestFamilyEdgeGesture];
+        [edgeGate start];
+
+        LATEdgeGestureEventSource *edgeSource = [[edgeSourceClass alloc] init];
+        [edgeSource start];
+        [activator la_resetDispatchCounts];
+        [edgeSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
+                        [self edgeGesturePointWithX:200.0 y:798.0],
+                    ]
+                                                                                   phase:0]
+                                          bounds:bounds
+                                       timestamp:0.0];
+        edgeSource.interestGate = edgeGate;
+        LATestTouchEvent *event = [[LATestTouchEvent alloc] init];
+        [edgeSource noteSystemGestureWindow:window event:event];
+        NSString *eventName = [edgeSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
+                                              [self edgeGesturePointWithX:200.0 y:700.0],
+                                          ]
+                                                                                                         phase:1]
+                                                                bounds:bounds
+                                                             timestamp:0.1];
+        [recorder expect:event.allTouchesRequestCount == 0 && eventName == nil
+                caseName:@"edge-interest-gate-before-snapshots-and-resets"
+                  reason:@"Edge source read touches or kept classifier state while interest was disabled"];
+    } else {
+        [recorder skip:@"edge-interest-gate-before-snapshots-and-resets"
+                reason:@"LATEdgeGestureEventSource was not loaded"];
+    }
+
+    Class forceSourceClass = NSClassFromString(@"LATForceTouchEventSource");
+    if (forceSourceClass) {
+        LATEventSourceInterestGate *forceGate = [[gateClass alloc] initWithActivator:activator];
+        [forceGate la_testingSetEventNames:@[] forFamily:LATEventSourceInterestFamilyForceTouch];
+        [forceGate start];
+
+        LATForceTouchEventSource *forceSource = [[forceSourceClass alloc] init];
+        [forceSource start];
+        [activator la_resetDispatchCounts];
+        [forceSource la_testingNoteTouchSnapshots:@[
+            [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:0 location:CGPointMake(200.0, 762.0) force:0.0],
+        ]
+                                           bounds:bounds
+                                        timestamp:0.0];
+        forceSource.interestGate = forceGate;
+        LATestTouchEvent *event = [[LATestTouchEvent alloc] init];
+        [forceSource noteSystemGestureWindow:window event:event];
+        [recorder expect:event.allTouchesRequestCount == 0 && ![forceSource la_testingHasRecognitionState]
+                caseName:@"force-touch-interest-gate-before-snapshots-and-resets"
+                  reason:@"Force touch source read touches or kept recognition state while interest was disabled"];
+    } else {
+        [recorder skip:@"force-touch-interest-gate-before-snapshots-and-resets"
+                reason:@"LATForceTouchEventSource was not loaded"];
+    }
+
+    Class statusBarSourceClass = NSClassFromString(@"LATStatusBarEventSource");
+    if (statusBarSourceClass) {
+        LATEventSourceInterestGate *statusBarGate = [[gateClass alloc] initWithActivator:activator];
+        [statusBarGate la_testingSetEventNames:@[] forFamily:LATEventSourceInterestFamilyStatusBar];
+        [statusBarGate start];
+
+        LATStatusBarEventSource *statusBarSource = [[statusBarSourceClass alloc] init];
+        [statusBarSource start];
+        [activator la_resetDispatchCounts];
+        NSObject *view = [[NSObject alloc] init];
+        CGRect statusBarBounds = CGRectMake(0.0, 0.0, 400.0, 40.0);
+        [statusBarSource la_testingNoteTouchBeganInStatusBarView:view
+                                                          bounds:statusBarBounds
+                                                        location:CGPointMake(200.0, 10.0)
+                                                        tapCount:1];
+        statusBarSource.interestGate = statusBarGate;
+        [statusBarSource noteStatusBarView:(UIView *)view touchesMoved:[NSSet set] withEvent:nil];
+        [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.6];
+        [recorder expect:![statusBarSource la_testingHasSessionForStatusBarView:view] &&
+                         [self dispatchCountForEventName:LAEventNameStatusBarHold activator:activator] == 0
+                caseName:@"status-bar-interest-gate-before-touch-read-and-cancels"
+                  reason:@"Status bar source kept a session or timer while interest was disabled"];
+    } else {
+        [recorder skip:@"status-bar-interest-gate-before-touch-read-and-cancels"
+                reason:@"LATStatusBarEventSource was not loaded"];
     }
 }
 
@@ -701,19 +878,15 @@
     [notStartedSource la_testingNoteTouchSnapshots:@[
         [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:0 location:CGPointMake(200.0, 762.0) force:0.0],
     ]
-                                           bounds:bounds
-                                        timestamp:0.0];
-    NSString *notStartedEventName =
-        [notStartedSource la_testingNoteTouchSnapshots:@[
-            [self forceTouchSnapshotWithIdentifier:@"touch-0"
-                                            phase:1
-                                         location:CGPointMake(200.0, 762.0)
-                                            force:5.0],
-        ]
-                                               bounds:bounds
-                                            timestamp:0.1];
-    [recorder expect:notStartedEventName == nil &&
-                     [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom activator:activator] == 0
+                                            bounds:bounds
+                                         timestamp:0.0];
+    NSString *notStartedEventName = [notStartedSource la_testingNoteTouchSnapshots:@[
+        [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:1 location:CGPointMake(200.0, 762.0) force:5.0],
+    ]
+                                                                            bounds:bounds
+                                                                         timestamp:0.1];
+    [recorder expect:notStartedEventName == nil && [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom
+                                                                         activator:activator] == 0
             caseName:@"force-touch-ignores-events-before-start"
               reason:@"Force touch event source dispatched before it was started"];
 
@@ -723,38 +896,25 @@
     [dispatchSource la_testingNoteTouchSnapshots:@[
         [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:0 location:CGPointMake(200.0, 762.0) force:0.0],
     ]
-                                         bounds:bounds
-                                      timestamp:0.0];
-    NSString *belowThresholdEventName =
-        [dispatchSource la_testingNoteTouchSnapshots:@[
-            [self forceTouchSnapshotWithIdentifier:@"touch-0"
-                                            phase:1
-                                         location:CGPointMake(200.0, 762.0)
-                                            force:4.99],
-        ]
-                                             bounds:bounds
-                                          timestamp:0.1];
-    NSString *firstEventName =
-        [dispatchSource la_testingNoteTouchSnapshots:@[
-            [self forceTouchSnapshotWithIdentifier:@"touch-0"
-                                            phase:1
-                                         location:CGPointMake(200.0, 762.0)
-                                            force:5.0],
-        ]
-                                             bounds:bounds
-                                          timestamp:0.2];
-    NSString *secondEventName =
-        [dispatchSource la_testingNoteTouchSnapshots:@[
-            [self forceTouchSnapshotWithIdentifier:@"touch-0"
-                                            phase:1
-                                         location:CGPointMake(200.0, 762.0)
-                                            force:6.0],
-        ]
-                                             bounds:bounds
-                                          timestamp:0.3];
+                                          bounds:bounds
+                                       timestamp:0.0];
+    NSString *belowThresholdEventName = [dispatchSource la_testingNoteTouchSnapshots:@[
+        [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:1 location:CGPointMake(200.0, 762.0) force:4.99],
+    ]
+                                                                              bounds:bounds
+                                                                           timestamp:0.1];
+    NSString *firstEventName = [dispatchSource la_testingNoteTouchSnapshots:@[
+        [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:1 location:CGPointMake(200.0, 762.0) force:5.0],
+    ]
+                                                                     bounds:bounds
+                                                                  timestamp:0.2];
+    NSString *secondEventName = [dispatchSource la_testingNoteTouchSnapshots:@[
+        [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:1 location:CGPointMake(200.0, 762.0) force:6.0],
+    ]
+                                                                      bounds:bounds
+                                                                   timestamp:0.3];
     [recorder expect:belowThresholdEventName == nil &&
-                     [firstEventName isEqualToString:LAEventNameForceTouchScreenBottom] &&
-                     secondEventName == nil &&
+                     [firstEventName isEqualToString:LAEventNameForceTouchScreenBottom] && secondEventName == nil &&
                      [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom activator:activator] == 1
             caseName:@"force-touch-dispatches-on-threshold-once"
               reason:@"Force touch did not dispatch exactly once when force crossed the threshold"];
@@ -765,19 +925,15 @@
     [endedSource la_testingNoteTouchSnapshots:@[
         [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:0 location:CGPointMake(200.0, 762.0) force:0.0],
     ]
-                                      bounds:bounds
-                                   timestamp:0.0];
-    NSString *endedEventName =
-        [endedSource la_testingNoteTouchSnapshots:@[
-            [self forceTouchSnapshotWithIdentifier:@"touch-0"
-                                            phase:3
-                                         location:CGPointMake(200.0, 762.0)
-                                            force:6.0],
-        ]
-                                          bounds:bounds
-                                       timestamp:0.1];
-    [recorder expect:endedEventName == nil &&
-                     [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom activator:activator] == 0
+                                       bounds:bounds
+                                    timestamp:0.0];
+    NSString *endedEventName = [endedSource la_testingNoteTouchSnapshots:@[
+        [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:3 location:CGPointMake(200.0, 762.0) force:6.0],
+    ]
+                                                                  bounds:bounds
+                                                               timestamp:0.1];
+    [recorder expect:endedEventName == nil && [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom
+                                                                    activator:activator] == 0
             caseName:@"force-touch-ignores-ended-threshold-crossing"
               reason:@"Force touch dispatched after the touch had already ended"];
 
@@ -787,19 +943,15 @@
     [movedAwaySource la_testingNoteTouchSnapshots:@[
         [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:0 location:CGPointMake(200.0, 762.0) force:0.0],
     ]
-                                        bounds:bounds
-                                     timestamp:0.0];
-    NSString *movedAwayEventName =
-        [movedAwaySource la_testingNoteTouchSnapshots:@[
-            [self forceTouchSnapshotWithIdentifier:@"touch-0"
-                                            phase:1
-                                         location:CGPointMake(200.0, 500.0)
-                                            force:6.0],
-        ]
-                                             bounds:bounds
-                                          timestamp:0.1];
-    [recorder expect:movedAwayEventName == nil &&
-                     [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom activator:activator] == 0
+                                           bounds:bounds
+                                        timestamp:0.0];
+    NSString *movedAwayEventName = [movedAwaySource la_testingNoteTouchSnapshots:@[
+        [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:1 location:CGPointMake(200.0, 500.0) force:6.0],
+    ]
+                                                                          bounds:bounds
+                                                                       timestamp:0.1];
+    [recorder expect:movedAwayEventName == nil && [self dispatchCountForEventName:LAEventNameForceTouchScreenBottom
+                                                                        activator:activator] == 0
             caseName:@"force-touch-requires-same-region-at-threshold"
               reason:@"Force touch dispatched after the touch moved outside its starting region"];
 }
@@ -807,8 +959,7 @@
 + (void)runFingerprintSensorRecognizerTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     Class sourceClass = NSClassFromString(@"LATFingerprintSensorEventSource");
     if (!sourceClass) {
-        [recorder skip:@"fingerprint-sensor-recognizer-logic"
-                reason:@"LATFingerprintSensorEventSource was not loaded"];
+        [recorder skip:@"fingerprint-sensor-recognizer-logic" reason:@"LATFingerprintSensorEventSource was not loaded"];
         return;
     }
 
@@ -1190,7 +1341,8 @@
     for (NSDictionary<NSString *, id> *testCase in dragOffCases) {
         NSString *eventName = [self classifiedEdgeGestureEventNameWithClassifier:classifier
                                                                           bounds:bounds
-                                                                  startLocations:@[ [self edgeGesturePointWithX:200.0 y:400.0] ]
+                                                                  startLocations:@[ [self edgeGesturePointWithX:200.0
+                                                                                                              y:400.0] ]
                                                                    moveLocations:testCase[@"Move"]
                                                                        movePhase:3];
         NSString *expectedEventName = testCase[@"EventName"];
@@ -1217,9 +1369,7 @@
                                             startLocations:@[ [self edgeGesturePointWithX:200.0 y:400.0] ]
                                              moveLocations:@[ [self edgeGesturePointWithX:10.0 y:10.0] ]
                                                  movePhase:3];
-    [recorder expect:dragOffMovedEventName == nil &&
-                     dragOffCancelledEventName == nil &&
-                     dragOffCornerEventName == nil
+    [recorder expect:dragOffMovedEventName == nil && dragOffCancelledEventName == nil && dragOffCornerEventName == nil
             caseName:@"edge-gesture-ignores-invalid-drag-off"
               reason:@"Drag-off classified before end, after cancellation, or from a corner endpoint"];
 
@@ -1243,22 +1393,30 @@
                                                     bounds:deviceBounds
                                             startLocations:@[ [self edgeGesturePointWithX:400.0 y:368.3] ]
                                              moveLocations:@[ [self edgeGesturePointWithX:345.0 y:368.3] ]];
-    NSString *wideTwoFingerLeftEventName =
-        [self classifiedEdgeGestureEventNameWithClassifier:classifier
-                                                    bounds:deviceBounds
-                                            startLocations:@[ [self edgeGesturePointWithX:26.0 y:323.0],
-                                                              [self edgeGesturePointWithX:26.0 y:413.7] ]
-                                             moveLocations:@[ [self edgeGesturePointWithX:74.0 y:323.0],
-                                                              [self edgeGesturePointWithX:74.0 y:413.7] ]];
-    NSString *wideTwoFingerRightEventName =
-        [self classifiedEdgeGestureEventNameWithClassifier:classifier
-                                                    bounds:deviceBounds
-                                            startLocations:@[ [self edgeGesturePointWithX:388.0 y:323.0],
-                                                              [self edgeGesturePointWithX:387.0 y:413.7] ]
-                                             moveLocations:@[ [self edgeGesturePointWithX:340.0 y:323.0],
-                                                              [self edgeGesturePointWithX:340.0 y:413.7] ]];
-    [recorder expect:wideSingleFingerLeftEventName == nil && wideSingleFingerRightEventName == nil
-                     && wideTwoFingerLeftEventName == nil && wideTwoFingerRightEventName == nil
+    NSString *wideTwoFingerLeftEventName = [self
+        classifiedEdgeGestureEventNameWithClassifier:classifier
+                                              bounds:deviceBounds
+                                      startLocations:@[
+                                          [self edgeGesturePointWithX:26.0 y:323.0], [self edgeGesturePointWithX:26.0
+                                                                                                               y:413.7]
+                                      ]
+                                       moveLocations:@[
+                                           [self edgeGesturePointWithX:74.0 y:323.0], [self edgeGesturePointWithX:74.0
+                                                                                                                y:413.7]
+                                       ]];
+    NSString *wideTwoFingerRightEventName = [self
+        classifiedEdgeGestureEventNameWithClassifier:classifier
+                                              bounds:deviceBounds
+                                      startLocations:@[
+                                          [self edgeGesturePointWithX:388.0 y:323.0], [self edgeGesturePointWithX:387.0
+                                                                                                                y:413.7]
+                                      ]
+                                       moveLocations:@[
+                                           [self edgeGesturePointWithX:340.0 y:323.0],
+                                           [self edgeGesturePointWithX:340.0 y:413.7]
+                                       ]];
+    [recorder expect:wideSingleFingerLeftEventName == nil && wideSingleFingerRightEventName == nil &&
+                     wideTwoFingerLeftEventName == nil && wideTwoFingerRightEventName == nil
             caseName:@"edge-gesture-keeps-side-edge-bands-narrow"
               reason:@"Side slide-in gestures classified outside their configured edge bands"];
 
@@ -1272,39 +1430,41 @@
               reason:@"A gesture that did not cross the interior trigger distance was classified"];
 
     [classifier reset];
-    [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0 y:798.0] ]
+    [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
+                                                                                                              y:798.0] ]
                                                                            phase:0]
                                   bounds:bounds
                                timestamp:0.0];
-    NSString *firstEventName =
-        [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0 y:700.0] ]
-                                                                               phase:1]
-                                      bounds:bounds
-                                   timestamp:0.1];
-    NSString *secondEventName =
-        [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0 y:650.0] ]
-                                                                               phase:1]
-                                      bounds:bounds
-                                   timestamp:0.2];
+    NSString *firstEventName = [classifier
+        updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0 y:700.0] ]
+                                                                   phase:1]
+                          bounds:bounds
+                       timestamp:0.1];
+    NSString *secondEventName = [classifier
+        updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0 y:650.0] ]
+                                                                   phase:1]
+                          bounds:bounds
+                       timestamp:0.2];
     [recorder expect:[firstEventName isEqualToString:LAEventNameSlideInFromBottom] && secondEventName == nil
             caseName:@"edge-gesture-classifies-once-per-session"
               reason:@"A single edge gesture session did not classify exactly once"];
 
     [classifier reset];
-    [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:120.0 y:788.0] ]
+    [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:120.0
+                                                                                                              y:788.0] ]
                                                                            phase:0]
                                   bounds:bounds
                                timestamp:0.0];
-    NSString *firstDragEventName =
-        [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:160.0 y:788.0] ]
-                                                                               phase:1]
-                                      bounds:bounds
-                                   timestamp:0.1];
-    NSString *secondDragEventName =
-        [classifier updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0 y:788.0] ]
-                                                                               phase:1]
-                                      bounds:bounds
-                                   timestamp:0.2];
+    NSString *firstDragEventName = [classifier
+        updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:160.0 y:788.0] ]
+                                                                   phase:1]
+                          bounds:bounds
+                       timestamp:0.1];
+    NSString *secondDragEventName = [classifier
+        updateWithTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0 y:788.0] ]
+                                                                   phase:1]
+                          bounds:bounds
+                       timestamp:0.2];
     [recorder expect:[firstDragEventName isEqualToString:LAEventScreenBottomSwipeRight] && secondDragEventName == nil
             caseName:@"edge-gesture-classifies-drag-along-once-per-session"
               reason:@"A single drag-along gesture session did not classify exactly once"];
@@ -1333,20 +1493,19 @@
     LATEdgeGestureEventSource *notStartedSource = [[sourceClass alloc] init];
     [activator la_resetDispatchCounts];
     [notStartedSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                             [self edgeGesturePointWithX:200.0 y:798.0],
-                                         ]
+                          [self edgeGesturePointWithX:200.0 y:798.0],
+                      ]
                                                                                      phase:0]
-                                           bounds:bounds
-                                        timestamp:0.0];
-    NSString *notStartedEventName =
-        [notStartedSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                                 [self edgeGesturePointWithX:200.0 y:700.0]
-                                             ]
-                                                                                         phase:1]
-                                               bounds:bounds
-                                            timestamp:0.1];
-    [recorder expect:notStartedEventName == nil &&
-                     [self dispatchCountForEventName:LAEventNameSlideInFromBottom activator:activator] == 0
+                                            bounds:bounds
+                                         timestamp:0.0];
+    NSString *notStartedEventName = [notStartedSource
+        la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
+                                                                                                          y:700.0] ]
+                                                                       phase:1]
+                              bounds:bounds
+                           timestamp:0.1];
+    [recorder expect:notStartedEventName == nil && [self dispatchCountForEventName:LAEventNameSlideInFromBottom
+                                                                         activator:activator] == 0
             caseName:@"edge-gesture-event-source-ignores-events-before-start"
               reason:@"Edge gesture event source dispatched before it was started"];
 
@@ -1354,25 +1513,23 @@
     [dispatchSource start];
     [activator la_resetDispatchCounts];
     [dispatchSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                          [self edgeGesturePointWithX:200.0 y:798.0],
-                                      ]
-                                                                                  phase:0]
-                                        bounds:bounds
-                                     timestamp:0.0];
-    NSString *firstEventName =
-        [dispatchSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                               [self edgeGesturePointWithX:200.0 y:700.0]
-                                           ]
-                                                                                       phase:1]
-                                             bounds:bounds
-                                          timestamp:0.1];
-    NSString *secondEventName =
-        [dispatchSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                               [self edgeGesturePointWithX:200.0 y:650.0]
-                                           ]
-                                                                                       phase:1]
-                                             bounds:bounds
-                                          timestamp:0.2];
+                        [self edgeGesturePointWithX:200.0 y:798.0],
+                    ]
+                                                                                   phase:0]
+                                          bounds:bounds
+                                       timestamp:0.0];
+    NSString *firstEventName = [dispatchSource
+        la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
+                                                                                                          y:700.0] ]
+                                                                       phase:1]
+                              bounds:bounds
+                           timestamp:0.1];
+    NSString *secondEventName = [dispatchSource
+        la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
+                                                                                                          y:650.0] ]
+                                                                       phase:1]
+                              bounds:bounds
+                           timestamp:0.2];
     [recorder expect:[firstEventName isEqualToString:LAEventNameSlideInFromBottom] && secondEventName == nil &&
                      [self dispatchCountForEventName:LAEventNameSlideInFromBottom activator:activator] == 1
             caseName:@"edge-gesture-event-source-dispatches-once"
@@ -1382,20 +1539,19 @@
     [shortMoveSource start];
     [activator la_resetDispatchCounts];
     [shortMoveSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                           [self edgeGesturePointWithX:200.0 y:798.0],
-                                       ]
-                                                                                   phase:0]
-                                         bounds:bounds
-                                      timestamp:0.0];
-    NSString *shortMoveEventName =
-        [shortMoveSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                                [self edgeGesturePointWithX:200.0 y:750.0]
-                                            ]
-                                                                                        phase:1]
-                                              bounds:bounds
-                                           timestamp:0.1];
-    [recorder expect:shortMoveEventName == nil &&
-                     [self dispatchCountForEventName:LAEventNameSlideInFromBottom activator:activator] == 0
+                         [self edgeGesturePointWithX:200.0 y:798.0],
+                     ]
+                                                                                    phase:0]
+                                           bounds:bounds
+                                        timestamp:0.0];
+    NSString *shortMoveEventName = [shortMoveSource
+        la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
+                                                                                                          y:750.0] ]
+                                                                       phase:1]
+                              bounds:bounds
+                           timestamp:0.1];
+    [recorder expect:shortMoveEventName == nil && [self dispatchCountForEventName:LAEventNameSlideInFromBottom
+                                                                        activator:activator] == 0
             caseName:@"edge-gesture-event-source-ignores-unclassified-move"
               reason:@"Edge gesture event source dispatched for an unclassified gesture"];
 
@@ -1403,18 +1559,17 @@
     [dragAlongSource start];
     [activator la_resetDispatchCounts];
     [dragAlongSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                           [self edgeGesturePointWithX:120.0 y:788.0],
-                                       ]
-                                                                                   phase:0]
-                                         bounds:bounds
-                                      timestamp:0.0];
-    NSString *dragAlongEventName =
-        [dragAlongSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                                [self edgeGesturePointWithX:160.0 y:788.0]
-                                            ]
-                                                                                        phase:1]
-                                              bounds:bounds
-                                           timestamp:0.1];
+                         [self edgeGesturePointWithX:120.0 y:788.0],
+                     ]
+                                                                                    phase:0]
+                                           bounds:bounds
+                                        timestamp:0.0];
+    NSString *dragAlongEventName = [dragAlongSource
+        la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:160.0
+                                                                                                          y:788.0] ]
+                                                                       phase:1]
+                              bounds:bounds
+                           timestamp:0.1];
     [recorder expect:[dragAlongEventName isEqualToString:LAEventScreenBottomSwipeRight] &&
                      [self dispatchCountForEventName:LAEventScreenBottomSwipeRight activator:activator] == 1
             caseName:@"edge-gesture-event-source-dispatches-drag-along"
@@ -1424,27 +1579,24 @@
     [dragOffSource start];
     [activator la_resetDispatchCounts];
     [dragOffSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                        [self edgeGesturePointWithX:200.0 y:400.0],
-                                    ]
-                                                                                phase:0]
-                                      bounds:bounds
-                                   timestamp:0.0];
-    NSString *dragOffMoveEventName =
-        [dragOffSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                             [self edgeGesturePointWithX:10.0 y:400.0]
-                                         ]
-                                                                                     phase:1]
-                                           bounds:bounds
-                                        timestamp:0.1];
-    NSString *dragOffEventName =
-        [dragOffSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                             [self edgeGesturePointWithX:10.0 y:400.0]
-                                         ]
-                                                                                     phase:3]
-                                           bounds:bounds
-                                        timestamp:0.2];
-    [recorder expect:dragOffMoveEventName == nil &&
-                     [dragOffEventName isEqualToString:LAEventNameDragOffLeft] &&
+                       [self edgeGesturePointWithX:200.0 y:400.0],
+                   ]
+                                                                                  phase:0]
+                                         bounds:bounds
+                                      timestamp:0.0];
+    NSString *dragOffMoveEventName = [dragOffSource
+        la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:10.0
+                                                                                                          y:400.0] ]
+                                                                       phase:1]
+                              bounds:bounds
+                           timestamp:0.1];
+    NSString *dragOffEventName = [dragOffSource
+        la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:10.0
+                                                                                                          y:400.0] ]
+                                                                       phase:3]
+                              bounds:bounds
+                           timestamp:0.2];
+    [recorder expect:dragOffMoveEventName == nil && [dragOffEventName isEqualToString:LAEventNameDragOffLeft] &&
                      [self dispatchCountForEventName:LAEventNameDragOffLeft activator:activator] == 1
             caseName:@"edge-gesture-event-source-dispatches-drag-off"
               reason:@"Edge gesture event source did not dispatch drag-off exactly once on touch end"];
@@ -1465,18 +1617,17 @@
     [fingerprintSource la_testingNoteTouchIDDown:YES sequenceState:0 timestamp:0.0];
     [fingerprintSource la_testingNoteTouchIDDown:NO sequenceState:1 timestamp:0.1];
     [fingerprintEdgeSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                               [self edgeGesturePointWithX:200.0 y:798.0],
-                                           ]
-                                                                                       phase:0]
-                                             bounds:bounds
-                                          timestamp:0.2];
-    NSString *fingerprintSlideEventName =
-        [fingerprintEdgeSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
-                                                   [self edgeGesturePointWithX:200.0 y:700.0]
-                                               ]
-                                                                                           phase:1]
+                               [self edgeGesturePointWithX:200.0 y:798.0],
+                           ]
+                                                                                          phase:0]
                                                  bounds:bounds
-                                              timestamp:0.4];
+                                              timestamp:0.2];
+    NSString *fingerprintSlideEventName = [fingerprintEdgeSource
+        la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
+                                                                                                          y:700.0] ]
+                                                                       phase:1]
+                              bounds:bounds
+                           timestamp:0.4];
     [fingerprintSource la_testingResolvePendingSinglePress];
     [recorder expect:[fingerprintSlideEventName isEqualToString:LAEventNameFingerprintSensorPressSingleAndSlideIn] &&
                      [self dispatchCountForEventName:LAEventNameFingerprintSensorPressSingleAndSlideIn

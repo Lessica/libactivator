@@ -169,8 +169,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
         [self resetButtonSequenceConsumedIfNoButtonsAreDown];
         return;
     }
-    [self sendVolumePressOrSequenceWithPressEventName:LAEventNameVolumeUpPress
-                                                usage:kHIDUsage_Csmr_VolumeIncrement];
+    [self sendVolumePressOrSequenceWithPressEventName:LAEventNameVolumeUpPress usage:kHIDUsage_Csmr_VolumeIncrement];
 }
 
 - (void)handleVolumeDownButtonDown:(BOOL)keyDown {
@@ -197,8 +196,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
         [self resetButtonSequenceConsumedIfNoButtonsAreDown];
         return;
     }
-    [self sendVolumePressOrSequenceWithPressEventName:LAEventNameVolumeDownPress
-                                                usage:kHIDUsage_Csmr_VolumeDecrement];
+    [self sendVolumePressOrSequenceWithPressEventName:LAEventNameVolumeDownPress usage:kHIDUsage_Csmr_VolumeDecrement];
 }
 
 - (void)handleMenuButtonDown:(BOOL)keyDown {
@@ -447,11 +445,9 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     }
 
     NSString *sequenceEventName = nil;
-    if (self.lastVolumePressUsage == kHIDUsage_Csmr_VolumeIncrement &&
-        usage == kHIDUsage_Csmr_VolumeDecrement) {
+    if (self.lastVolumePressUsage == kHIDUsage_Csmr_VolumeIncrement && usage == kHIDUsage_Csmr_VolumeDecrement) {
         sequenceEventName = LAEventNameVolumeUpDown;
-    } else if (self.lastVolumePressUsage == kHIDUsage_Csmr_VolumeDecrement &&
-               usage == kHIDUsage_Csmr_VolumeIncrement) {
+    } else if (self.lastVolumePressUsage == kHIDUsage_Csmr_VolumeDecrement && usage == kHIDUsage_Csmr_VolumeIncrement) {
         sequenceEventName = LAEventNameVolumeDownUp;
     }
 

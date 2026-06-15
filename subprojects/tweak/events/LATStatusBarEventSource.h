@@ -10,7 +10,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class LATEventSourceInterestGate;
+
 @interface LATStatusBarEventSource : NSObject
+
+@property(nonatomic, weak, nullable) LATEventSourceInterestGate *interestGate;
 
 // Main-queue confined. This source observes SpringBoard-owned status bar views and submits
 // Activator events without consuming the original system touch handling.
@@ -22,7 +26,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)noteStatusBarView:(UIView *)view touchesBegan:(NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
 - (void)noteStatusBarView:(UIView *)view touchesMoved:(NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
 - (void)noteStatusBarView:(UIView *)view touchesEnded:(NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
-- (void)noteStatusBarView:(UIView *)view touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
+- (void)noteStatusBarView:(UIView *)view
+         touchesCancelled:(NSSet<UITouch *> *)touches
+                withEvent:(nullable UIEvent *)event;
 
 #if DEBUG
 // Testing hooks
@@ -37,6 +43,7 @@ NS_ASSUME_NONNULL_BEGIN
                                              bounds:(CGRect)bounds
                                            location:(CGPoint)location
                                            tapCount:(NSUInteger)tapCount;
+- (BOOL)la_testingHasSessionForStatusBarView:(id)view;
 #endif
 
 @end

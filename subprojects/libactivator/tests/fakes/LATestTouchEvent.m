@@ -15,6 +15,7 @@
 }
 
 - (NSSet *)allTouches {
+    self.allTouchesRequestCount += 1;
     return self.testTouches ?: [NSSet set];
 }
 

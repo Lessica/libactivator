@@ -10,7 +10,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class LATEventSourceInterestGate;
+
 @interface LATForceTouchEventSource : NSObject
+
+@property(nonatomic, weak, nullable) LATEventSourceInterestGate *interestGate;
 
 // Main-queue confined. This source observes system gesture window events and dispatches
 // Activator force-touch events without consuming the original system touch handling.
@@ -27,6 +31,7 @@ NS_ASSUME_NONNULL_BEGIN
                                              bounds:(CGRect)bounds
                                           timestamp:(NSTimeInterval)timestamp;
 - (nullable NSString *)la_testingEventNameForLocation:(CGPoint)location bounds:(CGRect)bounds;
+- (BOOL)la_testingHasRecognitionState;
 #endif
 
 @end

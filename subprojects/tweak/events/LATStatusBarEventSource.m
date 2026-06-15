@@ -9,6 +9,7 @@
 #import "LATStatusBarEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LATEventSourceInterestGate.h"
 #import "LATQueueAssertions.h"
 
 static NSTimeInterval const LATStatusBarEventSourceHoldDelay = 0.5;
@@ -76,6 +77,14 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 
 - (void)noteStatusBarView:(UIView *)view touchesBegan:(NSSet<UITouch *> *)touches withEvent:(__unused UIEvent *)event {
     LATAssertMainQueue();
+    if (!self.started || !view) {
+        return;
+    }
+
+    if (![self shouldProcessEvents]) {
+        [self cancelSessionForStatusBarView:view];
+        return;
+    }
 
     UITouch *touch = touches.anyObject;
     if (!touch) {
@@ -90,6 +99,14 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 
 - (void)noteStatusBarView:(UIView *)view touchesMoved:(NSSet<UITouch *> *)touches withEvent:(__unused UIEvent *)event {
     LATAssertMainQueue();
+    if (!self.started || !view) {
+        return;
+    }
+
+    if (![self shouldProcessEvents]) {
+        [self cancelSessionForStatusBarView:view];
+        return;
+    }
 
     UITouch *touch = touches.anyObject;
     if (!touch) {
@@ -101,6 +118,14 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 
 - (void)noteStatusBarView:(UIView *)view touchesEnded:(NSSet<UITouch *> *)touches withEvent:(__unused UIEvent *)event {
     LATAssertMainQueue();
+    if (!self.started || !view) {
+        return;
+    }
+
+    if (![self shouldProcessEvents]) {
+        [self cancelSessionForStatusBarView:view];
+        return;
+    }
 
     UITouch *touch = touches.anyObject;
     if (!touch) {
@@ -114,6 +139,14 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
          touchesCancelled:(NSSet<UITouch *> *)touches
                 withEvent:(__unused UIEvent *)event {
     LATAssertMainQueue();
+    if (!self.started || !view) {
+        return;
+    }
+
+    if (![self shouldProcessEvents]) {
+        [self cancelSessionForStatusBarView:view];
+        return;
+    }
 
     UITouch *touch = touches.anyObject;
     if (!touch) {
@@ -125,6 +158,14 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
                                      bounds:view.bounds
                                    location:[touch locationInView:view]
                                    tapCount:touch.tapCount];
+}
+
+#pragma mark - Interest
+
+- (BOOL)shouldProcessEvents {
+    LATAssertMainQueue();
+    LATEventSourceInterestGate *interestGate = self.interestGate;
+    return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyStatusBar];
 }
 
 #pragma mark - Recognition
@@ -401,6 +442,10 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
                                            location:(CGPoint)location
                                            tapCount:(NSUInteger)tapCount {
     [self noteTouchCancelledInStatusBarView:view bounds:bounds location:location tapCount:tapCount];
+}
+
+- (BOOL)la_testingHasSessionForStatusBarView:(id)view {
+    return [self.sessionsByStatusBarView objectForKey:view] != nil;
 }
 #endif
 

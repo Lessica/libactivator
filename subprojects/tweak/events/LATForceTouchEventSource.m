@@ -9,6 +9,7 @@
 #import "LATForceTouchEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LATEventSourceInterestGate.h"
 #import "LATQueueAssertions.h"
 
 #import <Activator/Activator.h>
@@ -83,12 +84,25 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
         return;
     }
 
+    if (![self shouldProcessEvents]) {
+        [self resetRecognitionState];
+        return;
+    }
+
     NSArray<NSDictionary<NSString *, id> *> *snapshots = [self touchSnapshotsFromEvent:event inWindow:window];
     if (snapshots.count == 0) {
         return;
     }
 
     [self handleTouchSnapshots:snapshots bounds:window.bounds timestamp:event.timestamp];
+}
+
+#pragma mark - Interest
+
+- (BOOL)shouldProcessEvents {
+    LATAssertMainQueue();
+    LATEventSourceInterestGate *interestGate = self.interestGate;
+    return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyForceTouch];
 }
 
 #pragma mark - Recognition
@@ -195,8 +209,7 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
     }
 
     LATForceTouchPhase phase = (LATForceTouchPhase)phaseNumber.integerValue;
-    return phase == LATForceTouchPhaseBegan ||
-           phase == LATForceTouchPhaseMoved ||
+    return phase == LATForceTouchPhaseBegan || phase == LATForceTouchPhaseMoved ||
            phase == LATForceTouchPhaseStationary;
 }
 
@@ -216,10 +229,7 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 
     LAEvent *event = [LAEvent eventWithName:eventName mode:[self currentEventMode]];
     [LASharedActivator sendEventToListener:event];
-    HBLogInfo(@"Dispatched force touch event=%@ force=%.3f bounds=%@",
-              eventName,
-              force,
-              NSStringFromCGRect(bounds));
+    HBLogInfo(@"Dispatched force touch event=%@ force=%.3f bounds=%@", eventName, force, NSStringFromCGRect(bounds));
 }
 
 - (NSString *)currentEventMode {
@@ -294,6 +304,10 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 
 - (nullable NSString *)la_testingEventNameForLocation:(CGPoint)location bounds:(CGRect)bounds {
     return [self eventNameForLocation:location bounds:bounds];
+}
+
+- (BOOL)la_testingHasRecognitionState {
+    return self.activeSnapshots.count > 0 || self.session != nil || self.isTrackingUnrecognizedSession;
 }
 #endif
 

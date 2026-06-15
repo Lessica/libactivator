@@ -200,8 +200,9 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureDragAxis) {
     for (LATEdgeGestureDragCandidate *candidate in session.dragCandidates) {
         CGFloat delta = candidate.axis == LATEdgeGestureDragAxisHorizontal ? centroid.x - session.startCentroid.x
                                                                            : centroid.y - session.startCentroid.y;
-        CGFloat perpendicularDelta = candidate.axis == LATEdgeGestureDragAxisHorizontal ? centroid.y - session.startCentroid.y
-                                                                                       : centroid.x - session.startCentroid.x;
+        CGFloat perpendicularDelta = candidate.axis == LATEdgeGestureDragAxisHorizontal
+                                         ? centroid.y - session.startCentroid.y
+                                         : centroid.x - session.startCentroid.x;
         if (fabs(perpendicularDelta) >= LATEdgeGestureClassifierDragAlongPerpendicularTolerance) {
             continue;
         }
@@ -218,8 +219,8 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureDragAxis) {
 }
 
 - (nullable NSString *)dragOffEventNameForSession:(LATEdgeGestureSession *)session centroid:(CGPoint)centroid {
-    if (!session.isDragOffEligible || self.activeTouchLocations.count != 1 ||
-        self.endedTouchIdentifiers.count != 1 || self.finishedTouchIdentifiers.count != 1) {
+    if (!session.isDragOffEligible || self.activeTouchLocations.count != 1 || self.endedTouchIdentifiers.count != 1 ||
+        self.finishedTouchIdentifiers.count != 1) {
         return nil;
     }
 
@@ -304,28 +305,28 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureDragAxis) {
 
     if (centroid.y + LATEdgeGestureClassifierTopBottomStartBand >= height) {
         [self configureBottomSession:session
-                             centroid:centroid
-                                width:width
-                               height:height
-                         triggerInset:LATEdgeGestureClassifierTriggerInset];
-    } else if (centroid.y < LATEdgeGestureClassifierTopBottomStartBand) {
-        [self configureTopSession:session
-                          centroid:centroid
-                             width:width
-                            height:height
-                      triggerInset:LATEdgeGestureClassifierTriggerInset];
-    } else if (centroid.x < sideStartBand) {
-        [self configureLeftSession:session
-                           centroid:centroid
-                              width:width
-                             height:height
-                       triggerInset:LATEdgeGestureClassifierTriggerInset];
-    } else if (centroid.x >= width - sideStartBand) {
-        [self configureRightSession:session
                             centroid:centroid
                                width:width
                               height:height
                         triggerInset:LATEdgeGestureClassifierTriggerInset];
+    } else if (centroid.y < LATEdgeGestureClassifierTopBottomStartBand) {
+        [self configureTopSession:session
+                         centroid:centroid
+                            width:width
+                           height:height
+                     triggerInset:LATEdgeGestureClassifierTriggerInset];
+    } else if (centroid.x < sideStartBand) {
+        [self configureLeftSession:session
+                          centroid:centroid
+                             width:width
+                            height:height
+                      triggerInset:LATEdgeGestureClassifierTriggerInset];
+    } else if (centroid.x >= width - sideStartBand) {
+        [self configureRightSession:session
+                           centroid:centroid
+                              width:width
+                             height:height
+                       triggerInset:LATEdgeGestureClassifierTriggerInset];
     } else {
         session.triggerRect = CGRectNull;
     }
@@ -446,8 +447,7 @@ typedef NS_ENUM(NSInteger, LATEdgeGestureDragAxis) {
 }
 
 - (BOOL)dragOffEligibleForStartCentroid:(CGPoint)centroid width:(CGFloat)width height:(CGFloat)height {
-    CGRect startRect = CGRectMake(LATEdgeGestureClassifierDragOffStartInset,
-                                  LATEdgeGestureClassifierDragOffStartInset,
+    CGRect startRect = CGRectMake(LATEdgeGestureClassifierDragOffStartInset, LATEdgeGestureClassifierDragOffStartInset,
                                   MAX(0.0, width - LATEdgeGestureClassifierDragOffStartInset * 2.0),
                                   MAX(0.0, height - LATEdgeGestureClassifierDragOffStartInset * 2.0));
     return [self triggerRect:startRect containsPointInclusively:centroid];

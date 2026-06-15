@@ -17,6 +17,7 @@
 #import "LATBuiltInListenerRegistrant.h"
 #import "LATButtonEventSource.h"
 #import "LATEdgeGestureEventSource.h"
+#import "LATEventSourceInterestGate.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
 #import "LATHardwareActionListener.h"
@@ -49,6 +50,7 @@
 @property(nonatomic, strong, readwrite) LATRuntimeStateSource *runtimeStateSource;
 @property(nonatomic, strong, readwrite) LATButtonEventSource *buttonEventSource;
 @property(nonatomic, strong, readwrite) LATEdgeGestureEventSource *edgeGestureEventSource;
+@property(nonatomic, strong, readwrite) LATEventSourceInterestGate *eventSourceInterestGate;
 @property(nonatomic, strong, readwrite, nullable) LATFingerprintSensorEventSource *fingerprintSensorEventSource;
 @property(nonatomic, strong, readwrite, nullable) LATForceTouchEventSource *forceTouchEventSource;
 @property(nonatomic, strong, readwrite) LATLockStateEventSource *lockStateEventSource;
@@ -78,6 +80,7 @@
         _mediaEventSource = [[LATMediaEventSource alloc] init];
         _networkEventSource = [[LATNetworkEventSource alloc] init];
         _buttonEventSource = [[LATButtonEventSource alloc] init];
+        _eventSourceInterestGate = [[LATEventSourceInterestGate alloc] initWithActivator:activator];
         if ([self fingerprintSensorEventSourceShouldBeRegisteredWithActivator:activator]) {
             _fingerprintSensorEventSource = [[LATFingerprintSensorEventSource alloc] init];
         }
@@ -86,8 +89,11 @@
         }
         _lockStateEventSource.fingerprintSensorEventSource = _fingerprintSensorEventSource;
         _statusBarEventSource = [[LATStatusBarEventSource alloc] init];
+        _statusBarEventSource.interestGate = _eventSourceInterestGate;
         _edgeGestureEventSource = [[LATEdgeGestureEventSource alloc] init];
+        _edgeGestureEventSource.interestGate = _eventSourceInterestGate;
         _edgeGestureEventSource.fingerprintSensorEventSource = _fingerprintSensorEventSource;
+        _forceTouchEventSource.interestGate = _eventSourceInterestGate;
 
         [self registerBuiltInListenersWithActivator:activator];
     }
@@ -107,6 +113,7 @@
     [self.networkEventSource start];
     [self.buttonEventSource start];
     [self.fingerprintSensorEventSource start];
+    [self.eventSourceInterestGate start];
     [self.forceTouchEventSource start];
     [self.statusBarEventSource start];
     [self.edgeGestureEventSource start];

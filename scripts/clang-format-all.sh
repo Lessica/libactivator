@@ -15,7 +15,10 @@ if [[ "${1:-}" == "--check" ]]; then
 fi
 
 # Format tracked Objective-C source/header files in this repository.
-mapfile -d '' files < <(git ls-files -z -- '*.h' '*.m' '*.mm')
+files=()
+while IFS= read -r -d '' file; do
+    files+=("${file}")
+done < <(git ls-files -z -- '*.h' '*.m' '*.mm')
 
 if [[ "${#files[@]}" -eq 0 ]]; then
     echo "[clang-format] no matching files"
