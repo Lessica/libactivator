@@ -1,20 +1,20 @@
 //
-//  LATSystemUIActionController.m
+//  LATSystemSwitcherController.m
 //  libactivator
 //
 //  Created by Lessica on 6/15/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "system/LATSystemUIActionController.h"
+#import "system/LATSystemSwitcherController.h"
 
 #import <HBLog.h>
-#import <UIKit/UIKit.h>
 
-@interface SBMainWorkspace : NSObject
-+ (instancetype)sharedInstance;
-+ (instancetype)sharedInstanceIfExists;
-- (void)presentPowerDownTransientOverlay;
+@interface AXSpringBoardServer : NSObject
++ (instancetype)server;
+- (BOOL)isAppSwitcherVisible;
+- (void)openAppSwitcher;
+- (void)dismissAppSwitcher;
 @end
 
 @interface SBSwitcherController : NSObject
@@ -33,16 +33,22 @@
 - (BOOL)activateMainSwitcherNoninteractivelyWithSource:(long long)source animated:(BOOL)animated;
 @end
 
-@interface UIApplication (LATSystemUIActionController)
-- (void)_takeScreenshotAndEdit:(BOOL)edit;
-- (void)takeScreenshotAndEdit:(BOOL)edit;
-- (void)takeScreenshot;
-@end
-
-@implementation LATSystemUIActionController
+@implementation LATSystemSwitcherController
 
 - (BOOL)activateSwitcherForListenerName:(NSString *)listenerName {
     return [self performOnMainQueueForListenerName:listenerName block:^{
+        AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
+        if ([server respondsToSelector:@selector(isAppSwitcherVisible)] &&
+            [server isAppSwitcherVisible]) {
+            if ([server respondsToSelector:@selector(dismissAppSwitcher)]) {
+                [server dismissAppSwitcher];
+                return;
+            }
+        } else if ([server respondsToSelector:@selector(openAppSwitcher)]) {
+            [server openAppSwitcher];
+            return;
+        }
+
         SBSwitcherController *switcherController = [self activeDisplaySwitcherController];
         if ([switcherController respondsToSelector:@selector(toggleMainSwitcherWithSource:animated:)]) {
             if (![switcherController toggleMainSwitcherWithSource:0x14 animated:YES]) {
@@ -69,38 +75,13 @@
     }];
 }
 
-- (BOOL)showPowerMenuForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        Class workspaceClass = NSClassFromString(@"SBMainWorkspace");
-        SBMainWorkspace *workspace = nil;
-        if ([workspaceClass respondsToSelector:@selector(sharedInstanceIfExists)]) {
-            workspace = [(id)workspaceClass sharedInstanceIfExists];
-        }
-        if (!workspace && [workspaceClass respondsToSelector:@selector(sharedInstance)]) {
-            workspace = [(id)workspaceClass sharedInstance];
-        }
-
-        if (![workspace respondsToSelector:@selector(presentPowerDownTransientOverlay)]) {
-            HBLogError(@"SBMainWorkspace cannot present power menu for system action %@", listenerName ?: @"");
-            return;
-        }
-        [workspace presentPowerDownTransientOverlay];
-    }];
-}
-
-- (BOOL)editScreenshotForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        UIApplication *application = UIApplication.sharedApplication;
-        if ([application respondsToSelector:@selector(_takeScreenshotAndEdit:)]) {
-            [application _takeScreenshotAndEdit:YES];
-        } else if ([application respondsToSelector:@selector(takeScreenshotAndEdit:)]) {
-            [application takeScreenshotAndEdit:YES];
-        } else if ([application respondsToSelector:@selector(takeScreenshot)]) {
-            [application takeScreenshot];
-        } else {
-            HBLogError(@"SpringBoard cannot edit screenshot for system action %@", listenerName ?: @"");
-        }
-    }];
+- (nullable AXSpringBoardServer *)axSpringBoardServerForListenerName:(NSString *)listenerName {
+    Class serverClass = NSClassFromString(@"AXSpringBoardServer");
+    if (![serverClass respondsToSelector:@selector(server)]) {
+        HBLogError(@"AXSpringBoardServer is unavailable for system action %@", listenerName ?: @"");
+        return nil;
+    }
+    return [(id)serverClass server];
 }
 
 - (nullable SBSwitcherController *)activeDisplaySwitcherController {
@@ -124,18 +105,6 @@
         return nil;
     }
     return [(id)switcherClass sharedInstance];
-}
-
-- (BOOL)performOnMainQueueForListenerName:(NSString *)listenerName block:(dispatch_block_t)block {
-    if (!block) {
-        return NO;
-    }
-    if ([NSThread isMainThread]) {
-        block();
-    } else {
-        dispatch_async(dispatch_get_main_queue(), block);
-    }
-    return YES;
 }
 
 @end

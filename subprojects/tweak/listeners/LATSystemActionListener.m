@@ -11,16 +11,25 @@
 #import "LATApplicationLauncher.h"
 #import "LATBuiltInRegistry.h"
 #import "system/LATSystemActionCommand.h"
+#import "system/LATSystemAssistantController.h"
+#import "system/LATSystemCenterController.h"
+#import "system/LATSystemHapticFeedbackController.h"
 #import "system/LATSystemHomeScreenController.h"
 #import "system/LATSystemLockScreenController.h"
 #import "system/LATSystemNowPlayingApplicationLauncher.h"
+#import "system/LATSystemOrientationController.h"
 #import "system/LATSystemPowerController.h"
+#import "system/LATSystemPowerMenuController.h"
+#import "system/LATSystemReachabilityController.h"
 #import "system/LATSystemRingerMuteController.h"
 #import "system/LATSystemRingerStateResetter.h"
-#import "system/LATSystemUIActionController.h"
+#import "system/LATSystemScreenshotController.h"
+#import "system/LATSystemSwitcherController.h"
 #import "system/LATSystemVolumeHUDPresenter.h"
+#import "system/LATSystemWalletController.h"
 
 #import <HBLog.h>
+#import <UIKit/UIKit.h>
 
 @interface LATSystemActionListener ()
 
@@ -31,11 +40,19 @@
 @property(nonatomic, strong) LATSystemHomeScreenController *homeScreenController;
 @property(nonatomic, strong) LATSystemLockScreenController *lockScreenController;
 @property(nonatomic, strong) LATSystemNowPlayingApplicationLauncher *nowPlayingApplicationLauncher;
+@property(nonatomic, strong) LATSystemAssistantController *assistantController;
+@property(nonatomic, strong) LATSystemCenterController *centerController;
+@property(nonatomic, strong) LATSystemHapticFeedbackController *hapticFeedbackController;
+@property(nonatomic, strong) LATSystemOrientationController *orientationController;
 @property(nonatomic, strong) LATSystemPowerController *powerController;
+@property(nonatomic, strong) LATSystemPowerMenuController *powerMenuController;
+@property(nonatomic, strong) LATSystemReachabilityController *reachabilityController;
 @property(nonatomic, strong) LATSystemRingerMuteController *ringerMuteController;
 @property(nonatomic, strong) LATSystemRingerStateResetter *ringerStateResetter;
-@property(nonatomic, strong) LATSystemUIActionController *uiActionController;
+@property(nonatomic, strong) LATSystemScreenshotController *screenshotController;
+@property(nonatomic, strong) LATSystemSwitcherController *switcherController;
 @property(nonatomic, strong) LATSystemVolumeHUDPresenter *volumeHUDPresenter;
+@property(nonatomic, strong) LATSystemWalletController *walletController;
 
 @end
 
@@ -54,8 +71,16 @@
         _homeScreenController = [[LATSystemHomeScreenController alloc] init];
         _lockScreenController =
             [[LATSystemLockScreenController alloc] initWithRuntimeStateSource:_registry.runtimeStateSource];
+        _assistantController = [[LATSystemAssistantController alloc] init];
+        _centerController = [[LATSystemCenterController alloc] init];
+        _hapticFeedbackController = [[LATSystemHapticFeedbackController alloc] init];
+        _orientationController = [[LATSystemOrientationController alloc] init];
         _powerController = [[LATSystemPowerController alloc] init];
-        _uiActionController = [[LATSystemUIActionController alloc] init];
+        _powerMenuController = [[LATSystemPowerMenuController alloc] init];
+        _reachabilityController = [[LATSystemReachabilityController alloc] init];
+        _screenshotController = [[LATSystemScreenshotController alloc] init];
+        _switcherController = [[LATSystemSwitcherController alloc] init];
+        _walletController = [[LATSystemWalletController alloc] init];
     }
     return self;
 }
@@ -120,14 +145,23 @@
     case LATSystemActionKindLockScreenToggle:
         [self.lockScreenController toggleLockScreenForListenerName:listenerName];
         break;
+    case LATSystemActionKindActivateControlCenter:
+        [self.centerController activateControlCenterForListenerName:listenerName];
+        break;
+    case LATSystemActionKindActivateNotificationCenter:
+        [self.centerController activateNotificationCenterForListenerName:listenerName];
+        break;
+    case LATSystemActionKindActivateReachability:
+        [self.reachabilityController activateReachabilityForListenerName:listenerName];
+        break;
     case LATSystemActionKindActivateSwitcher:
-        [self.uiActionController activateSwitcherForListenerName:listenerName];
+        [self.switcherController activateSwitcherForListenerName:listenerName];
         break;
     case LATSystemActionKindEditScreenshot:
-        [self.uiActionController editScreenshotForListenerName:listenerName];
+        [self.screenshotController editScreenshotForListenerName:listenerName];
         break;
     case LATSystemActionKindPowerMenu:
-        [self.uiActionController showPowerMenuForListenerName:listenerName];
+        [self.powerMenuController showPowerMenuForListenerName:listenerName];
         break;
     case LATSystemActionKindRespring:
         [self.powerController respringForListenerName:listenerName];
@@ -143,6 +177,37 @@
         break;
     case LATSystemActionKindReboot:
         [self.powerController rebootForListenerName:listenerName];
+        break;
+    case LATSystemActionKindHapticFlick:
+        [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeFlick
+                                                   listenerName:listenerName];
+        break;
+    case LATSystemActionKindHapticTap:
+        [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeTap
+                                                   listenerName:listenerName];
+        break;
+    case LATSystemActionKindHapticQuirk:
+        [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeQuirk
+                                                   listenerName:listenerName];
+        break;
+    case LATSystemActionKindRotateLandscapeLeft:
+        [self.orientationController rotateToOrientation:UIInterfaceOrientationLandscapeLeft listenerName:listenerName];
+        break;
+    case LATSystemActionKindRotateLandscapeRight:
+        [self.orientationController rotateToOrientation:UIInterfaceOrientationLandscapeRight listenerName:listenerName];
+        break;
+    case LATSystemActionKindRotatePortrait:
+        [self.orientationController rotateToOrientation:UIInterfaceOrientationPortrait listenerName:listenerName];
+        break;
+    case LATSystemActionKindRotatePortraitUpsideDown:
+        [self.orientationController rotateToOrientation:UIInterfaceOrientationPortraitUpsideDown
+                                           listenerName:listenerName];
+        break;
+    case LATSystemActionKindVirtualAssistant:
+        [self.assistantController activateVirtualAssistantForListenerName:listenerName];
+        break;
+    case LATSystemActionKindWallet:
+        [self.walletController activateWalletForListenerName:listenerName];
         break;
     }
 }
@@ -187,6 +252,15 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.lockscreen.toggle"
                                                     selectorName:@"toggleLockScreen"
                                                             kind:LATSystemActionKindLockScreenToggle],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-control-center"
+                                                    selectorName:@"showControlCenter"
+                                                            kind:LATSystemActionKindActivateControlCenter],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-notification-center"
+                                                    selectorName:@"activateNotificationCenter"
+                                                            kind:LATSystemActionKindActivateNotificationCenter],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-reachability"
+                                                    selectorName:@"activateReachability"
+                                                            kind:LATSystemActionKindActivateReachability],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-switcher"
                                                     selectorName:@"activateSwitcherFromActivator:event:"
                                                             kind:LATSystemActionKindActivateSwitcher],
@@ -211,6 +285,33 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.reboot"
                                                     selectorName:@"reboot"
                                                             kind:LATSystemActionKindReboot],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.haptic.flick"
+                                                    selectorName:@"tapticWithActivator:event:listenerName:"
+                                                            kind:LATSystemActionKindHapticFlick],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.haptic.tap"
+                                                    selectorName:@"tapticWithActivator:event:listenerName:"
+                                                            kind:LATSystemActionKindHapticTap],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.haptic.quirk"
+                                                    selectorName:@"tapticWithActivator:event:listenerName:"
+                                                            kind:LATSystemActionKindHapticQuirk],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.rotate.landscape-left"
+                                                    selectorName:@"rotateLandscapeLeft"
+                                                            kind:LATSystemActionKindRotateLandscapeLeft],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.rotate.landscape-right"
+                                                    selectorName:@"rotateLandscapeRight"
+                                                            kind:LATSystemActionKindRotateLandscapeRight],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.rotate.portrait"
+                                                    selectorName:@"rotatePortrait"
+                                                            kind:LATSystemActionKindRotatePortrait],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.rotate.portrait-upside-down"
+                                                    selectorName:@"rotatePortraitUpsideDown"
+                                                            kind:LATSystemActionKindRotatePortraitUpsideDown],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.virtual-assistant"
+                                                    selectorName:@"activateSiri"
+                                                            kind:LATSystemActionKindVirtualAssistant],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.wallet"
+                                                    selectorName:@"openWallet"
+                                                            kind:LATSystemActionKindWallet],
         ];
 
         NSMutableDictionary<NSString *, LATSystemActionCommand *> *mutableCommands =

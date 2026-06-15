@@ -35,6 +35,9 @@
         @"libactivator.lockscreen.show" : @"showLockScreen",
         @"libactivator.lockscreen.dismiss" : @"dismissLockScreen",
         @"libactivator.lockscreen.toggle" : @"toggleLockScreen",
+        @"libactivator.system.activate-control-center" : @"showControlCenter",
+        @"libactivator.system.activate-notification-center" : @"activateNotificationCenter",
+        @"libactivator.system.activate-reachability" : @"activateReachability",
         @"libactivator.system.activate-switcher" : @"activateSwitcherFromActivator:event:",
         @"libactivator.system.edit-screenshot" : @"editScreenshot",
         @"libactivator.system.power-menu" : @"powerDownView",
@@ -43,6 +46,15 @@
         @"libactivator.system.safemode" : @"safeMode",
         @"libactivator.system.powerdown" : @"powerDown",
         @"libactivator.system.reboot" : @"reboot",
+        @"libactivator.system.haptic.flick" : @"tapticWithActivator:event:listenerName:",
+        @"libactivator.system.haptic.tap" : @"tapticWithActivator:event:listenerName:",
+        @"libactivator.system.haptic.quirk" : @"tapticWithActivator:event:listenerName:",
+        @"libactivator.system.rotate.landscape-left" : @"rotateLandscapeLeft",
+        @"libactivator.system.rotate.landscape-right" : @"rotateLandscapeRight",
+        @"libactivator.system.rotate.portrait" : @"rotatePortrait",
+        @"libactivator.system.rotate.portrait-upside-down" : @"rotatePortraitUpsideDown",
+        @"libactivator.system.virtual-assistant" : @"activateSiri",
+        @"libactivator.system.wallet" : @"openWallet",
     };
     NSSet<NSString *> *supportedNames = [NSSet setWithArray:[systemActionClass supportedListenerNames]];
 
@@ -60,6 +72,21 @@
                          [selector isEqualToString:expectedSelector]
                 caseName:[NSString stringWithFormat:@"system-action-selector-%@", listenerName]
                   reason:@"System action selector mapping did not match bundled metadata"];
+    }
+
+    NSDictionary<NSString *, NSNumber *> *expectedTapticTypes = @{
+        @"libactivator.system.haptic.flick" : @0,
+        @"libactivator.system.haptic.tap" : @1,
+        @"libactivator.system.haptic.quirk" : @2,
+    };
+    for (NSString *listenerName in expectedTapticTypes) {
+        id tapticType = [activator infoDictionaryValueOfKey:@"tapticType" forListenerWithName:listenerName];
+        NSInteger actualType = [tapticType respondsToSelector:@selector(integerValue)]
+            ? [tapticType integerValue]
+            : NSIntegerMin;
+        [recorder expect:actualType == expectedTapticTypes[listenerName].integerValue
+                caseName:[NSString stringWithFormat:@"system-action-taptic-type-%@", listenerName]
+                  reason:@"System action tapticType metadata did not match the 1.9.13 mapping"];
     }
 
     [recorder expect:![activator hasListenerWithName:LAEventNameVolumeMuteOn]

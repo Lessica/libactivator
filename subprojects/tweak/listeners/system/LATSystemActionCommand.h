@@ -21,6 +21,9 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     LATSystemActionKindLockScreenShow,
     LATSystemActionKindLockScreenDismiss,
     LATSystemActionKindLockScreenToggle,
+    LATSystemActionKindActivateControlCenter,
+    LATSystemActionKindActivateNotificationCenter,
+    LATSystemActionKindActivateReachability,
     LATSystemActionKindActivateSwitcher,
     LATSystemActionKindEditScreenshot,
     LATSystemActionKindPowerMenu,
@@ -29,6 +32,15 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     LATSystemActionKindSafeMode,
     LATSystemActionKindPowerDown,
     LATSystemActionKindReboot,
+    LATSystemActionKindHapticFlick,
+    LATSystemActionKindHapticTap,
+    LATSystemActionKindHapticQuirk,
+    LATSystemActionKindRotateLandscapeLeft,
+    LATSystemActionKindRotateLandscapeRight,
+    LATSystemActionKindRotatePortrait,
+    LATSystemActionKindRotatePortraitUpsideDown,
+    LATSystemActionKindVirtualAssistant,
+    LATSystemActionKindWallet,
 };
 
 @interface LATSystemActionCommand : NSObject
