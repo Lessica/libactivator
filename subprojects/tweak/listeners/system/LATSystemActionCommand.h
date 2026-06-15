@@ -18,6 +18,17 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     LATSystemActionKindRingerUnmute,
     LATSystemActionKindRingerToggle,
     LATSystemActionKindFirstSpringBoardPage,
+    LATSystemActionKindLockScreenShow,
+    LATSystemActionKindLockScreenDismiss,
+    LATSystemActionKindLockScreenToggle,
+    LATSystemActionKindActivateSwitcher,
+    LATSystemActionKindEditScreenshot,
+    LATSystemActionKindPowerMenu,
+    LATSystemActionKindRespring,
+    LATSystemActionKindHardRespring,
+    LATSystemActionKindSafeMode,
+    LATSystemActionKindPowerDown,
+    LATSystemActionKindReboot,
 };
 
 @interface LATSystemActionCommand : NSObject

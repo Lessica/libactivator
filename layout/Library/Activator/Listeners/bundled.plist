@@ -2097,6 +2097,30 @@
 		<key>title</key>
 		<string>First SpringBoard Page</string>
 	</dict>
+	<key>libactivator.system.hard-respring</key>
+	<dict>
+		<key>description</key>
+		<string>Relaunch SpringBoard and backboardd</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>modal-ui</string>
+			<string>application-launch</string>
+			<string>media-playback</string>
+			<string>volume-change</string>
+			<string>lock-screen</string>
+			<string>virtual-button</string>
+		</array>
+		<key>group</key>
+		<string>System Actions</string>
+		<key>incompatible-events</key>
+		<array>
+			<string>libactivator.device.unlocked</string>
+		</array>
+		<key>selector</key>
+		<string>hardRespring</string>
+		<key>title</key>
+		<string>Hard Respring</string>
+	</dict>
 	<key>libactivator.system.haptic.flick</key>
 	<dict>
 		<key>description</key>

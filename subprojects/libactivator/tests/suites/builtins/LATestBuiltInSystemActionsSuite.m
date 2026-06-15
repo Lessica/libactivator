@@ -32,6 +32,17 @@
         @"libactivator.audio.unmute-ringer" : @"unmuteRinger",
         @"libactivator.audio.toggle-ringer-mute" : @"toggleRingerMute",
         @"libactivator.system.first-springboard-page" : @"firstSpringBoardPage",
+        @"libactivator.lockscreen.show" : @"showLockScreen",
+        @"libactivator.lockscreen.dismiss" : @"dismissLockScreen",
+        @"libactivator.lockscreen.toggle" : @"toggleLockScreen",
+        @"libactivator.system.activate-switcher" : @"activateSwitcherFromActivator:event:",
+        @"libactivator.system.edit-screenshot" : @"editScreenshot",
+        @"libactivator.system.power-menu" : @"powerDownView",
+        @"libactivator.system.respring" : @"respring",
+        @"libactivator.system.hard-respring" : @"hardRespring",
+        @"libactivator.system.safemode" : @"safeMode",
+        @"libactivator.system.powerdown" : @"powerDown",
+        @"libactivator.system.reboot" : @"reboot",
     };
     NSSet<NSString *> *supportedNames = [NSSet setWithArray:[systemActionClass supportedListenerNames]];
 

@@ -12,9 +12,12 @@
 #import "LATBuiltInRegistry.h"
 #import "system/LATSystemActionCommand.h"
 #import "system/LATSystemHomeScreenController.h"
+#import "system/LATSystemLockScreenController.h"
 #import "system/LATSystemNowPlayingApplicationLauncher.h"
+#import "system/LATSystemPowerController.h"
 #import "system/LATSystemRingerMuteController.h"
 #import "system/LATSystemRingerStateResetter.h"
+#import "system/LATSystemUIActionController.h"
 #import "system/LATSystemVolumeHUDPresenter.h"
 
 #import <HBLog.h>
@@ -26,9 +29,12 @@
 
 // Action executors
 @property(nonatomic, strong) LATSystemHomeScreenController *homeScreenController;
+@property(nonatomic, strong) LATSystemLockScreenController *lockScreenController;
 @property(nonatomic, strong) LATSystemNowPlayingApplicationLauncher *nowPlayingApplicationLauncher;
+@property(nonatomic, strong) LATSystemPowerController *powerController;
 @property(nonatomic, strong) LATSystemRingerMuteController *ringerMuteController;
 @property(nonatomic, strong) LATSystemRingerStateResetter *ringerStateResetter;
+@property(nonatomic, strong) LATSystemUIActionController *uiActionController;
 @property(nonatomic, strong) LATSystemVolumeHUDPresenter *volumeHUDPresenter;
 
 @end
@@ -46,6 +52,10 @@
         _ringerStateResetter = [[LATSystemRingerStateResetter alloc] init];
         _ringerMuteController = [[LATSystemRingerMuteController alloc] initWithRegistry:_registry];
         _homeScreenController = [[LATSystemHomeScreenController alloc] init];
+        _lockScreenController =
+            [[LATSystemLockScreenController alloc] initWithRuntimeStateSource:_registry.runtimeStateSource];
+        _powerController = [[LATSystemPowerController alloc] init];
+        _uiActionController = [[LATSystemUIActionController alloc] init];
     }
     return self;
 }
@@ -101,6 +111,39 @@
     case LATSystemActionKindFirstSpringBoardPage:
         [self.homeScreenController resetToFirstSpringBoardPageForListenerName:listenerName];
         break;
+    case LATSystemActionKindLockScreenShow:
+        [self.lockScreenController showLockScreenForListenerName:listenerName];
+        break;
+    case LATSystemActionKindLockScreenDismiss:
+        [self.lockScreenController dismissLockScreenForListenerName:listenerName];
+        break;
+    case LATSystemActionKindLockScreenToggle:
+        [self.lockScreenController toggleLockScreenForListenerName:listenerName];
+        break;
+    case LATSystemActionKindActivateSwitcher:
+        [self.uiActionController activateSwitcherForListenerName:listenerName];
+        break;
+    case LATSystemActionKindEditScreenshot:
+        [self.uiActionController editScreenshotForListenerName:listenerName];
+        break;
+    case LATSystemActionKindPowerMenu:
+        [self.uiActionController showPowerMenuForListenerName:listenerName];
+        break;
+    case LATSystemActionKindRespring:
+        [self.powerController respringForListenerName:listenerName];
+        break;
+    case LATSystemActionKindHardRespring:
+        [self.powerController hardRespringForListenerName:listenerName];
+        break;
+    case LATSystemActionKindSafeMode:
+        [self.powerController safeModeForListenerName:listenerName];
+        break;
+    case LATSystemActionKindPowerDown:
+        [self.powerController powerDownForListenerName:listenerName];
+        break;
+    case LATSystemActionKindReboot:
+        [self.powerController rebootForListenerName:listenerName];
+        break;
     }
 }
 
@@ -135,6 +178,39 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.first-springboard-page"
                                                     selectorName:@"firstSpringBoardPage"
                                                             kind:LATSystemActionKindFirstSpringBoardPage],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.lockscreen.show"
+                                                    selectorName:@"showLockScreen"
+                                                            kind:LATSystemActionKindLockScreenShow],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.lockscreen.dismiss"
+                                                    selectorName:@"dismissLockScreen"
+                                                            kind:LATSystemActionKindLockScreenDismiss],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.lockscreen.toggle"
+                                                    selectorName:@"toggleLockScreen"
+                                                            kind:LATSystemActionKindLockScreenToggle],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-switcher"
+                                                    selectorName:@"activateSwitcherFromActivator:event:"
+                                                            kind:LATSystemActionKindActivateSwitcher],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.edit-screenshot"
+                                                    selectorName:@"editScreenshot"
+                                                            kind:LATSystemActionKindEditScreenshot],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.power-menu"
+                                                    selectorName:@"powerDownView"
+                                                            kind:LATSystemActionKindPowerMenu],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.respring"
+                                                    selectorName:@"respring"
+                                                            kind:LATSystemActionKindRespring],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.hard-respring"
+                                                    selectorName:@"hardRespring"
+                                                            kind:LATSystemActionKindHardRespring],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.safemode"
+                                                    selectorName:@"safeMode"
+                                                            kind:LATSystemActionKindSafeMode],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.powerdown"
+                                                    selectorName:@"powerDown"
+                                                            kind:LATSystemActionKindPowerDown],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.reboot"
+                                                    selectorName:@"reboot"
+                                                            kind:LATSystemActionKindReboot],
         ];
 
         NSMutableDictionary<NSString *, LATSystemActionCommand *> *mutableCommands =

@@ -15,10 +15,10 @@
 - 1.9.13 Public API、常量、通知、headers、import 入口和 ABI skeleton 已对齐。
 - SpringBoard authoritative backend、state/config IPC、event dispatch IPC、runtime mode、no-touch deferral、unlock-to-send callback、metadata/resource lookup、localization fallback、listener metadata cache 已具备基础能力。
 - event metadata 当前 123 项已 staged：121 项来自 1.9.13，`libactivator.now-playing.playing` / `libactivator.now-playing.paused` 是 2.x additive。
-- listener/action metadata 当前 110 项已 staged：1.9.13 的 117 项中移除 12 个 obsolete/excluded 项，新增 5 个 2.x additive listener/action name。
+- listener/action metadata 当前 111 项已 staged：1.9.13 的 117 项中移除 12 个 obsolete/excluded 项，新增 6 个 2.x additive listener/action name。
 - Events / Listeners resource metadata key 已完成 cross-check：常规展示、版本过滤、capability 过滤、mode compatibility、power/no-touch gate 等 key 已由 resource/core/dispatch layer 消费；`is-unprotected`、完整 unlock sequence、raw-event back、preview/haptic 等未完全兑现项已集中记录到 tracker。
 - 阶段 0 资源模型补强已完成，`Resources` stable suite 覆盖 bundled catalog、目录式 third-party `Info.plist`、required capabilities、small-icons path fallback 和排除项。
-- 阶段 1 / 阶段 3 listener/action 低风险实施面已完成：No-op、URL actions、HID-backed hardware actions、低风险 system actions、telephony call control、dynamic application listeners 已注册真实 listener object。
+- 阶段 1 / 阶段 3 listener/action 已完成：No-op、URL actions、HID-backed hardware actions、已验证 system actions、lock screen actions、power/recovery actions、telephony call control、dynamic application listeners 已注册真实 listener object。高风险 system actions 的真实副作用只通过真机手工验证，不进入 stable fake path；首轮真机验证无效的 clear-switcher、lock-and-wipe-credentials 以及 SpringBoard 进程内不可执行的 soft-reboot 当前退回 blocked。
 - 阶段 3 状态/通知型 event source 第一批已完成并收口：device locked/unlocked、power connected/disconnected、headset connected/disconnected、media playback、network joined/left Wi-Fi。
 - 阶段 4 已完成 hardware button、status bar、top slide / edge gesture、fingerprint sensor、force touch、drag-along / drag-off edge events。当前继续调用原始系统实现，不做 handled-default interception。
 
@@ -40,11 +40,10 @@
 
 可后续小切片推进的 blocked listener family：
 
-1. Modal/system UI actions：Control Center、Notification Center、Switcher、Reachability、Wallet、Assistant/Voice Control、keyboard dictation、screenshot editor、previous app、clear switcher 等。每项必须先用 Frida/IDA 确认现代 SpringBoard / system service 入口。
-2. Lock screen actions：`lockscreen.show` / `dismiss` / `toggle`。需要单独设计 passcode、biometric、display power、unlock-to-send 和 CoverSheet 状态边界。
-3. Power / recovery actions：power down、reboot、respring、safe mode、lock-and-wipe-credentials。高风险，必须先确认 owner 接受的实现方式和测试边界。
-4. Rotation actions：四个 orientation action。需要确认现代 orientation policy 与 SpringBoard 同步接口。
-5. Compose / camera shutter / haptics：Mail/SMS/Notes compose、camera shutter、system/watch haptics。按设备能力和目标 App 逐项验证，不作为默认主线。
+1. Modal/system UI actions：Control Center、Notification Center、Reachability、clear switcher、Wallet、Assistant/Voice Control、keyboard dictation、previous app、show now playing bar 等。每项必须先用 Frida/IDA 确认现代 SpringBoard / system service 入口；`clear-switcher` 的首轮路径已经真机验证无效，不能继续直接注册。
+2. Rotation actions：四个 orientation action。需要确认现代 orientation policy 与 SpringBoard 同步接口。
+3. Compose / camera shutter / haptics / residual lock action：Mail/SMS/Notes compose、camera shutter、system/watch haptics、lock-and-wipe-credentials。按设备能力和目标 App 逐项验证，不作为默认主线。
+4. Additive power action：soft-reboot。Dopamine `jbctl reboot_userspace` 的 `reboot3(RB2_USERREBOOT)` 参考路径不能直接在 SpringBoard 进程内执行，后续需要非 SpringBoard helper 或合适 privileged execution path。
 
 不恢复或架构外：
 
