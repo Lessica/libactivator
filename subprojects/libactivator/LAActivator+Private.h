@@ -48,7 +48,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Statistics
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 - (NSDictionary<NSString *, NSNumber *> *)la_eventDispatchCounts;
 - (NSDictionary<NSString *, NSNumber *> *)la_listenerReceiveCounts;
 - (NSDictionary<NSString *, NSNumber *> *)la_eventAbortCounts;

@@ -13,7 +13,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class LAActivator;
 @class LAEvent;
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 #define LA_IPC_EXTERN extern __attribute__((visibility("default")))
 #else
 #define LA_IPC_EXTERN extern __attribute__((visibility("hidden")))
@@ -95,7 +95,7 @@ LA_IPC_EXTERN NSString *const LAIPCMessageListenerSmallIconData;
 LA_IPC_EXTERN NSString *const LAIPCMessageRequestListenerRemoval;
 LA_IPC_EXTERN NSString *const LAIPCMessageRemoveEvent;
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 LA_IPC_EXTERN NSString *const LAIPCMessageTesting;
 LA_IPC_EXTERN NSString *const LAIPCTestingCommandPing;
 LA_IPC_EXTERN NSString *const LAIPCTestingCommandCleanup;
@@ -125,7 +125,7 @@ LA_IPC_EXTERN NSString *const LAIPCKeyPreferenceValue;
 LA_IPC_EXTERN NSString *const LAIPCKeyInfoDictionaryKey;
 LA_IPC_EXTERN NSString *const LAIPCKeyScale;
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingCommand;
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingSuites;
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingFailures;
@@ -136,7 +136,7 @@ LA_IPC_EXTERN NSString *const LAIPCKeyTestingFailureCount;
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingSkipCount;
 #endif
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 LA_IPC_EXTERN NSString *const LAIPCMessageEventDispatchCounts;
 LA_IPC_EXTERN NSString *const LAIPCMessageListenerReceiveCounts;
 LA_IPC_EXTERN NSString *const LAIPCMessageEventAbortCounts;

@@ -18,7 +18,7 @@ scripts/run-tests.sh
 scripts/run-tests.sh
 ```
 
-`scripts/run-tests.sh` 的职责是构建并安装 `DEBUG=1` testing package，然后通过 SSH 运行设备上已安装的 `/usr/libexec/libactivator/libactivator-tests run`。脚本应报告 SpringBoard pid 前后变化，pid 变化即视为 SpringBoard 重启。
+`scripts/run-tests.sh` 的职责是构建并安装 `LIBACTIVATOR_TEST_SUPPORT=1` testing package，然后通过 SSH 运行设备上已安装的 `/usr/libexec/libactivator/libactivator-tests run`。脚本应报告 SpringBoard pid 前后变化，pid 变化即视为 SpringBoard 重启。
 
 ## 执行责任划分
 
@@ -65,7 +65,7 @@ watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail �
 - 需要真实 listener object、data source、dispatch 回调、built-in action 对象、touch drain 的测试，如果行为由 SpringBoard runtime owner 承载，应放入 SpringBoard-owned stable suite，并优先验证外层 dispatch 行为，不把 tweak 内部 tracker 作为 libactivator 单元测试对象。
 - built-in action stable suite 只覆盖代码 allowlist、metadata/selector gate、runtime registration、obsolete/unsupported name 不注册，以及不产生设备副作用的纯 dispatch 语义。会打开 URL、启动 App、投递 HID、显示系统 UI、修改 ringer/audio 状态的行为不进入 stable fake path；应通过 Frida probe、`run-device-runtime` 或手工真机清单验证。
 - 需要打开 App、回主屏幕、锁屏、解锁、App Switcher、强杀 App 的测试默认不进 stable，先放 `run-device-runtime` 或手工观察。
-- 为测试而新增 production 入口必须先证明必要性，并用 `DEBUG` 宏隔离。普通构建不能包含 testing IPC、testing path 或测试自动化接口。
+- 为测试而新增 production 入口必须先证明必要性，并用 `LIBACTIVATOR_TEST_SUPPORT` 宏隔离。普通构建不能包含 testing IPC、testing path 或测试自动化接口。
 
 ## 当前专项清单
 

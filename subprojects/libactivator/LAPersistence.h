@@ -29,7 +29,7 @@ __attribute__((visibility("hidden")))
 
 #pragma mark - Testing
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 + (instancetype)testingPersistence;
 #endif
 

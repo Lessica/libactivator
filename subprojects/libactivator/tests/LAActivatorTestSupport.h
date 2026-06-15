@@ -6,7 +6,7 @@
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 
 #import <Foundation/Foundation.h>
 

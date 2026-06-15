@@ -34,7 +34,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Testing
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 - (NSDictionary<NSString *, id> *)testingDebugDictionary;
 #endif
 

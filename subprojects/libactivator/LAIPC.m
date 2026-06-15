@@ -82,7 +82,7 @@ NSString *const LAIPCMessageListenerSmallIconData = @"libactivator.request.liste
 NSString *const LAIPCMessageRequestListenerRemoval = @"libactivator.request.listener-request-removal";
 NSString *const LAIPCMessageRemoveEvent = @"libactivator.request.remove-event";
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 NSString *const LAIPCMessageTesting = @"libactivator.testing";
 NSString *const LAIPCTestingCommandPing = @"ping";
 NSString *const LAIPCTestingCommandCleanup = @"cleanup";
@@ -110,7 +110,7 @@ NSString *const LAIPCKeyPreferenceValue = @"PreferenceValue";
 NSString *const LAIPCKeyInfoDictionaryKey = @"InfoDictionaryKey";
 NSString *const LAIPCKeyScale = @"Scale";
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 NSString *const LAIPCKeyTestingCommand = @"TestingCommand";
 NSString *const LAIPCKeyTestingSuites = @"TestingSuites";
 NSString *const LAIPCKeyTestingFailures = @"TestingFailures";
@@ -121,7 +121,7 @@ NSString *const LAIPCKeyTestingFailureCount = @"TestingFailureCount";
 NSString *const LAIPCKeyTestingSkipCount = @"TestingSkipCount";
 #endif
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 NSString *const LAIPCMessageEventDispatchCounts = @"libactivator.request.event-dispatch-counts";
 NSString *const LAIPCMessageListenerReceiveCounts = @"libactivator.request.listener-receive-counts";
 NSString *const LAIPCMessageEventAbortCounts = @"libactivator.request.event-abort-counts";

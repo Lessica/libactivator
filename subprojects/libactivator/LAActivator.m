@@ -42,7 +42,7 @@
 // Caches
 @property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 // Dispatch diagnostics
 @property(nonatomic, strong) dispatch_queue_t dispatchDiagnosticsQueue;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *eventDispatchCounts;
@@ -116,7 +116,7 @@ LAActivator *LASharedActivator;
             [self la_registerSystemNotificationBridgeIfNeeded];
         }
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
         _dispatchDiagnosticsQueue =
             dispatch_queue_create("libactivator.dispatch-diagnostics", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _eventDispatchCounts = [NSMutableDictionary dictionary];
@@ -130,7 +130,7 @@ LAActivator *LASharedActivator;
 
 - (LAPersistence *)defaultPersistence {
     LAPersistence *persistence;
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
     persistence = [LAPersistence testingPersistence];
 #else
     persistence = [LAPersistence defaultPersistence];
@@ -457,7 +457,7 @@ LAActivator *LASharedActivator;
     if (!self.runningInsideSpringBoard || !event) {
         return;
     }
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
     [self la_incrementEventDispatchCountForEvent:event];
 #endif
 
@@ -503,12 +503,12 @@ LAActivator *LASharedActivator;
 
 - (void)la_deliverEvent:(LAEvent *)event toListener:(id<LAListener>)listener listenerName:(NSString *)listenerName {
     if ([listener respondsToSelector:@selector(activator:receiveEvent:forListenerName:)]) {
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
         [self la_incrementListenerReceiveCountForName:listenerName];
 #endif
         [listener activator:self receiveEvent:event forListenerName:listenerName];
     } else if ([listener respondsToSelector:@selector(activator:receiveEvent:)]) {
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
         [self la_incrementListenerReceiveCountForName:listenerName];
 #endif
         [listener activator:self receiveEvent:event];
@@ -574,19 +574,19 @@ LAActivator *LASharedActivator;
     if (!self.runningInsideSpringBoard || !event) {
         return;
     }
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
     [self la_incrementEventAbortCountForEvent:event];
 #endif
 
     for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
         id<LAListener> listener = [self listenerForName:listenerName];
         if ([listener respondsToSelector:@selector(activator:abortEvent:forListenerName:)]) {
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
             [self la_incrementListenerAbortCountForName:listenerName];
 #endif
             [listener activator:self abortEvent:event forListenerName:listenerName];
         } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
             [self la_incrementListenerAbortCountForName:listenerName];
 #endif
             [listener activator:self abortEvent:event];
@@ -611,13 +611,13 @@ LAActivator *LASharedActivator;
     }
     if (abort) {
         if ([listener respondsToSelector:@selector(activator:abortEvent:forListenerName:)]) {
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
             [self la_incrementEventAbortCountForEvent:event];
             [self la_incrementListenerAbortCountForName:listenerName];
 #endif
             [listener activator:self abortEvent:event forListenerName:listenerName];
         } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
             [self la_incrementEventAbortCountForEvent:event];
             [self la_incrementListenerAbortCountForName:listenerName];
 #endif
@@ -1788,7 +1788,7 @@ LAActivator *LASharedActivator;
 
 #pragma mark - Statistics
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 - (NSDictionary<NSString *, NSNumber *> *)la_snapshotDispatchCounts:
     (NSMutableDictionary<NSString *, NSNumber *> *)counts {
     __block NSDictionary<NSString *, NSNumber *> *snapshot = nil;

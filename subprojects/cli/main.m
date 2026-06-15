@@ -10,14 +10,20 @@
 
 #import <Activator/Activator.h>
 
+#ifndef PACKAGE_VERSION
+#define PACKAGE_VERSION "unknown"
+#endif
+
 @interface LAActivator (LegacyCompatibility)
 - (nullable id)_getObjectForPreference:(NSString *)preference;
 - (void)_setObject:(nullable id)value forPreference:(NSString *)preference;
+#if LIBACTIVATOR_TEST_SUPPORT
 - (NSDictionary<NSString *, NSNumber *> *)la_eventDispatchCounts;
 - (NSDictionary<NSString *, NSNumber *> *)la_listenerReceiveCounts;
 - (NSDictionary<NSString *, NSNumber *> *)la_eventAbortCounts;
 - (NSDictionary<NSString *, NSNumber *> *)la_listenerAbortCounts;
 - (void)la_resetDispatchCounts;
+#endif
 @end
 
 @interface LACommandLineTool : NSObject
@@ -101,6 +107,7 @@
         return [self runGetCommandWithKey:argument];
     }
     if ([command isEqualToString:@"activate"]) {
+        [self warnIfUnknownEventName:argument];
         LAEvent *event = [self eventWithCurrentModeNamed:argument];
         [_activator sendEventToListener:event];
         return [self exitStatusForEvent:event
@@ -117,13 +124,14 @@
                       failureMessage:[NSString stringWithFormat:@"Listener did not handle event: %@", argument ?: @""]];
     }
     if ([command isEqualToString:@"deactivate"]) {
+        [self warnIfUnknownEventName:argument];
         LAEvent *event = [self eventWithCurrentModeNamed:argument];
         [_activator sendDeactivateEventToListeners:event];
         return [self
             exitStatusForEvent:event
                 failureMessage:[NSString stringWithFormat:@"Deactivate event was not handled: %@", argument ?: @""]];
     }
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
     if ([command isEqualToString:@"counts"]) {
         return [self runCountsCommandWithArgument:argument];
     }
@@ -141,13 +149,19 @@
     }
 #if DEBUG
     if ([command isEqualToString:@"set-all"]) {
+        [self warnIfUnknownEventName:firstArgument];
+        [self warnIfUnknownListenerName:secondArgument];
         return [self runSetAllModesCommandWithEventName:firstArgument listenerName:secondArgument];
     }
+#endif
+#if LIBACTIVATOR_TEST_SUPPORT
     if ([command isEqualToString:@"counts"]) {
+        [self warnIfUnknownName:secondArgument forCountKind:firstArgument];
         return [self runCountsCommandWithKind:firstArgument name:secondArgument];
     }
 #endif
     if ([command isEqualToString:@"activate"]) {
+        [self warnIfUnknownEventName:firstArgument];
         if (![self validateListenerName:secondArgument]) {
             return 1;
         }
@@ -183,7 +197,9 @@
     }
     return 0;
 }
+#endif
 
+#if LIBACTIVATOR_TEST_SUPPORT
 - (int)runCountsCommandWithArgument:(NSString *)argument {
     if ([argument isEqualToString:@"events"]) {
         [self printCounts:self.activator.la_eventDispatchCounts];
@@ -239,7 +255,11 @@
     if ([self.activator hasListenerWithName:listenerName]) {
         return YES;
     }
+#if DEBUG
+    [self printUnknownWarningForKind:@"listener" name:listenerName];
+#else
     fprintf(stderr, "Unknown listener: %s\n", [listenerName UTF8String]);
+#endif
     return NO;
 }
 
@@ -260,10 +280,40 @@
 }
 
 #if DEBUG
+- (void)warnIfUnknownEventName:(NSString *)eventName {
+    if (eventName.length == 0 || [self.activator hasEventWithName:eventName]) {
+        return;
+    }
+    [self printUnknownWarningForKind:@"event" name:eventName];
+}
+
+- (void)warnIfUnknownListenerName:(NSString *)listenerName {
+    if (listenerName.length == 0 || [self.activator hasListenerWithName:listenerName]) {
+        return;
+    }
+    [self printUnknownWarningForKind:@"listener" name:listenerName];
+}
+
+- (void)warnIfUnknownName:(NSString *)name forCountKind:(NSString *)kind {
+    if ([kind isEqualToString:@"event"] || [kind isEqualToString:@"abort-event"]) {
+        [self warnIfUnknownEventName:name];
+        return;
+    }
+    if ([kind isEqualToString:@"listener"] || [kind isEqualToString:@"abort-listener"]) {
+        [self warnIfUnknownListenerName:name];
+    }
+}
+
+- (void)printUnknownWarningForKind:(NSString *)kind name:(NSString *)name {
+    fprintf(stderr, "Warning: unknown %s: %s\n", [kind UTF8String], [name UTF8String]);
+}
+
 - (NSArray<NSString *> *)allAssignmentModes {
     return @[ LAEventModeSpringBoard, LAEventModeApplication, LAEventModeLockScreen ];
 }
+#endif
 
+#if LIBACTIVATOR_TEST_SUPPORT
 - (void)printCounts:(NSDictionary<NSString *, NSNumber *> *)counts {
     NSArray<NSString *> *keys = [counts.allKeys sortedArrayUsingSelector:@selector(compare:)];
     for (NSString *key in keys) {
@@ -284,31 +334,56 @@
 }
 #endif
 
-- (void)printUsage {
-    fprintf(stderr, "Activator version: %ld\n", (long)self.activator.version);
-    fputs("Usage:\n", stderr);
-    fputs("\tactivator listeners\n", stderr);
-    fputs("\tactivator events\n", stderr);
-    fputs("\tactivator modes\n", stderr);
-    fputs("\tactivator current-mode\n", stderr);
-    fputs("\tactivator current-app\n", stderr);
-    fputs("\tactivator get <key>\n", stderr);
-    fputs("\tactivator set <key> <value>\n", stderr);
-#if DEBUG
-    fputs("\tactivator set-all <event> <listener>\n", stderr);
-    fputs("\tactivator counts event <event>\n", stderr);
-    fputs("\tactivator counts listener <listener>\n", stderr);
-    fputs("\tactivator counts abort-event <event>\n", stderr);
-    fputs("\tactivator counts abort-listener <listener>\n", stderr);
-    fputs("\tactivator counts events\n", stderr);
-    fputs("\tactivator counts listeners\n", stderr);
-    fputs("\tactivator counts abort-events\n", stderr);
-    fputs("\tactivator counts abort-listeners\n", stderr);
-    fputs("\tactivator counts reset\n", stderr);
+#if !DEBUG
+- (void)warnIfUnknownEventName:(NSString *)eventName {
+    (void)eventName;
+}
+
+- (void)warnIfUnknownName:(NSString *)name forCountKind:(NSString *)kind {
+    (void)name;
+    (void)kind;
+}
 #endif
-    fputs("\tactivator activate <event> [<listener>]\n", stderr);
-    fputs("\tactivator send <listener>\n", stderr);
-    fputs("\tactivator deactivate <event>\n", stderr);
+
+- (void)printUsage {
+    fprintf(stderr, "Activator v%s\n", PACKAGE_VERSION);
+    fputs("\n", stderr);
+    fputs("Usage:\n", stderr);
+    fputs("  activator <command> [arguments]\n", stderr);
+    fputs("\n", stderr);
+    fputs("Commands:\n", stderr);
+    [self printUsageCommand:@"listeners" description:@"List available listeners."];
+    [self printUsageCommand:@"events" description:@"List available events."];
+    [self printUsageCommand:@"modes" description:@"List available event modes."];
+    [self printUsageCommand:@"current-mode" description:@"Print the active event mode."];
+    [self printUsageCommand:@"current-app" description:@"Print the active application identifier."];
+    [self printUsageCommand:@"get <key>" description:@"Print a compatibility preference value."];
+    [self printUsageCommand:@"set <key> <value>" description:@"Set a compatibility preference value."];
+    [self printUsageCommand:@"activate <event> [<listener>]" description:@"Send an activation event."];
+    [self printUsageCommand:@"send <listener>" description:@"Send the default event to a listener."];
+    [self printUsageCommand:@"deactivate <event>" description:@"Send a deactivation event."];
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+    fputs("\n", stderr);
+    fputs("Debug commands:\n", stderr);
+#if DEBUG
+    [self printUsageCommand:@"set-all <event> <listener>" description:@"Assign a listener to an event in all modes."];
+#endif
+#if LIBACTIVATOR_TEST_SUPPORT
+    [self printUsageCommand:@"counts event <event>" description:@"Print the dispatch count for an event."];
+    [self printUsageCommand:@"counts listener <listener>" description:@"Print the receive count for a listener."];
+    [self printUsageCommand:@"counts abort-event <event>" description:@"Print the abort count for an event."];
+    [self printUsageCommand:@"counts abort-listener <listener>" description:@"Print the abort count for a listener."];
+    [self printUsageCommand:@"counts events" description:@"List non-zero event dispatch counts."];
+    [self printUsageCommand:@"counts listeners" description:@"List non-zero listener receive counts."];
+    [self printUsageCommand:@"counts abort-events" description:@"List non-zero event abort counts."];
+    [self printUsageCommand:@"counts abort-listeners" description:@"List non-zero listener abort counts."];
+    [self printUsageCommand:@"counts reset" description:@"Reset all dispatch counters."];
+#endif
+#endif
+}
+
+- (void)printUsageCommand:(NSString *)command description:(NSString *)description {
+    fprintf(stderr, "  %-36s %s\n", [command UTF8String], [description UTF8String]);
 }
 
 - (void)printObject:(id)object {

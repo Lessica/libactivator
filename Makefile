@@ -19,15 +19,15 @@ export THEOS_STAGING_DIR
 internal-stage::
 	$(ECHO_NOTHING)scripts/stage-public-headers.sh$(ECHO_END)
 
-ifeq ($(DEBUG),1)
-DEBUG_TEST_MAKE_GOALS := all stage
+ifeq ($(LIBACTIVATOR_TEST_SUPPORT),1)
+TEST_SUPPORT_MAKE_GOALS := all stage
 ifneq ($(filter commands,$(MAKECMDGOALS)),)
-DEBUG_TEST_MAKE_GOALS := commands stage
+TEST_SUPPORT_MAKE_GOALS := commands stage
 else ifneq ($(filter clean,$(MAKECMDGOALS)),)
-DEBUG_TEST_MAKE_GOALS := clean all stage
+TEST_SUPPORT_MAKE_GOALS := clean all stage
 endif
 after-stage::
-	$(ECHO_NOTHING)$(MAKE) -C tests THEOS_PROJECT_DIR=$(CURDIR)/tests $(DEBUG_TEST_MAKE_GOALS) DEBUG=1$(ECHO_END)
+	$(ECHO_NOTHING)$(MAKE) -C tests THEOS_PROJECT_DIR=$(CURDIR)/tests $(TEST_SUPPORT_MAKE_GOALS) LIBACTIVATOR_TEST_SUPPORT=1$(ECHO_END)
 endif
 
 include $(THEOS_MAKE_PATH)/package.mk

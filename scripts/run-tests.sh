@@ -64,7 +64,7 @@ if [ -n "$expected_architecture" ]; then
 fi
 
 # shellcheck disable=SC1010
-gmake clean do DEBUG=1
+gmake clean do LIBACTIVATOR_TEST_SUPPORT=1
 
 springboard_pid_before="$(wait_for_springboard_pid)"
 echo "[tests] SpringBoard pid before runner: ${springboard_pid_before}"

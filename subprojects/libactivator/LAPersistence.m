@@ -18,7 +18,7 @@
     return [[self alloc] initWithFilePath:jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")];
 }
 
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 + (instancetype)testingPersistence {
     return [[self alloc] initWithFilePath:jbroot(@"/var/mobile/Library/Preferences/libactivator-tests.plist")];
 }

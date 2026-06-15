@@ -68,7 +68,7 @@
 
 ## 数据、资源与缓存
 
-- v2 运行时偏好路径固定为 `jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")`；测试构建使用隔离路径，不读取或写入用户真实配置。
+- v2 运行时偏好路径固定为 `jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")`；`LIBACTIVATOR_TEST_SUPPORT=1` 测试构建使用隔离路径，不读取或写入用户真实配置。
 - 非 SpringBoard 客户端不得写运行时持久化文件。
 - 无效或不可读 plist 当作不存在；不删除、不重命名、不备份、不立即覆盖。
 - 配置变更先更新 SpringBoard in-memory state，磁盘写入可以在 main run loop 合并 flush。读取 Public API 或 IPC 应返回最新内存状态，直接读取 plist 的外部代码可能暂时看到旧磁盘快照。

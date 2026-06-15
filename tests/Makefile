@@ -13,7 +13,7 @@ libactivator-tests_FILES += runner/LATestRunnerResultPrinter.m
 libactivator-tests_FILES += runner/LATestRuntimeStatePrinter.m
 libactivator-tests_FILES += runner/LATestSpringBoardClient.m
 libactivator-tests_CFLAGS += -fobjc-arc
-libactivator-tests_CFLAGS += -DDEBUG=1
+libactivator-tests_CFLAGS += -DLIBACTIVATOR_TEST_SUPPORT=1
 libactivator-tests_CFLAGS += -I.
 libactivator-tests_CFLAGS += -Irunner
 libactivator-tests_CFLAGS += -I../include

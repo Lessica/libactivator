@@ -9,7 +9,7 @@
 #import "LAActivator+Private.h"
 #import "LAIPC.h"
 #import "LAIPCCodec.h"
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
 #import "LAActivatorTestSupport.h"
 #endif
 
@@ -111,10 +111,10 @@
         LAIPCMessageListenerSmallIconData,
         LAIPCMessageRequestListenerRemoval,
         LAIPCMessageRemoveEvent,
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
         LAIPCMessageTesting,
 #endif
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
         LAIPCMessageEventDispatchCounts,
         LAIPCMessageListenerReceiveCounts,
         LAIPCMessageEventAbortCounts,
@@ -168,7 +168,7 @@
 #pragma mark - Message Handling
 
 - (NSDictionary *)handleTestingMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
     if ([messageName isEqualToString:LAIPCMessageTesting]) {
         return [LAActivatorTestSupport handleCommandWithUserInfo:userInfo activator:_activator];
     }
@@ -291,7 +291,7 @@
     if ([messageName isEqualToString:LAIPCMessageCurrentApplicationDisplayIdentifier]) {
         return [LAIPCCodec replyWithOK:YES value:_activator.displayIdentifierForCurrentApplication ?: @""];
     }
-#if DEBUG
+#if LIBACTIVATOR_TEST_SUPPORT
     if ([messageName isEqualToString:LAIPCMessageEventDispatchCounts]) {
         return [LAIPCCodec replyWithOK:YES value:[_activator la_eventDispatchCounts]];
     }
