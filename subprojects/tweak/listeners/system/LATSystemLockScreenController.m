@@ -37,17 +37,16 @@
 }
 
 - (BOOL)showLockScreenForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        SBLockScreenManager *manager = [self lockScreenManagerForListenerName:listenerName];
-        if (!manager) {
-            return;
-        }
-        if (![manager respondsToSelector:@selector(remoteLock:)]) {
-            HBLogError(@"SBLockScreenManager does not support remoteLock: for system action %@", listenerName ?: @"");
-            return;
-        }
-        [manager remoteLock:YES];
-    }];
+    SBLockScreenManager *manager = [self lockScreenManagerForListenerName:listenerName];
+    if (!manager) {
+        return YES;
+    }
+    if (![manager respondsToSelector:@selector(remoteLock:)]) {
+        HBLogError(@"SBLockScreenManager does not support remoteLock: for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    [manager remoteLock:YES];
+    return YES;
 }
 
 - (BOOL)dismissLockScreenForListenerName:(NSString *)listenerName {
@@ -69,37 +68,39 @@
     LATRuntimeStateSource *runtimeStateSource = self.runtimeStateSource;
     if (!runtimeStateSource) {
         HBLogWarn(@"Runtime state source is unavailable for lock screen dismiss action %@", listenerName ?: @"");
-        return [self performOnMainQueueForListenerName:listenerName block:unlockBlock];
+        unlockBlock();
+        return YES;
     }
 
     if ([runtimeStateSource screenIsOn]) {
-        return [self performOnMainQueueForListenerName:listenerName block:unlockBlock];
+        unlockBlock();
+        return YES;
     }
 
     if (![runtimeStateSource wakeScreenForReason:(listenerName ?: @"libactivator.lockscreen.dismiss")
                                       completion:unlockBlock]) {
         HBLogWarn(@"Screen wake was not started for lock screen dismiss action %@", listenerName ?: @"");
-        return [self performOnMainQueueForListenerName:listenerName block:unlockBlock];
+        unlockBlock();
+        return YES;
     }
     return YES;
 }
 
 - (BOOL)toggleLockScreenForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        SBLockScreenManager *manager = [self lockScreenManagerForListenerName:listenerName];
-        if (!manager) {
-            return;
-        }
-        if (![manager respondsToSelector:@selector(isUILocked)]) {
-            HBLogError(@"SBLockScreenManager does not support isUILocked for system action %@", listenerName ?: @"");
-            return;
-        }
-        if ([manager isUILocked]) {
-            [self dismissLockScreenForListenerName:listenerName];
-        } else {
-            [self showLockScreenForListenerName:listenerName];
-        }
-    }];
+    SBLockScreenManager *manager = [self lockScreenManagerForListenerName:listenerName];
+    if (!manager) {
+        return YES;
+    }
+    if (![manager respondsToSelector:@selector(isUILocked)]) {
+        HBLogError(@"SBLockScreenManager does not support isUILocked for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    if ([manager isUILocked]) {
+        [self dismissLockScreenForListenerName:listenerName];
+    } else {
+        [self showLockScreenForListenerName:listenerName];
+    }
+    return YES;
 }
 
 - (nullable SBLockScreenManager *)lockScreenManagerForListenerName:(NSString *)listenerName {
@@ -109,18 +110,6 @@
         return nil;
     }
     return [(id)managerClass sharedInstance];
-}
-
-- (BOOL)performOnMainQueueForListenerName:(NSString *)listenerName block:(dispatch_block_t)block {
-    if (!block) {
-        return NO;
-    }
-    if ([NSThread isMainThread]) {
-        block();
-    } else {
-        dispatch_async(dispatch_get_main_queue(), block);
-    }
-    return YES;
 }
 
 @end

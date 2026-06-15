@@ -14,24 +14,21 @@
 @implementation LATSystemHapticFeedbackController
 
 - (BOOL)performHapticFeedbackType:(LATSystemHapticFeedbackType)feedbackType listenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        switch (feedbackType) {
-        case LATSystemHapticFeedbackTypeFlick:
-            [self performImpactHapticFeedbackStyle:UIImpactFeedbackStyleHeavy listenerName:listenerName];
-            break;
-        case LATSystemHapticFeedbackTypeTap:
-            [self performImpactHapticFeedbackStyle:UIImpactFeedbackStyleLight listenerName:listenerName];
-            break;
-        case LATSystemHapticFeedbackTypeQuirk:
-            [self performNotificationHapticFeedbackType:UINotificationFeedbackTypeSuccess listenerName:listenerName];
-            break;
-        default:
-            HBLogError(@"Unknown haptic feedback type %ld for system action %@",
-                       (long)feedbackType,
-                       listenerName ?: @"");
-            break;
-        }
-    }];
+    switch (feedbackType) {
+    case LATSystemHapticFeedbackTypeFlick:
+        [self performImpactHapticFeedbackStyle:UIImpactFeedbackStyleHeavy listenerName:listenerName];
+        break;
+    case LATSystemHapticFeedbackTypeTap:
+        [self performImpactHapticFeedbackStyle:UIImpactFeedbackStyleLight listenerName:listenerName];
+        break;
+    case LATSystemHapticFeedbackTypeQuirk:
+        [self performNotificationHapticFeedbackType:UINotificationFeedbackTypeSuccess listenerName:listenerName];
+        break;
+    default:
+        HBLogError(@"Unknown haptic feedback type %ld for system action %@", (long)feedbackType, listenerName ?: @"");
+        break;
+    }
+    return YES;
 }
 
 - (void)performImpactHapticFeedbackStyle:(NSInteger)style listenerName:(NSString *)listenerName {
@@ -48,8 +45,7 @@
     if ([generator respondsToSelector:@selector(impactOccurred)]) {
         [generator impactOccurred];
     } else {
-        HBLogError(@"UIImpactFeedbackGenerator cannot trigger feedback for system action %@",
-                   listenerName ?: @"");
+        HBLogError(@"UIImpactFeedbackGenerator cannot trigger feedback for system action %@", listenerName ?: @"");
     }
 }
 

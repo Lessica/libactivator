@@ -24,23 +24,23 @@
 @implementation LATSystemAssistantController
 
 - (BOOL)activateVirtualAssistantForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
-        if ([server respondsToSelector:@selector(isSiriVisible)] && [server isSiriVisible]) {
-            if ([server respondsToSelector:@selector(dismissSiri)] && [server dismissSiri]) {
-                return;
-            }
-            HBLogError(@"AXSpringBoardServer cannot dismiss Siri for system action %@", listenerName ?: @"");
-            return;
+    AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
+    if ([server respondsToSelector:@selector(isSiriVisible)] && [server isSiriVisible]) {
+        if ([server respondsToSelector:@selector(dismissSiri)] && [server dismissSiri]) {
+            return YES;
         }
+        HBLogError(@"AXSpringBoardServer cannot dismiss Siri for system action %@", listenerName ?: @"");
+        return YES;
+    }
 
-        AXPISystemActionHelper *helper = [self accessibilityPhysicalInteractionSystemActionHelperForListenerName:listenerName];
-        if (![helper respondsToSelector:@selector(activateSiri)]) {
-            HBLogError(@"AXPISystemActionHelper cannot activate Siri for system action %@", listenerName ?: @"");
-            return;
-        }
-        [helper activateSiri];
-    }];
+    AXPISystemActionHelper *helper =
+        [self accessibilityPhysicalInteractionSystemActionHelperForListenerName:listenerName];
+    if (![helper respondsToSelector:@selector(activateSiri)]) {
+        HBLogError(@"AXPISystemActionHelper cannot activate Siri for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    [helper activateSiri];
+    return YES;
 }
 
 - (nullable AXSpringBoardServer *)axSpringBoardServerForListenerName:(NSString *)listenerName {
@@ -52,16 +52,15 @@
     return [(id)serverClass server];
 }
 
-- (nullable AXPISystemActionHelper *)accessibilityPhysicalInteractionSystemActionHelperForListenerName:(NSString *)listenerName {
-    NSString *frameworkPath =
-        @"/System/Library/PrivateFrameworks/AccessibilityPhysicalInteraction.framework";
+- (nullable AXPISystemActionHelper *)accessibilityPhysicalInteractionSystemActionHelperForListenerName:
+    (NSString *)listenerName {
+    NSString *frameworkPath = @"/System/Library/PrivateFrameworks/AccessibilityPhysicalInteraction.framework";
     NSBundle *frameworkBundle = [NSBundle bundleWithPath:frameworkPath];
     if (!frameworkBundle.loaded) {
         NSError *error = nil;
         if (![frameworkBundle loadAndReturnError:&error]) {
             HBLogError(@"AccessibilityPhysicalInteraction.framework is unavailable for system action %@: %@",
-                       listenerName ?: @"",
-                       error.localizedDescription ?: @"unknown error");
+                       listenerName ?: @"", error.localizedDescription ?: @"unknown error");
             return nil;
         }
     }

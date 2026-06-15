@@ -31,7 +31,7 @@ static const NSUInteger LATSBSRelaunchActionOptionsRestartRenderServer = (1 << 0
 - (SBRestartManager *)restartManager;
 @end
 
-@interface UIApplication (LATSystemPowerController)
+@interface UIApplication (DoesNotExist)
 - (void)safeModeFromActivator;
 @end
 
@@ -66,9 +66,8 @@ static const NSUInteger LATSBSRelaunchActionOptionsRestartRenderServer = (1 << 0
             return;
         }
 
-        SBSRelaunchAction *action = [(id)actionClass actionWithReason:(listenerName ?: @"libactivator")
-                                                              options:options
-                                                            targetURL:nil];
+        SBSRelaunchAction *action =
+            [(id)actionClass actionWithReason:(listenerName ?: @"libactivator") options:options targetURL:nil];
         FBSSystemService *service = [(id)serviceClass sharedService];
         if (![service respondsToSelector:@selector(sendActions:withResult:)]) {
             HBLogError(@"FBSSystemService does not support sendActions:withResult:");
@@ -95,32 +94,29 @@ static const NSUInteger LATSBSRelaunchActionOptionsRestartRenderServer = (1 << 0
 }
 
 - (BOOL)powerDownForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueWithBlock:^{
-        SBRestartManager *restartManager = [self restartManagerForListenerName:listenerName];
-        if (!restartManager) {
-            return;
-        }
-        if (![restartManager respondsToSelector:@selector(shutdownForReason:)]) {
-            HBLogError(@"SBRestartManager does not support shutdownForReason: for system action %@",
-                       listenerName ?: @"");
-            return;
-        }
-        [restartManager shutdownForReason:nil];
-    }];
+    SBRestartManager *restartManager = [self restartManagerForListenerName:listenerName];
+    if (!restartManager) {
+        return YES;
+    }
+    if (![restartManager respondsToSelector:@selector(shutdownForReason:)]) {
+        HBLogError(@"SBRestartManager does not support shutdownForReason: for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    [restartManager shutdownForReason:nil];
+    return YES;
 }
 
 - (BOOL)rebootForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueWithBlock:^{
-        SBRestartManager *restartManager = [self restartManagerForListenerName:listenerName];
-        if (!restartManager) {
-            return;
-        }
-        if (![restartManager respondsToSelector:@selector(rebootForReason:)]) {
-            HBLogError(@"SBRestartManager does not support rebootForReason: for system action %@", listenerName ?: @"");
-            return;
-        }
-        [restartManager rebootForReason:nil];
-    }];
+    SBRestartManager *restartManager = [self restartManagerForListenerName:listenerName];
+    if (!restartManager) {
+        return YES;
+    }
+    if (![restartManager respondsToSelector:@selector(rebootForReason:)]) {
+        HBLogError(@"SBRestartManager does not support rebootForReason: for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    [restartManager rebootForReason:nil];
+    return YES;
 }
 
 - (nullable SBRestartManager *)restartManagerForListenerName:(NSString *)listenerName {
@@ -130,18 +126,6 @@ static const NSUInteger LATSBSRelaunchActionOptionsRestartRenderServer = (1 << 0
         return nil;
     }
     return [(SpringBoard *)application restartManager];
-}
-
-- (BOOL)performOnMainQueueWithBlock:(dispatch_block_t)block {
-    if (!block) {
-        return NO;
-    }
-    if ([NSThread isMainThread]) {
-        block();
-    } else {
-        dispatch_async(dispatch_get_main_queue(), block);
-    }
-    return YES;
 }
 
 @end

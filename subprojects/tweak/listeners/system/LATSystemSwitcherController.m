@@ -36,43 +36,41 @@
 @implementation LATSystemSwitcherController
 
 - (BOOL)activateSwitcherForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
-        if ([server respondsToSelector:@selector(isAppSwitcherVisible)] &&
-            [server isAppSwitcherVisible]) {
-            if ([server respondsToSelector:@selector(dismissAppSwitcher)]) {
-                [server dismissAppSwitcher];
-                return;
-            }
-        } else if ([server respondsToSelector:@selector(openAppSwitcher)]) {
-            [server openAppSwitcher];
-            return;
+    AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
+    if ([server respondsToSelector:@selector(isAppSwitcherVisible)] && [server isAppSwitcherVisible]) {
+        if ([server respondsToSelector:@selector(dismissAppSwitcher)]) {
+            [server dismissAppSwitcher];
+            return YES;
         }
+    } else if ([server respondsToSelector:@selector(openAppSwitcher)]) {
+        [server openAppSwitcher];
+        return YES;
+    }
 
-        SBSwitcherController *switcherController = [self activeDisplaySwitcherController];
-        if ([switcherController respondsToSelector:@selector(toggleMainSwitcherWithSource:animated:)]) {
-            if (![switcherController toggleMainSwitcherWithSource:0x14 animated:YES]) {
-                HBLogWarn(@"SBSwitcherController refused to toggle main switcher for system action %@",
-                          listenerName ?: @"");
-            }
-            return;
+    SBSwitcherController *switcherController = [self activeDisplaySwitcherController];
+    if ([switcherController respondsToSelector:@selector(toggleMainSwitcherWithSource:animated:)]) {
+        if (![switcherController toggleMainSwitcherWithSource:0x14 animated:YES]) {
+            HBLogWarn(@"SBSwitcherController refused to toggle main switcher for system action %@",
+                      listenerName ?: @"");
         }
-        if ([switcherController respondsToSelector:@selector(toggleMainSwitcherNoninteractivelyWithSource:animated:)]) {
-            if (![switcherController toggleMainSwitcherNoninteractivelyWithSource:0x14 animated:YES]) {
-                HBLogWarn(@"SBSwitcherController refused to toggle main switcher noninteractively for system action %@",
-                          listenerName ?: @"");
-            }
-            return;
+        return YES;
+    }
+    if ([switcherController respondsToSelector:@selector(toggleMainSwitcherNoninteractivelyWithSource:animated:)]) {
+        if (![switcherController toggleMainSwitcherNoninteractivelyWithSource:0x14 animated:YES]) {
+            HBLogWarn(@"SBSwitcherController refused to toggle main switcher noninteractively for system action %@",
+                      listenerName ?: @"");
         }
+        return YES;
+    }
 
-        SBMainSwitcherViewController *legacySwitcher = [self legacyMainSwitcherViewController];
-        if ([legacySwitcher respondsToSelector:@selector(activateMainSwitcherNoninteractivelyWithSource:animated:)]) {
-            [legacySwitcher activateMainSwitcherNoninteractivelyWithSource:1 animated:YES];
-            return;
-        }
+    SBMainSwitcherViewController *legacySwitcher = [self legacyMainSwitcherViewController];
+    if ([legacySwitcher respondsToSelector:@selector(activateMainSwitcherNoninteractivelyWithSource:animated:)]) {
+        [legacySwitcher activateMainSwitcherNoninteractivelyWithSource:1 animated:YES];
+        return YES;
+    }
 
-        HBLogError(@"SpringBoard cannot activate switcher for system action %@", listenerName ?: @"");
-    }];
+    HBLogError(@"SpringBoard cannot activate switcher for system action %@", listenerName ?: @"");
+    return YES;
 }
 
 - (nullable AXSpringBoardServer *)axSpringBoardServerForListenerName:(NSString *)listenerName {

@@ -104,16 +104,15 @@
     return YES;
 }
 
-- (nullable AXPISystemActionHelper *)accessibilityPhysicalInteractionSystemActionHelperForListenerName:(NSString *)listenerName {
-    NSString *frameworkPath =
-        @"/System/Library/PrivateFrameworks/AccessibilityPhysicalInteraction.framework";
+- (nullable AXPISystemActionHelper *)accessibilityPhysicalInteractionSystemActionHelperForListenerName:
+    (NSString *)listenerName {
+    NSString *frameworkPath = @"/System/Library/PrivateFrameworks/AccessibilityPhysicalInteraction.framework";
     NSBundle *frameworkBundle = [NSBundle bundleWithPath:frameworkPath];
     if (!frameworkBundle.loaded) {
         NSError *error = nil;
         if (![frameworkBundle loadAndReturnError:&error]) {
             HBLogWarn(@"AccessibilityPhysicalInteraction.framework is unavailable for ringer system action %@: %@",
-                      listenerName ?: @"",
-                      error.localizedDescription ?: @"unknown error");
+                      listenerName ?: @"", error.localizedDescription ?: @"unknown error");
             return nil;
         }
     }

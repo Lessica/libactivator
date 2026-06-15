@@ -11,7 +11,7 @@
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
 
-@interface UIApplication (LATSystemScreenshotController)
+@interface UIApplication (ScreenshotController)
 - (void)_takeScreenshotAndEdit:(BOOL)edit;
 - (void)takeScreenshotAndEdit:(BOOL)edit;
 - (void)takeScreenshot;
@@ -20,18 +20,17 @@
 @implementation LATSystemScreenshotController
 
 - (BOOL)editScreenshotForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        UIApplication *application = UIApplication.sharedApplication;
-        if ([application respondsToSelector:@selector(_takeScreenshotAndEdit:)]) {
-            [application _takeScreenshotAndEdit:YES];
-        } else if ([application respondsToSelector:@selector(takeScreenshotAndEdit:)]) {
-            [application takeScreenshotAndEdit:YES];
-        } else if ([application respondsToSelector:@selector(takeScreenshot)]) {
-            [application takeScreenshot];
-        } else {
-            HBLogError(@"SpringBoard cannot edit screenshot for system action %@", listenerName ?: @"");
-        }
-    }];
+    UIApplication *application = UIApplication.sharedApplication;
+    if ([application respondsToSelector:@selector(_takeScreenshotAndEdit:)]) {
+        [application _takeScreenshotAndEdit:YES];
+    } else if ([application respondsToSelector:@selector(takeScreenshotAndEdit:)]) {
+        [application takeScreenshotAndEdit:YES];
+    } else if ([application respondsToSelector:@selector(takeScreenshot)]) {
+        [application takeScreenshot];
+    } else {
+        HBLogError(@"SpringBoard cannot edit screenshot for system action %@", listenerName ?: @"");
+    }
+    return YES;
 }
 
 @end

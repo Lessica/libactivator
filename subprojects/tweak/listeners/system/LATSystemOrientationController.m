@@ -18,15 +18,13 @@
 @implementation LATSystemOrientationController
 
 - (BOOL)rotateToOrientation:(NSInteger)orientation listenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
-        if (![server respondsToSelector:@selector(setOrientation:)]) {
-            HBLogError(@"AXSpringBoardServer cannot set orientation for system action %@",
-                       listenerName ?: @"");
-            return;
-        }
-        [server setOrientation:orientation];
-    }];
+    AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
+    if (![server respondsToSelector:@selector(setOrientation:)]) {
+        HBLogError(@"AXSpringBoardServer cannot set orientation for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    [server setOrientation:orientation];
+    return YES;
 }
 
 - (nullable AXSpringBoardServer *)axSpringBoardServerForListenerName:(NSString *)listenerName {

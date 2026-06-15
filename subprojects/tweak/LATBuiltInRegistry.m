@@ -16,6 +16,7 @@
 #import "LATApplicationListenerProvider.h"
 #import "LATBuiltInListenerRegistrant.h"
 #import "LATButtonEventSource.h"
+#import "LATComposeActionListener.h"
 #import "LATEdgeGestureEventSource.h"
 #import "LATEventSourceInterestGate.h"
 #import "LATFingerprintSensorEventSource.h"
@@ -139,6 +140,10 @@
         },
         @{
             @"RegistrantClass" : LATSystemActionListener.class,
+            @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
+        },
+        @{
+            @"RegistrantClass" : LATComposeActionListener.class,
             @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
         },
         @{

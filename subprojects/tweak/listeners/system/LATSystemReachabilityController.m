@@ -20,16 +20,14 @@
 @implementation LATSystemReachabilityController
 
 - (BOOL)activateReachabilityForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        AXSpringBoardServerHelper *helper = [self axSpringBoardServerHelperForListenerName:listenerName];
-        if (![helper respondsToSelector:@selector(isReachabilityActive)] ||
-            ![helper respondsToSelector:@selector(setReachabilityActive:)]) {
-            HBLogError(@"AXSpringBoardServerHelper cannot toggle Reachability for system action %@",
-                       listenerName ?: @"");
-            return;
-        }
-        [helper setReachabilityActive:![helper isReachabilityActive]];
-    }];
+    AXSpringBoardServerHelper *helper = [self axSpringBoardServerHelperForListenerName:listenerName];
+    if (![helper respondsToSelector:@selector(isReachabilityActive)] ||
+        ![helper respondsToSelector:@selector(setReachabilityActive:)]) {
+        HBLogError(@"AXSpringBoardServerHelper cannot toggle Reachability for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    [helper setReachabilityActive:![helper isReachabilityActive]];
+    return YES;
 }
 
 - (nullable AXSpringBoardServerHelper *)axSpringBoardServerHelperForListenerName:(NSString *)listenerName {

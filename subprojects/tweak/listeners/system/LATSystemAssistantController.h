@@ -6,11 +6,11 @@
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "system/LATSystemMainQueueActionPerformer.h"
+#import <Foundation/Foundation.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATSystemAssistantController : LATSystemMainQueueActionPerformer
+@interface LATSystemAssistantController : NSObject
 - (BOOL)activateVirtualAssistantForListenerName:(NSString *)listenerName;
 @end
 

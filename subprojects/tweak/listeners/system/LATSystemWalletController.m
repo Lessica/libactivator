@@ -18,15 +18,13 @@
 @implementation LATSystemWalletController
 
 - (BOOL)activateWalletForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
-        if (![server respondsToSelector:@selector(armApplePay)]) {
-            HBLogError(@"AXSpringBoardServer cannot arm Apple Pay for system action %@",
-                       listenerName ?: @"");
-            return;
-        }
-        [server armApplePay];
-    }];
+    AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
+    if (![server respondsToSelector:@selector(armApplePay)]) {
+        HBLogError(@"AXSpringBoardServer cannot arm Apple Pay for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    [server armApplePay];
+    return YES;
 }
 
 - (nullable AXSpringBoardServer *)axSpringBoardServerForListenerName:(NSString *)listenerName {

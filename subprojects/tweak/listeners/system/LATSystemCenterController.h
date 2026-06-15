@@ -6,11 +6,11 @@
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "system/LATSystemMainQueueActionPerformer.h"
+#import <Foundation/Foundation.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATSystemCenterController : LATSystemMainQueueActionPerformer
+@interface LATSystemCenterController : NSObject
 - (BOOL)activateControlCenterForListenerName:(NSString *)listenerName;
 - (BOOL)activateNotificationCenterForListenerName:(NSString *)listenerName;
 @end

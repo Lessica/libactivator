@@ -24,67 +24,61 @@
 @implementation LATSystemCenterController
 
 - (BOOL)activateControlCenterForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
-        BOOL visible = NO;
-        if ([server respondsToSelector:@selector(isControlCenterVisible)]) {
-            visible = [server isControlCenterVisible];
-        }
-        if (![server respondsToSelector:@selector(showControlCenter:)]) {
-            HBLogError(@"AXSpringBoardServer cannot toggle Control Center for system action %@",
-                       listenerName ?: @"");
-            return;
-        }
-        if (![server showControlCenter:!visible]) {
-            HBLogWarn(@"AXSpringBoardServer refused to toggle Control Center for system action %@",
-                      listenerName ?: @"");
-        }
-    }];
+    AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
+    BOOL visible = NO;
+    if ([server respondsToSelector:@selector(isControlCenterVisible)]) {
+        visible = [server isControlCenterVisible];
+    }
+    if (![server respondsToSelector:@selector(showControlCenter:)]) {
+        HBLogError(@"AXSpringBoardServer cannot toggle Control Center for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    if (![server showControlCenter:!visible]) {
+        HBLogWarn(@"AXSpringBoardServer refused to toggle Control Center for system action %@", listenerName ?: @"");
+    }
+    return YES;
 }
 
 - (BOOL)activateNotificationCenterForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
-        BOOL visibilityKnown = [server respondsToSelector:@selector(isNotificationCenterVisible)];
-        BOOL visible = visibilityKnown ? [server isNotificationCenterVisible] : NO;
-        if (visibilityKnown && visible) {
-            if ([server respondsToSelector:@selector(hideNotificationCenter)]) {
-                [server hideNotificationCenter];
-                return;
-            }
-            if ([server respondsToSelector:@selector(showNotificationCenter:)]) {
-                if (![server showNotificationCenter:NO]) {
-                    HBLogWarn(@"AXSpringBoardServer refused to hide Notification Center for system action %@",
-                              listenerName ?: @"");
-                }
-                return;
-            }
-            if ([server respondsToSelector:@selector(toggleNotificationCenter)]) {
-                [server toggleNotificationCenter];
-                return;
-            }
-            HBLogError(@"AXSpringBoardServer cannot hide Notification Center for system action %@",
-                       listenerName ?: @"");
-            return;
+    AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
+    BOOL visibilityKnown = [server respondsToSelector:@selector(isNotificationCenterVisible)];
+    BOOL visible = visibilityKnown ? [server isNotificationCenterVisible] : NO;
+    if (visibilityKnown && visible) {
+        if ([server respondsToSelector:@selector(hideNotificationCenter)]) {
+            [server hideNotificationCenter];
+            return YES;
         }
         if ([server respondsToSelector:@selector(showNotificationCenter:)]) {
-            if (![server showNotificationCenter:YES]) {
-                HBLogWarn(@"AXSpringBoardServer refused to show Notification Center for system action %@",
+            if (![server showNotificationCenter:NO]) {
+                HBLogWarn(@"AXSpringBoardServer refused to hide Notification Center for system action %@",
                           listenerName ?: @"");
             }
-            return;
-        }
-        if ([server respondsToSelector:@selector(showNotificationCenter)]) {
-            [server showNotificationCenter];
-            return;
+            return YES;
         }
         if ([server respondsToSelector:@selector(toggleNotificationCenter)]) {
             [server toggleNotificationCenter];
-            return;
+            return YES;
         }
-        HBLogError(@"AXSpringBoardServer cannot toggle Notification Center for system action %@",
-                   listenerName ?: @"");
-    }];
+        HBLogError(@"AXSpringBoardServer cannot hide Notification Center for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    if ([server respondsToSelector:@selector(showNotificationCenter:)]) {
+        if (![server showNotificationCenter:YES]) {
+            HBLogWarn(@"AXSpringBoardServer refused to show Notification Center for system action %@",
+                      listenerName ?: @"");
+        }
+        return YES;
+    }
+    if ([server respondsToSelector:@selector(showNotificationCenter)]) {
+        [server showNotificationCenter];
+        return YES;
+    }
+    if ([server respondsToSelector:@selector(toggleNotificationCenter)]) {
+        [server toggleNotificationCenter];
+        return YES;
+    }
+    HBLogError(@"AXSpringBoardServer cannot toggle Notification Center for system action %@", listenerName ?: @"");
+    return YES;
 }
 
 - (nullable AXSpringBoardServer *)axSpringBoardServerForListenerName:(NSString *)listenerName {

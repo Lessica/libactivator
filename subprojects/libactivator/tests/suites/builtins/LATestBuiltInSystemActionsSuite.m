@@ -81,9 +81,8 @@
     };
     for (NSString *listenerName in expectedTapticTypes) {
         id tapticType = [activator infoDictionaryValueOfKey:@"tapticType" forListenerWithName:listenerName];
-        NSInteger actualType = [tapticType respondsToSelector:@selector(integerValue)]
-            ? [tapticType integerValue]
-            : NSIntegerMin;
+        NSInteger actualType =
+            [tapticType respondsToSelector:@selector(integerValue)] ? [tapticType integerValue] : NSIntegerMin;
         [recorder expect:actualType == expectedTapticTypes[listenerName].integerValue
                 caseName:[NSString stringWithFormat:@"system-action-taptic-type-%@", listenerName]
                   reason:@"System action tapticType metadata did not match the 1.9.13 mapping"];

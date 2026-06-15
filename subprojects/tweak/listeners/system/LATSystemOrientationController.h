@@ -6,11 +6,11 @@
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "system/LATSystemMainQueueActionPerformer.h"
+#import <Foundation/Foundation.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATSystemOrientationController : LATSystemMainQueueActionPerformer
+@interface LATSystemOrientationController : NSObject
 - (BOOL)rotateToOrientation:(NSInteger)orientation listenerName:(NSString *)listenerName;
 @end
 

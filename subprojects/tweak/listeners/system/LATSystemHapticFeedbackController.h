@@ -6,7 +6,7 @@
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "system/LATSystemMainQueueActionPerformer.h"
+#import <Foundation/Foundation.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -16,7 +16,7 @@ typedef NS_ENUM(NSInteger, LATSystemHapticFeedbackType) {
     LATSystemHapticFeedbackTypeQuirk = 2,
 };
 
-@interface LATSystemHapticFeedbackController : LATSystemMainQueueActionPerformer
+@interface LATSystemHapticFeedbackController : NSObject
 - (BOOL)performHapticFeedbackType:(LATSystemHapticFeedbackType)feedbackType listenerName:(NSString *)listenerName;
 @end
 

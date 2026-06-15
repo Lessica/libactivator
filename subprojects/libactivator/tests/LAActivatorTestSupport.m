@@ -12,6 +12,7 @@
 #import "LAIPC.h"
 #import "LARuntimeContext.h"
 #import "LATestBuiltInActionRegistrySuite.h"
+#import "LATestBuiltInComposeActionsSuite.h"
 #import "LATestBuiltInDynamicApplicationListenersSuite.h"
 #import "LATestBuiltInEventSourcesSuite.h"
 #import "LATestBuiltInHardwareActionsSuite.h"
@@ -114,6 +115,7 @@
     [LATestBuiltInURLActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInHardwareActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInSystemActionsSuite runWithRecorder:recorder activator:activator];
+    [LATestBuiltInComposeActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInTelephonyActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInDynamicApplicationListenersSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInEventSourcesSuite runWithRecorder:recorder activator:activator];

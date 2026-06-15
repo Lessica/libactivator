@@ -1,0 +1,65 @@
+//
+//  LATestBuiltInComposeActionsSuite.m
+//  libactivator
+//
+//  Created by Lessica on 6/15/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
+#import "LATestBuiltInComposeActionsSuite.h"
+
+#import "LATestEnvironment.h"
+
+@implementation LATestBuiltInComposeActionsSuite
+
++ (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    [recorder beginSuite:@"BuiltInComposeActions"];
+
+    Class<LATestSelectorBackedBuiltInListener> composeActionClass =
+        (Class<LATestSelectorBackedBuiltInListener>)NSClassFromString(@"LATComposeActionListener");
+    [recorder expect:composeActionClass != Nil
+            caseName:@"compose-action-class-available"
+              reason:@"LATComposeActionListener class was not loaded in SpringBoard"];
+    if (!composeActionClass) {
+        return;
+    }
+
+    NSDictionary<NSString *, NSString *> *expectedSelectors = @{
+        @"libactivator.mail.compose-message" : @"composeMail",
+        @"libactivator.sms.compose-message" : @"composeText",
+        @"libactivator.notes.compose-note" : @"composeNote",
+    };
+    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[composeActionClass supportedListenerNames]];
+
+    [recorder expect:supportedNames.count == expectedSelectors.count
+            caseName:@"compose-action-allowlist-count"
+              reason:@"Compose action allowlist did not match the expected command count"];
+    for (NSString *listenerName in expectedSelectors) {
+        NSString *expectedSelector = expectedSelectors[listenerName];
+        id selector = [activator infoDictionaryValueOfKey:@"selector" forListenerWithName:listenerName];
+        [recorder expect:[supportedNames containsObject:listenerName] && [activator hasListenerWithName:listenerName]
+                caseName:[NSString stringWithFormat:@"compose-action-registered-%@", listenerName]
+                  reason:@"Compose action allowlist or runtime registration is missing an expected listener name"];
+        [recorder expect:[[composeActionClass expectedSelectorForListenerName:listenerName]
+                             isEqualToString:expectedSelector] &&
+                         [selector isEqualToString:expectedSelector]
+                caseName:[NSString stringWithFormat:@"compose-action-selector-%@", listenerName]
+                  reason:@"Compose action selector mapping did not match bundled metadata"];
+    }
+
+    [recorder expect:![activator hasListenerWithName:@"libactivator.camera.invoke-shutter"]
+            caseName:@"camera-shutter-not-owned-by-compose-listener"
+              reason:@"Camera shutter must remain deferred until its runtime semantics are implemented"];
+
+    id<LAListener> composeAction = [[(Class)composeActionClass alloc] init];
+    LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.compose"
+                                                  mode:LAEventModeSpringBoard];
+    [composeAction activator:activator
+                receiveEvent:unsupportedEvent
+             forListenerName:@"libactivator.test.compose.unsupported"];
+    [recorder expect:!unsupportedEvent.handled
+            caseName:@"compose-action-unsupported-name-unhandled"
+              reason:@"Unsupported compose action listener name consumed the event"];
+}
+
+@end

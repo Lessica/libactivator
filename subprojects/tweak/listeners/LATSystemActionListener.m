@@ -180,15 +180,15 @@
         break;
     case LATSystemActionKindHapticFlick:
         [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeFlick
-                                                   listenerName:listenerName];
+                                                    listenerName:listenerName];
         break;
     case LATSystemActionKindHapticTap:
         [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeTap
-                                                   listenerName:listenerName];
+                                                    listenerName:listenerName];
         break;
     case LATSystemActionKindHapticQuirk:
         [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeQuirk
-                                                   listenerName:listenerName];
+                                                    listenerName:listenerName];
         break;
     case LATSystemActionKindRotateLandscapeLeft:
         [self.orientationController rotateToOrientation:UIInterfaceOrientationLandscapeLeft listenerName:listenerName];

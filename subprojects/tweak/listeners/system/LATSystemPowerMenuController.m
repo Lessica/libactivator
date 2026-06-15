@@ -19,22 +19,21 @@
 @implementation LATSystemPowerMenuController
 
 - (BOOL)showPowerMenuForListenerName:(NSString *)listenerName {
-    return [self performOnMainQueueForListenerName:listenerName block:^{
-        Class workspaceClass = NSClassFromString(@"SBMainWorkspace");
-        SBMainWorkspace *workspace = nil;
-        if ([workspaceClass respondsToSelector:@selector(sharedInstanceIfExists)]) {
-            workspace = [(id)workspaceClass sharedInstanceIfExists];
-        }
-        if (!workspace && [workspaceClass respondsToSelector:@selector(sharedInstance)]) {
-            workspace = [(id)workspaceClass sharedInstance];
-        }
+    Class workspaceClass = NSClassFromString(@"SBMainWorkspace");
+    SBMainWorkspace *workspace = nil;
+    if ([workspaceClass respondsToSelector:@selector(sharedInstanceIfExists)]) {
+        workspace = [(id)workspaceClass sharedInstanceIfExists];
+    }
+    if (!workspace && [workspaceClass respondsToSelector:@selector(sharedInstance)]) {
+        workspace = [(id)workspaceClass sharedInstance];
+    }
 
-        if (![workspace respondsToSelector:@selector(presentPowerDownTransientOverlay)]) {
-            HBLogError(@"SBMainWorkspace cannot present power menu for system action %@", listenerName ?: @"");
-            return;
-        }
-        [workspace presentPowerDownTransientOverlay];
-    }];
+    if (![workspace respondsToSelector:@selector(presentPowerDownTransientOverlay)]) {
+        HBLogError(@"SBMainWorkspace cannot present power menu for system action %@", listenerName ?: @"");
+        return YES;
+    }
+    [workspace presentPowerDownTransientOverlay];
+    return YES;
 }
 
 @end

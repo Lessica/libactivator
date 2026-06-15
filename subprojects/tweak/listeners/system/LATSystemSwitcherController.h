@@ -6,11 +6,11 @@
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "system/LATSystemMainQueueActionPerformer.h"
+#import <Foundation/Foundation.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATSystemSwitcherController : LATSystemMainQueueActionPerformer
+@interface LATSystemSwitcherController : NSObject
 - (BOOL)activateSwitcherForListenerName:(NSString *)listenerName;
 @end
 
