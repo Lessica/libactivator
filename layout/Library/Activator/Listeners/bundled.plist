@@ -2673,6 +2673,7 @@
 		<array>
 			<string>springboard</string>
 			<string>application</string>
+			<string>lockscreen</string>
 		</array>
 		<key>description</key>
 		<string>Show the standard media controls</string>

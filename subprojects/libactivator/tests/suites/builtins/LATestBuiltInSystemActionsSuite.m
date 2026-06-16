@@ -36,6 +36,8 @@
         @"libactivator.lockscreen.dismiss" : @"dismissLockScreen",
         @"libactivator.lockscreen.toggle" : @"toggleLockScreen",
         @"libactivator.system.activate-control-center" : @"showControlCenter",
+        @"libactivator.ipod.music-controls" : @"musicControls",
+        @"libactivator.system.show-now-playing-bar" : @"showNowPlayingBar",
         @"libactivator.system.activate-notification-center" : @"activateNotificationCenter",
         @"libactivator.system.activate-reachability" : @"activateReachability",
         @"libactivator.system.activate-switcher" : @"activateSwitcherFromActivator:event:",
@@ -86,6 +88,24 @@
         [recorder expect:actualType == expectedTapticTypes[listenerName].integerValue
                 caseName:[NSString stringWithFormat:@"system-action-taptic-type-%@", listenerName]
                   reason:@"System action tapticType metadata did not match the 1.9.13 mapping"];
+    }
+
+    [recorder expect:[activator listenerWithName:@"libactivator.system.show-now-playing-bar"
+                            isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"system-now-playing-bar-lockscreen-compatible"
+              reason:@"Show Now Playing Bar should be assignable at the lock screen"];
+
+    NSArray<NSString *> *nowPlayingControlNames =
+        @[ @"libactivator.ipod.music-controls", @"libactivator.system.show-now-playing-bar" ];
+    for (NSString *listenerName in nowPlayingControlNames) {
+        id needsPoweredDisplay = [activator infoDictionaryValueOfKey:@"needs-powered-display"
+                                                 forListenerWithName:listenerName];
+        BOOL requiresPoweredDisplay =
+            [needsPoweredDisplay respondsToSelector:@selector(boolValue)] && [needsPoweredDisplay boolValue];
+        [recorder
+              expect:!requiresPoweredDisplay
+            caseName:[NSString stringWithFormat:@"system-now-playing-controls-no-powered-display-gate-%@", listenerName]
+              reason:@"Now Playing controls should wake the screen internally instead of being gated while blanked"];
     }
 
     [recorder expect:![activator hasListenerWithName:LAEventNameVolumeMuteOn]

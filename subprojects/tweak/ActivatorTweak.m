@@ -17,12 +17,14 @@
 #import "LATNetworkEventSource.h"
 #import "LATRuntimeStateSource.h"
 #import "LATStatusBarEventSource.h"
+#import "system/LATSystemCenterController.h"
 
 #import <CaptainHook/CaptainHook.h>
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
 
 CHDeclareClass(SpringBoard);
+CHDeclareClass(CCUIModuleCollectionViewController);
 CHDeclareClass(UIViewController);
 CHDeclareClass(SBCoverSheetPrimarySlidingViewController);
 CHDeclareClass(SBMainSwitcherViewController);
@@ -45,6 +47,11 @@ static Class gDashboardCameraPageViewControllerClass = nil;
 static Class gInCallTransientOverlayViewControllerClass = nil;
 static Class gLockScreenEmergencyCallViewControllerClass = nil;
 static Class gIconControllerClass = nil;
+
+@interface CCUIModuleCollectionViewController : UIViewController
+- (void)viewDidLoad;
+- (void)viewWillAppear:(BOOL)animated;
+@end
 
 static void LATNoteHIDEvent(IOHIDEventRef event) {
     [gBuiltInRegistry.buttonEventSource noteHIDEvent:event];
@@ -124,6 +131,18 @@ CHOptimizedMethod1(self, void, UIViewController, viewWillAppear, BOOL, animated)
 CHOptimizedMethod1(self, void, UIViewController, viewDidDisappear, BOOL, animated) {
     CHSuper1(UIViewController, viewDidDisappear, animated);
     LATNoteViewControllerVisibility(self, NO);
+}
+
+#pragma mark - CCUIModuleCollectionViewController
+
+CHOptimizedMethod0(self, void, CCUIModuleCollectionViewController, viewDidLoad) {
+    CHSuper0(CCUIModuleCollectionViewController, viewDidLoad);
+    [LATSystemCenterController noteModuleCollectionViewControllerDidLoad:self];
+}
+
+CHOptimizedMethod1(self, void, CCUIModuleCollectionViewController, viewWillAppear, BOOL, animated) {
+    CHSuper1(CCUIModuleCollectionViewController, viewWillAppear, animated);
+    [LATSystemCenterController noteModuleCollectionViewControllerWillAppear:self];
 }
 
 #pragma mark - SBCoverSheetPrimarySlidingViewController
@@ -272,6 +291,7 @@ static void LATLoadRuntimeStateClasses(void) {
 static void LATLoadSpringBoardClasses(void) {
     CHLoadClass(UIViewController);
     CHLoadClass_(&SpringBoard$, NSClassFromString(@"SpringBoard"));
+    CHLoadClass_(&CCUIModuleCollectionViewController$, NSClassFromString(@"CCUIModuleCollectionViewController"));
     CHLoadClass_(&SBCoverSheetPrimarySlidingViewController$,
                  NSClassFromString(@"SBCoverSheetPrimarySlidingViewController"));
     CHLoadClass_(&SBMainSwitcherViewController$, NSClassFromString(@"SBMainSwitcherViewController"));
@@ -291,6 +311,14 @@ static void LATInstallHooks(void) {
 
         CHHook1(UIViewController, viewWillAppear);
         CHHook1(UIViewController, viewDidDisappear);
+        Class moduleCollectionViewControllerClass = NSClassFromString(@"CCUIModuleCollectionViewController");
+        if ([moduleCollectionViewControllerClass instancesRespondToSelector:@selector(viewDidLoad)] &&
+            [moduleCollectionViewControllerClass instancesRespondToSelector:@selector(viewWillAppear:)]) {
+            CHHook0(CCUIModuleCollectionViewController, viewDidLoad);
+            CHHook1(CCUIModuleCollectionViewController, viewWillAppear);
+        } else {
+            HBLogWarn(@"Skipping Control Center module collection hooks because required methods are unavailable");
+        }
         CHHook1(SBCoverSheetPrimarySlidingViewController, _beginTransitionFromAppeared);
         CHHook1(SBCoverSheetPrimarySlidingViewController, _endTransitionToAppeared);
         CHHook2(SBMainSwitcherViewController, layoutStateTransitionCoordinator,

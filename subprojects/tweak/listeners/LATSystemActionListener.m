@@ -72,7 +72,7 @@
         _lockScreenController =
             [[LATSystemLockScreenController alloc] initWithRuntimeStateSource:_registry.runtimeStateSource];
         _assistantController = [[LATSystemAssistantController alloc] init];
-        _centerController = [[LATSystemCenterController alloc] init];
+        _centerController = [[LATSystemCenterController alloc] initWithRuntimeStateSource:_registry.runtimeStateSource];
         _hapticFeedbackController = [[LATSystemHapticFeedbackController alloc] init];
         _orientationController = [[LATSystemOrientationController alloc] init];
         _powerController = [[LATSystemPowerController alloc] init];
@@ -147,6 +147,9 @@
         break;
     case LATSystemActionKindActivateControlCenter:
         [self.centerController activateControlCenterForListenerName:listenerName];
+        break;
+    case LATSystemActionKindShowNowPlayingControls:
+        [self.centerController showNowPlayingControlsForListenerName:listenerName];
         break;
     case LATSystemActionKindActivateNotificationCenter:
         [self.centerController activateNotificationCenterForListenerName:listenerName];
@@ -255,6 +258,12 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-control-center"
                                                     selectorName:@"showControlCenter"
                                                             kind:LATSystemActionKindActivateControlCenter],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.ipod.music-controls"
+                                                    selectorName:@"musicControls"
+                                                            kind:LATSystemActionKindShowNowPlayingControls],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.show-now-playing-bar"
+                                                    selectorName:@"showNowPlayingBar"
+                                                            kind:LATSystemActionKindShowNowPlayingControls],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-notification-center"
                                                     selectorName:@"activateNotificationCenter"
                                                             kind:LATSystemActionKindActivateNotificationCenter],

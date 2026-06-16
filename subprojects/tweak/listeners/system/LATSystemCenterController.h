@@ -10,8 +10,17 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class LATRuntimeStateSource;
+@class UIViewController;
+
 @interface LATSystemCenterController : NSObject
+
+- (instancetype)initWithRuntimeStateSource:(nullable LATRuntimeStateSource *)runtimeStateSource;
+
++ (void)noteModuleCollectionViewControllerDidLoad:(UIViewController *)viewController;
++ (void)noteModuleCollectionViewControllerWillAppear:(UIViewController *)viewController;
 - (BOOL)activateControlCenterForListenerName:(NSString *)listenerName;
+- (BOOL)showNowPlayingControlsForListenerName:(NSString *)listenerName;
 - (BOOL)activateNotificationCenterForListenerName:(NSString *)listenerName;
 @end
 
