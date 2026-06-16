@@ -15,7 +15,7 @@
 - 1.9.13 Public API、常量、通知、headers、import 入口和 ABI skeleton 已对齐。
 - SpringBoard authoritative backend、state/config IPC、event dispatch IPC、runtime mode、no-touch deferral、unlock-to-send callback、metadata/resource lookup、localization fallback、listener metadata cache 已具备基础能力。
 - event metadata 当前 123 项已 staged：121 项来自 1.9.13，`libactivator.now-playing.playing` / `libactivator.now-playing.paused` 是 2.x additive。
-- listener/action metadata 当前 111 项已 staged：1.9.13 的 117 项中移除 12 个 obsolete/excluded 项，新增 6 个 2.x additive listener/action name。
+- listener/action metadata 当前 118 项已 staged：1.9.13 的 117 项中移除 5 个 obsolete/excluded 项，新增 6 个 2.x additive listener/action name。
 - Events / Listeners resource metadata key 已完成 cross-check：常规展示、版本过滤、capability 过滤、mode compatibility、power/no-touch gate、system haptic `tapticType` 等 key 已由 resource/core/dispatch layer 消费；`is-unprotected`、完整 unlock sequence、raw-event back、preview 等未完全兑现项已集中记录到 tracker。
 - 阶段 0 资源模型补强已完成，`Resources` stable suite 覆盖 bundled catalog、目录式 third-party `Info.plist`、required capabilities、small-icons path fallback 和排除项。
 - 阶段 1 / 阶段 3 listener/action 已完成：No-op、URL actions、HID-backed hardware actions、已验证 system actions、AXSpringBoardServer-backed system UI actions、lock screen actions、power/recovery actions、telephony call control、dynamic application listeners 已注册真实 listener object。高风险 system actions 的真实副作用只通过真机手工验证，不进入 stable fake path；首轮真机验证无效的 clear-switcher、lock-and-wipe-credentials 以及 SpringBoard 进程内不可执行的 soft-reboot 当前退回 blocked。
@@ -36,17 +36,18 @@
 
 ## 阶段 3：listeners/actions 剩余工作
 
-当前不再把 low-risk listeners 作为主线；剩余 1.9.13 listener/action name 分为 obsolete、blocked 和 out-of-scope。详细 name 清单见 `BUILT_IN_ACTION_TRACKER.md` 的“阶段 3：listeners/actions 未完成交叉比对”。
+当前不再把 low-risk listeners 作为主线；剩余 listener/action 工作分为当前 staged 但未注册 runtime listener、已移除 obsolete name、以及 additive 暂缓项。详细 name 清单见 `BUILT_IN_ACTION_TRACKER.md` 的“阶段 3：listeners/actions 剩余交叉比对”。
 
 可后续小切片推进的 blocked listener family：
 
 1. Modal/system UI actions：clear switcher、previous app、keyboard dictation 等。每项必须先用 Frida/IDA 确认现代 SpringBoard / system service 入口；`clear-switcher` 的首轮路径已经真机验证无效，不能继续直接注册。
-2. Camera shutter / watch haptics / residual lock action：camera shutter、watch haptics、lock-and-wipe-credentials。按设备能力和目标 App 逐项验证，不作为默认主线。
+2. Watch haptics / residual lock action：watch haptics、lock-and-wipe-credentials。按设备能力和目标 App 逐项验证，不作为默认主线。
 3. Additive power action：soft-reboot。Dopamine `jbctl reboot_userspace` 的 `reboot3(RB2_USERREBOOT)` 参考路径不能直接在 SpringBoard 进程内执行，后续需要非 SpringBoard helper 或合适 privileged execution path。
+4. Listener handled semantics audit：所有 built-in listener family 需要与旧 master / 1.9.13 重新对齐 `event.handled` 时机、toggle/deactivate 行为和执行失败时的消费语义；这不是拦截层设计，结论应回写 tracker 或 reverse-engineering 记录。
 
 不恢复或架构外：
 
-- 已移除 URL/old social compose/keypad/bedtime 等 obsolete 项不进入主线。
+- 仍保留为已移除的旧 URL / old social compose / bedtime 等 obsolete 项不进入主线。
 - `libactivator.system.voice-control` 不恢复；旧实现依赖 `SBVoiceControlAlert`，现代系统没有可对齐旧 cancel/toggle 语义的替代入口。
 - `libactivator.system.local-back` / `libactivator.system.back` 依赖用户 App 注入，当前架构不实现。
 - `libactivator.ipod.music-controls` 依赖旧 Now Playing modal，不恢复。

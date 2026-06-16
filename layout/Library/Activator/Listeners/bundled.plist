@@ -230,6 +230,29 @@
 		<key>url</key>
 		<string>clock-alarm:default</string>
 	</dict>
+	<key>libactivator.clock.bedtime</key>
+	<dict>
+		<key>apply-rounded-corners</key>
+		<string>1</string>
+		<key>description</key>
+		<string>Open Clock app to Bedtime page</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>application-launch</string>
+		</array>
+		<key>group</key>
+		<string>Clock</string>
+		<key>selector</key>
+		<string>openURLWithActivator:event:listenerName:</string>
+		<key>small-icons</key>
+		<array>
+			<string>/Applications/MobileTimer.app/icon-about.png</string>
+		</array>
+		<key>title</key>
+		<string>Bedtime</string>
+		<key>url</key>
+		<string>clock-sleep-alarm:default</string>
+	</dict>
 	<key>libactivator.clock.stopwatch</key>
 	<dict>
 		<key>apply-rounded-corners</key>
@@ -953,6 +976,64 @@
 			<string>prefs:root=Bluetooth</string>
 		</array>
 	</dict>
+	<key>libactivator.settings.brightness</key>
+	<dict>
+		<key>apply-rounded-corners</key>
+		<string>1</string>
+		<key>compatible-modes</key>
+		<array>
+			<string>springboard</string>
+			<string>application</string>
+		</array>
+		<key>description</key>
+		<string>Open Settings to Brightness page</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>application-launch</string>
+		</array>
+		<key>group</key>
+		<string>Settings</string>
+		<key>selector</key>
+		<string>openURLWithActivator:event:listenerName:</string>
+		<key>small-icons</key>
+		<array>
+			<string>/Applications/Preferences.app/icon-table.png</string>
+			<string>/Applications/Preferences.app/Settings.png</string>
+		</array>
+		<key>title</key>
+		<string>Brightness</string>
+		<key>url</key>
+		<string>prefs:root=DISPLAY</string>
+	</dict>
+	<key>libactivator.settings.brightness-and-wallpaper</key>
+	<dict>
+		<key>apply-rounded-corners</key>
+		<string>1</string>
+		<key>compatible-modes</key>
+		<array>
+			<string>springboard</string>
+			<string>application</string>
+		</array>
+		<key>description</key>
+		<string>Open Settings to Brightness/Wallpaper page</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>application-launch</string>
+		</array>
+		<key>group</key>
+		<string>Settings</string>
+		<key>selector</key>
+		<string>openURLWithActivator:event:listenerName:</string>
+		<key>small-icons</key>
+		<array>
+			<string>/Applications/Preferences.app/icon-table.png</string>
+			<string>/Applications/Preferences.app/Settings.png</string>
+		</array>
+		<key>title</key>
+		<string>Brightness &amp; Wallpaper</string>
+		<key>url</key>
+		<string>prefs:root=Wallpaper</string>
+	</dict>
 	<key>libactivator.settings.carplay</key>
 	<dict>
 		<key>apply-rounded-corners</key>
@@ -1130,6 +1211,35 @@
 		<string>Do Not Disturb</string>
 		<key>url</key>
 		<string>prefs:root=DO_NOT_DISTURB</string>
+	</dict>
+	<key>libactivator.settings.equalizer</key>
+	<dict>
+		<key>apply-rounded-corners</key>
+		<string>1</string>
+		<key>compatible-modes</key>
+		<array>
+			<string>springboard</string>
+			<string>application</string>
+		</array>
+		<key>description</key>
+		<string>Open Settings to Equalizer page</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>application-launch</string>
+		</array>
+		<key>group</key>
+		<string>Settings</string>
+		<key>selector</key>
+		<string>openURLWithActivator:event:listenerName:</string>
+		<key>small-icons</key>
+		<array>
+			<string>/Applications/Preferences.app/icon-table.png</string>
+			<string>/Applications/Preferences.app/Settings.png</string>
+		</array>
+		<key>title</key>
+		<string>Equalizer</string>
+		<key>url</key>
+		<string>prefs:root=MUSIC&amp;path=com.apple.Music:EQ</string>
 	</dict>
 	<key>libactivator.settings.facetime</key>
 	<dict>
@@ -1508,6 +1618,35 @@
 		<key>url</key>
 		<string>prefs:root=MUSIC</string>
 	</dict>
+	<key>libactivator.settings.network</key>
+	<dict>
+		<key>apply-rounded-corners</key>
+		<string>1</string>
+		<key>compatible-modes</key>
+		<array>
+			<string>springboard</string>
+			<string>application</string>
+		</array>
+		<key>description</key>
+		<string>Open Settings to Network page</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>application-launch</string>
+		</array>
+		<key>group</key>
+		<string>Settings</string>
+		<key>selector</key>
+		<string>openURLWithActivator:event:listenerName:</string>
+		<key>small-icons</key>
+		<array>
+			<string>/Applications/Preferences.app/icon-table.png</string>
+			<string>/Applications/Preferences.app/Settings.png</string>
+		</array>
+		<key>title</key>
+		<string>Network</string>
+		<key>url</key>
+		<string>prefs:root=WIFI</string>
+	</dict>
 	<key>libactivator.settings.notes</key>
 	<dict>
 		<key>apply-rounded-corners</key>
@@ -1830,6 +1969,35 @@
 		<string>Personal Hotspot</string>
 		<key>url</key>
 		<string>prefs:root=INTERNET_TETHERING</string>
+	</dict>
+	<key>libactivator.settings.usage</key>
+	<dict>
+		<key>apply-rounded-corners</key>
+		<string>1</string>
+		<key>compatible-modes</key>
+		<array>
+			<string>springboard</string>
+			<string>application</string>
+		</array>
+		<key>description</key>
+		<string>Open Settings to Usage page</string>
+		<key>exclusive-assignment-groups</key>
+		<array>
+			<string>application-launch</string>
+		</array>
+		<key>group</key>
+		<string>Settings</string>
+		<key>selector</key>
+		<string>openURLWithActivator:event:listenerName:</string>
+		<key>small-icons</key>
+		<array>
+			<string>/Applications/Preferences.app/icon-table.png</string>
+			<string>/Applications/Preferences.app/Settings.png</string>
+		</array>
+		<key>title</key>
+		<string>Usage</string>
+		<key>url</key>
+		<string>prefs:root=General&amp;path=STORAGE_MGMT#MANAGE</string>
 	</dict>
 	<key>libactivator.settings.virtual-assistant</key>
 	<dict>

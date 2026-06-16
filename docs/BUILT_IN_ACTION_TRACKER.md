@@ -15,9 +15,9 @@
 | Catalog | 1.9.13 资源 | 当前 staged | 差异 |
 | --- | ---: | ---: | --- |
 | Events | 121 | 123 | 当前在 1.9.13 基线外新增 `libactivator.now-playing.playing`、`libactivator.now-playing.paused` 两个现代 MediaRemote 状态事件。 |
-| Static listeners/actions | 117 | 112 | 当前从 1.9.13 移除 11 个已确认失效、废弃或排除项，并新增 6 个 2.x 动作 name。 |
+| Static listeners/actions | 117 | 118 | 当前从 1.9.13 移除 5 个已确认失效、废弃或排除项，并新增 6 个 2.x 动作 name。 |
 
-当前 listener staged 移除项：`libactivator.clock.bedtime`、`libactivator.settings.brightness`、`libactivator.settings.brightness-and-wallpaper`、`libactivator.settings.equalizer`、`libactivator.settings.facebook`、`libactivator.settings.network`、`libactivator.settings.twitter`、`libactivator.settings.usage`、`libactivator.twitter.compose-tweet`、`libactivator.facebook.compose-post`、`libactivator.weibo.compose-post`。
+当前 listener staged 移除项：`libactivator.settings.facebook`、`libactivator.settings.twitter`、`libactivator.twitter.compose-tweet`、`libactivator.facebook.compose-post`、`libactivator.weibo.compose-post`。
 
 当前 listener staged 新增项：`libactivator.audio.mute-ringer`、`libactivator.audio.unmute-ringer`、`libactivator.audio.toggle-ringer-mute`、`libactivator.audio.toggle-output-mute`、`libactivator.keyboard.toggle-on-screen-keyboard`、`libactivator.system.hard-respring`。
 
@@ -50,26 +50,26 @@ Events key 层面的非 Settings UI 未完成项只有两个：`is-unprotected` 
 
 ### Listeners keys
 
-当前 staged listener/action resource 共 112 个 static listener/action name，包含 15 类 key。
+当前 staged listener/action resource 共 118 个 static listener/action name，包含 15 类 key。
 
 | Key | staged 覆盖 | 作用 | 当前状态 |
 | --- | ---: | --- | --- |
-| `title` | 112 | listener/action 的本地化标题 fallback。 | `implemented`：`LAListenerFallbacks` / `LAResourceManager` 已作为 metadata fallback 暴露。 |
-| `description` | 112 | listener/action 的本地化说明 fallback。 | `implemented`：已作为 metadata fallback 暴露。 |
-| `group` | 110 | listener/action 分组。 | `implemented`：已作为 metadata fallback 暴露；排序/展示属于 Settings UI。 |
-| `selector` | 112 | 旧 built-in action dispatcher 的 selector name，也作为当前实现的 metadata gate。 | `partial-by-name`：已实现 listener family 会校验 selector metadata；未实现 selector 对应的 blocked/out-of-scope action 已在阶段 3 表中逐项列出。 |
-| `url` | 40 | 单一 URL action 入口。 | `implemented`：`LATURLActionListener` 已读取并提交 `LSApplicationWorkspace openSensitiveURL:withOptions:error:`。 |
+| `title` | 118 | listener/action 的本地化标题 fallback。 | `implemented`：`LAListenerFallbacks` / `LAResourceManager` 已作为 metadata fallback 暴露。 |
+| `description` | 118 | listener/action 的本地化说明 fallback。 | `implemented`：已作为 metadata fallback 暴露。 |
+| `group` | 116 | listener/action 分组。 | `implemented`：已作为 metadata fallback 暴露；排序/展示属于 Settings UI。 |
+| `selector` | 118 | 旧 built-in action dispatcher 的 selector name，也作为当前实现的 metadata gate。 | `partial-by-name`：已实现 listener family 会校验 selector metadata；未实现 selector 对应的 blocked/out-of-scope action 已在阶段 3 表中逐项列出。 |
+| `url` | 46 | 单一 URL action 入口。 | `implemented`：`LATURLActionListener` 已读取并提交 `LSApplicationWorkspace openSensitiveURL:withOptions:error:`。 |
 | `urls` | 4 | 按 CoreFoundation 版本选择 URL action 入口。 | `implemented`：`LATURLActionListener` 已按阈值选择候选 URL。 |
-| `compatible-modes` | 58 | 限定 listener 可在什么 mode 中作为 assignment target 或 receive target。 | `implemented`：dispatch engine 和 Public API 已消费。 |
+| `compatible-modes` | 63 | 限定 listener 可在什么 mode 中作为 assignment target 或 receive target。 | `implemented`：dispatch engine 和 Public API 已消费。 |
 | `incompatible-events` | 15 | 禁止特定 listener 与特定 event 组合，例如防止 unlock event 触发危险动作、button event 递归触发 virtual button。changelog 早期明确提到 block dangerous actions from device unlocked event、events incompatible with automatic unlocking。 | `implemented`：dispatch/compatibility 查询已消费；blocked listener 本身未注册时该 key 暂不可被真实触发。 |
-| `exclusive-assignment-groups` | 105 | 多 action assignment 的互斥组，例如 `modal-ui`、`application-launch`、`media-playback`、`volume-change`、`lock-screen`、`virtual-button`、`orientation`。 | `implemented-api`：core 已提供 `exclusiveAssignmentGroupsForListenerName:` 和 `listenerNamesAreMutuallyCompatible:`；真正阻止 UI 中选择冲突 action 属于 Settings UI。 |
+| `exclusive-assignment-groups` | 111 | 多 action assignment 的互斥组，例如 `modal-ui`、`application-launch`、`media-playback`、`volume-change`、`lock-screen`、`virtual-button`、`orientation`。 | `implemented-api`：core 已提供 `exclusiveAssignmentGroupsForListenerName:` 和 `listenerNamesAreMutuallyCompatible:`；真正阻止 UI 中选择冲突 action 属于 Settings UI。 |
 | `needs-powered-display` | 25 | 控制熄屏时是否延迟/跳过 listener。1.9.13 changelog 特别提到 reset ringer switch action 不应要求亮屏；当前 2.x 新增 ringer mute/unmute/toggle 也显式不要求亮屏。 | `implemented`：dispatch engine 已根据 runtime screen state gate listener。 |
 | `requires-no-touch-events` | 5 | 触摸活跃时延迟投递 listener，changelog 明确提到新增该 info key 以便 action 等待触摸结束。 | `implemented`：dispatch core 已实现 no-touch deferral，tweak runtime 提供 touch state。 |
 | `receives-raw-events` | 1 | 让 listener 接收原始 event 以实现旧 `back` action 这类依赖当前 App/UIKit 上下文的行为。 | `out-of-scope-gap`：唯一使用者是 `libactivator.system.back`；当前项目不注入用户 App，不实现 old back/local back raw-event 语义。 |
 | `previews` | 5 | 允许 action 在配置/菜单中 preview。1.9.7 changelog 提到 listeners 可设置 `previews=1` 自动支持 preview，且 vibration actions 可预览。 | `partial`：core preview dispatch API 已存在，但 built-in `system.vibrate` 当前没有 preview 行为；watch haptic action 尚未实现。 |
 | `tapticType` | 3 | Taptic action 类型，当前值映射 `flick=0` / `tap=1` / `quirk=2`。1.9.7 增加 taptic engine actions，1.9.13 改为 iOS 13 public haptics。 | `implemented`：`libactivator.system.haptic.*` 已按 1.9.13 解混淆语义映射到 UIKit feedback generator。 |
-| `small-icons` | 67 | 小图标候选路径，按 jbroot 优先、原路径 fallback。 | `implemented`：resource manager / listener metadata cache 已解析；展示属于 Settings UI。 |
-| `apply-rounded-corners` | 66 | 旧 UI 对图标做圆角处理的展示 hint。 | `settings-ui-only`：不影响 runtime，本轮不计入欠账。 |
+| `small-icons` | 73 | 小图标候选路径，按 jbroot 优先、原路径 fallback。 | `implemented`：resource manager / listener metadata cache 已解析；展示属于 Settings UI。 |
+| `apply-rounded-corners` | 72 | 旧 UI 对图标做圆角处理的展示 hint。 | `settings-ui-only`：不影响 runtime，本轮不计入欠账。 |
 
 Listeners key 层面的非 Settings UI 未完成项是：`selector` 覆盖的 blocked/out-of-scope action name、`receives-raw-events` 的 old back raw-event 语义、`previews` 对 built-in vibration / watch haptic preview 的实际动作支持。`exclusive-assignment-groups` 的核心查询已实现，配置 UI 中的冲突阻止属于后续 Settings UI，不作为 runtime 欠账。
 
@@ -80,7 +80,7 @@ Listeners key 层面的非 Settings UI 未完成项是：`selector` 覆盖的 bl
 | Family | 承载实体 | 已实现 name | 说明 |
 | --- | --- | --- | --- |
 | No-op | `LATNothingListener` | `libactivator.system.nothing` | 已注册并在 dispatch 后设置 `event.handled = YES`。 |
-| URL actions | `LATURLActionListener` | `libactivator.clock.alarm`、`libactivator.clock.stopwatch`、`libactivator.clock.timer`、`libactivator.clock.world-clock`、`libactivator.settings.about`、`libactivator.settings.accessibility`、`libactivator.settings.auto-lock`、`libactivator.settings.background-app-refresh`、`libactivator.settings.battery`、`libactivator.settings.bluetooth`、`libactivator.settings.carplay`、`libactivator.settings.cellular`、`libactivator.settings.control-center`、`libactivator.settings.date-time`、`libactivator.settings.display`、`libactivator.settings.do-not-disturb`、`libactivator.settings.facetime`、`libactivator.settings.game-center`、`libactivator.settings.general`、`libactivator.settings.handoff`、`libactivator.settings.icloud`、`libactivator.settings.international`、`libactivator.settings.keyboard`、`libactivator.settings.location-services`、`libactivator.settings.mail`、`libactivator.settings.managed-configuration`、`libactivator.settings.maps`、`libactivator.settings.messages`、`libactivator.settings.music`、`libactivator.settings.notes`、`libactivator.settings.notifications`、`libactivator.settings.passcode`、`libactivator.settings.phone`、`libactivator.settings.photos`、`libactivator.settings.privacy`、`libactivator.settings.reminders`、`libactivator.settings.safari`、`libactivator.settings.sounds`、`libactivator.settings.store`、`libactivator.settings.tethering`、`libactivator.settings.virtual-assistant`、`libactivator.settings.vpn`、`libactivator.settings.wallpaper`、`libactivator.settings.wifi`、`libactivator.phone.favorites`、`libactivator.phone.recents`、`libactivator.phone.contacts`、`libactivator.phone.keypad`、`libactivator.phone.voicemail` | 44 个 Clock / Settings URL action 与 5 个 Phone tab hardcoded URL action 已实现。真实打开通过 `LSApplicationWorkspace openSensitiveURL:withOptions:error:` 在非主队列提交；`phone.keypad` 额外依赖注入 MobilePhone 的 companion tweak，在 `mobilephone-recents:keypad` 到达后通过 `MPRootViewController baseViewController` 定位 `PhoneTabBarController`，再用 `keypadViewController` 反查 `tabTypeForViewController:` 并切换。 |
+| URL actions | `LATURLActionListener` | `libactivator.clock.alarm`、`libactivator.clock.bedtime`、`libactivator.clock.stopwatch`、`libactivator.clock.timer`、`libactivator.clock.world-clock`、`libactivator.settings.about`、`libactivator.settings.accessibility`、`libactivator.settings.auto-lock`、`libactivator.settings.background-app-refresh`、`libactivator.settings.battery`、`libactivator.settings.bluetooth`、`libactivator.settings.brightness`、`libactivator.settings.brightness-and-wallpaper`、`libactivator.settings.carplay`、`libactivator.settings.cellular`、`libactivator.settings.control-center`、`libactivator.settings.date-time`、`libactivator.settings.display`、`libactivator.settings.do-not-disturb`、`libactivator.settings.equalizer`、`libactivator.settings.facetime`、`libactivator.settings.game-center`、`libactivator.settings.general`、`libactivator.settings.handoff`、`libactivator.settings.icloud`、`libactivator.settings.international`、`libactivator.settings.keyboard`、`libactivator.settings.location-services`、`libactivator.settings.mail`、`libactivator.settings.managed-configuration`、`libactivator.settings.maps`、`libactivator.settings.messages`、`libactivator.settings.music`、`libactivator.settings.network`、`libactivator.settings.notes`、`libactivator.settings.notifications`、`libactivator.settings.passcode`、`libactivator.settings.phone`、`libactivator.settings.photos`、`libactivator.settings.privacy`、`libactivator.settings.reminders`、`libactivator.settings.safari`、`libactivator.settings.sounds`、`libactivator.settings.store`、`libactivator.settings.tethering`、`libactivator.settings.usage`、`libactivator.settings.virtual-assistant`、`libactivator.settings.vpn`、`libactivator.settings.wallpaper`、`libactivator.settings.wifi`、`libactivator.phone.favorites`、`libactivator.phone.recents`、`libactivator.phone.contacts`、`libactivator.phone.keypad`、`libactivator.phone.voicemail` | 50 个 Clock / Settings URL action 与 5 个 Phone tab hardcoded URL action 已实现。真实打开通过 `LSApplicationWorkspace openSensitiveURL:withOptions:error:` 在非主队列提交；`clock.bedtime` 保留 1.9.13 原 URL `clock-sleep-alarm:default`，并额外依赖注入 MobileTimer 的 companion tweak，在 URL 到达后通过 `MTATabBarController showSleepView` 拉起起床闹钟编辑 UI；`phone.keypad` 额外依赖注入 MobilePhone 的 companion tweak，在 `mobilephone-recents:keypad` 到达后通过 `MPRootViewController baseViewController` 定位 `PhoneTabBarController`，再用 `keypadViewController` 反查 `tabTypeForViewController:` 并切换。 |
 | Camera actions | `LATCameraActionListener` + `ActivatorAppTweak` | `libactivator.camera.invoke-shutter` | SpringBoard listener 在事件 mode 为 lockscreen、runtime `isUILocked`，或 CoverSheet camera 已可见时优先走锁屏相机，避免 Camera App 位于锁屏底下时被 foreground app 短路；非锁屏时才直接处理前台 `com.apple.camera`。锁屏 camera 走 `LATLockScreenCameraLauncher`，但 activation completion 不直接发 HID，而是等 CoverSheet camera visible 后延后 0.6s 复核，并要求 SpringBoard `appsRegisteredForVolumeEvents.firstObject.bundleIdentifier == com.apple.camera`；若不满足则继续等待 volume registration notification 或 pending timeout。普通 Camera app launch 等待 Camera companion 的延迟 ready：仅当 `CAMViewfinderViewController _updateEnabledControlsWithReason:forceLog:` 当场满足 Camera app active 且 `UIApplication setWantsVolumeButtonEvents:YES` 时，延后 0.6s 复核条件仍成立后才发送 `libactivator.camera.ready` Darwin notification。completion / ready 到达后条件不满足就丢弃 pending shutter，不补发 HID。 |
 | Hardware actions | `LATHardwareActionListener` | `libactivator.ipod.toggle-playback`、`libactivator.ipod.pause-playback`、`libactivator.ipod.resume-playback`、`libactivator.ipod.next-track`、`libactivator.ipod.previous-track`、`libactivator.audio.increase-volume`、`libactivator.audio.decrease-volume`、`libactivator.audio.toggle-output-mute`、`libactivator.screen.brightness.increase`、`libactivator.screen.brightness.decrease`、`libactivator.system.homebutton`、`libactivator.system.sleepbutton`、`libactivator.keyboard.toggle-on-screen-keyboard`、`libactivator.system.take-screenshot`、`libactivator.system.spotlight`、`libactivator.system.vibrate` | HID Consumer page 动作统一通过 `LATHIDEventSender` 提交，并使用 synthetic `senderID` 防止 HID event source 回流识别；vibrate 使用 `AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)`。 |
 | System actions | `LATSystemActionListener` | `libactivator.audio.show-volume-bar`、`libactivator.audio.launch-playing-app`、`libactivator.audio.reset-ringer-state`、`libactivator.audio.mute-ringer`、`libactivator.audio.unmute-ringer`、`libactivator.audio.toggle-ringer-mute`、`libactivator.system.first-springboard-page`、`libactivator.lockscreen.show`、`libactivator.lockscreen.dismiss`、`libactivator.lockscreen.toggle`、`libactivator.system.activate-control-center`、`libactivator.system.activate-notification-center`、`libactivator.system.activate-reachability`、`libactivator.system.activate-switcher`、`libactivator.system.edit-screenshot`、`libactivator.system.power-menu`、`libactivator.system.respring`、`libactivator.system.hard-respring`、`libactivator.system.safemode`、`libactivator.system.powerdown`、`libactivator.system.reboot`、`libactivator.system.haptic.flick`、`libactivator.system.haptic.tap`、`libactivator.system.haptic.quirk`、`libactivator.system.rotate.landscape-left`、`libactivator.system.rotate.landscape-right`、`libactivator.system.rotate.portrait`、`libactivator.system.rotate.portrait-upside-down`、`libactivator.system.virtual-assistant`、`libactivator.system.wallet` | Volume HUD、now-playing application launch、ringer state sync、ringer mute/unmute/toggle、SBS first SpringBoard page，以及已通过真机验证、trace 确认或 AXSpringBoardServer / AXPISystemActionHelper SPI 补齐的锁屏、切换器、电源菜单、系统 UI、haptics、rotation、截图编辑、respring/reboot/powerdown/safemode 动作已注册。ringer mute/unmute/toggle 首选 `AXPISystemActionHelper toggleRingerSwitch:` / `isRingerSwitchOn`，原 `SBRingerControl` 路径保留 fallback。`activate-reachability` 现在在主队列调用 `AXSpringBoardServerHelper isReachabilityActive` / `setReachabilityActive:`，保持旧 Activator toggle 语义。`system.haptic.flick` / `tap` / `quirk` 分别映射 `UIImpactFeedbackStyleHeavy`、`UIImpactFeedbackStyleLight`、`UINotificationFeedbackTypeSuccess`。`hard-respring` 是本轮新增 additive 高风险动作，真实副作用只通过真机手工验证，不进入 stable fake path。 |
@@ -102,19 +102,36 @@ Listeners key 层面的非 Settings UI 未完成项是：`selector` 覆盖的 bl
 | Fingerprint sensor events | `libactivator.fingerprint-sensor.press.single`、`libactivator.fingerprint-sensor.press.twice`、`libactivator.fingerprint-sensor.hold`、`libactivator.fingerprint-sensor.hold-long`、`libactivator.fingerprint-sensor.press.single.with-slide-in`、`libactivator.fingerprint-sensor.press.single.with-hold` | Touch ID HID probe 接入 `LATFingerprintSensorEventSource`；只在 `touch-id` capability 通过时注册；端到端真机验收通过。 |
 | Force touch events | `libactivator.force-touch.statusbar`、`libactivator.force-touch.screen-left`、`libactivator.force-touch.screen-right`、`libactivator.force-touch.screen-bottom-left`、`libactivator.force-touch.screen-bottom`、`libactivator.force-touch.screen-bottom-right` | `_UISystemGestureWindow sendEvent:` / `UITouch.force` 数据路径；只在 `SupportsForceTouch` capability 通过时注册；六组真机验收通过。 |
 
-## 阶段 3：listeners/actions 未完成交叉比对
+## 阶段 3：listeners/actions 剩余交叉比对
 
-1.9.13 static listener/action 资源共 117 个。当前已实现 static listener name 共 102 个，其中 96 个来自 1.9.13，6 个是 2.x additive name。未实现的 1.9.13 listener/action name 共 21 个，按处理状态归类如下；2.x additive 暂缓项单独列出。
+1.9.13 static listener/action 资源共 117 个。当前 staged static listener/action resource 共 118 个，其中 112 个来自 1.9.13，6 个是 2.x additive name。当前已实现 runtime static listener name 共 108 个，其中 102 个来自 1.9.13，6 个是 2.x additive name。
+
+阶段 3 后续收口不再按原始 117 项散列推进；当前需要关注的是：staged 资源中仍未注册 runtime listener 的 10 个 name、已从 staged 移除且不恢复的 5 个旧 name，以及单独暂缓的 2.x additive `soft-reboot`。
+
+### 当前 staged 但未注册 runtime listener
+
+这些 name 仍保留 metadata，或因兼容展示、历史资源完整性而保留在 staged resource 中；没有真实 runtime listener object 注册时，不应出现在 `availableListenerNames`。
 
 | 分类 | Listener names | 当前状态 | 说明 |
 | --- | --- | --- | --- |
-| 已移除 / obsolete URL 或旧服务 | `libactivator.clock.bedtime`、`libactivator.settings.brightness`、`libactivator.settings.brightness-and-wallpaper`、`libactivator.settings.equalizer`、`libactivator.settings.facebook`、`libactivator.settings.network`、`libactivator.settings.twitter`、`libactivator.settings.usage`、`libactivator.facebook.compose-post`、`libactivator.twitter.compose-tweet`、`libactivator.weibo.compose-post` | `obsolete` | 已从当前 staged listener resource 移除；其中 Settings/Clock URL 经真机验证失效、重复或打开错误页面，旧 social compose 服务不作为内置 action 恢复。 |
 | 旧 Audio modal | `libactivator.ipod.music-controls`、`libactivator.system.show-now-playing-bar` | `obsolete` | 旧 `SBNowPlayingAlertItem` / Now Playing Bar modal 在现代 iOS 没有等价 UI，不作为当前 listener family 恢复，也不映射到 Control Center 的 Now Playing 模块。 |
+| Voice Control | `libactivator.system.voice-control` | `obsolete` | 旧 master 依赖 `SBVoiceControlAlert`，现代 Voice Control 已不是同一 UI；AXSpringBoardServer 只提供打开入口，无法复刻旧 cancel/toggle 语义，当前无替代方案。 |
 | Modal/system UI actions | `libactivator.system.clear-switcher`、`libactivator.system.previous-app`、`libactivator.keyboard.dictation` | `blocked` | 需要 Frida/IDA probe 对应现代 SpringBoard / keyboard service 入口，不把旧 selector 直接映射到现代 UI。`clear-switcher` 的首轮现代路径真机验证无效，当前不注册 runtime listener，后续重新 probe。 |
 | Power / lock residual actions | `libactivator.system.lock-and-wipe-credentials` | `blocked` | 1.9.13 语义是锁屏并强制 biometric lockout，不是删除 passcode 或清除系统凭据；首轮 `SBCoverSheetPresentationManager lockUIFromSource:withOptions:` 路径真机验证无效，当前不注册 runtime listener。 |
-| 2.x additive deferred actions | `libactivator.system.soft-reboot` | `blocked` | Dopamine `jbctl reboot_userspace` 的 `reboot3(RB2_USERREBOOT)` 路径在 SpringBoard 进程内无法执行；当前从 staged resource 和 runtime allowlist 移除，后续需要非 SpringBoard helper 或合适 privileged execution path。 |
 | Watch haptics | `libactivator.watch.haptic.tap` | `blocked` | 涉及 Watch 能力与设备差异；不作为默认 listener 主线。 |
 | App 注入依赖 | `libactivator.system.local-back`、`libactivator.system.back` | `out-of-scope` | 1.9.13 旧语义依赖 `com.apple.UIKit` filter 注入用户 App 进程执行 local back；本项目不注入用户 App，因此只保留资源/逆向记录，不实现。 |
+
+### 已从 staged 移除且不恢复
+
+| 分类 | Listener names | 当前状态 | 说明 |
+| --- | --- | --- | --- |
+| obsolete URL 或旧服务 | `libactivator.settings.facebook`、`libactivator.settings.twitter`、`libactivator.facebook.compose-post`、`libactivator.twitter.compose-tweet`、`libactivator.weibo.compose-post` | `obsolete` | 已从当前 staged listener resource 移除；其中剩余旧 Settings URL 经真机验证失效、重复或打开错误页面，旧 social compose 服务不作为内置 action 恢复。 |
+
+### Additive 暂缓项
+
+| 分类 | Listener names | 当前状态 | 说明 |
+| --- | --- | --- | --- |
+| 2.x additive deferred actions | `libactivator.system.soft-reboot` | `blocked` | Dopamine `jbctl reboot_userspace` 的 `reboot3(RB2_USERREBOOT)` 路径在 SpringBoard 进程内无法执行；当前从 staged resource 和 runtime allowlist 移除，后续需要非 SpringBoard helper 或合适 privileged execution path。 |
 
 ## 阶段 4：events 未完成交叉比对
 
@@ -134,6 +151,7 @@ Listeners key 层面的非 Settings UI 未完成项是：`selector` 覆盖的 bl
 
 ## 遗留问题
 
+- 所有 listener 的 `event.handled` 语义需要与旧 master / 1.9.13 实现重新逐项对齐。重点确认每个 built-in listener 是在接收合法 listener name 后立即消费事件，还是只在 SPI/URL/UI 请求实际提交成功后标记 handled；同时确认 toggle/deactivate 类 listener 在目标 UI 已打开时的旧行为。该复核必须覆盖 URL、hardware、system、compose、telephony、camera、dynamic application listener family，并把差异记录回本表或对应 reverse-engineering 记录。
 - Handled-default interception 尚未设计。当前 hardware button、status bar、edge gesture、force touch 都只负责识别和 dispatch，不根据 `event.handled` 吞掉系统默认行为。后续如果恢复拦截，应单独设计 hook 返回值、原始事件转发、fallback 重发和 `event.handled` 回传路径。
 - 物理按键与 status bar scroll-to-top 是当前最明确可能需要拦截层的 family；edge gesture / force touch 当前继续保持 no-intercept 语义。
 - Fingerprint sensor 遗留 1.9.13 changelog 项：“Suppress Touch ID events while showing an auth alert in Touch ID-enabled apps”。当前尚未识别现代 LocalAuthentication / biometric auth UI 状态，不做该 suppression。

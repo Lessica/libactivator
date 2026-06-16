@@ -17,6 +17,8 @@
 
 CHDeclareClass(UIApplication);
 CHDeclareClass(CAMViewfinderViewController);
+CHDeclareClass(MTAAppController);
+CHDeclareClass(MTATabBarController);
 CHDeclareClass(PhoneApplication);
 CHDeclareClass(PhoneTabBarController);
 
@@ -43,10 +45,21 @@ CHDeclareClass(PhoneTabBarController);
 - (void)_updateEnabledControlsWithReason:(NSString *)reason forceLog:(BOOL)forceLog;
 @end
 
+@interface MTAAppController : NSObject
+- (void)scene:(UIScene *)scene openURL:(NSURL *)url sourceApplication:(nullable NSString *)sourceApplication;
+@end
+
+@interface MTATabBarController : UITabBarController
+- (void)showSleepView;
+@end
+
+static NSString *const LATClockSleepAlarmURLString = @"clock-sleep-alarm:default";
 static NSString *const LATPhoneKeypadURLString = @"mobilephone-recents:keypad";
 static const char *LATCameraReadyNotification = "libactivator.camera.ready";
 static const CFTimeInterval LATCameraReadyNotificationThrottle = 0.25;
 static const NSTimeInterval LATCameraReadyNotificationDelay = 0.6;
+static const NSTimeInterval LATClockSleepViewRetryDelay = 0.25;
+static const NSUInteger LATClockSleepViewMaximumAttempts = 8;
 
 // Camera ready state
 static CFAbsoluteTime gLastCameraReadyNotificationTime = 0;
@@ -56,6 +69,10 @@ static BOOL gCameraReadyNotificationPending = NO;
 
 // Phone keypad state
 static BOOL gPhonePendingKeypadTabSelection = NO;
+
+// Clock sleep view state
+static BOOL gClockPendingSleepViewPresentation = NO;
+static NSUInteger gClockSleepViewPresentationGeneration = 0;
 
 #pragma mark - Camera Ready Notification
 
@@ -168,7 +185,7 @@ static void LATInstallCameraHooks(void) {
                                                 }];
 }
 
-#pragma mark - Phone URL Matching
+#pragma mark - Shared View Controller Lookup
 
 static BOOL LATStringContainsAnyToken(NSString *string, NSArray<NSString *> *tokens) {
     NSString *lowercaseString = string.lowercaseString;
@@ -179,6 +196,218 @@ static BOOL LATStringContainsAnyToken(NSString *string, NSArray<NSString *> *tok
     }
     return NO;
 }
+
+static UIViewController *LATRootViewControllerFromScenes(UIApplication *application) {
+    for (UIScene *scene in application.connectedScenes) {
+        if (![scene isKindOfClass:UIWindowScene.class]) {
+            continue;
+        }
+
+        for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+            if (window.isKeyWindow && [window.rootViewController isKindOfClass:UIViewController.class]) {
+                return window.rootViewController;
+            }
+        }
+    }
+
+    for (UIScene *scene in application.connectedScenes) {
+        if (![scene isKindOfClass:UIWindowScene.class]) {
+            continue;
+        }
+
+        for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+            if ([window.rootViewController isKindOfClass:UIViewController.class]) {
+                return window.rootViewController;
+            }
+        }
+    }
+
+    return nil;
+}
+
+static UIViewController *LATApplicationRootViewController(UIApplication *application) {
+    UIViewController *rootViewController = nil;
+    if ([application respondsToSelector:@selector(rootViewController)]) {
+        rootViewController = [application rootViewController];
+    }
+
+    if (![rootViewController isKindOfClass:UIViewController.class]) {
+        rootViewController = LATRootViewControllerFromScenes(application);
+    }
+
+    return rootViewController;
+}
+
+#pragma mark - Clock URL Matching
+
+static BOOL LATClockURLRequestsSleepAlarm(NSURL *url) {
+    return [url.absoluteString.lowercaseString isEqualToString:LATClockSleepAlarmURLString];
+}
+
+#pragma mark - Clock View Controller Lookup
+
+static MTATabBarController *LATClockFindTabBarControllerInViewController(UIViewController *viewController,
+                                                                         NSMutableSet<NSValue *> *visitedViewControllers) {
+    if (!viewController) {
+        return nil;
+    }
+
+    NSValue *viewControllerKey = [NSValue valueWithNonretainedObject:viewController];
+    if ([visitedViewControllers containsObject:viewControllerKey]) {
+        return nil;
+    }
+    [visitedViewControllers addObject:viewControllerKey];
+
+    Class tabBarControllerClass = NSClassFromString(@"MTATabBarController");
+    if (tabBarControllerClass && [viewController isKindOfClass:tabBarControllerClass]) {
+        return (MTATabBarController *)viewController;
+    }
+
+    if (tabBarControllerClass && [viewController.tabBarController isKindOfClass:tabBarControllerClass]) {
+        return (MTATabBarController *)viewController.tabBarController;
+    }
+
+    for (UIViewController *childViewController in viewController.childViewControllers) {
+        MTATabBarController *tabBarController =
+            LATClockFindTabBarControllerInViewController(childViewController, visitedViewControllers);
+        if (tabBarController) {
+            return tabBarController;
+        }
+    }
+
+    if ([viewController isKindOfClass:UINavigationController.class]) {
+        for (UIViewController *navigationViewController in ((UINavigationController *)viewController).viewControllers) {
+            MTATabBarController *tabBarController =
+                LATClockFindTabBarControllerInViewController(navigationViewController, visitedViewControllers);
+            if (tabBarController) {
+                return tabBarController;
+            }
+        }
+    }
+
+    return LATClockFindTabBarControllerInViewController(viewController.presentedViewController,
+                                                        visitedViewControllers);
+}
+
+static MTATabBarController *LATClockTabBarController(void) {
+    UIApplication *application = UIApplication.sharedApplication;
+    UIViewController *rootViewController = LATApplicationRootViewController(application);
+
+    MTATabBarController *tabBarController =
+        LATClockFindTabBarControllerInViewController(rootViewController, [NSMutableSet set]);
+    if (tabBarController) {
+        return tabBarController;
+    }
+
+    HBLogWarn(@"Unable to locate Clock tab bar controller from root view controller %@", rootViewController);
+    return nil;
+}
+
+#pragma mark - Clock Sleep View Presentation
+
+static BOOL LATClockApplyPendingSleepViewPresentationIfPossible(void) {
+    if (!gClockPendingSleepViewPresentation) {
+        return NO;
+    }
+
+    MTATabBarController *tabBarController = LATClockTabBarController();
+    if (!tabBarController) {
+        return NO;
+    }
+
+    if (![tabBarController respondsToSelector:@selector(showSleepView)]) {
+        HBLogWarn(@"Unable to open Clock sleep view because MTATabBarController does not expose showSleepView");
+        gClockPendingSleepViewPresentation = NO;
+        gClockSleepViewPresentationGeneration++;
+        return NO;
+    }
+
+    [tabBarController showSleepView];
+    HBLogDebug(@"Requested Clock sleep view from %@", tabBarController);
+    gClockPendingSleepViewPresentation = NO;
+    gClockSleepViewPresentationGeneration++;
+    return YES;
+}
+
+static void LATClockAttemptPendingSleepViewPresentation(NSUInteger generation, NSUInteger remainingAttempts) {
+    if (!gClockPendingSleepViewPresentation || generation != gClockSleepViewPresentationGeneration) {
+        return;
+    }
+
+    if (LATClockApplyPendingSleepViewPresentationIfPossible()) {
+        return;
+    }
+
+    if (remainingAttempts == 0) {
+        HBLogWarn(@"Unable to open Clock sleep view because the tab bar controller is unavailable");
+        gClockPendingSleepViewPresentation = NO;
+        gClockSleepViewPresentationGeneration++;
+        return;
+    }
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LATClockSleepViewRetryDelay * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+                       LATClockAttemptPendingSleepViewPresentation(generation, remainingAttempts - 1);
+                   });
+}
+
+static void LATClockRequestSleepViewPresentation(void) {
+    gClockPendingSleepViewPresentation = YES;
+    gClockSleepViewPresentationGeneration++;
+    NSUInteger generation = gClockSleepViewPresentationGeneration;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        LATClockAttemptPendingSleepViewPresentation(generation, LATClockSleepViewMaximumAttempts);
+    });
+}
+
+#pragma mark - Clock Application URL Hooks
+
+CHOptimizedMethod3(self, void, MTAAppController, scene, UIScene *, scene, openURL, NSURL *, url, sourceApplication,
+                   NSString *, sourceApplication) {
+    CHSuper3(MTAAppController, scene, scene, openURL, url, sourceApplication, sourceApplication);
+    HBLogDebug(@"Clock scene:openURL:sourceApplication: %@ source=%@", url.absoluteString ?: @"",
+               sourceApplication ?: @"");
+    if (LATClockURLRequestsSleepAlarm(url)) {
+        LATClockRequestSleepViewPresentation();
+    }
+}
+
+#pragma mark - Clock Tab Bar Hooks
+
+CHOptimizedMethod1(self, void, MTATabBarController, viewDidAppear, BOOL, animated) {
+    CHSuper1(MTATabBarController, viewDidAppear, animated);
+    LATClockApplyPendingSleepViewPresentationIfPossible();
+}
+
+#pragma mark - Clock Hook Installation
+
+static void LATInstallClockHooks(void) {
+    Class appControllerClass = NSClassFromString(@"MTAAppController");
+    if (!appControllerClass) {
+        HBLogWarn(@"Skipping Clock sleep view hook because MTAAppController is unavailable");
+        return;
+    }
+
+    CHLoadClass_(&MTAAppController$, appControllerClass);
+    if ([appControllerClass instancesRespondToSelector:@selector(scene:openURL:sourceApplication:)]) {
+        CHHook3(MTAAppController, scene, openURL, sourceApplication);
+    } else {
+        HBLogWarn(@"Skipping Clock URL hook because MTAAppController does not expose scene:openURL:sourceApplication:");
+    }
+
+    Class tabBarControllerClass = NSClassFromString(@"MTATabBarController");
+    if (!tabBarControllerClass) {
+        HBLogWarn(@"Skipping Clock tab bar hook because MTATabBarController is unavailable");
+        return;
+    }
+
+    CHLoadClass_(&MTATabBarController$, tabBarControllerClass);
+    if ([tabBarControllerClass instancesRespondToSelector:@selector(viewDidAppear:)]) {
+        CHHook1(MTATabBarController, viewDidAppear);
+    }
+}
+
+#pragma mark - Phone URL Matching
 
 static BOOL LATPhoneURLRequestsKeypad(NSURL *url) {
     return [url.absoluteString.lowercaseString isEqualToString:LATPhoneKeypadURLString];
@@ -288,40 +517,9 @@ static UITabBarController *LATPhoneFindTabBarControllerInViewController(UIViewCo
     return LATPhoneFindTabBarControllerInViewController(viewController.presentedViewController, visitedViewControllers);
 }
 
-static UIViewController *LATPhoneRootViewControllerFromScenes(UIApplication *application) {
-    for (UIScene *scene in application.connectedScenes) {
-        if (![scene isKindOfClass:UIWindowScene.class]) {
-            continue;
-        }
-
-        for (UIWindow *window in ((UIWindowScene *)scene).windows) {
-            if (window.isKeyWindow && [window.rootViewController isKindOfClass:UIViewController.class]) {
-                return window.rootViewController;
-            }
-        }
-    }
-
-    for (UIScene *scene in application.connectedScenes) {
-        if (![scene isKindOfClass:UIWindowScene.class]) {
-            continue;
-        }
-
-        for (UIWindow *window in ((UIWindowScene *)scene).windows) {
-            if ([window.rootViewController isKindOfClass:UIViewController.class]) {
-                return window.rootViewController;
-            }
-        }
-    }
-
-    return nil;
-}
-
 static UITabBarController *LATPhoneTabBarController(void) {
     UIApplication *application = UIApplication.sharedApplication;
-    UIViewController *rootViewController = [application rootViewController];
-    if (![rootViewController isKindOfClass:UIViewController.class]) {
-        rootViewController = LATPhoneRootViewControllerFromScenes(application);
-    }
+    UIViewController *rootViewController = LATApplicationRootViewController(application);
 
     UITabBarController *tabBarController =
         LATPhoneFindTabBarControllerInViewController(rootViewController, [NSMutableSet set]);
@@ -482,5 +680,7 @@ __attribute__((constructor)) static void LATAppTweakInitialize(void) {
         LATInstallCameraHooks();
     } else if ([bundleIdentifier isEqualToString:@"com.apple.mobilephone"]) {
         LATInstallPhoneHooks();
+    } else if ([bundleIdentifier isEqualToString:@"com.apple.mobiletimer"]) {
+        LATInstallClockHooks();
     }
 }

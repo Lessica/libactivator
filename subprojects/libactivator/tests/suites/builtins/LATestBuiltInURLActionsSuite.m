@@ -32,7 +32,7 @@
         @"libactivator.phone.voicemail",
     ]];
     NSSet<NSString *> *supportedNames = [NSSet setWithArray:[urlActionClass supportedListenerNames]];
-    [recorder expect:supportedNames.count == 49
+    [recorder expect:supportedNames.count == 55
             caseName:@"url-action-allowlist-count"
               reason:@"URL action allowlist did not match the expected count"];
 
@@ -72,6 +72,31 @@
         caseName:@"url-action-representative-versioned-url-metadata"
           reason:@"Representative versioned URL action metadata did not match bundled resources"];
 
+    id brightnessURL = [activator infoDictionaryValueOfKey:@"url"
+                                       forListenerWithName:@"libactivator.settings.brightness"];
+    id brightnessWallpaperURL =
+        [activator infoDictionaryValueOfKey:@"url"
+                        forListenerWithName:@"libactivator.settings.brightness-and-wallpaper"];
+    id equalizerURL = [activator infoDictionaryValueOfKey:@"url"
+                                      forListenerWithName:@"libactivator.settings.equalizer"];
+    [recorder expect:[brightnessURL isEqual:@"prefs:root=DISPLAY"] &&
+                     [brightnessWallpaperURL isEqual:@"prefs:root=Wallpaper"] &&
+                     [equalizerURL isEqual:@"prefs:root=MUSIC&path=com.apple.Music:EQ"]
+            caseName:@"url-action-restored-settings-url-metadata"
+              reason:@"Restored Settings URL action metadata did not match the expected URLs"];
+
+    id bedtimeURL = [activator infoDictionaryValueOfKey:@"url"
+                                    forListenerWithName:@"libactivator.clock.bedtime"];
+    id networkURL = [activator infoDictionaryValueOfKey:@"url"
+                                    forListenerWithName:@"libactivator.settings.network"];
+    id usageURL = [activator infoDictionaryValueOfKey:@"url"
+                                  forListenerWithName:@"libactivator.settings.usage"];
+    [recorder expect:[bedtimeURL isEqual:@"clock-sleep-alarm:default"] &&
+                     [networkURL isEqual:@"prefs:root=WIFI"] &&
+                     [usageURL isEqual:@"prefs:root=General&path=STORAGE_MGMT#MANAGE"]
+            caseName:@"url-action-restored-clock-and-network-url-metadata"
+              reason:@"Restored Clock or network Settings URL action metadata did not match the expected URLs"];
+
     [recorder expect:[supportedNames containsObject:@"libactivator.phone.recents"] &&
                      [activator hasListenerWithName:@"libactivator.phone.recents"]
             caseName:@"url-action-phone-tab-registered"
@@ -108,9 +133,14 @@
             caseName:@"url-action-unsupported-name-unhandled"
               reason:@"Unsupported URL action listener name consumed the event"];
 
-    [recorder expect:![activator hasListenerWithName:@"libactivator.settings.brightness"]
-            caseName:@"url-action-obsolete-name-not-registered"
-              reason:@"Obsolete URL action was registered"];
+    [recorder expect:[activator hasListenerWithName:@"libactivator.settings.brightness"] &&
+                     [activator hasListenerWithName:@"libactivator.settings.brightness-and-wallpaper"] &&
+                     [activator hasListenerWithName:@"libactivator.settings.equalizer"] &&
+                     [activator hasListenerWithName:@"libactivator.clock.bedtime"] &&
+                     [activator hasListenerWithName:@"libactivator.settings.network"] &&
+                     [activator hasListenerWithName:@"libactivator.settings.usage"]
+            caseName:@"url-action-restored-settings-names-registered"
+              reason:@"Restored Settings URL action was not registered"];
 }
 
 @end

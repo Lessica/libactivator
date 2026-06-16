@@ -8,6 +8,7 @@
 		<array>
 			<string>com.apple.camera</string>
 			<string>com.apple.mobilephone</string>
+			<string>com.apple.mobiletimer</string>
 		</array>
 	</dict>
 </dict>

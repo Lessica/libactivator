@@ -2,7 +2,7 @@ export PACKAGE_VERSION := 2.0.0
 
 TARGET := iphone:clang:16.5:15.0
 ARCHS := arm64 arm64e
-INSTALL_TARGET_PROCESSES := SpringBoard Camera MobilePhone
+INSTALL_TARGET_PROCESSES := SpringBoard Camera MobilePhone MobileTimer
 
 include $(THEOS)/makefiles/common.mk
 
