@@ -10,21 +10,11 @@
 
 #import <Activator/Activator.h>
 
+#import "LAActivator+Private.h"
+
 #ifndef PACKAGE_VERSION
 #define PACKAGE_VERSION "unknown"
 #endif
-
-@interface LAActivator (LegacyCompatibility)
-- (nullable id)_getObjectForPreference:(NSString *)preference;
-- (void)_setObject:(nullable id)value forPreference:(NSString *)preference;
-#if LIBACTIVATOR_TEST_SUPPORT
-- (NSDictionary<NSString *, NSNumber *> *)la_eventDispatchCounts;
-- (NSDictionary<NSString *, NSNumber *> *)la_listenerReceiveCounts;
-- (NSDictionary<NSString *, NSNumber *> *)la_eventAbortCounts;
-- (NSDictionary<NSString *, NSNumber *> *)la_listenerAbortCounts;
-- (void)la_resetDispatchCounts;
-#endif
-@end
 
 @interface LACommandLineTool : NSObject
 - (instancetype)initWithArgc:(int)argc argv:(char *[])argv;
@@ -97,6 +87,9 @@
     }
     if ([command isEqualToString:@"postinst"]) {
         return [self runPostInstallCommand];
+    }
+    if ([command isEqualToString:@"prerm"]) {
+        return [self runPreRemovalCommand];
     }
     [self printUsage];
     return 0;
@@ -249,6 +242,10 @@
 
 - (int)runPostInstallCommand {
     return 0;
+}
+
+- (int)runPreRemovalCommand {
+    return [self.activator la_setApplicationAccessibilityEnabled:NO] ? 0 : 1;
 }
 
 - (BOOL)validateListenerName:(NSString *)listenerName {

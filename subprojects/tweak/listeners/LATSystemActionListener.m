@@ -15,6 +15,7 @@
 #import "system/LATSystemCenterController.h"
 #import "system/LATSystemHapticFeedbackController.h"
 #import "system/LATSystemHomeScreenController.h"
+#import "system/LATSystemLocalBackController.h"
 #import "system/LATSystemLockScreenController.h"
 #import "system/LATSystemNowPlayingApplicationLauncher.h"
 #import "system/LATSystemOrientationController.h"
@@ -44,6 +45,7 @@
 @property(nonatomic, strong) LATSystemAssistantController *assistantController;
 @property(nonatomic, strong) LATSystemCenterController *centerController;
 @property(nonatomic, strong) LATSystemHapticFeedbackController *hapticFeedbackController;
+@property(nonatomic, strong) LATSystemLocalBackController *localBackController;
 @property(nonatomic, strong) LATSystemOrientationController *orientationController;
 @property(nonatomic, strong) LATSystemPowerController *powerController;
 @property(nonatomic, strong) LATSystemPowerMenuController *powerMenuController;
@@ -76,6 +78,7 @@
         _assistantController = [[LATSystemAssistantController alloc] init];
         _centerController = [[LATSystemCenterController alloc] initWithRuntimeStateSource:_registry.runtimeStateSource];
         _hapticFeedbackController = [[LATSystemHapticFeedbackController alloc] init];
+        _localBackController = [[LATSystemLocalBackController alloc] init];
         _orientationController = [[LATSystemOrientationController alloc] init];
         _powerController = [[LATSystemPowerController alloc] init];
         _powerMenuController = [[LATSystemPowerMenuController alloc] init];
@@ -196,6 +199,9 @@
         [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeQuirk
                                                     listenerName:listenerName];
         break;
+    case LATSystemActionKindLocalBack:
+        [self.localBackController performLocalBackForListenerName:listenerName];
+        break;
     case LATSystemActionKindRotateLandscapeLeft:
         [self.orientationController rotateToOrientation:UIInterfaceOrientationLandscapeLeft listenerName:listenerName];
         break;
@@ -309,6 +315,9 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.haptic.quirk"
                                                     selectorName:@"tapticWithActivator:event:listenerName:"
                                                             kind:LATSystemActionKindHapticQuirk],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.local-back"
+                                                    selectorName:@"localBack"
+                                                            kind:LATSystemActionKindLocalBack],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.rotate.landscape-left"
                                                     selectorName:@"rotateLandscapeLeft"
                                                             kind:LATSystemActionKindRotateLandscapeLeft],

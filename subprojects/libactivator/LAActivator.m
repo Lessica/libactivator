@@ -12,6 +12,7 @@
 #import <notify.h>
 
 #import "LAActivator+Private.h"
+#import "LAApplicationAccessibility.h"
 #import "LADefaultEventDataSource.h"
 #import "LAIPC.h"
 #import "LALegacyBridge.h"
@@ -202,6 +203,29 @@ LAActivator *LASharedActivator;
     }
     return self.runtimeContext;
 }
+
+#pragma mark - Application Accessibility
+
+- (BOOL)la_applicationAccessibilityEnabled {
+    if (!self.runningInsideSpringBoard) {
+        return [self.ipcClient boolValueForMessageName:LAIPCMessageApplicationAccessibilityEnabled
+                                              userInfo:nil
+                                          defaultValue:NO];
+    }
+    return [LAApplicationAccessibility isEnabled];
+}
+
+- (BOOL)la_setApplicationAccessibilityEnabled:(BOOL)enabled {
+    if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{LAIPCKeyApplicationAccessibilityEnabled : @(enabled)};
+        return [self.ipcClient boolValueForMessageName:LAIPCMessageSetApplicationAccessibilityEnabled
+                                              userInfo:userInfo
+                                          defaultValue:NO];
+    }
+    return [LAApplicationAccessibility setEnabled:enabled];
+}
+
+#pragma mark - Notification Bridge
 
 - (void)la_registerSystemNotificationBridgeIfNeeded {
     NSArray *notificationNames = @[

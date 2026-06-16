@@ -40,6 +40,7 @@ ActivatorTweak_FILES += listeners/system/LATSystemAssistantController.m
 ActivatorTweak_FILES += listeners/system/LATSystemCenterController.m
 ActivatorTweak_FILES += listeners/system/LATSystemHapticFeedbackController.m
 ActivatorTweak_FILES += listeners/system/LATSystemHomeScreenController.m
+ActivatorTweak_FILES += listeners/system/LATSystemLocalBackController.m
 ActivatorTweak_FILES += listeners/system/LATSystemLockScreenController.m
 ActivatorTweak_FILES += listeners/system/LATSystemNowPlayingApplicationLauncher.m
 ActivatorTweak_FILES += listeners/system/LATSystemOrientationController.m

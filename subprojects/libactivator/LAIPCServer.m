@@ -74,6 +74,8 @@
         LAIPCMessageCurrentEventModeUnderneathLockScreen,
         LAIPCMessageSupportsUnlockingDeviceToSendEvents,
         LAIPCMessageCurrentApplicationDisplayIdentifier,
+        LAIPCMessageApplicationAccessibilityEnabled,
+        LAIPCMessageSetApplicationAccessibilityEnabled,
         LAIPCMessageEventIsHidden,
         LAIPCMessageEventRequiresAssignment,
         LAIPCMessageCompatibleModesForEvent,
@@ -138,6 +140,10 @@
         return reply;
     }
     reply = [self handleAssignmentMessageNamed:messageName withUserInfo:userInfo];
+    if (reply) {
+        return reply;
+    }
+    reply = [self handleApplicationAccessibilityMessageNamed:messageName withUserInfo:userInfo];
     if (reply) {
         return reply;
     }
@@ -274,6 +280,18 @@
         BOOL changed = [_activator la_setApplicationWithDisplayIdentifier:displayIdentifier
                                                             isBlacklisted:[userInfo[LAIPCKeyBlacklisted] boolValue]];
         return [LAIPCCodec replyWithOK:YES value:@(changed)];
+    }
+    return nil;
+}
+
+- (NSDictionary *)handleApplicationAccessibilityMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
+    if ([messageName isEqualToString:LAIPCMessageApplicationAccessibilityEnabled]) {
+        return [LAIPCCodec replyWithOK:YES value:@([_activator la_applicationAccessibilityEnabled])];
+    }
+    if ([messageName isEqualToString:LAIPCMessageSetApplicationAccessibilityEnabled]) {
+        BOOL enabled = [userInfo[LAIPCKeyApplicationAccessibilityEnabled] boolValue];
+        BOOL ok = [_activator la_setApplicationAccessibilityEnabled:enabled];
+        return [LAIPCCodec replyWithOK:ok value:@(ok)];
     }
     return nil;
 }

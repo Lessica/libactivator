@@ -10,6 +10,8 @@
 
 NSString *const LAIPCServerName = @"libactivator.springboard";
 
+#pragma mark - Registry Messages
+
 NSString *const LAIPCMessageAvailableEventNames = @"libactivator.request.available-event-names";
 NSString *const LAIPCMessageHasEvent = @"libactivator.request.has-event";
 NSString *const LAIPCMessageAvailableListenerNames = @"libactivator.request.available-listener-names";
@@ -28,6 +30,9 @@ NSString *const LAIPCMessageCurrentProfileName = @"libactivator.request.current-
 NSString *const LAIPCMessageSetCurrentProfileName = @"libactivator.request.set-current-profile-name";
 NSString *const LAIPCMessagePreferenceValue = @"libactivator.request.preference-value";
 NSString *const LAIPCMessageSetPreferenceValue = @"libactivator.request.set-preference-value";
+
+#pragma mark - Runtime Messages
+
 NSString *const LAIPCMessageCurrentEventMode = @"libactivator.request.current-event-mode";
 NSString *const LAIPCMessageCurrentEventModeUnderneathLockScreen =
     @"libactivator.request.current-event-mode-underneath-lock-screen";
@@ -35,6 +40,15 @@ NSString *const LAIPCMessageSupportsUnlockingDeviceToSendEvents =
     @"libactivator.request.supports-unlocking-device-to-send-events";
 NSString *const LAIPCMessageCurrentApplicationDisplayIdentifier =
     @"libactivator.request.current-application-display-identifier";
+
+#pragma mark - Application Accessibility Messages
+
+NSString *const LAIPCMessageApplicationAccessibilityEnabled =
+    @"libactivator.request.application-accessibility-enabled";
+NSString *const LAIPCMessageSetApplicationAccessibilityEnabled =
+    @"libactivator.request.set-application-accessibility-enabled";
+
+#pragma mark - Event Metadata Messages
 
 NSString *const LAIPCMessageEventIsHidden = @"libactivator.request.event-is-hidden";
 NSString *const LAIPCMessageEventRequiresAssignment = @"libactivator.request.event-requires-assignment";
@@ -46,6 +60,8 @@ NSString *const LAIPCMessageAssignmentWarningForEvent = @"libactivator.request.a
 NSString *const LAIPCMessageEventIsUnprotected = @"libactivator.request.event-is-unprotected";
 NSString *const LAIPCMessageEventSupportsRemoval = @"libactivator.request.event-supports-removal";
 NSString *const LAIPCMessageEventSupportsConfiguration = @"libactivator.request.event-supports-configuration";
+
+#pragma mark - Listener Metadata Messages
 
 NSString *const LAIPCMessageListenerInfoDictionaryValue = @"libactivator.request.listener-info-dictionary-value";
 NSString *const LAIPCMessageListenerRequiresAssignment = @"libactivator.request.listener-requires-assignment";
@@ -60,6 +76,8 @@ NSString *const LAIPCMessageListenerNamesAreMutuallyCompatible =
 NSString *const LAIPCMessageListenerSupportsRemoval = @"libactivator.request.listener-supports-removal";
 NSString *const LAIPCMessageListenerSupportsConfiguration = @"libactivator.request.listener-supports-configuration";
 
+#pragma mark - Localization Messages
+
 NSString *const LAIPCMessageLocalizedTitleForEventName = @"libactivator.request.localized-title-for-event-name";
 NSString *const LAIPCMessageLocalizedTitleForListenerName = @"libactivator.request.localized-title-for-listener-name";
 NSString *const LAIPCMessageLocalizedTitleForListenerNames = @"libactivator.request.localized-title-for-listener-names";
@@ -69,6 +87,8 @@ NSString *const LAIPCMessageLocalizedDescriptionForEventName =
     @"libactivator.request.localized-description-for-event-name";
 NSString *const LAIPCMessageLocalizedDescriptionForListenerName =
     @"libactivator.request.localized-description-for-listener-name";
+
+#pragma mark - Dispatch Messages
 
 NSString *const LAIPCMessageDispatchAssignedEvent = @"libactivator.request.dispatch-assigned-event";
 NSString *const LAIPCMessageDispatchEventToListeners = @"libactivator.request.dispatch-event-to-listeners";
@@ -94,6 +114,8 @@ NSString *const LAIPCTestingCommandPrepareUserInfoProbe = @"prepare-user-info-pr
 NSString *const LAIPCTestingCommandUserInfoProbeResult = @"user-info-probe-result";
 #endif
 
+#pragma mark - UserInfo Keys
+
 NSString *const LAIPCKeyOK = @"OK";
 NSString *const LAIPCKeyValue = @"Value";
 NSString *const LAIPCKeyEventName = @"EventName";
@@ -109,6 +131,7 @@ NSString *const LAIPCKeyPreferenceKey = @"PreferenceKey";
 NSString *const LAIPCKeyPreferenceValue = @"PreferenceValue";
 NSString *const LAIPCKeyInfoDictionaryKey = @"InfoDictionaryKey";
 NSString *const LAIPCKeyScale = @"Scale";
+NSString *const LAIPCKeyApplicationAccessibilityEnabled = @"ApplicationAccessibilityEnabled";
 
 #if LIBACTIVATOR_TEST_SUPPORT
 NSString *const LAIPCKeyTestingCommand = @"TestingCommand";

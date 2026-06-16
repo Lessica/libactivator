@@ -7,6 +7,7 @@ LIBRARY_NAME := libactivator
 
 libactivator_FILES += LAConstants.m
 libactivator_FILES += LAEvent.m
+libactivator_FILES += LAApplicationAccessibility.m
 libactivator_FILES += LAListenerFallbacks.m
 libactivator_FILES += LAEventDataSourceFallbacks.m
 libactivator_FILES += LAPersistence.m

@@ -49,7 +49,8 @@
 
 - 仍保留为已移除的旧 URL / old social compose / bedtime 等 obsolete 项不进入主线。
 - `libactivator.system.voice-control` 已按现代 Voice Control 功能恢复为 toggle；实现依据是 AccessibilitySettings 中 `-[CACSettingsController setCommandAndControlEnabled:specifier:]` 只调用 `_AXSCommandAndControlSetEnabled([value boolValue])`。
-- `libactivator.system.local-back` / `libactivator.system.back` 依赖用户 App 注入，当前架构不实现。
+- `libactivator.system.local-back` 已复用 Voice Control 的 `CACSpokenCommand goBack` 恢复；该路径保留 Safari 返回按钮标题分支和 AX escape action 兜底。
+- `libactivator.system.back` 的旧 raw-event 语义依赖用户 App 注入，当前架构不实现。
 - `libactivator.ipod.music-controls` / `libactivator.system.show-now-playing-bar` 已按现代等价入口恢复：灭屏时先点亮屏幕，再打开 Control Center；Control Center 已可见时切换 Now Playing 模块展开状态。
 
 ## 阶段 4：events 剩余工作
@@ -84,6 +85,7 @@
 - menu editor 和 menu listener runtime provider。
 - `glyph.pdf` lookup 和 glyph/small icon 展示、localization、resource metadata 展示。
 - `glyph.pdf` 只作为 Settings UI 展示资源接入，不在 `libactivator` 核心里恢复 1.9.0 大图标 callback。
+- 显式暴露 application accessibility 启停开关。`libactivator.system.local-back` 可能为恢复 Voice Control 返回语义而持久打开该系统状态；Settings UI 必须让用户能看到并关闭它。
 
 边界：Settings UI 不实现 event acquisition，也不直接拥有 SpringBoard runtime state；它通过 Public API/IPC 操作 SpringBoard authoritative backend。
 
@@ -94,7 +96,7 @@
 范围：
 
 - 命令面应保持 1.9.13 兼容：`listeners`、`events`、`modes`、`current-mode`、`current-app`、`get <key>`、`set <key> <value>`、`activate <event> [<listener>]`、`send <listener>`、`deactivate <event>`。
-- `postinst` 是隐藏安装后入口，旧 usage 不展示。当前保留 no-op；不要为了测试或便利增加新子命令。
+- `postinst` 是隐藏安装后入口，旧 usage 不展示。当前保留 no-op；`prerm` 是隐藏卸载前入口，用于包卸载前关闭 application accessibility。
 - `get` / `set` 只负责调用 libactivator compatibility facade，不在 CLI 内实现 flat key 解析或直接读写 plist。
 - 事件触发命令使用当前 event mode 构造 `LAEvent`，按旧语义以 `event.handled ? 0 : 1` 作为退出状态。
 

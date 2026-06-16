@@ -36,6 +36,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     LATSystemActionKindHapticFlick,
     LATSystemActionKindHapticTap,
     LATSystemActionKindHapticQuirk,
+    LATSystemActionKindLocalBack,
     LATSystemActionKindRotateLandscapeLeft,
     LATSystemActionKindRotateLandscapeRight,
     LATSystemActionKindRotatePortrait,

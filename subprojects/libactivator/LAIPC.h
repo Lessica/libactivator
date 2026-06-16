@@ -41,10 +41,18 @@ LA_IPC_EXTERN NSString *const LAIPCMessageCurrentProfileName;
 LA_IPC_EXTERN NSString *const LAIPCMessageSetCurrentProfileName;
 LA_IPC_EXTERN NSString *const LAIPCMessagePreferenceValue;
 LA_IPC_EXTERN NSString *const LAIPCMessageSetPreferenceValue;
+
+#pragma mark - Runtime Messages
+
 LA_IPC_EXTERN NSString *const LAIPCMessageCurrentEventMode;
 LA_IPC_EXTERN NSString *const LAIPCMessageCurrentEventModeUnderneathLockScreen;
 LA_IPC_EXTERN NSString *const LAIPCMessageSupportsUnlockingDeviceToSendEvents;
 LA_IPC_EXTERN NSString *const LAIPCMessageCurrentApplicationDisplayIdentifier;
+
+#pragma mark - Application Accessibility Messages
+
+LA_IPC_EXTERN NSString *const LAIPCMessageApplicationAccessibilityEnabled;
+LA_IPC_EXTERN NSString *const LAIPCMessageSetApplicationAccessibilityEnabled;
 
 #pragma mark - Event Metadata Messages
 
@@ -124,6 +132,7 @@ LA_IPC_EXTERN NSString *const LAIPCKeyPreferenceKey;
 LA_IPC_EXTERN NSString *const LAIPCKeyPreferenceValue;
 LA_IPC_EXTERN NSString *const LAIPCKeyInfoDictionaryKey;
 LA_IPC_EXTERN NSString *const LAIPCKeyScale;
+LA_IPC_EXTERN NSString *const LAIPCKeyApplicationAccessibilityEnabled;
 
 #if LIBACTIVATOR_TEST_SUPPORT
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingCommand;

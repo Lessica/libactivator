@@ -10,6 +10,7 @@ activator_FILES += main.m
 
 activator_CFLAGS += -fobjc-arc
 activator_CFLAGS += -I../../include
+activator_CFLAGS += -I../libactivator
 activator_CFLAGS += -DPACKAGE_VERSION=\"$(PACKAGE_VERSION)\"
 ifeq ($(LIBACTIVATOR_TEST_SUPPORT),1)
 activator_CFLAGS += -DLIBACTIVATOR_TEST_SUPPORT=1

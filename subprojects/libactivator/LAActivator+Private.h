@@ -17,7 +17,15 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Lifecycle
 
 - (void)startIPCServerIfNeeded;
+
+#pragma mark - Runtime State
+
 - (nullable LARuntimeContext *)la_runtimeContext;
+
+#pragma mark - Application Accessibility
+
+- (BOOL)la_applicationAccessibilityEnabled;
+- (BOOL)la_setApplicationAccessibilityEnabled:(BOOL)enabled;
 
 #pragma mark - Legacy Preferences
 
