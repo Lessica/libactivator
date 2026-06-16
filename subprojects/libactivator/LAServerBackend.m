@@ -13,8 +13,6 @@
 #import <HBLog.h>
 #import <dispatch/dispatch.h>
 
-static const void *LAServerBackendStateQueueKey = &LAServerBackendStateQueueKey;
-
 static NSString *const LAActivatorDefaultProfileName = @"Default";
 static NSString *const LAActivatorSchemaVersionKey = @"SchemaVersion";
 static NSString *const LAActivatorCurrentProfileNameKey = @"CurrentProfileName";
@@ -44,8 +42,8 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 @property(nonatomic, assign) BOOL persistentSaveScheduled;
 @property(nonatomic, assign, nullable) CFRunLoopObserverRef persistentSaveObserver;
 
-// Concurrency
-@property(nonatomic, strong) dispatch_queue_t stateQueue;
+// State protection
+@property(nonatomic, strong) NSRecursiveLock *stateLock;
 
 @end
 
@@ -63,9 +61,8 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         _blacklistedDisplayIdentifiers = [[NSMutableSet alloc] init];
         _seenListenerNames = [[NSMutableSet alloc] init];
         _legacyPreferences = [[NSMutableDictionary alloc] init];
-        _stateQueue = dispatch_queue_create("libactivator.state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
-        dispatch_queue_set_specific(_stateQueue, LAServerBackendStateQueueKey, (void *)LAServerBackendStateQueueKey,
-                                    NULL);
+        _stateLock = [[NSRecursiveLock alloc] init];
+        _stateLock.name = @"libactivator.state";
         [self resetRuntimeState];
         [self loadPersistentState];
     }
@@ -134,11 +131,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         });
     };
 
-    if ([self isRunningOnStateQueue]) {
-        markDirty();
-    } else {
-        dispatch_sync(self.stateQueue, markDirty);
-    }
+    [self performWithStateLock:markDirty];
 }
 
 - (BOOL)flushPendingPersistentState {
@@ -154,11 +147,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         self.persistentSaveScheduled = NO;
     };
 
-    if ([self isRunningOnStateQueue]) {
-        copyPendingDictionary();
-    } else {
-        dispatch_sync(self.stateQueue, copyPendingDictionary);
-    }
+    [self performWithStateLock:copyPendingDictionary];
 
     if (!dictionary) {
         return YES;
@@ -192,16 +181,18 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     return dictionary;
 }
 
-- (BOOL)isRunningOnStateQueue {
-    return dispatch_get_specific(LAServerBackendStateQueueKey) == LAServerBackendStateQueueKey;
+- (void)performWithStateLock:(dispatch_block_t)block {
+    [self.stateLock lock];
+    block();
+    [self.stateLock unlock];
 }
 
 - (void)installPersistentSaveObserverIfNeeded {
     __block BOOL shouldInstall = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         shouldInstall =
             self.persistentStateDirty && self.persistentSaveScheduled && self.persistentSaveObserver == NULL;
-    });
+    }];
     if (!shouldInstall) {
         return;
     }
@@ -213,10 +204,14 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
             if (!strongSelf) {
                 return;
             }
-            if (strongSelf.persistentSaveObserver) {
-                CFRunLoopObserverInvalidate(strongSelf.persistentSaveObserver);
-                CFRelease(strongSelf.persistentSaveObserver);
+            __block CFRunLoopObserverRef observerToInvalidate = NULL;
+            [strongSelf performWithStateLock:^{
+                observerToInvalidate = strongSelf.persistentSaveObserver;
                 strongSelf.persistentSaveObserver = NULL;
+            }];
+            if (observerToInvalidate) {
+                CFRunLoopObserverInvalidate(observerToInvalidate);
+                CFRelease(observerToInvalidate);
             }
             [strongSelf flushPendingPersistentState];
         };
@@ -228,7 +223,18 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return;
     }
 
-    self.persistentSaveObserver = observer;
+    __block BOOL shouldAddObserver = NO;
+    [self performWithStateLock:^{
+        if (self.persistentStateDirty && self.persistentSaveScheduled && self.persistentSaveObserver == NULL) {
+            self.persistentSaveObserver = observer;
+            shouldAddObserver = YES;
+        }
+    }];
+    if (!shouldAddObserver) {
+        CFRelease(observer);
+        return;
+    }
+
     CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
 }
 
@@ -318,9 +324,9 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return nil;
     }
     __block id<LAListener> listener = nil;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         listener = self.listeners[name];
-    });
+    }];
     return listener;
 }
 
@@ -333,9 +339,9 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return NO;
     }
     __block BOOL seen = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         seen = [self.seenListenerNames containsObject:name];
-    });
+    }];
     return seen;
 }
 
@@ -348,7 +354,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return NO;
     }
     __block BOOL added = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         added = self.listeners[name] == nil;
         self.listeners[name] = listener;
         if (added) {
@@ -358,7 +364,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
             [self.seenListenerNames addObject:name];
             [self savePersistentState];
         }
-    });
+    }];
     return added;
 }
 
@@ -367,36 +373,36 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return NO;
     }
     __block BOOL removed = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         removed = self.listeners[name] != nil;
         [self.listeners removeObjectForKey:name];
         if (removed) {
             self.cachedListenerNames = nil;
         }
-    });
+    }];
     return removed;
 }
 
 - (NSArray *)availableListenerNames {
     __block NSArray *listenerNames = nil;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         if (!self.cachedListenerNames) {
             self.cachedListenerNames = [self.listeners.allKeys sortedArrayUsingSelector:@selector(compare:)];
         }
         listenerNames = self.cachedListenerNames;
-    });
+    }];
     return listenerNames;
 }
 
 - (NSArray *)registeredListeners {
     __block NSArray *listeners = nil;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         NSHashTable *uniqueListeners = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
         for (id listener in self.listeners.allValues) {
             [uniqueListeners addObject:listener];
         }
         listeners = uniqueListeners.allObjects;
-    });
+    }];
     return listeners ?: @[];
 }
 
@@ -407,9 +413,9 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return nil;
     }
     __block id<LAEventDataSource> dataSource = nil;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         dataSource = self.eventDataSources[eventName];
-    });
+    }];
     return dataSource;
 }
 
@@ -418,10 +424,10 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return NO;
     }
     __block BOOL added = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         added = self.eventDataSources[eventName] == nil;
         self.eventDataSources[eventName] = dataSource;
-    });
+    }];
     return added;
 }
 
@@ -430,18 +436,18 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return NO;
     }
     __block BOOL removed = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         removed = self.eventDataSources[eventName] != nil;
         [self.eventDataSources removeObjectForKey:eventName];
-    });
+    }];
     return removed;
 }
 
 - (NSArray *)availableEventNames {
     __block NSArray *eventNames = nil;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         eventNames = [self.eventDataSources.allKeys sortedArrayUsingSelector:@selector(compare:)];
-    });
+    }];
     return eventNames;
 }
 
@@ -450,9 +456,9 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return NO;
     }
     __block BOOL hasEvent = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         hasEvent = self.eventDataSources[name] != nil;
-    });
+    }];
     return hasEvent;
 }
 
@@ -470,7 +476,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     NSString *normalizedMode = mode ?: @"";
     NSArray *normalizedNames = [LAServerBackend normalizedStringArray:listenerNames];
     __block BOOL changed = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         NSMutableDictionary *assignments = [self assignmentsForCurrentProfile];
         NSMutableDictionary *eventAssignments = assignments[eventName];
         if (!eventAssignments) {
@@ -491,7 +497,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         if (changed) {
             [self savePersistentState];
         }
-    });
+    }];
     return changed;
 }
 
@@ -506,7 +512,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
     NSString *mode = event.mode ?: @"";
     __block BOOL changed = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         NSMutableDictionary *assignments = [self assignmentsForCurrentProfile];
         NSMutableDictionary *eventAssignments = assignments[event.name];
         if (!eventAssignments) {
@@ -521,7 +527,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
             changed = YES;
             [self savePersistentState];
         }
-    });
+    }];
     return changed;
 }
 
@@ -532,7 +538,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
     NSString *mode = event.mode ?: @"";
     __block BOOL changed = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         NSMutableDictionary *assignments = [self assignmentsForCurrentProfile];
         NSMutableDictionary *eventAssignments = assignments[event.name];
         NSMutableArray *listenerNames = [eventAssignments[mode] mutableCopy];
@@ -551,7 +557,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         }
         changed = YES;
         [self savePersistentState];
-    });
+    }];
     return changed;
 }
 
@@ -566,10 +572,10 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
     NSString *normalizedMode = mode ?: @"";
     __block NSArray *listenerNames = nil;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         NSDictionary *assignments = [self assignmentsForCurrentProfile];
         listenerNames = [assignments[eventName][normalizedMode] copy];
-    });
+    }];
     return listenerNames ?: @[];
 }
 
@@ -579,7 +585,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     }
 
     NSMutableArray *events = [NSMutableArray array];
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         NSDictionary *assignments = [self assignmentsForCurrentProfile];
         for (NSString *eventName in assignments) {
             NSDictionary *modes = assignments[eventName];
@@ -589,7 +595,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
                 }
             }
         }
-    });
+    }];
     return [events copy];
 }
 
@@ -600,9 +606,9 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return NO;
     }
     __block BOOL blacklisted = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         blacklisted = [self.blacklistedDisplayIdentifiers containsObject:displayIdentifier];
-    });
+    }];
     return blacklisted;
 }
 
@@ -611,7 +617,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return NO;
     }
     __block BOOL changed = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         BOOL currentlyBlacklisted = [self.blacklistedDisplayIdentifiers containsObject:displayIdentifier];
         changed = currentlyBlacklisted != blacklisted;
         if (!changed) {
@@ -623,7 +629,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
             [self.blacklistedDisplayIdentifiers removeObject:displayIdentifier];
         }
         [self savePersistentState];
-    });
+    }];
     return changed;
 }
 
@@ -634,7 +640,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return NO;
     }
     __block BOOL changed = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         BOOL currentlySeen = [self.seenListenerNames containsObject:listenerName];
         changed = currentlySeen != seen;
         if (!changed) {
@@ -646,7 +652,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
             [self.seenListenerNames removeObject:listenerName];
         }
         [self savePersistentState];
-    });
+    }];
     return changed;
 }
 
@@ -655,9 +661,9 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return nil;
     }
     __block id object = nil;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         object = self.legacyPreferences[key];
-    });
+    }];
     return object;
 }
 
@@ -666,7 +672,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         return NO;
     }
     __block BOOL changed = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         id existingObject = self.legacyPreferences[key];
         if (object) {
             changed = ![existingObject isEqual:object];
@@ -682,7 +688,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         if (changed) {
             [self savePersistentState];
         }
-    });
+    }];
     return changed;
 }
 
@@ -690,17 +696,17 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
 - (NSArray *)availableProfileNames {
     __block NSArray *profileNames = nil;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         profileNames = [self.profiles.allKeys sortedArrayUsingSelector:@selector(compare:)];
-    });
+    }];
     return profileNames;
 }
 
 - (NSString *)currentProfileName {
     __block NSString *profileName = nil;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         profileName = self.storedCurrentProfileName;
-    });
+    }];
     return profileName;
 }
 
@@ -711,7 +717,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 - (BOOL)setCurrentProfileNameIfChanged:(NSString *)currentProfileName {
     NSString *profileName = currentProfileName.length > 0 ? [currentProfileName copy] : LAActivatorDefaultProfileName;
     __block BOOL changed = NO;
-    dispatch_sync(self.stateQueue, ^{
+    [self performWithStateLock:^{
         BOOL profileExists = self.profiles[profileName] != nil;
         changed = ![self.storedCurrentProfileName isEqualToString:profileName] || !profileExists;
         if (!changed) {
@@ -720,7 +726,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         self.storedCurrentProfileName = profileName;
         [self assignmentsForCurrentProfile];
         [self savePersistentState];
-    });
+    }];
     return changed;
 }
 

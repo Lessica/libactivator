@@ -46,6 +46,7 @@ ActivatorTweak_FILES += listeners/system/LATSystemNowPlayingApplicationLauncher.
 ActivatorTweak_FILES += listeners/system/LATSystemOrientationController.m
 ActivatorTweak_FILES += listeners/system/LATSystemPowerController.m
 ActivatorTweak_FILES += listeners/system/LATSystemPowerMenuController.m
+ActivatorTweak_FILES += listeners/system/LATSystemPreviousApplicationController.m
 ActivatorTweak_FILES += listeners/system/LATSystemReachabilityController.m
 ActivatorTweak_FILES += listeners/system/LATSystemRingerMuteController.m
 ActivatorTweak_FILES += listeners/system/LATSystemRingerStateResetter.m

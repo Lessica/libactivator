@@ -8,6 +8,8 @@
 
 #import "LARuntimeContext.h"
 
+#import "LAQueueAssertions.h"
+
 #import <Activator/Activator.h>
 
 @interface LARuntimeContext ()
@@ -23,9 +25,6 @@
 @property(nonatomic, copy, nullable) BOOL (^touchActiveProvider)(void);
 @property(nonatomic, copy, nullable) void (^touchesEndedPerformer)(dispatch_block_t block);
 
-// Concurrency
-@property(nonatomic, strong) dispatch_queue_t queue;
-
 @end
 
 @implementation LARuntimeContext
@@ -33,7 +32,6 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _queue = dispatch_queue_create("libactivator.runtime-context", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _cachedEventMode = LAEventModeSpringBoard;
         _cachedEventModeUnderneathLockScreen = LAEventModeSpringBoard;
         _cachedScreenOn = YES;
@@ -45,22 +43,24 @@
          underneathLockScreen:(NSString *)underneathMode
             displayIdentifier:(NSString *)displayIdentifier
                      screenOn:(BOOL)screenOn {
+    LAAssertMainQueue();
+
     NSString *effectiveMode = eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;
     NSString *effectiveUnderneathMode = underneathMode.length > 0 ? underneathMode : LAEventModeSpringBoard;
     NSString *effectiveDisplayIdentifier = displayIdentifier.length > 0 ? displayIdentifier : nil;
-    __block NSString *changedEventMode = nil;
-    __block void (^changeHandler)(NSString *eventMode) = nil;
-    dispatch_sync(self.queue, ^{
-        NSString *previousMode = [self->_cachedEventMode copy];
-        self->_cachedEventMode = [effectiveMode copy];
-        self->_cachedEventModeUnderneathLockScreen = [effectiveUnderneathMode copy];
-        self->_cachedDisplayIdentifier = [effectiveDisplayIdentifier copy];
-        self->_cachedScreenOn = screenOn;
-        if (![effectiveMode isEqualToString:previousMode]) {
-            changedEventMode = [effectiveMode copy];
-            changeHandler = [self->_eventModeChangeHandler copy];
-        }
-    });
+
+    NSString *previousMode = [self.cachedEventMode copy];
+    self.cachedEventMode = [effectiveMode copy];
+    self.cachedEventModeUnderneathLockScreen = [effectiveUnderneathMode copy];
+    self.cachedDisplayIdentifier = [effectiveDisplayIdentifier copy];
+    self.cachedScreenOn = screenOn;
+
+    NSString *changedEventMode = nil;
+    if (![effectiveMode isEqualToString:previousMode]) {
+        changedEventMode = [effectiveMode copy];
+    }
+
+    void (^changeHandler)(NSString *eventMode) = [self->_eventModeChangeHandler copy];
     if (changedEventMode.length > 0 && changeHandler) {
         dispatch_async(dispatch_get_main_queue(), ^{
             changeHandler(changedEventMode);
@@ -70,55 +70,46 @@
 }
 
 - (void)setEventModeChangeHandler:(void (^)(NSString *eventMode))handler {
-    dispatch_sync(self.queue, ^{
-        self->_eventModeChangeHandler = [handler copy];
-    });
+    LAAssertMainQueue();
+    _eventModeChangeHandler = [handler copy];
 }
 
 - (void)setTouchActivityProvider:(BOOL (^)(void))touchActiveProvider
            touchesEndedPerformer:(void (^)(dispatch_block_t block))touchesEndedPerformer {
+    LAAssertMainQueue();
     self.touchActiveProvider = [touchActiveProvider copy];
     self.touchesEndedPerformer = [touchesEndedPerformer copy];
 }
 
 - (NSString *)currentEventMode {
-    __block NSString *eventMode = nil;
-    dispatch_sync(self.queue, ^{
-        eventMode = [self->_cachedEventMode copy];
-    });
-    return eventMode ?: LAEventModeSpringBoard;
+    LAAssertMainQueue();
+    return [self.cachedEventMode copy] ?: LAEventModeSpringBoard;
 }
 
 - (NSString *)currentEventModeUnderneathLockScreen {
-    __block NSString *eventMode = nil;
-    dispatch_sync(self.queue, ^{
-        eventMode = [self->_cachedEventModeUnderneathLockScreen copy];
-    });
-    return eventMode ?: LAEventModeSpringBoard;
+    LAAssertMainQueue();
+    return [self.cachedEventModeUnderneathLockScreen copy] ?: LAEventModeSpringBoard;
 }
 
 - (NSString *)displayIdentifierForCurrentApplication {
-    __block NSString *displayIdentifier = nil;
-    dispatch_sync(self.queue, ^{
-        displayIdentifier = [self->_cachedDisplayIdentifier copy];
-    });
-    return displayIdentifier;
+    LAAssertMainQueue();
+    return [self.cachedDisplayIdentifier copy];
 }
 
 - (BOOL)screenIsOn {
-    __block BOOL screenOn = YES;
-    dispatch_sync(self.queue, ^{
-        screenOn = self->_cachedScreenOn;
-    });
-    return screenOn;
+    LAAssertMainQueue();
+    return self.cachedScreenOn;
 }
 
 - (BOOL)touchActive {
+    LAAssertMainQueue();
     BOOL (^provider)(void) = self.touchActiveProvider;
     return provider ? provider() : NO;
 }
 
 - (void)performWhenTouchesEnd:(dispatch_block_t)block {
+    LAAssertMainQueue();
+
     if (!block) {
         return;
     }
@@ -132,16 +123,12 @@
 
 #if LIBACTIVATOR_TEST_SUPPORT
 - (NSDictionary *)testingDebugDictionary {
-    __block NSString *mode = nil;
-    __block NSString *underneathMode = nil;
-    __block NSString *displayIdentifier = nil;
-    __block BOOL screenOn = YES;
-    dispatch_sync(self.queue, ^{
-        mode = [self->_cachedEventMode copy];
-        underneathMode = [self->_cachedEventModeUnderneathLockScreen copy];
-        displayIdentifier = [self->_cachedDisplayIdentifier copy];
-        screenOn = self->_cachedScreenOn;
-    });
+    LAAssertMainQueue();
+
+    NSString *mode = [self.cachedEventMode copy];
+    NSString *underneathMode = [self.cachedEventModeUnderneathLockScreen copy];
+    NSString *displayIdentifier = [self.cachedDisplayIdentifier copy];
+    BOOL screenOn = self.cachedScreenOn;
     return @{
         @"Mode" : mode ?: @"",
         @"UnderneathMode" : underneathMode ?: @"",

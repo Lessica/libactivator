@@ -10,6 +10,7 @@
 
 #import "LATApplicationLauncher.h"
 #import "LATBuiltInRegistry.h"
+
 #import "system/LATSystemActionCommand.h"
 #import "system/LATSystemAssistantController.h"
 #import "system/LATSystemCenterController.h"
@@ -21,6 +22,7 @@
 #import "system/LATSystemOrientationController.h"
 #import "system/LATSystemPowerController.h"
 #import "system/LATSystemPowerMenuController.h"
+#import "system/LATSystemPreviousApplicationController.h"
 #import "system/LATSystemReachabilityController.h"
 #import "system/LATSystemRingerMuteController.h"
 #import "system/LATSystemRingerStateResetter.h"
@@ -49,6 +51,7 @@
 @property(nonatomic, strong) LATSystemOrientationController *orientationController;
 @property(nonatomic, strong) LATSystemPowerController *powerController;
 @property(nonatomic, strong) LATSystemPowerMenuController *powerMenuController;
+@property(nonatomic, strong) LATSystemPreviousApplicationController *previousApplicationController;
 @property(nonatomic, strong) LATSystemReachabilityController *reachabilityController;
 @property(nonatomic, strong) LATSystemRingerMuteController *ringerMuteController;
 @property(nonatomic, strong) LATSystemRingerStateResetter *ringerStateResetter;
@@ -82,6 +85,9 @@
         _orientationController = [[LATSystemOrientationController alloc] init];
         _powerController = [[LATSystemPowerController alloc] init];
         _powerMenuController = [[LATSystemPowerMenuController alloc] init];
+        _previousApplicationController =
+            [[LATSystemPreviousApplicationController alloc] initWithApplicationLauncher:launcher
+                                                                     runtimeStateSource:_registry.runtimeStateSource];
         _reachabilityController = [[LATSystemReachabilityController alloc] init];
         _screenshotController = [[LATSystemScreenshotController alloc] init];
         _switcherController = [[LATSystemSwitcherController alloc] init];
@@ -174,6 +180,9 @@
         break;
     case LATSystemActionKindPowerMenu:
         [self.powerMenuController showPowerMenuForListenerName:listenerName];
+        break;
+    case LATSystemActionKindPreviousApplication:
+        event.handled = [self.previousApplicationController launchPreviousApplicationForListenerName:listenerName];
         break;
     case LATSystemActionKindRespring:
         [self.powerController respringForListenerName:listenerName];
@@ -302,6 +311,9 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.power-menu"
                                                     selectorName:@"powerDownView"
                                                             kind:LATSystemActionKindPowerMenu],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.previous-app"
+                                                    selectorName:@"previousApp"
+                                                            kind:LATSystemActionKindPreviousApplication],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.respring"
                                                     selectorName:@"respring"
                                                             kind:LATSystemActionKindRespring],

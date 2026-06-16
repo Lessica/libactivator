@@ -10,6 +10,7 @@
 #import <HBLog.h>
 #import <dispatch/dispatch.h>
 #import <notify.h>
+#import <os/lock.h>
 
 #import "LAActivator+Private.h"
 #import "LAApplicationAccessibility.h"
@@ -25,7 +26,11 @@
 
 #pragma mark - Class Extension
 
-@interface LAActivator ()
+@interface LAActivator () {
+#if LIBACTIVATOR_TEST_SUPPORT
+    os_unfair_lock _dispatchDiagnosticsLock;
+#endif
+}
 
 // Runtime
 @property(nonatomic, strong, nullable) LARuntimeContext *runtimeContext;
@@ -45,7 +50,6 @@
 
 #if LIBACTIVATOR_TEST_SUPPORT
 // Dispatch diagnostics
-@property(nonatomic, strong) dispatch_queue_t dispatchDiagnosticsQueue;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *eventDispatchCounts;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *listenerReceiveCounts;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *eventAbortCounts;
@@ -118,8 +122,7 @@ LAActivator *LASharedActivator;
         }
 
 #if LIBACTIVATOR_TEST_SUPPORT
-        _dispatchDiagnosticsQueue =
-            dispatch_queue_create("libactivator.dispatch-diagnostics", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+        _dispatchDiagnosticsLock = OS_UNFAIR_LOCK_INIT;
         _eventDispatchCounts = [NSMutableDictionary dictionary];
         _listenerReceiveCounts = [NSMutableDictionary dictionary];
         _eventAbortCounts = [NSMutableDictionary dictionary];
@@ -1813,12 +1816,18 @@ LAActivator *LASharedActivator;
 #pragma mark - Statistics
 
 #if LIBACTIVATOR_TEST_SUPPORT
+- (void)la_performWithDispatchDiagnosticsLock:(dispatch_block_t)block {
+    os_unfair_lock_lock(&_dispatchDiagnosticsLock);
+    block();
+    os_unfair_lock_unlock(&_dispatchDiagnosticsLock);
+}
+
 - (NSDictionary<NSString *, NSNumber *> *)la_snapshotDispatchCounts:
     (NSMutableDictionary<NSString *, NSNumber *> *)counts {
     __block NSDictionary<NSString *, NSNumber *> *snapshot = nil;
-    dispatch_sync(self.dispatchDiagnosticsQueue, ^{
+    [self la_performWithDispatchDiagnosticsLock:^{
         snapshot = [counts copy];
-    });
+    }];
     return snapshot ?: @{};
 }
 
@@ -1859,21 +1868,21 @@ LAActivator *LASharedActivator;
         [self.ipcClient sendMessageName:LAIPCMessageResetDispatchCounts userInfo:nil];
         return;
     }
-    dispatch_sync(self.dispatchDiagnosticsQueue, ^{
+    [self la_performWithDispatchDiagnosticsLock:^{
         [self.eventDispatchCounts removeAllObjects];
         [self.listenerReceiveCounts removeAllObjects];
         [self.eventAbortCounts removeAllObjects];
         [self.listenerAbortCounts removeAllObjects];
-    });
+    }];
 }
 
 - (void)la_incrementCountForKey:(NSString *)key inCounts:(NSMutableDictionary<NSString *, NSNumber *> *)counts {
     if (key.length == 0 || !counts) {
         return;
     }
-    dispatch_sync(self.dispatchDiagnosticsQueue, ^{
+    [self la_performWithDispatchDiagnosticsLock:^{
         counts[key] = @([counts[key] unsignedLongLongValue] + 1);
-    });
+    }];
 }
 
 - (void)la_incrementEventDispatchCountForEvent:(LAEvent *)event {

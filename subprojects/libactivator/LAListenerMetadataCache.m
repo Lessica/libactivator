@@ -8,18 +8,17 @@
 
 #import "LAListenerMetadataCache.h"
 
-#import <dispatch/dispatch.h>
+#import <os/lock.h>
 
-@interface LAListenerMetadataCache ()
+@interface LAListenerMetadataCache () {
+    os_unfair_lock _cacheLock;
+}
 
 // Underlying caches
 @property(nonatomic, strong) NSMutableDictionary *smallIcons;
 @property(nonatomic, strong) NSMutableDictionary *localizedTitles;
 @property(nonatomic, strong) NSMutableDictionary *localizedGroups;
 @property(nonatomic, strong) NSMutableDictionary *localizedDescriptions;
-
-// Concurrency
-@property(nonatomic, strong) dispatch_queue_t queue;
 
 @end
 
@@ -32,19 +31,18 @@
         _localizedTitles = [[NSMutableDictionary alloc] init];
         _localizedGroups = [[NSMutableDictionary alloc] init];
         _localizedDescriptions = [[NSMutableDictionary alloc] init];
-        _queue =
-            dispatch_queue_create("libactivator.listener-metadata-cache", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+        _cacheLock = OS_UNFAIR_LOCK_INIT;
     }
     return self;
 }
 
 - (void)removeAllObjects {
-    dispatch_sync(self.queue, ^{
-        [self.smallIcons removeAllObjects];
-        [self.localizedTitles removeAllObjects];
-        [self.localizedGroups removeAllObjects];
-        [self.localizedDescriptions removeAllObjects];
-    });
+    os_unfair_lock_lock(&_cacheLock);
+    [self.smallIcons removeAllObjects];
+    [self.localizedTitles removeAllObjects];
+    [self.localizedGroups removeAllObjects];
+    [self.localizedDescriptions removeAllObjects];
+    os_unfair_lock_unlock(&_cacheLock);
 }
 
 - (UIImage *)smallIconForListenerName:(NSString *)listenerName resolver:(UIImage * (^)(void))resolver {
@@ -70,18 +68,20 @@
         return resolver ? resolver() : nil;
     }
 
-    __block id cachedObject = nil;
-    dispatch_sync(self.queue, ^{
-        cachedObject = cache[listenerName];
-    });
+    os_unfair_lock_lock(&_cacheLock);
+    id cachedObject = cache[listenerName];
+    os_unfair_lock_unlock(&_cacheLock);
+
     if (cachedObject) {
         return cachedObject == NSNull.null ? nil : cachedObject;
     }
 
     id resolvedObject = resolver ? resolver() : nil;
-    dispatch_sync(self.queue, ^{
-        cache[listenerName] = resolvedObject ?: NSNull.null;
-    });
+
+    os_unfair_lock_lock(&_cacheLock);
+    cache[listenerName] = resolvedObject ?: NSNull.null;
+    os_unfair_lock_unlock(&_cacheLock);
+
     return resolvedObject;
 }
 

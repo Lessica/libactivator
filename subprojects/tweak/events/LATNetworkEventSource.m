@@ -9,7 +9,7 @@
 #import "LATNetworkEventSource.h"
 
 #import "LAActivator+Private.h"
-#import "LATQueueAssertions.h"
+#import "LAQueueAssertions.h"
 
 #import <HBLog.h>
 #import <Network/Network.h>
@@ -58,7 +58,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 }
 
 - (void)start {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -85,7 +85,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 #pragma mark - Monitoring
 
 - (void)startSpringBoardNetworkNotificationMonitoring {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     NSNotificationCenter *notificationCenter = NSNotificationCenter.defaultCenter;
     __weak typeof(self) weakSelf = self;
@@ -135,7 +135,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 }
 
 - (void)scheduleNetworkStateRefreshWithReason:(NSString *)reason {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (self.refreshScheduled) {
         return;
     }
@@ -151,7 +151,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 #pragma mark - Wi-Fi State
 
 - (void)handlePotentialNetworkStateChangeWithReason:(NSString *)reason {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     NSString *networkName = [self readCurrentWiFiNetworkName];
     if (!self.hasKnownWiFiNetworkName) {
@@ -178,13 +178,13 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 }
 
 - (void)refreshKnownWiFiNetworkNameWithoutSendingEvent {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     self.hasKnownWiFiNetworkName = YES;
     self.currentWiFiNetworkName = [self readCurrentWiFiNetworkName];
 }
 
 - (nullable NSString *)readCurrentWiFiNetworkName {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     Class managerClass = NSClassFromString(@"SBWiFiManager");
     if (![managerClass respondsToSelector:@selector(sharedInstance)]) {
@@ -203,7 +203,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 #pragma mark - Event Dispatch
 
 - (void)sendWiFiEventWithBaseName:(NSString *)baseEventName networkName:(NSString *)networkName {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     NSString *eventMode = LASharedActivator.currentEventMode;
     if (eventMode.length == 0) {

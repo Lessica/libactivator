@@ -1,5 +1,5 @@
 //
-//  LATQueueAssertions.h
+//  LAQueueAssertions.h
 //  libactivator
 //
 //  Created by Lessica on 6/14/26.
@@ -8,4 +8,4 @@
 
 #import <dispatch/dispatch.h>
 
-#define LATAssertMainQueue() dispatch_assert_queue_debug(dispatch_get_main_queue())
+#define LAAssertMainQueue() dispatch_assert_queue_debug(dispatch_get_main_queue())

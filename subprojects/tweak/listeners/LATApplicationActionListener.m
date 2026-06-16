@@ -8,6 +8,7 @@
 
 #import "LATApplicationActionListener.h"
 
+#import "LAQueueAssertions.h"
 #import "LATApplicationDescriptor.h"
 #import "LATApplicationLauncher.h"
 #import "LATBuiltInRegistry.h"
@@ -23,8 +24,6 @@
 @property(nonatomic, strong) LATLockScreenCameraLauncher *lockScreenCameraLauncher;
 @property(nonatomic, weak, nullable) LATBuiltInRegistry *registry;
 
-// Descriptor cache
-@property(nonatomic, strong) dispatch_queue_t descriptorQueue;
 @property(nonatomic, copy) NSDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier;
 
 @end
@@ -37,30 +36,24 @@
         _launcher = launcher;
         _registry = registry;
         _lockScreenCameraLauncher = [[LATLockScreenCameraLauncher alloc] initWithRegistry:_registry];
-        _descriptorQueue = dispatch_queue_create("libactivator.application-action-listener.descriptors",
-                                                 DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _descriptorsByIdentifier = @{};
     }
     return self;
 }
 
 - (void)setApplicationDescriptors:(NSDictionary<NSString *, LATApplicationDescriptor *> *)descriptorsByIdentifier {
-    NSDictionary<NSString *, LATApplicationDescriptor *> *snapshot = [descriptorsByIdentifier copy] ?: @{};
-    dispatch_sync(self.descriptorQueue, ^{
-        self.descriptorsByIdentifier = snapshot;
-    });
+    LAAssertMainQueue();
+    self.descriptorsByIdentifier = [descriptorsByIdentifier copy] ?: @{};
 }
 
 - (LATApplicationDescriptor *)applicationDescriptorForIdentifier:(NSString *)identifier {
+    LAAssertMainQueue();
+
     if (identifier.length == 0) {
         return nil;
     }
 
-    __block LATApplicationDescriptor *descriptor = nil;
-    dispatch_sync(self.descriptorQueue, ^{
-        descriptor = self.descriptorsByIdentifier[identifier];
-    });
-    return descriptor;
+    return self.descriptorsByIdentifier[identifier];
 }
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {

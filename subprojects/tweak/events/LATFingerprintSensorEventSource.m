@@ -9,7 +9,7 @@
 #import "LATFingerprintSensorEventSource.h"
 
 #import "LAActivator+Private.h"
-#import "LATQueueAssertions.h"
+#import "LAQueueAssertions.h"
 
 #import <HBLog.h>
 
@@ -48,7 +48,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 #pragma mark - Lifecycle
 
 - (void)start {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -58,7 +58,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 #pragma mark - HID Events
 
 - (void)noteHIDEvent:(IOHIDEventRef)event {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !event || IOHIDEventGetType(event) != kIOHIDEventTypeTouchID) {
         return;
     }
@@ -71,7 +71,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 #pragma mark - Runtime Coordination
 
 - (void)noteDeviceUnlockedAtTimestamp:(NSTimeInterval)timestamp {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     self.hasRecentDeviceUnlockTimestamp = YES;
     self.lastDeviceUnlockTimestamp = timestamp;
@@ -79,7 +79,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (void)handleTouchIDDown:(BOOL)touchDown sequenceState:(NSInteger)sequenceState timestamp:(NSTimeInterval)timestamp {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started) {
         return;
     }
@@ -97,7 +97,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (BOOL)shouldIgnoreTouchIDEventAtTimestamp:(NSTimeInterval)timestamp {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     if (!self.hasRecentDeviceUnlockTimestamp) {
         return NO;
@@ -108,7 +108,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (void)handleSensorDownWithSequenceState:(NSInteger)sequenceState timestamp:(__unused NSTimeInterval)timestamp {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (self.sensorDown) {
         return;
     }
@@ -129,7 +129,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (void)handleSensorUpWithSequenceState:(NSInteger)sequenceState timestamp:(NSTimeInterval)timestamp {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.sensorDown) {
         return;
     }
@@ -160,7 +160,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 #pragma mark - Press Recognition
 
 - (void)scheduleSinglePressResolutionWithTimestamp:(NSTimeInterval)timestamp {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     self.pendingSinglePress = YES;
     self.lastSinglePressUpTimestamp = timestamp;
@@ -176,7 +176,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (void)resolveSinglePressIfNeededWithGeneration:(NSUInteger)generation {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     if (generation != self.singlePressGeneration || self.sensorDown || !self.hasPendingSinglePress ||
         self.sequenceConsumed) {
@@ -190,7 +190,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (void)cancelPendingSinglePress {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     self.singlePressGeneration += 1;
     self.pendingSinglePress = NO;
@@ -199,7 +199,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 #pragma mark - Hold Recognition
 
 - (void)scheduleHoldRecognition {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     self.holdGeneration += 1;
     NSUInteger generation = self.holdGeneration;
@@ -218,13 +218,13 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (void)cancelHoldRecognition {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     self.holdGeneration += 1;
 }
 
 - (void)sendShortHoldEventIfNeededWithGeneration:(NSUInteger)generation {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     if (generation != self.holdGeneration || !self.sensorDown || self.sequenceConsumed) {
         return;
@@ -239,7 +239,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (void)sendLongHoldEventIfNeededWithGeneration:(NSUInteger)generation {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     if (generation != self.holdGeneration || !self.sensorDown || self.secondPressDown || !self.hasShortHoldRecognized) {
         return;
@@ -251,7 +251,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (void)abortShortHoldEventIfNeeded {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     LAEvent *event = self.shortHoldEventToAbort;
     self.shortHoldEventToAbort = nil;
@@ -261,7 +261,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (void)clearShortHoldEventWithoutAborting {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     self.shortHoldEventToAbort = nil;
 }
@@ -269,7 +269,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 #pragma mark - Cross-Source Coordination
 
 - (BOOL)consumePendingSinglePressForSlideInAtTimestamp:(NSTimeInterval)timestamp {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     if (!self.started || self.sensorDown || !self.hasPendingSinglePress || self.sequenceConsumed) {
         return NO;
@@ -290,7 +290,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 #pragma mark - State
 
 - (void)resetRecognitionState {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     [self cancelPendingSinglePress];
     [self cancelHoldRecognition];
@@ -303,7 +303,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (void)resetSequenceIfIdle {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     if (self.sensorDown || self.hasPendingSinglePress) {
         return;
@@ -318,7 +318,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 #pragma mark - Event Dispatch
 
 - (LAEvent *)sendFingerprintEventWithName:(NSString *)eventName {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     LAEvent *event = [LAEvent eventWithName:eventName mode:[self currentEventMode]];
     [LASharedActivator sendEventToListener:event];
@@ -327,7 +327,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 }
 
 - (NSString *)currentEventMode {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     NSString *eventMode = LASharedActivator.currentEventMode;
     return eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;

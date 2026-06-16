@@ -29,6 +29,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     LATSystemActionKindActivateSwitcher,
     LATSystemActionKindEditScreenshot,
     LATSystemActionKindPowerMenu,
+    LATSystemActionKindPreviousApplication,
     LATSystemActionKindRespring,
     LATSystemActionKindHardRespring,
     LATSystemActionKindSafeMode,

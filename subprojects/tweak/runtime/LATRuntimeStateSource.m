@@ -8,9 +8,9 @@
 
 #import "LATRuntimeStateSource.h"
 
+#import "LAQueueAssertions.h"
 #import "LARuntimeContext.h"
 #import "LATHIDEventSender.h"
-#import "LATQueueAssertions.h"
 
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
@@ -36,10 +36,6 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 @property(nonatomic, strong) LARuntimeContext *runtimeContext;
 @property(nonatomic, strong) LATHIDEventSender *hidEventSender;
 
-// State serialization queues
-@property(nonatomic, strong) dispatch_queue_t stateQueue;
-@property(nonatomic, strong) dispatch_queue_t touchQueue;
-
 // Visibility source trackers
 @property(nonatomic, strong) NSMutableSet<NSString *> *homeScreenVisibilitySources;
 @property(nonatomic, strong) NSMutableSet<NSString *> *lockScreenVisibilitySources;
@@ -53,7 +49,8 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 @property(nonatomic, copy) NSString *cachedEventModeUnderneathLockScreen;
 @property(nonatomic, copy, nullable) NSString *cachedDisplayIdentifier;
 @property(nonatomic, copy, nullable) NSString *cachedForegroundDisplayIdentifier;
-@property(nonatomic, assign) NSUInteger stateGeneration;
+@property(nonatomic, copy, nullable) NSString *cachedLastForegroundDisplayIdentifier;
+@property(nonatomic, copy, nullable) NSString *cachedPreviousForegroundDisplayIdentifier;
 
 // Touch tracking
 @property(nonatomic, strong) NSHashTable<UITouch *> *activeTouches;
@@ -82,13 +79,9 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
         _homeScreenVisibilitySources = [[NSMutableSet alloc] init];
         _springBoardInterfaceVisibilitySources = [[NSMutableSet alloc] init];
         _lockScreenVisibilitySources = [[NSMutableSet alloc] init];
-        _stateQueue =
-            dispatch_queue_create("libactivator.tweak.runtime-state", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _cachedScreenOn = YES;
         _cachedEventMode = LAEventModeSpringBoard;
         _cachedEventModeUnderneathLockScreen = LAEventModeSpringBoard;
-        _touchQueue =
-            dispatch_queue_create("libactivator.tweak.touch-activity", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
         _activeTouches = [[NSHashTable alloc]
             initWithOptions:NSPointerFunctionsStrongMemory | NSPointerFunctionsObjectPointerPersonality
                    capacity:0];
@@ -110,7 +103,7 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (void)start {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -123,14 +116,8 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 #pragma mark - Runtime Feed
 
 - (void)refreshForegroundDisplayIdentifier {
-    dispatch_block_t refreshBlock = ^{
-        [self refreshForegroundDisplayIdentifierOnMainThread];
-    };
-    if (NSThread.isMainThread) {
-        refreshBlock();
-    } else {
-        dispatch_async(dispatch_get_main_queue(), refreshBlock);
-    }
+    LAAssertMainQueue();
+    [self refreshForegroundDisplayIdentifierOnMainThread];
 }
 
 - (void)noteHomeScreenVisible:(BOOL)visible source:(NSString *)source {
@@ -171,31 +158,30 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 #pragma mark - Screen State
 
 - (BOOL)screenIsOn {
-    __block BOOL screenOn = YES;
-    dispatch_sync(self.stateQueue, ^{
-        screenOn = self.cachedScreenOn;
-    });
-    return screenOn;
+    LAAssertMainQueue();
+    return self.cachedScreenOn;
 }
 
 - (BOOL)isUILocked {
-    __block BOOL uiLocked = NO;
-    dispatch_sync(self.stateQueue, ^{
-        uiLocked = self.cachedUILocked;
-    });
-    return uiLocked;
+    LAAssertMainQueue();
+    return self.cachedUILocked;
 }
 
 - (NSString *)displayIdentifierForCurrentApplication {
-    __block NSString *displayIdentifier = nil;
-    dispatch_sync(self.stateQueue, ^{
-        displayIdentifier = [self.cachedDisplayIdentifier copy];
-    });
-    return displayIdentifier;
+    LAAssertMainQueue();
+    return [self.cachedDisplayIdentifier copy];
+}
+
+- (NSString *)displayIdentifierForPreviousApplication {
+    LAAssertMainQueue();
+    if (self.cachedDisplayIdentifier.length == 0) {
+        return [self.cachedLastForegroundDisplayIdentifier copy];
+    }
+    return [self.cachedPreviousForegroundDisplayIdentifier copy];
 }
 
 - (void)startObservingScreenBlankedState {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     __weak typeof(self) weakSelf = self;
     int token = 0;
@@ -214,7 +200,7 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (void)handleScreenBlankedNotificationWithToken:(int)token {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     uint64_t blanked = 1;
     int status = notify_get_state(token, &blanked);
     if (status != NOTIFY_STATUS_OK) {
@@ -225,57 +211,56 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (BOOL)wakeScreenForReason:(NSString *)reason completion:(dispatch_block_t)completion {
+    LAAssertMainQueue();
+
     if (!completion) {
         HBLogWarn(@"Ignoring screen wake request without completion: %@", reason ?: @"");
         return NO;
     }
 
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (self.screenIsOn) {
-            completion();
-            return;
-        }
+    if (self.screenIsOn) {
+        completion();
+        return YES;
+    }
 
-        [self.pendingScreenWakeCompletions addObject:[completion copy]];
-        [self requestPowerButtonWakeIfNeededForReason:reason];
-    });
+    [self.pendingScreenWakeCompletions addObject:[completion copy]];
+    [self requestPowerButtonWakeIfNeededForReason:reason];
 
     return YES;
 }
 
 - (void)noteScreenDidTurnOn {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        if (!self.screenIsOn) {
-            return;
-        }
-        [self completeScreenWake];
-    });
+    LAAssertMainQueue();
+    if (!self.screenIsOn) {
+        return;
+    }
+    [self completeScreenWake];
 }
 
 #pragma mark - Touch State
 
 - (void)noteSystemTouchEvent:(UIEvent *)event {
+    LAAssertMainQueue();
+
     if (event.type != UIEventTypeTouches) {
         return;
     }
 
     NSMutableArray *blocksToRun = [NSMutableArray array];
-    dispatch_sync(self.touchQueue, ^{
-        for (UITouch *touch in event.allTouches) {
-            if (![touch isKindOfClass:UITouch.class]) {
-                continue;
-            }
-            if (touch.phase == UITouchPhaseEnded || touch.phase == UITouchPhaseCancelled) {
-                [self.activeTouches removeObject:touch];
-            } else {
-                [self.activeTouches addObject:touch];
-            }
+    for (UITouch *touch in event.allTouches) {
+        if (![touch isKindOfClass:UITouch.class]) {
+            continue;
         }
-        if (self.activeTouches.count == 0 && self.pendingTouchBlocks.count > 0) {
-            [blocksToRun addObjectsFromArray:self.pendingTouchBlocks];
-            [self.pendingTouchBlocks removeAllObjects];
+        if (touch.phase == UITouchPhaseEnded || touch.phase == UITouchPhaseCancelled) {
+            [self.activeTouches removeObject:touch];
+        } else {
+            [self.activeTouches addObject:touch];
         }
-    });
+    }
+    if (self.activeTouches.count == 0 && self.pendingTouchBlocks.count > 0) {
+        [blocksToRun addObjectsFromArray:self.pendingTouchBlocks];
+        [self.pendingTouchBlocks removeAllObjects];
+    }
 
     for (dispatch_block_t block in blocksToRun) {
         dispatch_async(dispatch_get_main_queue(), block);
@@ -283,35 +268,29 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (BOOL)touchActive {
-    __block BOOL touchActive = NO;
-    dispatch_sync(self.touchQueue, ^{
-        touchActive = self.activeTouches.count > 0;
-    });
-    return touchActive;
+    LAAssertMainQueue();
+    return self.activeTouches.count > 0;
 }
 
 - (void)performWhenTouchesEnd:(dispatch_block_t)block {
+    LAAssertMainQueue();
+
     if (!block) {
         return;
     }
 
-    __block BOOL shouldRunNow = NO;
-    dispatch_sync(self.touchQueue, ^{
-        if (self.activeTouches.count == 0) {
-            shouldRunNow = YES;
-        } else {
-            [self.pendingTouchBlocks addObject:[block copy]];
-        }
-    });
-    if (shouldRunNow) {
+    if (self.activeTouches.count == 0) {
         dispatch_async(dispatch_get_main_queue(), block);
+        return;
     }
+
+    [self.pendingTouchBlocks addObject:[block copy]];
 }
 
 #pragma mark - Foreground Application
 
 - (void)refreshForegroundDisplayIdentifierOnMainThread {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     UIApplication *application = UIApplication.sharedApplication;
     if (![application respondsToSelector:@selector(_accessibilityFrontMostApplication)]) {
@@ -335,10 +314,25 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (void)noteForegroundDisplayIdentifier:(NSString *)displayIdentifier {
-    [self updateStateWithBlock:^{
-        NSString *identifier = [displayIdentifier isEqualToString:@"com.apple.springboard"] ? nil : displayIdentifier;
-        self->_cachedForegroundDisplayIdentifier = [identifier copy];
-    }];
+    LAAssertMainQueue();
+
+    NSString *identifier = [displayIdentifier isEqualToString:@"com.apple.springboard"] ? nil : displayIdentifier;
+    BOOL foregroundChanged = !((identifier.length == 0 && self.cachedForegroundDisplayIdentifier.length == 0) ||
+                               [identifier isEqualToString:self.cachedForegroundDisplayIdentifier]);
+    if (!foregroundChanged) {
+        return;
+    }
+
+    if (identifier.length > 0 && ![identifier isEqualToString:self.cachedLastForegroundDisplayIdentifier]) {
+        if (self.cachedLastForegroundDisplayIdentifier.length > 0) {
+            self.cachedPreviousForegroundDisplayIdentifier = [self.cachedLastForegroundDisplayIdentifier copy];
+        }
+        self.cachedLastForegroundDisplayIdentifier = [identifier copy];
+    }
+    self.cachedForegroundDisplayIdentifier = [identifier copy];
+    [self recomputeCachedRuntimeState];
+
+    [self publishCurrentState];
 }
 
 #pragma mark - Private
@@ -372,57 +366,46 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (void)updateStateWithBlock:(void (^)(void))block {
-    __block NSUInteger generation = 0;
-    __block BOOL screenOn = YES;
-    __block BOOL uiLocked = NO;
-    __block BOOL homeScreenVisible = NO;
-    __block BOOL springBoardInterfaceVisible = NO;
-    __block NSString *foregroundDisplayIdentifier = nil;
-    dispatch_sync(self.stateQueue, ^{
-        block();
-        self->_stateGeneration++;
-        generation = self->_stateGeneration;
-        screenOn = !self->_screenBlanked;
-        uiLocked = self->_cachedUILocked;
-        homeScreenVisible = self->_homeScreenVisibilitySources.count > 0;
-        springBoardInterfaceVisible = self->_springBoardInterfaceVisibilitySources.count > 0;
-        foregroundDisplayIdentifier = [self->_cachedForegroundDisplayIdentifier copy];
-    });
+    LAAssertMainQueue();
 
-    NSString *underneathMode = [self eventModeUnderneathLockScreenWithHomeScreenVisible:homeScreenVisible
-                                                            springBoardInterfaceVisible:springBoardInterfaceVisible
-                                                            foregroundDisplayIdentifier:foregroundDisplayIdentifier];
-    NSString *eventMode = [self eventModeWithScreenOn:screenOn uiLocked:uiLocked underneathMode:underneathMode];
-    NSString *displayIdentifier =
-        [eventMode isEqualToString:LAEventModeApplication] ? foregroundDisplayIdentifier : nil;
-    dispatch_sync(self.stateQueue, ^{
-        if (generation != self->_stateGeneration) {
-            return;
-        }
-
-        self->_cachedScreenOn = screenOn;
-        self->_cachedUILocked = uiLocked;
-        self->_cachedEventMode = [eventMode copy] ?: LAEventModeSpringBoard;
-        self->_cachedEventModeUnderneathLockScreen = [underneathMode copy] ?: LAEventModeSpringBoard;
-        self->_cachedDisplayIdentifier = [displayIdentifier copy];
-        self->_cachedForegroundDisplayIdentifier = [foregroundDisplayIdentifier copy];
-    });
-
+    block();
+    [self recomputeCachedRuntimeState];
     [self publishCurrentState];
 }
 
-- (void)publishCurrentState {
-    __block NSString *eventMode = nil;
-    __block NSString *underneathMode = nil;
-    __block NSString *displayIdentifier = nil;
-    __block BOOL screenOn = YES;
-    dispatch_sync(self.stateQueue, ^{
-        eventMode = [self->_cachedEventMode copy];
-        underneathMode = [self->_cachedEventModeUnderneathLockScreen copy];
-        displayIdentifier = [self->_cachedDisplayIdentifier copy];
-        screenOn = self->_cachedScreenOn;
-    });
+- (void)recomputeCachedRuntimeState {
+    LAAssertMainQueue();
 
+    BOOL computedScreenOn = !self.screenBlanked;
+    BOOL uiLocked = self.cachedUILocked;
+    BOOL homeScreenVisible = self.homeScreenVisibilitySources.count > 0;
+    BOOL springBoardInterfaceVisible = self.springBoardInterfaceVisibilitySources.count > 0;
+    NSString *foregroundDisplayIdentifier = [self.cachedForegroundDisplayIdentifier copy];
+    NSString *computedUnderneathMode =
+        [self eventModeUnderneathLockScreenWithHomeScreenVisible:homeScreenVisible
+                                     springBoardInterfaceVisible:springBoardInterfaceVisible
+                                     foregroundDisplayIdentifier:foregroundDisplayIdentifier];
+    NSString *computedEventMode = [self eventModeWithScreenOn:computedScreenOn
+                                                     uiLocked:uiLocked
+                                               underneathMode:computedUnderneathMode];
+    NSString *computedDisplayIdentifier =
+        [computedEventMode isEqualToString:LAEventModeApplication] ? foregroundDisplayIdentifier : nil;
+
+    self.cachedScreenOn = computedScreenOn;
+    self.cachedUILocked = uiLocked;
+    self.cachedEventMode = [computedEventMode copy] ?: LAEventModeSpringBoard;
+    self.cachedEventModeUnderneathLockScreen = [computedUnderneathMode copy] ?: LAEventModeSpringBoard;
+    self.cachedDisplayIdentifier = [computedDisplayIdentifier copy];
+    self.cachedForegroundDisplayIdentifier = [foregroundDisplayIdentifier copy];
+}
+
+- (void)publishCurrentState {
+    LAAssertMainQueue();
+
+    NSString *eventMode = [self.cachedEventMode copy];
+    NSString *underneathMode = [self.cachedEventModeUnderneathLockScreen copy];
+    NSString *displayIdentifier = [self.cachedDisplayIdentifier copy];
+    BOOL screenOn = self.cachedScreenOn;
     dispatch_async(dispatch_get_main_queue(), ^{
         [self.runtimeContext updateEventMode:eventMode ?: LAEventModeSpringBoard
                         underneathLockScreen:underneathMode ?: LAEventModeSpringBoard
@@ -432,6 +415,8 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (void)requestPowerButtonWakeIfNeededForReason:(NSString *)reason {
+    LAAssertMainQueue();
+
     if (self.wakeRequestInFlight) {
         return;
     }
@@ -463,6 +448,8 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (void)completeScreenWake {
+    LAAssertMainQueue();
+
     NSArray<dispatch_block_t> *completions = [self.pendingScreenWakeCompletions copy];
     [self.pendingScreenWakeCompletions removeAllObjects];
     [self resetWakeRequest];
@@ -473,6 +460,8 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 }
 
 - (void)resetWakeRequest {
+    LAAssertMainQueue();
+
     self.wakeRequestInFlight = NO;
 }
 

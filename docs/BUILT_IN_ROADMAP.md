@@ -40,7 +40,7 @@
 
 可后续小切片推进的 blocked listener family：
 
-1. Modal/system UI actions：clear switcher、previous app、keyboard dictation 等。每项必须先用 Frida/IDA 确认现代 SpringBoard / system service 入口；`clear-switcher` 的首轮路径已经真机验证无效，不能继续直接注册。
+1. Modal/system UI actions：clear switcher、keyboard dictation 等。每项必须先用 Frida/IDA 确认现代 SpringBoard / system service 入口；`clear-switcher` 的首轮路径已经真机验证无效，不能继续直接注册。
 2. Watch haptics：按设备能力和目标 App 验证，不作为默认主线。
 3. Additive power action：soft-reboot。Dopamine `jbctl reboot_userspace` 的 `reboot3(RB2_USERREBOOT)` 参考路径不能直接在 SpringBoard 进程内执行，后续需要非 SpringBoard helper 或合适 privileged execution path。
 4. Listener handled semantics audit：所有 built-in listener family 需要与旧 master / 1.9.13 重新对齐 `event.handled` 时机、toggle/deactivate 行为和执行失败时的消费语义；这不是拦截层设计，结论应回写 tracker 或 reverse-engineering 记录。

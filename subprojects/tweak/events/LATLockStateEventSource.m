@@ -9,8 +9,8 @@
 #import "LATLockStateEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LAQueueAssertions.h"
 #import "LATFingerprintSensorEventSource.h"
-#import "LATQueueAssertions.h"
 #import "LATRuntimeStateSource.h"
 
 #import <HBLog.h>
@@ -49,7 +49,7 @@
 }
 
 - (void)start {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -68,7 +68,7 @@
 #pragma mark - Notifications
 
 - (void)handleLockStateNotification {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     BOOL locked = NO;
     if (![self readUILocked:&locked]) {
         HBLogDebug(@"Unable to read lock state for device lock event source");
@@ -94,7 +94,7 @@
 }
 
 - (void)refreshKnownLockStateWithoutSendingEvent {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     BOOL locked = NO;
     if (![self readUILocked:&locked]) {
         return;
@@ -107,7 +107,7 @@
 #pragma mark - State
 
 - (BOOL)readUILocked:(BOOL *)locked {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     Class managerClass = NSClassFromString(@"SBLockScreenManager");
     if (![managerClass respondsToSelector:@selector(sharedInstance)]) {
         return NO;
@@ -127,7 +127,7 @@
 #pragma mark - Event Dispatch
 
 - (void)sendDeviceLockEventForLockedState:(BOOL)locked {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     NSString *eventName = locked ? LAEventNameDeviceLocked : LAEventNameDeviceUnlocked;
     NSString *eventMode = locked ? LAEventModeLockScreen : LASharedActivator.currentEventMode;
     if (!locked && [eventMode isEqualToString:LAEventModeLockScreen]) {

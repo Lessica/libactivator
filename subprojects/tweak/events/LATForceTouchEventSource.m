@@ -9,8 +9,8 @@
 #import "LATForceTouchEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LAQueueAssertions.h"
 #import "LATEventSourceInterestGate.h"
-#import "LATQueueAssertions.h"
 
 #import <Activator/Activator.h>
 #import <HBLog.h>
@@ -69,7 +69,7 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 }
 
 - (void)start {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -79,7 +79,7 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 #pragma mark - Touch Entry Points
 
 - (void)noteSystemGestureWindow:(UIWindow *)window event:(UIEvent *)event {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !window || !event) {
         return;
     }
@@ -100,7 +100,7 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 #pragma mark - Interest
 
 - (BOOL)shouldProcessEvents {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     LATEventSourceInterestGate *interestGate = self.interestGate;
     return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyForceTouch];
 }
@@ -110,7 +110,7 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 - (nullable NSString *)handleTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
                                      bounds:(CGRect)bounds
                                   timestamp:(__unused NSTimeInterval)timestamp {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || snapshots.count == 0 || CGRectIsEmpty(bounds)) {
         return nil;
     }
@@ -222,7 +222,7 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 #pragma mark - Event Dispatch
 
 - (void)sendEventWithName:(NSString *)eventName force:(CGFloat)force bounds:(CGRect)bounds {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (eventName.length == 0) {
         return;
     }
@@ -233,7 +233,7 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 }
 
 - (NSString *)currentEventMode {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     NSString *eventMode = LASharedActivator.currentEventMode;
     return eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;

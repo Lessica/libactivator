@@ -38,6 +38,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)screenIsOn;
 - (BOOL)isUILocked;
 - (nullable NSString *)displayIdentifierForCurrentApplication;
+- (nullable NSString *)displayIdentifierForPreviousApplication;
 - (BOOL)wakeScreenForReason:(NSString *)reason completion:(dispatch_block_t)completion;
 
 @end

@@ -9,8 +9,8 @@
 #import "LATStatusBarEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LAQueueAssertions.h"
 #import "LATEventSourceInterestGate.h"
-#import "LATQueueAssertions.h"
 
 static NSTimeInterval const LATStatusBarEventSourceHoldDelay = 0.5;
 static NSTimeInterval const LATStatusBarEventSourceTapDelay = 0.33;
@@ -66,7 +66,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 }
 
 - (void)start {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -76,7 +76,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 #pragma mark - Touch Entry Points
 
 - (void)noteStatusBarView:(UIView *)view touchesBegan:(NSSet<UITouch *> *)touches withEvent:(__unused UIEvent *)event {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !view) {
         return;
     }
@@ -98,7 +98,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 }
 
 - (void)noteStatusBarView:(UIView *)view touchesMoved:(NSSet<UITouch *> *)touches withEvent:(__unused UIEvent *)event {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !view) {
         return;
     }
@@ -117,7 +117,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 }
 
 - (void)noteStatusBarView:(UIView *)view touchesEnded:(NSSet<UITouch *> *)touches withEvent:(__unused UIEvent *)event {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !view) {
         return;
     }
@@ -138,7 +138,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 - (void)noteStatusBarView:(UIView *)view
          touchesCancelled:(NSSet<UITouch *> *)touches
                 withEvent:(__unused UIEvent *)event {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !view) {
         return;
     }
@@ -163,7 +163,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 #pragma mark - Interest
 
 - (BOOL)shouldProcessEvents {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     LATEventSourceInterestGate *interestGate = self.interestGate;
     return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyStatusBar];
 }
@@ -174,7 +174,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
                                bounds:(CGRect)bounds
                              location:(CGPoint)location
                              tapCount:(__unused NSUInteger)tapCount {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !view) {
         return;
     }
@@ -192,7 +192,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 }
 
 - (void)noteTouchMovedInStatusBarView:(id)view bounds:(CGRect)bounds location:(CGPoint)location {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !view) {
         return;
     }
@@ -218,7 +218,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 }
 
 - (void)noteTouchEndedInStatusBarView:(id)view tapCount:(NSUInteger)tapCount {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !view) {
         return;
     }
@@ -248,7 +248,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
                                    bounds:(CGRect)bounds
                                  location:(CGPoint)location
                                  tapCount:(NSUInteger)tapCount {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (![self shouldTreatCancellationAsTapForStatusBarView:view bounds:bounds location:location]) {
         [self cancelSessionForStatusBarView:view];
         return;
@@ -258,7 +258,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 }
 
 - (BOOL)shouldTreatCancellationAsTapForStatusBarView:(id)view bounds:(CGRect)bounds location:(CGPoint)location {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !view) {
         return NO;
     }
@@ -293,7 +293,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 - (void)configureEventNamesForSession:(LATStatusBarTouchSession *)session
                            startPoint:(CGPoint)startPoint
                                bounds:(CGRect)bounds {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     CGFloat width = CGRectGetWidth(bounds);
     if (width > 0.0 && startPoint.x < width * 0.25) {
@@ -314,7 +314,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 #pragma mark - Timers
 
 - (void)scheduleHoldForStatusBarView:(id)view session:(LATStatusBarTouchSession *)session {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     session.holdGeneration += 1;
     NSUInteger generation = session.holdGeneration;
@@ -329,7 +329,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 }
 
 - (void)scheduleTapForStatusBarView:(id)view session:(LATStatusBarTouchSession *)session {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     session.tapGeneration += 1;
     NSUInteger generation = session.tapGeneration;
@@ -346,7 +346,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 - (void)sendHoldForStatusBarView:(id)view
                          session:(LATStatusBarTouchSession *)session
                       generation:(NSUInteger)generation {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     if (!view || generation != session.holdGeneration || !session.touchActive || session.hasSentEvent ||
         [self.sessionsByStatusBarView objectForKey:view] != session) {
@@ -357,7 +357,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 }
 
 - (void)sendTapForStatusBarView:(id)view session:(LATStatusBarTouchSession *)session generation:(NSUInteger)generation {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     if (!view || generation != session.tapGeneration || session.touchActive || session.hasSentEvent ||
         [self.sessionsByStatusBarView objectForKey:view] != session) {
@@ -368,17 +368,17 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 }
 
 - (void)cancelHoldForSession:(LATStatusBarTouchSession *)session {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     session.holdGeneration += 1;
 }
 
 - (void)cancelTapForSession:(LATStatusBarTouchSession *)session {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     session.tapGeneration += 1;
 }
 
 - (void)cancelSessionForStatusBarView:(id)view {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!view) {
         return;
     }
@@ -395,7 +395,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 #pragma mark - Event Dispatch
 
 - (void)sendEventWithName:(NSString *)eventName statusBarView:(id)view session:(LATStatusBarTouchSession *)session {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (eventName.length == 0 || session.hasSentEvent) {
         return;
     }
@@ -411,7 +411,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 }
 
 - (NSString *)currentEventMode {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     NSString *eventMode = LASharedActivator.currentEventMode;
     return eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;

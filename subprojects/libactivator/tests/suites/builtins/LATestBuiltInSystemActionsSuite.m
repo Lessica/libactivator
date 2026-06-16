@@ -44,6 +44,7 @@
         @"libactivator.system.activate-switcher" : @"activateSwitcherFromActivator:event:",
         @"libactivator.system.edit-screenshot" : @"editScreenshot",
         @"libactivator.system.power-menu" : @"powerDownView",
+        @"libactivator.system.previous-app" : @"previousApp",
         @"libactivator.system.respring" : @"respring",
         @"libactivator.system.hard-respring" : @"hardRespring",
         @"libactivator.system.safemode" : @"safeMode",

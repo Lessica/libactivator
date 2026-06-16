@@ -8,7 +8,7 @@
 
 #import "LATEventSourceInterestGate.h"
 
-#import "LATQueueAssertions.h"
+#import "LAQueueAssertions.h"
 
 #import <Activator/Activator.h>
 
@@ -56,7 +56,7 @@ static NSUInteger const LATEventSourceInterestFamilyCount = LATEventSourceIntere
 }
 
 - (void)start {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -84,7 +84,7 @@ static NSUInteger const LATEventSourceInterestFamilyCount = LATEventSourceIntere
 #pragma mark - Interest
 
 - (BOOL)isInterestedInFamily:(LATEventSourceInterestFamily)family {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !self.activator) {
         return YES;
     }
@@ -253,7 +253,7 @@ static NSUInteger const LATEventSourceInterestFamilyCount = LATEventSourceIntere
         return;
     }
 
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     self.hasCachedInterestMask = NO;
     self.cachedInterestMask = 0;
     self.cachedEventMode = nil;

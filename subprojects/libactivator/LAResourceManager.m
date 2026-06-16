@@ -9,12 +9,15 @@
 #import "LAResourceManager.h"
 
 #import <dispatch/dispatch.h>
+#import <os/lock.h>
 #import <roothide.h>
 
 extern CFTypeRef MGCopyAnswer(CFStringRef key);
 extern Boolean MGGetBoolAnswer(CFStringRef key);
 
-@interface LAResourceManager ()
+@interface LAResourceManager () {
+    os_unfair_lock _cacheLock;
+}
 
 // Caches
 @property(nonatomic, strong) NSBundle *cachedSupportBundle;
@@ -24,9 +27,6 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 @property(nonatomic, strong) NSDictionary *bundledListenerInfo;
 @property(nonatomic, assign) BOOL didReadHomeButtonType;
 @property(nonatomic, assign) NSInteger cachedHomeButtonType;
-
-// Concurrency
-@property(nonatomic, strong) dispatch_queue_t cacheQueue;
 
 @end
 
@@ -48,7 +48,7 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
     if (self) {
         _eventBundles = [[NSMutableDictionary alloc] init];
         _listenerBundles = [[NSMutableDictionary alloc] init];
-        _cacheQueue = dispatch_queue_create("libactivator.resources", DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL);
+        _cacheLock = OS_UNFAIR_LOCK_INIT;
     }
     return self;
 }
@@ -70,21 +70,23 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 #pragma mark - Bundles
 
 - (NSBundle *)supportBundle {
-    __block NSBundle *bundle = nil;
-    dispatch_sync(self.cacheQueue, ^{
-        bundle = self.cachedSupportBundle;
-    });
+    os_unfair_lock_lock(&_cacheLock);
+    NSBundle *bundle = self.cachedSupportBundle;
+    os_unfair_lock_unlock(&_cacheLock);
+
     if (bundle) {
         return bundle;
     }
 
     bundle = [NSBundle bundleWithPath:[self supportDirectoryPath]];
-    dispatch_sync(self.cacheQueue, ^{
-        if (!self.cachedSupportBundle) {
-            self.cachedSupportBundle = bundle;
-        }
-        bundle = self.cachedSupportBundle;
-    });
+
+    os_unfair_lock_lock(&_cacheLock);
+    if (!self.cachedSupportBundle) {
+        self.cachedSupportBundle = bundle;
+    }
+    bundle = self.cachedSupportBundle;
+    os_unfair_lock_unlock(&_cacheLock);
+
     return bundle;
 }
 
@@ -93,10 +95,10 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
         return nil;
     }
 
-    __block NSBundle *bundle = nil;
-    dispatch_sync(self.cacheQueue, ^{
-        bundle = self.eventBundles[eventName];
-    });
+    os_unfair_lock_lock(&_cacheLock);
+    NSBundle *bundle = self.eventBundles[eventName];
+    os_unfair_lock_unlock(&_cacheLock);
+
     if (bundle) {
         return bundle;
     }
@@ -104,12 +106,12 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
     NSString *path = [[self eventsDirectoryPath] stringByAppendingPathComponent:eventName];
     bundle = [NSBundle bundleWithPath:path];
     if (bundle) {
-        dispatch_sync(self.cacheQueue, ^{
-            if (!self.eventBundles[eventName]) {
-                self.eventBundles[eventName] = bundle;
-            }
-            bundle = self.eventBundles[eventName];
-        });
+        os_unfair_lock_lock(&_cacheLock);
+        if (!self.eventBundles[eventName]) {
+            self.eventBundles[eventName] = bundle;
+        }
+        bundle = self.eventBundles[eventName];
+        os_unfair_lock_unlock(&_cacheLock);
     }
     return bundle;
 }
@@ -202,10 +204,10 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 }
 
 - (NSDictionary *)bundledEventInfo {
-    __block NSDictionary *bundledInfo = nil;
-    dispatch_sync(self.cacheQueue, ^{
-        bundledInfo = _bundledEventInfo;
-    });
+    os_unfair_lock_lock(&_cacheLock);
+    NSDictionary *bundledInfo = _bundledEventInfo;
+    os_unfair_lock_unlock(&_cacheLock);
+
     if (bundledInfo) {
         return bundledInfo;
     }
@@ -213,12 +215,14 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
     NSString *path = [[self eventsDirectoryPath] stringByAppendingPathComponent:@"bundled.plist"];
     NSDictionary *dictionary = [NSDictionary dictionaryWithContentsOfFile:path];
     bundledInfo = [dictionary isKindOfClass:NSDictionary.class] ? dictionary : @{};
-    dispatch_sync(self.cacheQueue, ^{
-        if (!_bundledEventInfo) {
-            _bundledEventInfo = bundledInfo;
-        }
-        bundledInfo = _bundledEventInfo;
-    });
+
+    os_unfair_lock_lock(&_cacheLock);
+    if (!_bundledEventInfo) {
+        _bundledEventInfo = bundledInfo;
+    }
+    bundledInfo = _bundledEventInfo;
+    os_unfair_lock_unlock(&_cacheLock);
+
     return bundledInfo;
 }
 
@@ -227,10 +231,10 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
         return nil;
     }
 
-    __block NSBundle *bundle = nil;
-    dispatch_sync(self.cacheQueue, ^{
-        bundle = self.listenerBundles[listenerName];
-    });
+    os_unfair_lock_lock(&_cacheLock);
+    NSBundle *bundle = self.listenerBundles[listenerName];
+    os_unfair_lock_unlock(&_cacheLock);
+
     if (bundle) {
         return bundle;
     }
@@ -238,21 +242,21 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
     NSString *path = [[self listenersDirectoryPath] stringByAppendingPathComponent:listenerName];
     bundle = [NSBundle bundleWithPath:path];
     if (bundle) {
-        dispatch_sync(self.cacheQueue, ^{
-            if (!self.listenerBundles[listenerName]) {
-                self.listenerBundles[listenerName] = bundle;
-            }
-            bundle = self.listenerBundles[listenerName];
-        });
+        os_unfair_lock_lock(&_cacheLock);
+        if (!self.listenerBundles[listenerName]) {
+            self.listenerBundles[listenerName] = bundle;
+        }
+        bundle = self.listenerBundles[listenerName];
+        os_unfair_lock_unlock(&_cacheLock);
     }
     return bundle;
 }
 
 - (NSDictionary *)bundledListenerInfo {
-    __block NSDictionary *bundledInfo = nil;
-    dispatch_sync(self.cacheQueue, ^{
-        bundledInfo = _bundledListenerInfo;
-    });
+    os_unfair_lock_lock(&_cacheLock);
+    NSDictionary *bundledInfo = _bundledListenerInfo;
+    os_unfair_lock_unlock(&_cacheLock);
+
     if (bundledInfo) {
         return bundledInfo;
     }
@@ -260,12 +264,14 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
     NSString *path = [[self listenersDirectoryPath] stringByAppendingPathComponent:@"bundled.plist"];
     NSDictionary *dictionary = [NSDictionary dictionaryWithContentsOfFile:path];
     bundledInfo = [dictionary isKindOfClass:NSDictionary.class] ? dictionary : @{};
-    dispatch_sync(self.cacheQueue, ^{
-        if (!_bundledListenerInfo) {
-            _bundledListenerInfo = bundledInfo;
-        }
-        bundledInfo = _bundledListenerInfo;
-    });
+
+    os_unfair_lock_lock(&_cacheLock);
+    if (!_bundledListenerInfo) {
+        _bundledListenerInfo = bundledInfo;
+    }
+    bundledInfo = _bundledListenerInfo;
+    os_unfair_lock_unlock(&_cacheLock);
+
     return bundledInfo;
 }
 
@@ -528,12 +534,11 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 #pragma mark - Capabilities
 
 - (NSInteger)homeButtonType {
-    __block BOOL didReadHomeButtonType = NO;
-    __block NSInteger homeButtonType = 0;
-    dispatch_sync(self.cacheQueue, ^{
-        didReadHomeButtonType = self.didReadHomeButtonType;
-        homeButtonType = self.cachedHomeButtonType;
-    });
+    os_unfair_lock_lock(&_cacheLock);
+    BOOL didReadHomeButtonType = self.didReadHomeButtonType;
+    NSInteger homeButtonType = self.cachedHomeButtonType;
+    os_unfair_lock_unlock(&_cacheLock);
+
     if (didReadHomeButtonType) {
         return homeButtonType;
     }
@@ -544,13 +549,14 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
         resolvedHomeButtonType = [value integerValue];
     }
 
-    dispatch_sync(self.cacheQueue, ^{
-        if (!self.didReadHomeButtonType) {
-            self.cachedHomeButtonType = resolvedHomeButtonType;
-            self.didReadHomeButtonType = YES;
-        }
-        homeButtonType = self.cachedHomeButtonType;
-    });
+    os_unfair_lock_lock(&_cacheLock);
+    if (!self.didReadHomeButtonType) {
+        self.cachedHomeButtonType = resolvedHomeButtonType;
+        self.didReadHomeButtonType = YES;
+    }
+    homeButtonType = self.cachedHomeButtonType;
+    os_unfair_lock_unlock(&_cacheLock);
+
     return homeButtonType;
 }
 

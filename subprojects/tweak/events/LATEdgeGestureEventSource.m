@@ -9,10 +9,10 @@
 #import "LATEdgeGestureEventSource.h"
 
 #import "LAActivator+Private.h"
+#import "LAQueueAssertions.h"
 #import "LATEdgeGestureClassifier.h"
 #import "LATEventSourceInterestGate.h"
 #import "LATFingerprintSensorEventSource.h"
-#import "LATQueueAssertions.h"
 
 #import <HBLog.h>
 
@@ -39,7 +39,7 @@
 }
 
 - (void)start {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (self.started) {
         return;
     }
@@ -49,7 +49,7 @@
 #pragma mark - Touch Entry Points
 
 - (void)noteSystemGestureWindow:(UIWindow *)window event:(UIEvent *)event {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || !window || !event) {
         return;
     }
@@ -74,7 +74,7 @@
 #pragma mark - Interest
 
 - (BOOL)shouldProcessEvents {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     LATEventSourceInterestGate *interestGate = self.interestGate;
     return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture];
 }
@@ -84,7 +84,7 @@
 - (nullable NSString *)handleTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
                                      bounds:(CGRect)bounds
                                   timestamp:(NSTimeInterval)timestamp {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (!self.started || snapshots.count == 0) {
         return nil;
     }
@@ -109,7 +109,7 @@
 #pragma mark - Event Dispatch
 
 - (void)sendEventWithName:(NSString *)eventName touchCount:(NSUInteger)touchCount bounds:(CGRect)bounds {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
     if (eventName.length == 0) {
         return;
     }
@@ -121,7 +121,7 @@
 }
 
 - (NSString *)currentEventMode {
-    LATAssertMainQueue();
+    LAAssertMainQueue();
 
     NSString *eventMode = LASharedActivator.currentEventMode;
     return eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;
