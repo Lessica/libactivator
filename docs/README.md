@@ -1,25 +1,21 @@
 # 文档入口
 
-本目录现在只保留日常协作需要优先读取的短文档；旧版长文档已经完整归档到 `docs/archive/2026-06-09/`，用于追溯先前重写过程中的细节、证据和历史判断。
+本目录根部只保留日常协作会反复读取的工作文档。历史长文、完整调查过程和已经备份的旧版本放在 `docs/archive/`；如果根目录文档与归档文档冲突，以根目录文档为准。
 
-## 当前优先文档
+## 每次开工先读
 
-- `PROJECT_CONVENTIONS.md`：当前项目规约，覆盖代码风格、架构边界、IPC、资源、持久化、运行时和 Settings UI 边界。
-- `DEVICE_WORKFLOW.md`：与真机设备交互时必须遵守的流程，包括 rootless/roothide 环境、安装、日志、崩溃日志、Frida 诊断边界。
-- `TESTING.md`：测试分类、执行责任和默认验证入口，说明哪些测试可以进提交门槛，哪些只能作为专项诊断。
-- `BUILT_IN_ROADMAP.md`：下一阶段内置 event / listener / action 的实现路线图，明确各类能力由哪个模块承载、按什么顺序推进。
-- `BUILT_IN_ACTION_TRACKER.md`：内置 listener/action 的具体事项跟踪表，记录每项动作的依据、状态和首次验证方式。
-- `LOW_RISK_EVENT_SOURCE_FLOW.md`：以 `device locked / unlocked` 为例的低风险事件源端到端流程图，说明 assignment、event source、dispatch engine 和队列上下文的关系。
-- `LEGACY_REVERSE_ENGINEERING.md`：需要反复引用的 1.9.13 旧实现逆向证据，包括本地解混淆记录和已确认的旧版语义。
+1. `PROJECT_CONVENTIONS.md`：项目硬边界，先确认当前任务有没有触碰 Public API、注入边界、IPC、持久化、runtime ownership、Settings UI 或必须问 owner 的情况。
+2. `DEVICE_WORKFLOW.md`：只要需要真机、SpringBoard、安装、日志、崩溃日志、Frida 或手工观察，就先读。
+3. `TESTING.md`：只要改了代码、资源、脚本或测试，就先读对应验证入口和测试分层。
+4. `LEGACY_REVERSE_ENGINEERING.md`：只要实现或判断旧 Activator 行为，就先查这里的证据索引，再按需回到 `docs/archive/2026-06-17/LEGACY_REVERSE_ENGINEERING.md` 查完整记录。
 
-## 归档说明
+## 其他活文档
 
-`docs/archive/2026-06-09/` 保留了归档前的全部文档，包括英文主文档和 `zh-Hans` 翻译副本。归档文档不再作为日常最新规约读取入口；如果新文档与归档文档冲突，以根目录下的新文档为准。
-
-归档文档仍有价值：当需要追溯某个兼容性判断、旧实现对比、1.9.13 资源统计、Public API inventory 或真机验证记录时，可以回到归档目录查证。
+- `BUILT_IN_ROADMAP.md`：内置 event / listener / action 的阶段路线与模块归属。
+- `BUILT_IN_ACTION_TRACKER.md`：内置 listener/action 的逐项状态、依据和首次验证方式。
 
 ## 更新规则
 
-新文档只记录需要反复强调、会影响后续实现决策的结论。临时调查过程、一次性 probe 结果和已经过时的中间计划不要写进根目录文档；需要保存时放入归档或专门的调查记录。
+根目录文档只记录会影响后续实现决策的当前结论。临时调查过程、一次性 probe 输出、过时计划和长证据链不要继续塞回根目录；需要保存时放到 `docs/archive/` 或专门调查记录。
 
-`docs/` 目录下的普通段落不要按固定行宽硬换行。能用中文描述的内容尽量用中文；API 名称、命令、状态值、文件路径、类名、方法名、常量名保持原文。
+`docs/` 目录下的普通段落不要按固定行宽硬换行。文档正文优先使用简体中文；API 名称、命令、状态值、文件路径、类名、方法名、常量名保持原文。

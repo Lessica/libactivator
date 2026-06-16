@@ -1,115 +1,97 @@
-# 内置能力实现路线图
+# 内置能力路线图
 
-本路线图只保留当前需要推进和反复确认的方向。已完成或已确认的内容降级为基线事实；逐项状态和 name 级别交叉比对见 `docs/BUILT_IN_ACTION_TRACKER.md`。
+本路线图只保留当前还需要推进、反复确认或作为边界约束的内容。已完成的 listener/action/event 明细不再放在根目录路线图；需要历史对照时查 `docs/archive/2026-06-17/BUILT_IN_ROADMAP.md` 和 `docs/archive/2026-06-17/BUILT_IN_ACTION_TRACKER.md`。
 
 ## 总体原则
 
-- 资源 metadata presence 不等于 runtime behavior implemented。`availableEventNames` 可以来自 event metadata，但没有 hook 就不能认为事件可触发；listener/action metadata 可以用于展示和 fallback，但没有 listener object 注册就不能出现在 `availableListenerNames`。
-- 每个内置能力都要先确认现代 iOS 15+ 的承载模块、SPI 依赖、验证方式，再实现和注册。
+- Metadata presence 不等于 runtime behavior implemented。没有真实 `LAListener` object 的 listener/action 不能进入 `availableListenerNames`；没有 hook/adapter 的 event name 不能被真实触发。
+- 每个内置能力都要先确认现代 iOS 15+ 的承载模块、SPI 依赖和验证方式，再实现和注册。
 - 不为旧能力引入用户 App 注入；不使用 `com.apple.UIKit` filter。
 - Settings UI 不承担 runtime 行为；它只负责配置、展示和调用 Public API。
 - 不确定 SPI 时停止并问 owner。不要猜实现。
 
-## 当前基线
+## 当前剩余主线
 
-- 1.9.13 Public API、常量、通知、headers、import 入口和 ABI skeleton 已对齐。
-- SpringBoard authoritative backend、state/config IPC、event dispatch IPC、runtime mode、no-touch deferral、unlock-to-send callback、metadata/resource lookup、localization fallback、listener metadata cache 已具备基础能力。
-- event metadata 当前 123 项已 staged：121 项来自 1.9.13，`libactivator.now-playing.playing` / `libactivator.now-playing.paused` 是 2.x additive。
-- listener/action metadata 当前 118 项已 staged：1.9.13 的 117 项中移除 5 个 obsolete/excluded 项，新增 6 个 2.x additive listener/action name。
-- Events / Listeners resource metadata key 已完成 cross-check：常规展示、版本过滤、capability 过滤、mode compatibility、power/no-touch gate、system haptic `tapticType`、`system.back` 的 raw event 触发源判断等 key 已由 resource/core/dispatch layer 消费；`is-unprotected`、完整 unlock sequence、preview 等未完全兑现项已集中记录到 tracker。
-- 阶段 0 资源模型补强已完成，`Resources` stable suite 覆盖 bundled catalog、目录式 third-party `Info.plist`、required capabilities、small-icons path fallback 和排除项。
-- 阶段 1 / 阶段 3 listener/action 已完成：No-op、URL actions、HID-backed hardware actions、已验证 system actions、AXSpringBoardServer-backed system UI actions、lock screen actions、power/recovery actions、telephony call control、dynamic application listeners 已注册真实 listener object。高风险 system actions 的真实副作用只通过真机手工验证，不进入 stable fake path；首轮真机验证无效的 clear-switcher 以及 SpringBoard 进程内不可执行的 soft-reboot 当前退回 blocked。
-- 阶段 3 状态/通知型 event source 第一批已完成并收口：device locked/unlocked、power connected/disconnected、headset connected/disconnected、media playback、network joined/left Wi-Fi。
-- 阶段 4 已完成 hardware button、status bar、top slide / edge gesture、fingerprint sensor、force touch、drag-along / drag-off edge events。当前继续调用原始系统实现，不做 handled-default interception。
-
-## 承载模块划分
-
-| 能力类型 | 承载位置 | 说明 |
+| 主线 | 状态 | 下一步 |
 | --- | --- | --- |
-| event metadata | `layout/Library/Activator/Events/bundled.plist` 和 `LAResourceManager` | 固定 1.9.13 事件范围、标题、分组、兼容模式、required capabilities 等信息；2.x additive event 必须明确记录。 |
-| listener/action metadata | `layout/Library/Activator/Listeners/bundled.plist`、glyph 资源和 `LAResourceManager` | 固定静态动作展示信息、兼容规则、图标候选路径和 selector/url 元数据；obsolete 项可以从当前 staged 资源移除。 |
-| static built-in actions | `ActivatorTweak.dylib` 中的 built-in listener registry | 由 SpringBoard 注册真实 `LAListener` object，例如 URL actions、hardware actions、system actions、telephony actions。 |
-| event sources | `ActivatorTweak.dylib` 中的 SpringBoard acquisition adapters | 负责从硬件按钮、触摸手势、SpringBoard 状态、通知或系统服务采集事件，然后调用 dispatch engine。 |
-| dynamic application listeners | 独立 application listener family provider | 动态读取 SpringBoard app model，注册 App launch/action listener，处理 app glyph、显示名、特殊系统 App 行为。 |
+| Staged 但未注册的 listener/action | 剩 `clear-switcher`、`watch.haptic.tap` 两项 blocked | 分别重新 probe 现代 SpringBoard switcher 清理入口、Watch haptic 能力与设备差异。 |
+| Additive 暂缓 action | `system.soft-reboot` blocked 且已从 staged/runtime 移除 | 需要非 SpringBoard helper 或合适 privileged execution path，不能直接在 SpringBoard 进程内调用 `reboot3(RB2_USERREBOOT)`。 |
+| 未实现 event family | 1.9.13 event 中仍有 33 个未实现 | 按 multi-touch、SpringBoard/icon、lock screen clock、headset button、motion、HUD tap、gesture bar、scheduled、car/watch/clamshell 分组推进。 |
+| Settings UI 与 menu | 尚未进入 runtime 主线 | 实现 `libactivatorsettings.dylib`、assignments/profile/blacklist UI、menu editor 和 menu listener runtime provider。 |
+| Handled-default interception | 尚未设计 | 单独设计物理按键和 status bar scroll-to-top 等默认行为拦截，不并入现有 event source gate。 |
+| `event.handled` 语义复核 | 跨 listener family 遗留审计 | 对齐旧 master / 1.9.13 的 handled 时机、toggle/deactivate 行为和失败消费语义。 |
+
+## 承载模块边界
+
+| 能力类型 | 承载位置 | 边界 |
+| --- | --- | --- |
+| event metadata | `layout/Library/Activator/Events/bundled.plist` 和 `LAResourceManager` | 只提供标题、分组、兼容模式、capability 等静态信息；不能替代 event source。 |
+| listener/action metadata | `layout/Library/Activator/Listeners/bundled.plist`、glyph 资源和 `LAResourceManager` | 只提供展示、兼容规则、图标和 selector/url metadata；不能替代 listener object。 |
+| static built-in actions | `ActivatorTweak.dylib` 中的 built-in listener registry | 由 SpringBoard 注册真实 `LAListener` object。 |
+| event sources | `ActivatorTweak.dylib` 中的 SpringBoard acquisition adapters | 从硬件按钮、触摸手势、SpringBoard 状态、通知或系统服务采集事件，再调用 dispatch engine。 |
+| dynamic application listeners | 独立 application listener family provider | 动态读取 SpringBoard app model，处理 app launch/action listener、glyph、显示名和特殊系统 App 行为。 |
 | menu listeners | Settings UI + runtime menu provider | 菜单内容来自用户配置，需等 Settings UI 菜单编辑能力落地后实现。 |
-| CLI | `subprojects/cli` 的 `/usr/bin/activator` | 生产工具 target，使用 Public API 和生产 IPC，不依赖 testing IPC，也不是 test runner。 |
+| CLI | `subprojects/cli` 的 `/usr/bin/activator` | 生产兼容工具，使用 Public API 和生产 IPC，不依赖 testing IPC，也不是 test runner。 |
 
-## 阶段 3：listeners/actions 剩余工作
+## Listeners/actions 剩余工作
 
-当前不再把 low-risk listeners 作为主线；剩余 listener/action 工作分为当前 staged 但未注册 runtime listener、已移除 obsolete name、以及 additive 暂缓项。详细 name 清单见 `BUILT_IN_ACTION_TRACKER.md` 的“阶段 3：listeners/actions 剩余交叉比对”。
+当前不再按 1.9.13 的 117 项静态资源散列推进；剩余工作只跟踪未注册、已移除、暂缓或语义待复核的条目。
 
-可后续小切片推进的 blocked listener family：
+1. `libactivator.system.clear-switcher`：首轮现代路径真机验证无效，当前只保留 metadata，不注册 runtime listener。后续需要重新确认 iOS 15+ Switcher app layout 清理入口。
+2. `libactivator.watch.haptic.tap`：依赖 Watch 能力和设备差异，当前 blocked，不作为默认 listener 主线。
+3. `libactivator.system.soft-reboot`：2.x additive 暂缓项，SpringBoard 进程内不可直接执行当前参考路径；需要 helper 或 privileged path。
+4. Obsolete social/settings actions：`settings.facebook`、`settings.twitter`、`facebook.compose-post`、`twitter.compose-tweet`、`weibo.compose-post` 已从 staged resource 移除，不恢复。
+5. `previews` 语义：core preview dispatch API 存在，但 built-in vibration / watch haptic preview 尚未作为实际动作支持。
+6. `is-unprotected` 与 `supports-unlocking-device`：旧 API protection prompt、unprotected 豁免和完整主动解锁流程尚未兑现；当前只有 callback-only unlock-to-send compatibility。
 
-1. Modal/system UI actions：clear switcher。`clear-switcher` 的首轮路径已经真机验证无效，不能继续直接注册；`keyboard dictation` 已作为 AX-backed toggle 恢复，通过当前应用 `visibleElements` 中的多语言标题匹配触发：听写中优先按“键盘/Keyboard/…”停止，未听写时按 `0:` keyplane identifier 前缀加“听写/Dictation/…”启动。
-2. Watch haptics：按设备能力和目标 App 验证，不作为默认主线。
-3. Additive power action：soft-reboot。Dopamine `jbctl reboot_userspace` 的 `reboot3(RB2_USERREBOOT)` 参考路径不能直接在 SpringBoard 进程内执行，后续需要非 SpringBoard helper 或合适 privileged execution path。
-4. Listener handled semantics audit：所有 built-in listener family 需要与旧 master / 1.9.13 重新对齐 `event.handled` 时机、toggle/deactivate 行为和执行失败时的消费语义；这不是拦截层设计，结论应回写 tracker 或 reverse-engineering 记录。
+## Events 剩余工作
 
-不恢复或架构外：
+优先级按实现收益和可验证性排序：
 
-- 仍保留为已移除的旧 URL / old social compose / bedtime 等 obsolete 项不进入主线。
-- `libactivator.system.voice-control` 已按现代 Voice Control 功能恢复为 toggle；实现依据是 AccessibilitySettings 中 `-[CACSettingsController setCommandAndControlEnabled:specifier:]` 只调用 `_AXSCommandAndControlSetEnabled([value boolValue])`。
-- `libactivator.system.local-back` 已复用 Voice Control 的 `CACSpokenCommand goBack` 恢复；该路径保留 Safari 返回按钮标题分支和 AX escape action 兜底。
-- `libactivator.system.back` 已按现代等价路径恢复：application mode 走 `local-back`，非 application mode fallback 到 Home，触发源为 `libactivator.menu.press.single` 时返回未处理。
-- `libactivator.ipod.music-controls` / `libactivator.system.show-now-playing-bar` 已按现代等价入口恢复：灭屏时先点亮屏幕，再打开 Control Center；Control Center 已可见时切换 Now Playing 模块展开状态。
-
-## 阶段 4：events 剩余工作
-
-当前阶段 4 的主线是剩余触摸与设备事件。详细 name 清单见 `BUILT_IN_ACTION_TRACKER.md` 的“阶段 4：events 未完成交叉比对”。
-
-优先顺序：
-
-1. Multi-touch gesture family：`three/four/five-finger tap/pinch/spread` 共 9 个 event。先 probe SpringBoard 或系统手势层能否在不注入用户 App 的前提下观察多指触摸；若需要持续全局识别，必须接入 assignment-aware runtime gate；gate 只降低采集成本，不替代 dispatch engine。
+1. Multi-touch gesture family：`three/four/five-finger tap/pinch/spread` 共 9 个 event。先 probe SpringBoard 或系统手势层能否在不注入用户 App 的前提下观察多指触摸；若需要持续全局识别，必须接入 assignment-aware runtime gate。
 2. SpringBoard/icon gesture family：`springboard.pinch`、`springboard.spread`、`icon.flick.*` 共 6 个 event。只针对 SpringBoard UI 层实现，先确认现代 Home Screen / icon view hook 点。
-3. Lock screen clock gesture family：clock double tap、tap hold、swipe left/right/down 共 5 个 event。与 CoverSheet、通知中心、相机入口、passcode 状态强相关，需单独 probe。
-4. Low-priority event backlog：headset-button press/hold、motion shake、volume display tap、gesture-bar double tap、scheduled sunrise/sunset、car/watch/clamshell connected/open 等。它们依赖设备能力、外设状态或私有服务，不用 metadata presence 推断可用性。
-
-已完成阶段 4 family 继续保持 no-intercept：hardware button、status bar、edge gesture、fingerprint sensor、force touch、drag-along / drag-off 当前都只识别并 dispatch，继续调用原始系统实现。
+3. Lock screen clock gesture family：clock double tap、tap hold、swipe left/right/down 共 5 个 event。与 CoverSheet、通知中心、相机入口、passcode 状态强相关，需要单独 probe。
+4. Headset button：press single、hold short 共 2 个 event。已实现 headset connected/disconnected，但线控按钮需要确认现代音频 route、HID 或 MediaRemote 信号来源。
+5. Motion shake：确认是否能在 SpringBoard 进程内可靠接入，不为该事件注入用户 App。
+6. Volume HUD tap：依赖音量 HUD 触摸，应作为独立 HUD/UI hook，而不是 HID 按键热路径。
+7. Gesture bar double tap：与 home indicator / gesture bar 设备能力和 iOS 版本强相关，需要按设备 probe。
+8. Scheduled sunrise/sunset：需要定位旧实现语义和现代定位/日出日落调度来源。
+9. Car / watch / smart cover：依赖外设、设备能力或私有服务，先保留 metadata，不用 metadata presence 推断可用性。
 
 ## Handled-default Interception Backlog
 
-拦截层是独立设计任务，不并入现有 event source gate。当前判断：
+拦截层是独立设计任务，不并入现有 event source gate。
 
-- 可能需要拦截的主要 family 是物理按键和 status bar scroll-to-top；HID 层未来可以考虑完全拦截后根据 `event.handled` 决定是否 fallback 重发 synthetic event。
+- 可能需要拦截的主要 family 是物理按键和 status bar scroll-to-top。
+- HID 层未来可以考虑完全拦截后根据 `event.handled` 决定是否 fallback 重发 synthetic event。
 - Edge gesture、drag-along/off、force touch 当前保持 no-intercept 语义；如未来要改变，必须逐 family 设计 hook 返回值、原始事件转发和 `event.handled` 回传路径。
 - 不能把“event 已提交给 dispatch engine”当成“应拦截默认行为”；只有 listener 真正 handled 后才能决定是否拦截。
 
-## 阶段 5：Settings UI 与菜单
+## Settings UI 与菜单
 
-目标：实现 `libactivatorsettings.dylib`，让 Preferences、Activator.app 和第三方越狱 App 都能作为 Settings UI host。
+目标是实现 `libactivatorsettings.dylib`，让 Preferences、Activator.app 和第三方越狱 App 都能作为 Settings UI host。
 
 范围：
 
 - modes/events/listeners 列表、搜索、assignments、profiles、blacklist。
 - listener/event configuration controller factory。
 - menu editor 和 menu listener runtime provider。
-- `glyph.pdf` lookup 和 glyph/small icon 展示、localization、resource metadata 展示。
+- `glyph.pdf` lookup、glyph/small icon 展示、localization、resource metadata 展示。
 - `glyph.pdf` 只作为 Settings UI 展示资源接入，不在 `libactivator` 核心里恢复 1.9.0 大图标 callback。
 - 显式暴露 application accessibility 启停开关。`libactivator.system.local-back` 可能为恢复 Voice Control 返回语义而持久打开该系统状态；Settings UI 必须让用户能看到并关闭它。
 
 边界：Settings UI 不实现 event acquisition，也不直接拥有 SpringBoard runtime state；它通过 Public API/IPC 操作 SpringBoard authoritative backend。
 
-## 阶段 6：CLI 兼容工具
+## CLI 遗留边界
 
-目标：实现 1.9.13 package 中 `/usr/bin/activator` 的现代等价。
+CLI 是 production compatibility tool，不是测试入口。
 
-范围：
-
-- 命令面应保持 1.9.13 兼容：`listeners`、`events`、`modes`、`current-mode`、`current-app`、`get <key>`、`set <key> <value>`、`activate <event> [<listener>]`、`send <listener>`、`deactivate <event>`。
-- `postinst` 是隐藏安装后入口，旧 usage 不展示。当前保留 no-op；`prerm` 是隐藏卸载前入口，用于包卸载前关闭 application accessibility。
+- 命令面保持 1.9.13 兼容：`listeners`、`events`、`modes`、`current-mode`、`current-app`、`get <key>`、`set <key> <value>`、`activate <event> [<listener>]`、`send <listener>`、`deactivate <event>`。
+- `postinst` 是隐藏安装后入口，旧 usage 不展示；当前保留 no-op。
+- `prerm` 是隐藏卸载前入口，用于包卸载前关闭 application accessibility。
 - `get` / `set` 只负责调用 libactivator compatibility facade，不在 CLI 内实现 flat key 解析或直接读写 plist。
 - 事件触发命令使用当前 event mode 构造 `LAEvent`，按旧语义以 `event.handled ? 0 : 1` 作为退出状态。
-
-边界：CLI 是 production tool，不是 test runner；不能依赖 DEBUG-only testing IPC、hidden testing IPC 或测试 plist。
-
-已确认的 1.9.13 逆向结论：
-
-- 旧 CLI 启动命令前会 `dlopen("/usr/lib/libactivator.dylib", RTLD_LAZY)` 并检查 `[LAActivator.sharedInstance isAlive]`；不可达时 `exit(-1)`。
-- `listeners`、`events`、`modes` 分别逐行打印 `availableListenerNames`、`availableEventNames`、`availableEventModes`。
-- `current-mode` 打印 `currentEventMode`；`current-app` 仅在 `displayIdentifierForCurrentApplication.length > 0` 时打印。
-- `get <key>` 调用 `_getObjectForPreference:` 并打印返回对象的 `description`；`set <key> <value>` 调用 `_setObject:forPreference:`，value 是命令行字符串。
-- `activate <event>` 调用 `sendEventToListener:`；`activate <event> <listener>` 调用 `sendEvent:toListenerWithName:`；`send <listener>` 使用 event name `libactivator` 调用指定 listener；`deactivate <event>` 调用 `sendDeactivateEventToListeners:`。
-- 旧 `postinst` 在 `kCFCoreFoundationVersionNumber < 1200.0` 时清理 BulletinBoard `SectionInfo.plist` 里的 today/tomorrow 通知中心 section 和对应 PushStore 文件，并始终尝试把 `SectionInfo.plist` chown 为 `501:501`。当前项目暂不复刻该副作用，等确实需要非 shell 安装后逻辑时再实现。
+- CLI 不能依赖 DEBUG-only testing IPC、hidden testing IPC 或测试 plist。
 
 ## 验收要求
 

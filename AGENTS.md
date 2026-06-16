@@ -19,7 +19,8 @@
 ## 协作方式
 
 - 先理解现有规约、Public API 和参考实现，再进行实现决策。
-- 日常协作优先读取 `docs/README.md`、`docs/PROJECT_CONVENTIONS.md`、`docs/DEVICE_WORKFLOW.md`、`docs/TESTING.md`、`docs/BUILT_IN_ROADMAP.md`。
+- 每次新会话或重新接手任务时，先读 `docs/README.md`，再按任务触碰范围读取 `docs/PROJECT_CONVENTIONS.md`、`docs/DEVICE_WORKFLOW.md`、`docs/TESTING.md`、`docs/LEGACY_REVERSE_ENGINEERING.md`。
+- 涉及内置 event / listener / action 路线或逐项状态时，再读取 `docs/BUILT_IN_ROADMAP.md` 和 `docs/BUILT_IN_ACTION_TRACKER.md`。
 - `docs/archive/` 下的文档是历史归档，只用于追溯先前决策、证据和旧 inventory；如果根目录新文档与归档文档冲突，以根目录新文档为准。
 - 保持改动范围清晰，避免把无关重构混入当前任务。
 - 不要提交 `references/`；它只是本地参考快照。
