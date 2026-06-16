@@ -35,6 +35,7 @@
         @"libactivator.lockscreen.show" : @"showLockScreen",
         @"libactivator.lockscreen.dismiss" : @"dismissLockScreen",
         @"libactivator.lockscreen.toggle" : @"toggleLockScreen",
+        @"libactivator.system.lock-and-wipe-credentials" : @"wipeCredentials",
         @"libactivator.system.activate-control-center" : @"showControlCenter",
         @"libactivator.ipod.music-controls" : @"musicControls",
         @"libactivator.system.show-now-playing-bar" : @"showNowPlayingBar",

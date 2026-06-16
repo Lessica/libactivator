@@ -21,6 +21,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     LATSystemActionKindLockScreenShow,
     LATSystemActionKindLockScreenDismiss,
     LATSystemActionKindLockScreenToggle,
+    LATSystemActionKindLockAndWipeCredentials,
     LATSystemActionKindActivateControlCenter,
     LATSystemActionKindShowNowPlayingControls,
     LATSystemActionKindActivateNotificationCenter,

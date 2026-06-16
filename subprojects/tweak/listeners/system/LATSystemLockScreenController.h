@@ -21,6 +21,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)showLockScreenForListenerName:(NSString *)listenerName;
 - (BOOL)dismissLockScreenForListenerName:(NSString *)listenerName;
 - (BOOL)toggleLockScreenForListenerName:(NSString *)listenerName;
+- (BOOL)lockAndWipeCredentialsForListenerName:(NSString *)listenerName;
 
 @end
 

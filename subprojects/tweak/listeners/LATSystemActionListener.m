@@ -151,6 +151,9 @@
     case LATSystemActionKindLockScreenToggle:
         [self.lockScreenController toggleLockScreenForListenerName:listenerName];
         break;
+    case LATSystemActionKindLockAndWipeCredentials:
+        [self.lockScreenController lockAndWipeCredentialsForListenerName:listenerName];
+        break;
     case LATSystemActionKindActivateControlCenter:
         [self.centerController activateControlCenterForListenerName:listenerName];
         break;
@@ -272,6 +275,9 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.lockscreen.toggle"
                                                     selectorName:@"toggleLockScreen"
                                                             kind:LATSystemActionKindLockScreenToggle],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.lock-and-wipe-credentials"
+                                                    selectorName:@"wipeCredentials"
+                                                            kind:LATSystemActionKindLockAndWipeCredentials],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-control-center"
                                                     selectorName:@"showControlCenter"
                                                             kind:LATSystemActionKindActivateControlCenter],

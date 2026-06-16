@@ -18,7 +18,7 @@
 - listener/action metadata 当前 118 项已 staged：1.9.13 的 117 项中移除 5 个 obsolete/excluded 项，新增 6 个 2.x additive listener/action name。
 - Events / Listeners resource metadata key 已完成 cross-check：常规展示、版本过滤、capability 过滤、mode compatibility、power/no-touch gate、system haptic `tapticType`、`system.back` 的 raw event 触发源判断等 key 已由 resource/core/dispatch layer 消费；`is-unprotected`、完整 unlock sequence、preview 等未完全兑现项已集中记录到 tracker。
 - 阶段 0 资源模型补强已完成，`Resources` stable suite 覆盖 bundled catalog、目录式 third-party `Info.plist`、required capabilities、small-icons path fallback 和排除项。
-- 阶段 1 / 阶段 3 listener/action 已完成：No-op、URL actions、HID-backed hardware actions、已验证 system actions、AXSpringBoardServer-backed system UI actions、lock screen actions、power/recovery actions、telephony call control、dynamic application listeners 已注册真实 listener object。高风险 system actions 的真实副作用只通过真机手工验证，不进入 stable fake path；首轮真机验证无效的 clear-switcher、lock-and-wipe-credentials 以及 SpringBoard 进程内不可执行的 soft-reboot 当前退回 blocked。
+- 阶段 1 / 阶段 3 listener/action 已完成：No-op、URL actions、HID-backed hardware actions、已验证 system actions、AXSpringBoardServer-backed system UI actions、lock screen actions、power/recovery actions、telephony call control、dynamic application listeners 已注册真实 listener object。高风险 system actions 的真实副作用只通过真机手工验证，不进入 stable fake path；首轮真机验证无效的 clear-switcher 以及 SpringBoard 进程内不可执行的 soft-reboot 当前退回 blocked。
 - 阶段 3 状态/通知型 event source 第一批已完成并收口：device locked/unlocked、power connected/disconnected、headset connected/disconnected、media playback、network joined/left Wi-Fi。
 - 阶段 4 已完成 hardware button、status bar、top slide / edge gesture、fingerprint sensor、force touch、drag-along / drag-off edge events。当前继续调用原始系统实现，不做 handled-default interception。
 
@@ -41,7 +41,7 @@
 可后续小切片推进的 blocked listener family：
 
 1. Modal/system UI actions：clear switcher、previous app、keyboard dictation 等。每项必须先用 Frida/IDA 确认现代 SpringBoard / system service 入口；`clear-switcher` 的首轮路径已经真机验证无效，不能继续直接注册。
-2. Watch haptics / residual lock action：watch haptics、lock-and-wipe-credentials。按设备能力和目标 App 逐项验证，不作为默认主线。
+2. Watch haptics：按设备能力和目标 App 验证，不作为默认主线。
 3. Additive power action：soft-reboot。Dopamine `jbctl reboot_userspace` 的 `reboot3(RB2_USERREBOOT)` 参考路径不能直接在 SpringBoard 进程内执行，后续需要非 SpringBoard helper 或合适 privileged execution path。
 4. Listener handled semantics audit：所有 built-in listener family 需要与旧 master / 1.9.13 重新对齐 `event.handled` 时机、toggle/deactivate 行为和执行失败时的消费语义；这不是拦截层设计，结论应回写 tracker 或 reverse-engineering 记录。
 

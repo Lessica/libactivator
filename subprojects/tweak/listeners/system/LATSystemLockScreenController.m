@@ -15,12 +15,19 @@
 @interface SBLockScreenManager : NSObject
 + (instancetype)sharedInstance;
 - (void)remoteLock:(BOOL)lock;
+- (void)lockUIFromSource:(NSInteger)source
+             withOptions:(NSDictionary<NSString *, id> *)options
+              completion:(nullable id)completion;
 - (BOOL)isUILocked;
 - (void)attemptUnlockWithPasscode:(NSString *)passcode;
 - (void)attemptUnlockWithPasscode:(NSString *)passcode
                    finishUIUnlock:(BOOL)finishUIUnlock
                        completion:(nullable id)completion;
 @end
+
+static NSString *const LATLockOptionsUseScreenOffModeKey = @"SBUILockOptionsUseScreenOffModeKey";
+static NSString *const LATLockOptionsForceBioLockoutKey = @"SBUILockOptionsForceBioLockoutKey";
+static NSString *const LATLockOptionsForceLockKey = @"SBUILockOptionsForceLockKey";
 
 @interface LATSystemLockScreenController ()
 @property(nonatomic, weak, nullable) LATRuntimeStateSource *runtimeStateSource;
@@ -101,6 +108,27 @@
         [self showLockScreenForListenerName:listenerName];
     }
     return YES;
+}
+
+- (BOOL)lockAndWipeCredentialsForListenerName:(NSString *)listenerName {
+    SBLockScreenManager *manager = [self lockScreenManagerForListenerName:listenerName];
+    if (!manager) {
+        return YES;
+    }
+
+    if ([manager respondsToSelector:@selector(lockUIFromSource:withOptions:completion:)]) {
+        NSDictionary<NSString *, id> *options = @{
+            LATLockOptionsUseScreenOffModeKey : @YES,
+            LATLockOptionsForceBioLockoutKey : @YES,
+            LATLockOptionsForceLockKey : @YES,
+        };
+        [manager lockUIFromSource:0 withOptions:options completion:nil];
+        return YES;
+    }
+
+    HBLogError(@"SBLockScreenManager does not support biometric lockout options for system action %@",
+               listenerName ?: @"");
+    return [self showLockScreenForListenerName:listenerName];
 }
 
 - (nullable SBLockScreenManager *)lockScreenManagerForListenerName:(NSString *)listenerName {
