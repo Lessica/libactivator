@@ -44,6 +44,34 @@
             caseName:@"event-user-info-plist-filter"
               reason:@"Event payload did not recursively filter non-property-list userInfo values"];
 
+    [recorder expect:[LAIPCCodec isPropertyListValue:@{@"safe" : @[ @"value", @42 ]}]
+            caseName:@"valid-property-list-check"
+              reason:@"Valid property-list payload was rejected"];
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-circular-container"
+    NSMutableDictionary *cyclicDictionary = [@{@"safe" : @"value"} mutableCopy];
+    cyclicDictionary[@"cycle"] = cyclicDictionary;
+    NSMutableArray *cyclicArray = [NSMutableArray arrayWithObject:@"safe"];
+    [cyclicArray addObject:cyclicArray];
+#pragma clang diagnostic pop
+
+    NSDictionary *sanitizedCyclicDictionary = [LAIPCCodec propertyListValue:cyclicDictionary];
+    [recorder expect:[sanitizedCyclicDictionary[@"safe"] isEqual:@"value"] && sanitizedCyclicDictionary[@"cycle"] == nil
+            caseName:@"cyclic-dictionary-filter"
+              reason:@"Cyclic dictionary payload was not filtered safely"];
+
+    NSArray *sanitizedCyclicArray = [LAIPCCodec propertyListValue:cyclicArray];
+    [recorder expect:[sanitizedCyclicArray isEqualToArray:@[ @"safe" ]]
+            caseName:@"cyclic-array-filter"
+              reason:@"Cyclic array payload was not filtered safely"];
+
+    [recorder
+          expect:![LAIPCCodec isPropertyListValue:cyclicDictionary] && ![LAIPCCodec isPropertyListValue:cyclicArray] &&
+                 ![LAIPCCodec isPropertyListValue:@{@"unsafe" : [[NSObject alloc] init]}]
+        caseName:@"invalid-property-list-check"
+          reason:@"Invalid property-list payload was not rejected safely"];
+
     LAEvent *decodedEvent = [LAIPCCodec eventWithUserInfo:eventDictionary];
     [recorder expect:[decodedEvent.name isEqualToString:event.name] && [decodedEvent.mode isEqualToString:event.mode] &&
                      decodedEvent.handled && [decodedEvent.userInfo[@"nested"][@"safe"] isEqual:@42]

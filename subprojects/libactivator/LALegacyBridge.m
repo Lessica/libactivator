@@ -8,6 +8,7 @@
 
 #import "LALegacyBridge.h"
 
+#import "LAIPCCodec.h"
 #import "LAServerBackend.h"
 
 static NSString *const LALegacyAssignmentPrefix = @"LAEventListener(";
@@ -77,7 +78,7 @@ static NSString *const LALegacyHasSeenPrefix = @"LAHasSeenListener-";
         return [self.backend setListenerName:listenerName seen:[self isTruthyObject:object]];
     }
 
-    if (object && ![NSPropertyListSerialization propertyList:object isValidForFormat:NSPropertyListBinaryFormat_v1_0]) {
+    if (object && ![LAIPCCodec isPropertyListValue:object]) {
         return NO;
     }
     return [self.backend setObject:object forLegacyPreferenceKey:key];

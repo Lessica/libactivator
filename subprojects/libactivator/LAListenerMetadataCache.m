@@ -8,17 +8,15 @@
 
 #import "LAListenerMetadataCache.h"
 
-#import <os/lock.h>
+static NSUInteger const LAListenerMetadataCacheCountLimit = 512;
 
-@interface LAListenerMetadataCache () {
-    os_unfair_lock _cacheLock;
-}
+@interface LAListenerMetadataCache ()
 
 // Underlying caches
-@property(nonatomic, strong) NSMutableDictionary *smallIcons;
-@property(nonatomic, strong) NSMutableDictionary *localizedTitles;
-@property(nonatomic, strong) NSMutableDictionary *localizedGroups;
-@property(nonatomic, strong) NSMutableDictionary *localizedDescriptions;
+@property(nonatomic, strong) NSCache<NSString *, id> *smallIcons;
+@property(nonatomic, strong) NSCache<NSString *, id> *localizedTitles;
+@property(nonatomic, strong) NSCache<NSString *, id> *localizedGroups;
+@property(nonatomic, strong) NSCache<NSString *, id> *localizedDescriptions;
 
 @end
 
@@ -27,22 +25,26 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-        _smallIcons = [[NSMutableDictionary alloc] init];
-        _localizedTitles = [[NSMutableDictionary alloc] init];
-        _localizedGroups = [[NSMutableDictionary alloc] init];
-        _localizedDescriptions = [[NSMutableDictionary alloc] init];
-        _cacheLock = OS_UNFAIR_LOCK_INIT;
+        _smallIcons = [self cacheWithName:@"libactivator.listener-metadata.small-icons"];
+        _localizedTitles = [self cacheWithName:@"libactivator.listener-metadata.localized-titles"];
+        _localizedGroups = [self cacheWithName:@"libactivator.listener-metadata.localized-groups"];
+        _localizedDescriptions = [self cacheWithName:@"libactivator.listener-metadata.localized-descriptions"];
     }
     return self;
 }
 
+- (NSCache<NSString *, id> *)cacheWithName:(NSString *)name {
+    NSCache<NSString *, id> *cache = [[NSCache alloc] init];
+    cache.name = name;
+    cache.countLimit = LAListenerMetadataCacheCountLimit;
+    return cache;
+}
+
 - (void)removeAllObjects {
-    os_unfair_lock_lock(&_cacheLock);
     [self.smallIcons removeAllObjects];
     [self.localizedTitles removeAllObjects];
     [self.localizedGroups removeAllObjects];
     [self.localizedDescriptions removeAllObjects];
-    os_unfair_lock_unlock(&_cacheLock);
 }
 
 - (UIImage *)smallIconForListenerName:(NSString *)listenerName resolver:(UIImage * (^)(void))resolver {
@@ -62,25 +64,19 @@
 }
 
 - (id)cachedObjectForListenerName:(NSString *)listenerName
-                            cache:(NSMutableDictionary *)cache
+                            cache:(NSCache<NSString *, id> *)cache
                          resolver:(id (^)(void))resolver {
     if (listenerName.length == 0) {
         return resolver ? resolver() : nil;
     }
 
-    os_unfair_lock_lock(&_cacheLock);
-    id cachedObject = cache[listenerName];
-    os_unfair_lock_unlock(&_cacheLock);
-
+    id cachedObject = [cache objectForKey:listenerName];
     if (cachedObject) {
         return cachedObject == NSNull.null ? nil : cachedObject;
     }
 
     id resolvedObject = resolver ? resolver() : nil;
-
-    os_unfair_lock_lock(&_cacheLock);
-    cache[listenerName] = resolvedObject ?: NSNull.null;
-    os_unfair_lock_unlock(&_cacheLock);
+    [cache setObject:resolvedObject ?: NSNull.null forKey:listenerName];
 
     return resolvedObject;
 }

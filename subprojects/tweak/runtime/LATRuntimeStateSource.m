@@ -19,6 +19,7 @@
 static NSString *const LATRuntimeStateDefaultSource = @"default";
 static const uint32_t LATRuntimeStateHIDPageConsumer = 0x0C;
 static const uint32_t LATRuntimeStateHIDUsagePower = 0x30;
+static NSUInteger const LATRuntimeStateMaximumPendingBlocks = 32;
 static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 
 @interface UIApplication (RuntimeStateSource)
@@ -100,6 +101,12 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
         [self publishCurrentState];
     }
     return self;
+}
+
+- (void)dealloc {
+    if (_screenBlankedToken != 0) {
+        notify_cancel(_screenBlankedToken);
+    }
 }
 
 - (void)start {
@@ -223,6 +230,11 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
         return YES;
     }
 
+    if (self.pendingScreenWakeCompletions.count >= LATRuntimeStateMaximumPendingBlocks) {
+        HBLogWarn(@"Dropping screen wake request because too many completions are pending: %@", reason ?: @"");
+        return NO;
+    }
+
     [self.pendingScreenWakeCompletions addObject:[completion copy]];
     [self requestPowerButtonWakeIfNeededForReason:reason];
 
@@ -281,6 +293,11 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 
     if (self.activeTouches.count == 0) {
         dispatch_async(dispatch_get_main_queue(), block);
+        return;
+    }
+
+    if (self.pendingTouchBlocks.count >= LATRuntimeStateMaximumPendingBlocks) {
+        HBLogWarn(@"Dropping touch-end performer because too many blocks are pending");
         return;
     }
 

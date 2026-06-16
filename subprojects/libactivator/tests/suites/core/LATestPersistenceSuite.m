@@ -69,6 +69,21 @@
                          containsObject:@"com.apple.Preferences"]
             caseName:@"coalesced-snapshot"
               reason:@"Coalesced save did not contain the latest backend state"];
+    NSDictionary *firstSavedDictionary = countingPersistence.lastSavedDictionary;
+    [backend assignEvent:event toListenersWithNames:@[ @"libactivator.test.listener.two" ]];
+    NSArray *firstSavedListenerNames =
+        firstSavedDictionary[@"Profiles"][@"Testing"][@"Assignments"][event.name][event.mode];
+    [recorder expect:[firstSavedListenerNames isEqualToArray:@[ @"libactivator.test.listener.one" ]]
+            caseName:@"snapshot-is-detached"
+              reason:@"Saved backend snapshot changed after later in-memory mutations"];
+    NSMutableDictionary *mutableLegacyPreference = [@{@"Value" : @"Original"} mutableCopy];
+    [recorder expect:[backend setObject:mutableLegacyPreference forLegacyPreferenceKey:@"MutableLegacyPreference"]
+            caseName:@"legacy-preference-save"
+              reason:@"Mutable legacy preference was not accepted"];
+    mutableLegacyPreference[@"Value"] = @"Changed";
+    [recorder expect:[[backend objectForLegacyPreferenceKey:@"MutableLegacyPreference"][@"Value"] isEqual:@"Original"]
+            caseName:@"legacy-preference-detached"
+              reason:@"Stored legacy preference retained a mutable caller-owned object"];
     [backend setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:NO];
     [recorder expect:countingPersistence.saveCount == 1 &&
                      ![backend applicationWithDisplayIdentifierIsBlacklisted:@"com.apple.Preferences"]

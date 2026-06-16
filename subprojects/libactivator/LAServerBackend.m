@@ -8,6 +8,7 @@
 
 #import "LAServerBackend.h"
 
+#import "LAIPCCodec.h"
 #import "LAPersistence.h"
 
 #import <HBLog.h>
@@ -165,7 +166,9 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     for (NSString *profileName in self.profiles) {
         NSDictionary *profile = self.profiles[profileName];
         NSDictionary *assignments = profile[LAActivatorAssignmentsKey] ?: @{};
-        serializedProfiles[profileName] = @{LAActivatorAssignmentsKey : assignments};
+        serializedProfiles[profileName] = @{
+            LAActivatorAssignmentsKey : [LAIPCCodec propertyListValue:assignments] ?: @{},
+        };
     }
 
     NSDictionary *dictionary = @{
@@ -176,7 +179,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
             [self.blacklistedDisplayIdentifiers.allObjects sortedArrayUsingSelector:@selector(compare:)],
         LAActivatorSeenListenerNamesKey :
             [self.seenListenerNames.allObjects sortedArrayUsingSelector:@selector(compare:)],
-        LAActivatorLegacyPreferencesKey : self.legacyPreferences ?: @{},
+        LAActivatorLegacyPreferencesKey : [LAIPCCodec propertyListValue:self.legacyPreferences] ?: @{},
     };
     return dictionary;
 }
@@ -671,13 +674,18 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     if (key.length == 0) {
         return NO;
     }
+    id storedObject = object ? [LAIPCCodec propertyListValue:object] : nil;
+    if (object && !storedObject) {
+        return NO;
+    }
+
     __block BOOL changed = NO;
     [self performWithStateLock:^{
         id existingObject = self.legacyPreferences[key];
-        if (object) {
-            changed = ![existingObject isEqual:object];
+        if (storedObject) {
+            changed = ![existingObject isEqual:storedObject];
             if (changed) {
-                self.legacyPreferences[key] = object;
+                self.legacyPreferences[key] = storedObject;
             }
         } else {
             changed = existingObject != nil;

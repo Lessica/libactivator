@@ -12,6 +12,8 @@
 
 #import <Activator/Activator.h>
 
+static NSUInteger const LAIPCCodecMaximumPropertyListDepth = 32;
+
 @implementation LAIPCCodec
 
 + (NSDictionary *)replyWithOK:(BOOL)ok value:(id)value {
@@ -123,36 +125,117 @@
     return [events copy];
 }
 
-+ (id)propertyListValue:(id)value {
++ (BOOL)isPropertyListValue:(id)value {
+    NSHashTable *activeContainers = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
+    return [self isPropertyListValue:value depth:0 activeContainers:activeContainers];
+}
+
++ (BOOL)isPropertyListValue:(id)value depth:(NSUInteger)depth activeContainers:(NSHashTable *)activeContainers {
     if (!value) {
-        return nil;
+        return NO;
     }
-    if ([NSPropertyListSerialization propertyList:value isValidForFormat:NSPropertyListBinaryFormat_v1_0]) {
-        return value;
+
+    if ([value isKindOfClass:NSString.class] || [value isKindOfClass:NSNumber.class] ||
+        [value isKindOfClass:NSData.class] || [value isKindOfClass:NSDate.class]) {
+        return YES;
+    }
+
+    if (depth >= LAIPCCodecMaximumPropertyListDepth) {
+        return NO;
     }
 
     if ([value isKindOfClass:NSDictionary.class]) {
+        if ([activeContainers containsObject:value]) {
+            return NO;
+        }
+        [activeContainers addObject:value];
+
+        for (id key in value) {
+            if (![key isKindOfClass:NSString.class] || ![self isPropertyListValue:value[key]
+                                                                            depth:depth + 1
+                                                                 activeContainers:activeContainers]) {
+                [activeContainers removeObject:value];
+                return NO;
+            }
+        }
+
+        [activeContainers removeObject:value];
+        return YES;
+    }
+
+    if ([value isKindOfClass:NSArray.class]) {
+        if ([activeContainers containsObject:value]) {
+            return NO;
+        }
+        [activeContainers addObject:value];
+
+        for (id item in value) {
+            if (![self isPropertyListValue:item depth:depth + 1 activeContainers:activeContainers]) {
+                [activeContainers removeObject:value];
+                return NO;
+            }
+        }
+
+        [activeContainers removeObject:value];
+        return YES;
+    }
+
+    return NO;
+}
+
++ (id)propertyListValue:(id)value {
+    NSHashTable *activeContainers = [NSHashTable hashTableWithOptions:NSPointerFunctionsObjectPointerPersonality];
+    return [self propertyListValue:value depth:0 activeContainers:activeContainers];
+}
+
++ (id)propertyListValue:(id)value depth:(NSUInteger)depth activeContainers:(NSHashTable *)activeContainers {
+    if (!value) {
+        return nil;
+    }
+
+    if ([value isKindOfClass:NSString.class] || [value isKindOfClass:NSNumber.class] ||
+        [value isKindOfClass:NSData.class] || [value isKindOfClass:NSDate.class]) {
+        return value;
+    }
+
+    if (depth >= LAIPCCodecMaximumPropertyListDepth) {
+        return nil;
+    }
+
+    if ([value isKindOfClass:NSDictionary.class]) {
+        if ([activeContainers containsObject:value]) {
+            return nil;
+        }
+        [activeContainers addObject:value];
+
         NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:[value count]];
         for (id key in value) {
             if (![key isKindOfClass:NSString.class]) {
                 continue;
             }
-            id sanitizedValue = [self propertyListValue:value[key]];
+            id sanitizedValue = [self propertyListValue:value[key] depth:depth + 1 activeContainers:activeContainers];
             if (sanitizedValue) {
                 dictionary[key] = sanitizedValue;
             }
         }
+        [activeContainers removeObject:value];
         return [dictionary copy];
     }
 
     if ([value isKindOfClass:NSArray.class]) {
+        if ([activeContainers containsObject:value]) {
+            return nil;
+        }
+        [activeContainers addObject:value];
+
         NSMutableArray *array = [NSMutableArray arrayWithCapacity:[value count]];
         for (id item in value) {
-            id sanitizedItem = [self propertyListValue:item];
+            id sanitizedItem = [self propertyListValue:item depth:depth + 1 activeContainers:activeContainers];
             if (sanitizedItem) {
                 [array addObject:sanitizedItem];
             }
         }
+        [activeContainers removeObject:value];
         return [array copy];
     }
 

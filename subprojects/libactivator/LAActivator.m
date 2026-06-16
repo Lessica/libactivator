@@ -16,6 +16,7 @@
 #import "LAApplicationAccessibility.h"
 #import "LADefaultEventDataSource.h"
 #import "LAIPC.h"
+#import "LAIPCCodec.h"
 #import "LALegacyBridge.h"
 #import "LAListenerMetadataCache.h"
 #import "LAPersistence.h"
@@ -706,40 +707,7 @@ LAActivator *LASharedActivator;
 #pragma mark - IPC Serialization
 
 - (id)la_ipcPropertyListValue:(id)value {
-    if (!value) {
-        return nil;
-    }
-
-    if ([NSPropertyListSerialization propertyList:value isValidForFormat:NSPropertyListBinaryFormat_v1_0]) {
-        return value;
-    }
-
-    if ([value isKindOfClass:NSDictionary.class]) {
-        NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:[value count]];
-        for (id key in value) {
-            if (![key isKindOfClass:NSString.class]) {
-                continue;
-            }
-            id sanitizedValue = [self la_ipcPropertyListValue:value[key]];
-            if (sanitizedValue) {
-                dictionary[key] = sanitizedValue;
-            }
-        }
-        return [dictionary copy];
-    }
-
-    if ([value isKindOfClass:NSArray.class]) {
-        NSMutableArray *array = [NSMutableArray arrayWithCapacity:[value count]];
-        for (id item in value) {
-            id sanitizedItem = [self la_ipcPropertyListValue:item];
-            if (sanitizedItem) {
-                [array addObject:sanitizedItem];
-            }
-        }
-        return [array copy];
-    }
-
-    return nil;
+    return [LAIPCCodec propertyListValue:value];
 }
 
 - (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event {

@@ -34,6 +34,7 @@ __attribute__((visibility("hidden")))
 + (NSDictionary *)userInfoWithEvent:(LAEvent *)event;
 + (NSArray<NSDictionary<NSString *, id> *> *)eventDictionariesWithEvents:(NSArray<LAEvent *> *)events;
 + (NSArray<LAEvent *> *)eventsWithDictionaries:(NSArray<NSDictionary<NSString *, id> *> *)eventDictionaries;
++ (BOOL)isPropertyListValue:(nullable id)value;
 + (nullable id)propertyListValue:(nullable id)value;
 
 @end

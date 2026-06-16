@@ -48,6 +48,12 @@
     return self;
 }
 
+- (void)dealloc {
+    if (_lockStateToken != 0) {
+        notify_cancel(_lockStateToken);
+    }
+}
+
 - (void)start {
     LAAssertMainQueue();
     if (self.started) {
@@ -58,11 +64,16 @@
     [self refreshKnownLockStateWithoutSendingEvent];
 
     __weak typeof(self) weakSelf = self;
-    notify_register_dispatch("com.apple.springboard.lockstate", &_lockStateToken, dispatch_get_main_queue(),
-                             ^(int token) {
-                                 __strong typeof(weakSelf) strongSelf = weakSelf;
-                                 [strongSelf handleLockStateNotification];
-                             });
+    int status = notify_register_dispatch("com.apple.springboard.lockstate", &_lockStateToken,
+                                          dispatch_get_main_queue(), ^(int token) {
+                                              (void)token;
+                                              __strong typeof(weakSelf) strongSelf = weakSelf;
+                                              [strongSelf handleLockStateNotification];
+                                          });
+    if (status != NOTIFY_STATUS_OK) {
+        HBLogWarn(@"Unable to observe lock state: %d", status);
+        _lockStateToken = 0;
+    }
 }
 
 #pragma mark - Notifications

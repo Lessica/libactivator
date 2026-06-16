@@ -9,6 +9,7 @@
 #import "LARemoteListener.h"
 
 #import "LAIPC.h"
+#import "LAIPCCodec.h"
 #import "LAResourceManager.h"
 
 #import <dispatch/dispatch.h>
@@ -148,40 +149,7 @@
 #pragma mark - Serialization
 
 - (id)propertyListValue:(id)value {
-    if (!value) {
-        return nil;
-    }
-
-    if ([NSPropertyListSerialization propertyList:value isValidForFormat:NSPropertyListBinaryFormat_v1_0]) {
-        return value;
-    }
-
-    if ([value isKindOfClass:NSDictionary.class]) {
-        NSMutableDictionary *dictionary = [NSMutableDictionary dictionaryWithCapacity:[value count]];
-        for (id key in value) {
-            if (![key isKindOfClass:NSString.class]) {
-                continue;
-            }
-            id sanitizedValue = [self propertyListValue:value[key]];
-            if (sanitizedValue) {
-                dictionary[key] = sanitizedValue;
-            }
-        }
-        return [dictionary copy];
-    }
-
-    if ([value isKindOfClass:NSArray.class]) {
-        NSMutableArray *array = [NSMutableArray arrayWithCapacity:[value count]];
-        for (id item in value) {
-            id sanitizedItem = [self propertyListValue:item];
-            if (sanitizedItem) {
-                [array addObject:sanitizedItem];
-            }
-        }
-        return [array copy];
-    }
-
-    return nil;
+    return [LAIPCCodec propertyListValue:value];
 }
 
 - (NSDictionary *)userInfoForEvent:(LAEvent *)event listenerName:(NSString *)listenerName {
