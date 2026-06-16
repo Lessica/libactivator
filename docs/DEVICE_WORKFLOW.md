@@ -28,10 +28,15 @@
 
 - Frida 只用于诊断、探针和临时 hook，不算自动化测试，也不要写进测试结论。
 - 只允许 USB Frida，不允许 remote Frida。
-- 需要对 SpringBoard 附加 Frida 时通常要提权执行。
+- Codex 环境中访问 USB Frida 需要提权执行。看到 `Waiting for USB device to appear...` 时，第一步是用正确的 Frida CLI 和 `sandbox_permissions: "require_escalated"` 重跑，不要先归因于 usbmux、transport 或脚本行为。
+- 默认使用系统 `frida`，它对应 Frida 17.x。`.venv/bin/frida` 对应更低 Frida 版本，除非 owner 明确指定、任务明确需要低版本 Frida，或某个 probe 已确认只能在旧 runtime 下运行，否则不要用 `.venv/bin/frida`。已有 approval prefix 不决定 Frida 版本；先按需要的 Frida major version 选择 CLI，再为这个命令申请提权。
+- 附加 SpringBoard 使用 `frida -U -n SpringBoard -l <script>`；只有明确使用低版本 venv 时才使用 `.venv/bin/frida -U -n SpringBoard -l <script>`。不要使用 `frida -U SpringBoard -l ...`，该形式可能被 CLI 解析为 spawn 而不是 attach。
+- 交互式 Frida CLI probe 需要 PTY 保持 stdin 打开，但 PTY 不能替代 USB 访问提权。
 - 不要使用 `frida -q` 做交互或长时间观察；当前 Frida CLI 的 `-q` 会 quiet 并在 `-l` 或 `-e` 后退出，容易误判为“Frida 自己断开”。
 - 探针脚本如果需要保留，应放在项目内可读位置；不要放到 `/tmp` 后让 owner 看不到实际执行内容。临时探针完成后如果不再有价值，可以删除。
 - 不要在 Frida JS 线程直接查询 UIKit/SpringBoard UI 状态；涉及 UI 状态的 probe 必须切到 SpringBoard 主队列。
+- SpringBoard AX probe 中，`AXElement.systemApplication`、`currentApplications`、`visibleElements`、`press` 等 ObjC 调用默认放到 `ObjC.mainQueue`，除非后续 probe 证明某个调用可以安全离开主队列。
+- 预期自行结束的 probe 脚本应在完成后 `send({ event: "done" })`；如果脚本需要保持附加用于观察，脚本输出和调用说明必须明确写出来。
 - 避免把 Frida 动态创建的 ObjC object 长期注册进 SpringBoard registry。优先使用临时 hook 或短生命周期调用，并在结束前清理。
 
 ## Frida 主机工具版本

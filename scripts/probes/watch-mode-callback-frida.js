@@ -1,5 +1,5 @@
 // Usage:
-//   .venv/bin/frida -U SpringBoard -l scripts/probes/watch-mode-callback-frida.js
+//   frida -U SpringBoard -l scripts/probes/watch-mode-callback-frida.js
 //
 // Notes:
 //   Keep the Frida session interactive. Do not pass -q, because -q exits after

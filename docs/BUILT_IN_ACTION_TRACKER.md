@@ -106,9 +106,9 @@ Listeners key 层面的非 Settings UI 未完成项是：`selector` 覆盖的 bl
 
 ## 阶段 3：listeners/actions 剩余交叉比对
 
-1.9.13 static listener/action 资源共 117 个。当前 staged static listener/action resource 共 118 个，其中 112 个来自 1.9.13，6 个是 2.x additive name。当前已实现 runtime static listener name 共 115 个，其中 109 个来自 1.9.13，6 个是 2.x additive name。
+1.9.13 static listener/action 资源共 117 个。当前 staged static listener/action resource 共 118 个，其中 112 个来自 1.9.13，6 个是 2.x additive name。当前已实现 runtime static listener name 共 116 个，其中 110 个来自 1.9.13，6 个是 2.x additive name。
 
-阶段 3 后续收口不再按原始 117 项散列推进；当前需要关注的是：staged 资源中仍未注册 runtime listener 的 3 个 name、已从 staged 移除且不恢复的 5 个旧 name，以及单独暂缓的 2.x additive `soft-reboot`。
+阶段 3 后续收口不再按原始 117 项散列推进；当前需要关注的是：staged 资源中仍未注册 runtime listener 的 2 个 name、已从 staged 移除且不恢复的 5 个旧 name，以及单独暂缓的 2.x additive `soft-reboot`。
 
 ### 当前 staged 但未注册 runtime listener
 
@@ -116,7 +116,7 @@ Listeners key 层面的非 Settings UI 未完成项是：`selector` 覆盖的 bl
 
 | 分类 | Listener names | 当前状态 | 说明 |
 | --- | --- | --- | --- |
-| Modal/system UI actions | `libactivator.system.clear-switcher`、`libactivator.keyboard.dictation` | `blocked` | 需要 Frida/IDA probe 对应现代 SpringBoard / keyboard service 入口，不把旧 selector 直接映射到现代 UI。`clear-switcher` 的首轮现代路径真机验证无效，当前不注册 runtime listener，后续重新 probe。 |
+| Modal/system UI actions | `libactivator.system.clear-switcher` | `blocked` | `clear-switcher` 的首轮现代路径真机验证无效，当前不注册 runtime listener，后续重新 probe。`libactivator.keyboard.dictation` 已恢复为 AX-backed toggle：在主队列枚举当前应用 `visibleElements`，听写进行中优先按多语言“键盘/Keyboard/…”标题匹配停止听写入口；未进行听写时按 `0:` keyplane identifier 前缀加多语言“听写/Dictation/…”标题匹配启动入口。 |
 | Watch haptics | `libactivator.watch.haptic.tap` | `blocked` | 涉及 Watch 能力与设备差异；不作为默认 listener 主线。 |
 
 ### 已从 staged 移除且不恢复

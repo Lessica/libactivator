@@ -1,5 +1,5 @@
 // Usage:
-//   .venv/bin/frida -U SpringBoard -l scripts/probes/probe-fingerprint-sensor-hid-frida.js
+//   frida -U SpringBoard -l scripts/probes/probe-fingerprint-sensor-hid-frida.js
 //   frida -U SpringBoard -l scripts/probes/probe-fingerprint-sensor-hid-frida.js
 //
 // Purpose:

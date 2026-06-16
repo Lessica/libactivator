@@ -1,5 +1,5 @@
 // Usage:
-//   .venv/bin/frida -U SpringBoard -l scripts/probes/probe-lock-button-state-machine-frida.js
+//   frida -U SpringBoard -l scripts/probes/probe-lock-button-state-machine-frida.js
 //   frida -U SpringBoard -l scripts/probes/probe-lock-button-state-machine-frida.js
 //
 // Purpose:

@@ -14,6 +14,7 @@
 #import "system/LATSystemActionCommand.h"
 #import "system/LATSystemAssistantController.h"
 #import "system/LATSystemCenterController.h"
+#import "system/LATSystemDictationController.h"
 #import "system/LATSystemHapticFeedbackController.h"
 #import "system/LATSystemHomeScreenController.h"
 #import "system/LATSystemLocalBackController.h"
@@ -46,6 +47,7 @@
 @property(nonatomic, strong) LATSystemNowPlayingApplicationLauncher *nowPlayingApplicationLauncher;
 @property(nonatomic, strong) LATSystemAssistantController *assistantController;
 @property(nonatomic, strong) LATSystemCenterController *centerController;
+@property(nonatomic, strong) LATSystemDictationController *dictationController;
 @property(nonatomic, strong) LATSystemHapticFeedbackController *hapticFeedbackController;
 @property(nonatomic, strong) LATSystemLocalBackController *localBackController;
 @property(nonatomic, strong) LATSystemOrientationController *orientationController;
@@ -80,6 +82,7 @@
             [[LATSystemLockScreenController alloc] initWithRuntimeStateSource:_registry.runtimeStateSource];
         _assistantController = [[LATSystemAssistantController alloc] init];
         _centerController = [[LATSystemCenterController alloc] initWithRuntimeStateSource:_registry.runtimeStateSource];
+        _dictationController = [[LATSystemDictationController alloc] init];
         _hapticFeedbackController = [[LATSystemHapticFeedbackController alloc] init];
         _localBackController = [[LATSystemLocalBackController alloc] init];
         _orientationController = [[LATSystemOrientationController alloc] init];
@@ -171,6 +174,9 @@
         break;
     case LATSystemActionKindActivateReachability:
         [self.reachabilityController activateReachabilityForListenerName:listenerName];
+        break;
+    case LATSystemActionKindKeyboardDictation:
+        [self.dictationController startDictationForListenerName:listenerName];
         break;
     case LATSystemActionKindActivateSwitcher:
         [self.switcherController activateSwitcherForListenerName:listenerName];
@@ -302,6 +308,9 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-reachability"
                                                     selectorName:@"activateReachability"
                                                             kind:LATSystemActionKindActivateReachability],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.keyboard.dictation"
+                                                    selectorName:@"startDictation"
+                                                            kind:LATSystemActionKindKeyboardDictation],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-switcher"
                                                     selectorName:@"activateSwitcherFromActivator:event:"
                                                             kind:LATSystemActionKindActivateSwitcher],

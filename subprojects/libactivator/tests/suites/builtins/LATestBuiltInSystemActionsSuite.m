@@ -41,6 +41,7 @@
         @"libactivator.system.show-now-playing-bar" : @"showNowPlayingBar",
         @"libactivator.system.activate-notification-center" : @"activateNotificationCenter",
         @"libactivator.system.activate-reachability" : @"activateReachability",
+        @"libactivator.keyboard.dictation" : @"startDictation",
         @"libactivator.system.activate-switcher" : @"activateSwitcherFromActivator:event:",
         @"libactivator.system.edit-screenshot" : @"editScreenshot",
         @"libactivator.system.power-menu" : @"powerDownView",

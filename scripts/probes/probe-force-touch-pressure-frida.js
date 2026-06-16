@@ -1,5 +1,5 @@
 // Usage:
-//   .venv/bin/frida -U SpringBoard -l scripts/probes/probe-force-touch-pressure-frida.js
+//   frida -U SpringBoard -l scripts/probes/probe-force-touch-pressure-frida.js
 //   frida -U SpringBoard -l scripts/probes/probe-force-touch-pressure-frida.js
 //
 // Purpose:
