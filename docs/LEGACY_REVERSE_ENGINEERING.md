@@ -66,7 +66,7 @@ for (uint64_t offset = rangeStart; offset < rangeEnd; offset++) {
 
 旧实现大意是：如果 `SBNowPlayingAlertItem` 已经显示，则通过 `SBAlertItemsController` 关闭；否则在可显示 now-playing UI 的条件下创建并激活一个 `SBNowPlayingAlertItem`。若该 UI 路径不可用，则退回到打开 now-playing application / Music fallback 的路径。
 
-这个语义依赖旧 SpringBoard 的 now-playing alert modal。现代 iOS 已没有对应的 `SBNowPlayingAlertItem` 用户体验，当前采用用户可见的等价入口：必要时先点亮屏幕，再打开 Control Center 并展开 Now Playing 模块。实现不只打开 Control Center；SpringBoard tweak hook `CCUIModuleCollectionViewController -viewDidLoad` 缓存实例，并在 `-viewWillAppear:` 时对模块 ID `com.apple.mediaremote.controlcenter.nowplaying` 调用 `expandModuleWithIdentifier:`。`libactivator.system.show-now-playing-bar` 使用同一现代等价实现。
+这个语义依赖旧 SpringBoard 的 now-playing alert modal。现代 iOS 已没有对应的 `SBNowPlayingAlertItem` 用户体验，当前采用用户可见的等价入口：必要时先点亮屏幕，再打开 Control Center 并切换 Now Playing 模块展开状态。实现不只打开 Control Center；SpringBoard tweak hook `CCUIModuleCollectionViewController -viewDidLoad` 缓存实例，并在 `-viewWillAppear:` 时对模块 ID `com.apple.mediaremote.controlcenter.nowplaying` 使用 `isModuleExpandedForIdentifier:` 判断当前状态，已展开则 `dismissExpandedModuleAnimated:completion:` 收起，未展开则 `expandModuleWithIdentifier:` 展开。`libactivator.system.show-now-playing-bar` 使用同一现代等价实现。
 
 ## Lock screen / switcher / power actions
 

@@ -27,15 +27,17 @@
 @interface CCUIModuleCollectionViewController : UIViewController
 - (void)dismissExpandedModuleAnimated:(BOOL)animated completion:(void (^)(void))completion;
 - (void)expandModuleWithIdentifier:(id)identifier;
+- (BOOL)isModuleExpandedForIdentifier:(id)identifier;
 @end
 
 static NSString *const LATNowPlayingControlCenterModuleIdentifier = @"com.apple.mediaremote.controlcenter.nowplaying";
 static __weak UIViewController *gModuleCollectionViewController = nil;
-static BOOL gPendingNowPlayingControlsExpansion = NO;
+static BOOL gPendingNowPlayingControlsAction = NO;
+static BOOL gPendingNowPlayingControlsShouldToggle = NO;
 
 @interface LATSystemCenterController ()
 @property(nonatomic, weak, nullable) LATRuntimeStateSource *runtimeStateSource;
-+ (BOOL)expandPendingNowPlayingControlsIfPossibleForListenerName:(nullable NSString *)listenerName;
++ (BOOL)performPendingNowPlayingControlsActionIfPossibleForListenerName:(nullable NSString *)listenerName;
 - (void)showNowPlayingControlsWithPoweredDisplayForListenerName:(NSString *)listenerName;
 @end
 
@@ -55,11 +57,11 @@ static BOOL gPendingNowPlayingControlsExpansion = NO;
 
 + (void)noteModuleCollectionViewControllerWillAppear:(UIViewController *)viewController {
     gModuleCollectionViewController = viewController;
-    [self expandPendingNowPlayingControlsIfPossibleForListenerName:nil];
+    [self performPendingNowPlayingControlsActionIfPossibleForListenerName:nil];
 }
 
-+ (BOOL)expandPendingNowPlayingControlsIfPossibleForListenerName:(nullable NSString *)listenerName {
-    if (!gPendingNowPlayingControlsExpansion) {
++ (BOOL)performPendingNowPlayingControlsActionIfPossibleForListenerName:(nullable NSString *)listenerName {
+    if (!gPendingNowPlayingControlsAction) {
         return NO;
     }
 
@@ -70,9 +72,36 @@ static BOOL gPendingNowPlayingControlsExpansion = NO;
         return NO;
     }
 
-    gPendingNowPlayingControlsExpansion = NO;
+    BOOL shouldToggle = gPendingNowPlayingControlsShouldToggle;
+    gPendingNowPlayingControlsAction = NO;
+    gPendingNowPlayingControlsShouldToggle = NO;
+
     CCUIModuleCollectionViewController *moduleCollectionViewController =
         (CCUIModuleCollectionViewController *)viewController;
+    BOOL canCheckExpandedState =
+        [moduleCollectionViewController respondsToSelector:@selector(isModuleExpandedForIdentifier:)];
+    BOOL nowPlayingModuleExpanded =
+        canCheckExpandedState
+            ? [moduleCollectionViewController isModuleExpandedForIdentifier:LATNowPlayingControlCenterModuleIdentifier]
+            : NO;
+
+    if (shouldToggle && canCheckExpandedState && nowPlayingModuleExpanded) {
+        if (![moduleCollectionViewController respondsToSelector:@selector(dismissExpandedModuleAnimated:completion:)]) {
+            HBLogWarn(
+                @"Control Center module collection controller cannot dismiss Now Playing module for system action %@",
+                listenerName ?: @"");
+            return NO;
+        }
+        [moduleCollectionViewController dismissExpandedModuleAnimated:NO completion:nil];
+        HBLogDebug(@"Requested Control Center Now Playing module dismissal for system action %@", listenerName ?: @"");
+        return YES;
+    }
+
+    if (!shouldToggle && canCheckExpandedState && nowPlayingModuleExpanded) {
+        HBLogDebug(@"Control Center Now Playing module is already expanded for system action %@", listenerName ?: @"");
+        return YES;
+    }
+
     void (^expandBlock)(void) = ^{
         [moduleCollectionViewController expandModuleWithIdentifier:LATNowPlayingControlCenterModuleIdentifier];
         HBLogDebug(@"Requested Control Center Now Playing module expansion for system action %@", listenerName ?: @"");
@@ -129,12 +158,14 @@ static BOOL gPendingNowPlayingControlsExpansion = NO;
 }
 
 - (void)showNowPlayingControlsWithPoweredDisplayForListenerName:(NSString *)listenerName {
-    gPendingNowPlayingControlsExpansion = YES;
     AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
     BOOL visible = NO;
     if ([server respondsToSelector:@selector(isControlCenterVisible)]) {
         visible = [server isControlCenterVisible];
     }
+
+    gPendingNowPlayingControlsAction = YES;
+    gPendingNowPlayingControlsShouldToggle = visible;
 
     if (![server respondsToSelector:@selector(showControlCenter:)]) {
         HBLogError(@"AXSpringBoardServer cannot show Control Center for system action %@", listenerName ?: @"");
@@ -147,7 +178,7 @@ static BOOL gPendingNowPlayingControlsExpansion = NO;
     }
 
     if (visible) {
-        [self.class expandPendingNowPlayingControlsIfPossibleForListenerName:listenerName];
+        [self.class performPendingNowPlayingControlsActionIfPossibleForListenerName:listenerName];
     }
 }
 
