@@ -284,7 +284,8 @@
     return nil;
 }
 
-- (NSDictionary *)handleApplicationAccessibilityMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
+- (NSDictionary *)handleApplicationAccessibilityMessageNamed:(NSString *)messageName
+                                                withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAIPCMessageApplicationAccessibilityEnabled]) {
         return [LAIPCCodec replyWithOK:YES value:@([_activator la_applicationAccessibilityEnabled])];
     }

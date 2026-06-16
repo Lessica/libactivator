@@ -43,8 +43,7 @@ NSString *const LAIPCMessageCurrentApplicationDisplayIdentifier =
 
 #pragma mark - Application Accessibility Messages
 
-NSString *const LAIPCMessageApplicationAccessibilityEnabled =
-    @"libactivator.request.application-accessibility-enabled";
+NSString *const LAIPCMessageApplicationAccessibilityEnabled = @"libactivator.request.application-accessibility-enabled";
 NSString *const LAIPCMessageSetApplicationAccessibilityEnabled =
     @"libactivator.request.set-application-accessibility-enabled";
 

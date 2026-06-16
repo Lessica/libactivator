@@ -131,7 +131,8 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
 #pragma mark - Metadata Validation
 
 - (BOOL)listenerSelectorMatchesMetadataForActivator:(LAActivator *)activator {
-    id selector = [activator infoDictionaryValueOfKey:@"selector" forListenerWithName:LATCameraActionListenerNameInvokeShutter];
+    id selector = [activator infoDictionaryValueOfKey:@"selector"
+                                  forListenerWithName:LATCameraActionListenerNameInvokeShutter];
     return [selector isKindOfClass:NSString.class] && [selector isEqualToString:LATCameraActionSelectorInvokeShutter];
 }
 
@@ -147,7 +148,8 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
         }
 
         if ([self.lockScreenCameraLauncher enqueueOpenLockScreenCameraWithCompletion:^{
-                [self schedulePendingLockScreenCameraShutterCompletionWithReason:@"lock screen camera activation completed"];
+                [self schedulePendingLockScreenCameraShutterCompletionWithReason:
+                          @"lock screen camera activation completed"];
             }]) {
             return;
         }
@@ -259,7 +261,8 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
 - (BOOL)cameraIsRegisteredForVolumeButtonEvents {
     UIApplication *application = UIApplication.sharedApplication;
     if (![application respondsToSelector:@selector(appsRegisteredForVolumeEvents)]) {
-        HBLogWarn(@"Unable to inspect volume button registration because SpringBoard does not expose appsRegisteredForVolumeEvents");
+        HBLogWarn(@"Unable to inspect volume button registration because SpringBoard does not expose "
+                  @"appsRegisteredForVolumeEvents");
         return NO;
     }
 
@@ -307,10 +310,11 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
 - (void)startObservingCameraReadyNotification {
     __weak typeof(self) weakSelf = self;
     int token = 0;
-    int status = notify_register_dispatch(LATCameraReadyNotification, &token, dispatch_get_main_queue(), ^(int deliveredToken) {
-        (void)deliveredToken;
-        [weakSelf completePendingShutterIfNeeded];
-    });
+    int status =
+        notify_register_dispatch(LATCameraReadyNotification, &token, dispatch_get_main_queue(), ^(int deliveredToken) {
+            (void)deliveredToken;
+            [weakSelf completePendingShutterIfNeeded];
+        });
     if (status != NOTIFY_STATUS_OK) {
         HBLogWarn(@"Unable to observe Camera ready notification: %d", status);
         return;
@@ -326,7 +330,8 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
                     object:nil
                      queue:NSOperationQueue.mainQueue
                 usingBlock:^(__unused NSNotification *notification) {
-                    [weakSelf schedulePendingLockScreenCameraShutterCompletionWithReason:@"volume registration changed"];
+                    [weakSelf
+                        schedulePendingLockScreenCameraShutterCompletionWithReason:@"volume registration changed"];
                 }];
 }
 

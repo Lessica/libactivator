@@ -74,9 +74,8 @@
 
     id brightnessURL = [activator infoDictionaryValueOfKey:@"url"
                                        forListenerWithName:@"libactivator.settings.brightness"];
-    id brightnessWallpaperURL =
-        [activator infoDictionaryValueOfKey:@"url"
-                        forListenerWithName:@"libactivator.settings.brightness-and-wallpaper"];
+    id brightnessWallpaperURL = [activator infoDictionaryValueOfKey:@"url"
+                                                forListenerWithName:@"libactivator.settings.brightness-and-wallpaper"];
     id equalizerURL = [activator infoDictionaryValueOfKey:@"url"
                                       forListenerWithName:@"libactivator.settings.equalizer"];
     [recorder expect:[brightnessURL isEqual:@"prefs:root=DISPLAY"] &&
@@ -85,14 +84,10 @@
             caseName:@"url-action-restored-settings-url-metadata"
               reason:@"Restored Settings URL action metadata did not match the expected URLs"];
 
-    id bedtimeURL = [activator infoDictionaryValueOfKey:@"url"
-                                    forListenerWithName:@"libactivator.clock.bedtime"];
-    id networkURL = [activator infoDictionaryValueOfKey:@"url"
-                                    forListenerWithName:@"libactivator.settings.network"];
-    id usageURL = [activator infoDictionaryValueOfKey:@"url"
-                                  forListenerWithName:@"libactivator.settings.usage"];
-    [recorder expect:[bedtimeURL isEqual:@"clock-sleep-alarm:default"] &&
-                     [networkURL isEqual:@"prefs:root=WIFI"] &&
+    id bedtimeURL = [activator infoDictionaryValueOfKey:@"url" forListenerWithName:@"libactivator.clock.bedtime"];
+    id networkURL = [activator infoDictionaryValueOfKey:@"url" forListenerWithName:@"libactivator.settings.network"];
+    id usageURL = [activator infoDictionaryValueOfKey:@"url" forListenerWithName:@"libactivator.settings.usage"];
+    [recorder expect:[bedtimeURL isEqual:@"clock-sleep-alarm:default"] && [networkURL isEqual:@"prefs:root=WIFI"] &&
                      [usageURL isEqual:@"prefs:root=General&path=STORAGE_MGMT#MANAGE"]
             caseName:@"url-action-restored-clock-and-network-url-metadata"
               reason:@"Restored Clock or network Settings URL action metadata did not match the expected URLs"];

@@ -8,14 +8,18 @@
 
 #import "system/LATSystemLocalBackController.h"
 
+#import "IOKitSPI.h"
 #import "LAActivator+Private.h"
+#import "LATHIDEventSender.h"
 
+#import <Activator/Activator.h>
 #import <HBLog.h>
 #import <dlfcn.h>
 #import <objc/message.h>
 
 static NSString *const LATSpeechRecognitionCommandAndControlFrameworkPath =
-    @"/System/Library/PrivateFrameworks/SpeechRecognitionCommandAndControl.framework/SpeechRecognitionCommandAndControl";
+    @"/System/Library/PrivateFrameworks/SpeechRecognitionCommandAndControl.framework/"
+    @"SpeechRecognitionCommandAndControl";
 static NSString *const LATAccessibilityUtilitiesFrameworkPath =
     @"/System/Library/PrivateFrameworks/AccessibilityUtilities.framework/AccessibilityUtilities";
 
@@ -23,7 +27,25 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
 static unsigned long long const LATAccessibilityBackButtonTrait = 0x08000000ULL;
 static int const LATAccessibilityEscapeAction = 2013;
 
+@interface LATSystemLocalBackController ()
+@property(nonatomic, strong) LATHIDEventSender *homeButtonSender;
+@end
+
 @implementation LATSystemLocalBackController
+
+- (BOOL)performBackForEvent:(LAEvent *)event activator:(LAActivator *)activator listenerName:(NSString *)listenerName {
+    NSString *eventMode = activator.currentEventMode ?: event.mode;
+    if ([eventMode isEqualToString:LAEventModeApplication]) {
+        return [self performLocalBackForListenerName:listenerName];
+    }
+
+    if ([event.name isEqualToString:LAEventNameMenuPressSingle]) {
+        HBLogDebug(@"Skipping home fallback for system back action %@ from menu single press", listenerName ?: @"");
+        return NO;
+    }
+
+    return [self sendHomeButtonForListenerName:listenerName];
+}
 
 - (BOOL)performLocalBackForListenerName:(NSString *)listenerName {
     if (![self loadAccessibilityFrameworksForListenerName:listenerName]) {
@@ -47,34 +69,43 @@ static int const LATAccessibilityEscapeAction = 2013;
 
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LATAccessibilityElementRetryDelay * NSEC_PER_SEC)),
                        dispatch_get_main_queue(), ^{
-            @try {
-                [self performAccessibilityLocalBackForListenerName:copiedListenerName];
-            } @catch (NSException *exception) {
-                HBLogError(@"Failed to retry local back for system action %@: %@", copiedListenerName ?: @"",
-                           exception);
-            }
-        });
+                           @try {
+                               [self performAccessibilityLocalBackForListenerName:copiedListenerName];
+                           } @catch (NSException *exception) {
+                               HBLogError(@"Failed to retry local back for system action %@: %@",
+                                          copiedListenerName ?: @"", exception);
+                           }
+                       });
     };
     if (NSThread.isMainThread) {
         if (shouldDelayForApplicationAccessibility) {
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
-                                         (int64_t)(LATAccessibilityElementRetryDelay * NSEC_PER_SEC)),
-                           dispatch_get_main_queue(), performLocalBack);
+            dispatch_after(
+                dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LATAccessibilityElementRetryDelay * NSEC_PER_SEC)),
+                dispatch_get_main_queue(), performLocalBack);
         } else {
             performLocalBack();
         }
     } else {
         dispatch_async(dispatch_get_main_queue(), ^{
             if (shouldDelayForApplicationAccessibility) {
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
-                                             (int64_t)(LATAccessibilityElementRetryDelay * NSEC_PER_SEC)),
-                               dispatch_get_main_queue(), performLocalBack);
+                dispatch_after(
+                    dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LATAccessibilityElementRetryDelay * NSEC_PER_SEC)),
+                    dispatch_get_main_queue(), performLocalBack);
             } else {
                 performLocalBack();
             }
         });
     }
     return YES;
+}
+
+- (BOOL)sendHomeButtonForListenerName:(NSString *)listenerName {
+    if (!self.homeButtonSender) {
+        self.homeButtonSender = [[LATHIDEventSender alloc] init];
+    }
+    return [self.homeButtonSender sendKeyboardUsagePage:kHIDPage_Consumer
+                                                  usage:kHIDUsage_Csmr_Menu
+                                                 reason:listenerName ?: @"libactivator.system.back"];
 }
 
 - (BOOL)enableApplicationAccessibilityIfNeededForListenerName:(NSString *)listenerName {
@@ -253,8 +284,8 @@ static int const LATAccessibilityEscapeAction = 2013;
             continue;
         }
 
-        BOOL handled = ((BOOL (*)(id, SEL, int))objc_msgSend)(element, @selector(performAction:),
-                                                              LATAccessibilityEscapeAction);
+        BOOL handled =
+            ((BOOL (*)(id, SEL, int))objc_msgSend)(element, @selector(performAction:), LATAccessibilityEscapeAction);
         if (handled) {
             HBLogDebug(@"Performed accessibility escape action for system action %@", listenerName ?: @"");
             return YES;
@@ -282,8 +313,7 @@ static int const LATAccessibilityEscapeAction = 2013;
     dispatch_once(&sOnceToken, ^{
         sLoadedCommandAndControl =
             (dlopen(LATSpeechRecognitionCommandAndControlFrameworkPath.UTF8String, RTLD_LAZY) != NULL);
-        sLoadedAccessibilityUtilities =
-            (dlopen(LATAccessibilityUtilitiesFrameworkPath.UTF8String, RTLD_LAZY) != NULL);
+        sLoadedAccessibilityUtilities = (dlopen(LATAccessibilityUtilitiesFrameworkPath.UTF8String, RTLD_LAZY) != NULL);
     });
 
     if (!sLoadedCommandAndControl) {

@@ -199,6 +199,11 @@
         [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeQuirk
                                                     listenerName:listenerName];
         break;
+    case LATSystemActionKindBack:
+        event.handled = [self.localBackController performBackForEvent:event
+                                                            activator:activator
+                                                         listenerName:listenerName];
+        break;
     case LATSystemActionKindLocalBack:
         [self.localBackController performLocalBackForListenerName:listenerName];
         break;
@@ -315,6 +320,9 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.haptic.quirk"
                                                     selectorName:@"tapticWithActivator:event:listenerName:"
                                                             kind:LATSystemActionKindHapticQuirk],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.back"
+                                                    selectorName:@"goBackWithActivator:event:"
+                                                            kind:LATSystemActionKindBack],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.local-back"
                                                     selectorName:@"localBack"
                                                             kind:LATSystemActionKindLocalBack],

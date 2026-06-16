@@ -51,6 +51,7 @@
         @"libactivator.system.haptic.flick" : @"tapticWithActivator:event:listenerName:",
         @"libactivator.system.haptic.tap" : @"tapticWithActivator:event:listenerName:",
         @"libactivator.system.haptic.quirk" : @"tapticWithActivator:event:listenerName:",
+        @"libactivator.system.back" : @"goBackWithActivator:event:",
         @"libactivator.system.local-back" : @"localBack",
         @"libactivator.system.rotate.landscape-left" : @"rotateLandscapeLeft",
         @"libactivator.system.rotate.landscape-right" : @"rotateLandscapeRight",

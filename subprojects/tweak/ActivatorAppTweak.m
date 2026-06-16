@@ -120,8 +120,9 @@ static void LATScheduleCameraReadyNotificationAfterControlsUpdate(void) {
 
                        gCameraReadyNotificationPending = NO;
                        if (!LATCameraApplicationIsActive() || !gCameraWantsVolumeButtonEvents) {
-                           HBLogDebug(@"Canceled delayed Camera ready notification active=%d wantsVolumeButtonEvents=%d",
-                                      LATCameraApplicationIsActive(), gCameraWantsVolumeButtonEvents);
+                           HBLogDebug(
+                               @"Canceled delayed Camera ready notification active=%d wantsVolumeButtonEvents=%d",
+                               LATCameraApplicationIsActive(), gCameraWantsVolumeButtonEvents);
                            return;
                        }
 
@@ -171,7 +172,8 @@ static void LATInstallCameraHooks(void) {
 
     Class viewfinderClass = NSClassFromString(@"CAMViewfinderViewController");
     if (![viewfinderClass instancesRespondToSelector:@selector(_updateEnabledControlsWithReason:forceLog:)]) {
-        HBLogWarn(@"Skipping Camera controls readiness hook because CAMViewfinderViewController does not expose _updateEnabledControlsWithReason:forceLog:");
+        HBLogWarn(@"Skipping Camera controls readiness hook because CAMViewfinderViewController does not expose "
+                  @"_updateEnabledControlsWithReason:forceLog:");
     } else {
         CHLoadClass_(&CAMViewfinderViewController$, viewfinderClass);
         CHHook2(CAMViewfinderViewController, _updateEnabledControlsWithReason, forceLog);
@@ -246,8 +248,9 @@ static BOOL LATClockURLRequestsSleepAlarm(NSURL *url) {
 
 #pragma mark - Clock View Controller Lookup
 
-static MTATabBarController *LATClockFindTabBarControllerInViewController(UIViewController *viewController,
-                                                                         NSMutableSet<NSValue *> *visitedViewControllers) {
+static MTATabBarController *
+LATClockFindTabBarControllerInViewController(UIViewController *viewController,
+                                             NSMutableSet<NSValue *> *visitedViewControllers) {
     if (!viewController) {
         return nil;
     }
@@ -285,8 +288,7 @@ static MTATabBarController *LATClockFindTabBarControllerInViewController(UIViewC
         }
     }
 
-    return LATClockFindTabBarControllerInViewController(viewController.presentedViewController,
-                                                        visitedViewControllers);
+    return LATClockFindTabBarControllerInViewController(viewController.presentedViewController, visitedViewControllers);
 }
 
 static MTATabBarController *LATClockTabBarController(void) {
@@ -432,8 +434,7 @@ static UIViewController *LATPhoneKeypadViewControllerInTabBarController(UITabBar
         HBLogDebug(@"Phone tab[%lu] class=%@ title=%@ accessibilityIdentifier=%@", (unsigned long)index, className,
                    title, accessibilityIdentifier);
         if (LATStringContainsAnyToken(className, tokens) ||
-            LATStringContainsAnyToken(accessibilityIdentifier, tokens) ||
-            LATStringContainsAnyToken(title, tokens)) {
+            LATStringContainsAnyToken(accessibilityIdentifier, tokens) || LATStringContainsAnyToken(title, tokens)) {
             *stop = YES;
         }
     }];
@@ -443,8 +444,7 @@ static UIViewController *LATPhoneKeypadViewControllerInTabBarController(UITabBar
         NSString *accessibilityIdentifier = viewController.tabBarItem.accessibilityIdentifier ?: @"";
         NSString *title = viewController.tabBarItem.title ?: viewController.title ?: @"";
         if (LATStringContainsAnyToken(className, tokens) ||
-            LATStringContainsAnyToken(accessibilityIdentifier, tokens) ||
-            LATStringContainsAnyToken(title, tokens)) {
+            LATStringContainsAnyToken(accessibilityIdentifier, tokens) || LATStringContainsAnyToken(title, tokens)) {
             return viewController;
         }
     }
@@ -452,8 +452,9 @@ static UIViewController *LATPhoneKeypadViewControllerInTabBarController(UITabBar
     return nil;
 }
 
-static UITabBarController *LATPhoneFindTabBarControllerInViewController(UIViewController *viewController,
-                                                                        NSMutableSet<NSValue *> *visitedViewControllers) {
+static UITabBarController *
+LATPhoneFindTabBarControllerInViewController(UIViewController *viewController,
+                                             NSMutableSet<NSValue *> *visitedViewControllers) {
     if (!viewController) {
         return nil;
     }
@@ -588,7 +589,8 @@ CHOptimizedMethod1(self, BOOL, PhoneApplication, applicationOpenURL, NSURL *, ur
     return result;
 }
 
-CHOptimizedMethod2(self, BOOL, PhoneApplication, applicationOpenURL, NSURL *, url, publicURLsOnly, BOOL, publicURLsOnly) {
+CHOptimizedMethod2(self, BOOL, PhoneApplication, applicationOpenURL, NSURL *, url, publicURLsOnly, BOOL,
+                   publicURLsOnly) {
     BOOL result = CHSuper2(PhoneApplication, applicationOpenURL, url, publicURLsOnly, publicURLsOnly);
     HBLogDebug(@"Phone applicationOpenURL:publicURLsOnly: %@ public=%d result=%d", url.absoluteString ?: @"",
                publicURLsOnly, result);
@@ -634,9 +636,9 @@ CHOptimizedMethod1(self, void, PhoneTabBarController, viewDidAppear, BOOL, anima
 
 static void LATInstallPhoneHooks(void) {
     Class phoneApplicationClass = NSClassFromString(@"PhoneApplication");
-    HBLogDebug(@"Phone keypad hook probe: PhoneApplication=%@ applicationOpenURL=%d applicationOpenURLPublic=%d applicationOpenURLOptions=%d",
-               phoneApplicationClass,
-               [phoneApplicationClass instancesRespondToSelector:@selector(applicationOpenURL:)],
+    HBLogDebug(@"Phone keypad hook probe: PhoneApplication=%@ applicationOpenURL=%d applicationOpenURLPublic=%d "
+               @"applicationOpenURLOptions=%d",
+               phoneApplicationClass, [phoneApplicationClass instancesRespondToSelector:@selector(applicationOpenURL:)],
                [phoneApplicationClass instancesRespondToSelector:@selector(applicationOpenURL:publicURLsOnly:)],
                [phoneApplicationClass instancesRespondToSelector:@selector(application:openURL:options:)]);
     if (!phoneApplicationClass) {

@@ -16,7 +16,7 @@
 - SpringBoard authoritative backend、state/config IPC、event dispatch IPC、runtime mode、no-touch deferral、unlock-to-send callback、metadata/resource lookup、localization fallback、listener metadata cache 已具备基础能力。
 - event metadata 当前 123 项已 staged：121 项来自 1.9.13，`libactivator.now-playing.playing` / `libactivator.now-playing.paused` 是 2.x additive。
 - listener/action metadata 当前 118 项已 staged：1.9.13 的 117 项中移除 5 个 obsolete/excluded 项，新增 6 个 2.x additive listener/action name。
-- Events / Listeners resource metadata key 已完成 cross-check：常规展示、版本过滤、capability 过滤、mode compatibility、power/no-touch gate、system haptic `tapticType` 等 key 已由 resource/core/dispatch layer 消费；`is-unprotected`、完整 unlock sequence、raw-event back、preview 等未完全兑现项已集中记录到 tracker。
+- Events / Listeners resource metadata key 已完成 cross-check：常规展示、版本过滤、capability 过滤、mode compatibility、power/no-touch gate、system haptic `tapticType`、`system.back` 的 raw event 触发源判断等 key 已由 resource/core/dispatch layer 消费；`is-unprotected`、完整 unlock sequence、preview 等未完全兑现项已集中记录到 tracker。
 - 阶段 0 资源模型补强已完成，`Resources` stable suite 覆盖 bundled catalog、目录式 third-party `Info.plist`、required capabilities、small-icons path fallback 和排除项。
 - 阶段 1 / 阶段 3 listener/action 已完成：No-op、URL actions、HID-backed hardware actions、已验证 system actions、AXSpringBoardServer-backed system UI actions、lock screen actions、power/recovery actions、telephony call control、dynamic application listeners 已注册真实 listener object。高风险 system actions 的真实副作用只通过真机手工验证，不进入 stable fake path；首轮真机验证无效的 clear-switcher、lock-and-wipe-credentials 以及 SpringBoard 进程内不可执行的 soft-reboot 当前退回 blocked。
 - 阶段 3 状态/通知型 event source 第一批已完成并收口：device locked/unlocked、power connected/disconnected、headset connected/disconnected、media playback、network joined/left Wi-Fi。
@@ -50,7 +50,7 @@
 - 仍保留为已移除的旧 URL / old social compose / bedtime 等 obsolete 项不进入主线。
 - `libactivator.system.voice-control` 已按现代 Voice Control 功能恢复为 toggle；实现依据是 AccessibilitySettings 中 `-[CACSettingsController setCommandAndControlEnabled:specifier:]` 只调用 `_AXSCommandAndControlSetEnabled([value boolValue])`。
 - `libactivator.system.local-back` 已复用 Voice Control 的 `CACSpokenCommand goBack` 恢复；该路径保留 Safari 返回按钮标题分支和 AX escape action 兜底。
-- `libactivator.system.back` 的旧 raw-event 语义依赖用户 App 注入，当前架构不实现。
+- `libactivator.system.back` 已按现代等价路径恢复：application mode 走 `local-back`，非 application mode fallback 到 Home，触发源为 `libactivator.menu.press.single` 时返回未处理。
 - `libactivator.ipod.music-controls` / `libactivator.system.show-now-playing-bar` 已按现代等价入口恢复：灭屏时先点亮屏幕，再打开 Control Center；Control Center 已可见时切换 Now Playing 模块展开状态。
 
 ## 阶段 4：events 剩余工作
