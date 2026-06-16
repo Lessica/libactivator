@@ -15,11 +15,11 @@
 | Catalog | 1.9.13 资源 | 当前 staged | 当前剩余关注点 |
 | --- | ---: | ---: | --- |
 | Events | 121 | 123 | 2 个 2.x additive now-playing 状态事件已加入；1.9.13 event 中仍有 33 个 runtime source 未实现。 |
-| Static listeners/actions | 117 | 118 | 5 个 obsolete 旧项已移除，6 个 2.x additive name 曾加入；当前仍需关注 staged 但未注册的 2 个 name，以及暂缓的 additive `soft-reboot`。 |
+| Static listeners/actions | 117 | 119 | 5 个 obsolete 旧项已移除，7 个 2.x additive name 曾加入；当前仍需关注 staged 但未注册的 2 个 name。 |
 
 当前 listener staged 移除项：`libactivator.settings.facebook`、`libactivator.settings.twitter`、`libactivator.twitter.compose-tweet`、`libactivator.facebook.compose-post`、`libactivator.weibo.compose-post`。
 
-当前 2.x additive listener/action name：`libactivator.audio.mute-ringer`、`libactivator.audio.unmute-ringer`、`libactivator.audio.toggle-ringer-mute`、`libactivator.audio.toggle-output-mute`、`libactivator.keyboard.toggle-on-screen-keyboard`、`libactivator.system.hard-respring`。`libactivator.system.soft-reboot` 曾作为 additive 候选推进，但当前因 SpringBoard 进程内不可执行参考路径而移出 staged/runtime。
+当前 2.x additive listener/action name：`libactivator.audio.mute-ringer`、`libactivator.audio.unmute-ringer`、`libactivator.audio.toggle-ringer-mute`、`libactivator.audio.toggle-output-mute`、`libactivator.keyboard.toggle-on-screen-keyboard`、`libactivator.system.hard-respring`、`libactivator.system.soft-reboot`。`libactivator.system.soft-reboot` 由 `jbroot(/usr/libexec/activator/user-reboot)` setuid/setgid helper 执行 `reboot3(RB2_USERREBOOT)`，SpringBoard listener 只通过 `posix_spawn` 提交执行。
 
 ## Metadata key 剩余欠账
 
@@ -58,12 +58,6 @@
 | 分类 | Listener names | 当前状态 | 说明 |
 | --- | --- | --- | --- |
 | obsolete URL 或旧服务 | `libactivator.settings.facebook`、`libactivator.settings.twitter`、`libactivator.facebook.compose-post`、`libactivator.twitter.compose-tweet`、`libactivator.weibo.compose-post` | `obsolete` | 旧 Settings URL 经真机验证失效、重复或打开错误页面；旧 social compose 服务不作为内置 action 恢复。 |
-
-### Additive 暂缓项
-
-| 分类 | Listener names | 当前状态 | 下一步 |
-| --- | --- | --- | --- |
-| 2.x additive deferred actions | `libactivator.system.soft-reboot` | `blocked` | Dopamine `jbctl reboot_userspace` 的 `reboot3(RB2_USERREBOOT)` 路径在 SpringBoard 进程内无法执行；后续需要非 SpringBoard helper 或合适 privileged execution path。 |
 
 ## Events 未完成交叉比对
 

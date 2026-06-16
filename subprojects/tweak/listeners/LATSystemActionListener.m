@@ -196,6 +196,9 @@
     case LATSystemActionKindHardRespring:
         [self.powerController hardRespringForListenerName:listenerName];
         break;
+    case LATSystemActionKindSoftReboot:
+        [self.powerController softRebootForListenerName:listenerName];
+        break;
     case LATSystemActionKindSafeMode:
         [self.powerController safeModeForListenerName:listenerName];
         break;
@@ -329,6 +332,9 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.hard-respring"
                                                     selectorName:@"hardRespring"
                                                             kind:LATSystemActionKindHardRespring],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.soft-reboot"
+                                                    selectorName:@"softReboot"
+                                                            kind:LATSystemActionKindSoftReboot],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.safemode"
                                                     selectorName:@"safeMode"
                                                             kind:LATSystemActionKindSafeMode],

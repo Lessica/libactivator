@@ -39,6 +39,7 @@
 - `libactivator.lockscreen.show` 使用 `SBLockScreenManager.sharedInstance remoteLock:YES`，不执行背光 fade out。
 - `libactivator.lockscreen.dismiss` 屏幕未亮时先通过项目内 Power HID 唤醒和 screen-on state 回调，再尝试空 passcode 解锁路径；该路径只支持无密码设备或系统允许空 passcode 解锁的状态。
 - `libactivator.system.respring` / `hard-respring` 使用 `SBSRelaunchAction` + `FBSSystemService`，hard respring 带 `SBSRelaunchActionOptionsRestartRenderServer`。
+- `libactivator.system.soft-reboot` 使用 `jbroot(/usr/libexec/activator/user-reboot)` setuid/setgid helper 执行 `reboot3(RB2_USERREBOOT)`；SpringBoard 进程内 listener 只通过 `posix_spawn` 调用 helper。
 - `libactivator.system.soft-reboot` 当前从 staged resource 和 runtime allowlist 移除，后续需要非 SpringBoard helper 或合适 privileged execution path。
 - `libactivator.system.powerdown` / `reboot` 使用 `SpringBoard.restartManager shutdownForReason:nil` / `rebootForReason:nil`。
 - 旧 master 与 1.9.13 均显示多个 `activate-*` action 是 toggle：Control Center、Notification Center、Switcher、Reachability、Siri 等现代实现也应保留 toggle 语义。

@@ -101,7 +101,7 @@
 
 - `/usr/bin/activator` 是 production compatibility tool，不是测试入口；不得为了端到端测试增加 1.9.13 不存在的子命令。
 - CLI 的 `get` / `set` 语义通过 libactivator 私有 preference compatibility bridge 进入 SpringBoard authoritative backend；不要在 CLI 内解析或直接写 preference 文件。
-- `postinst` 当前保持 no-op 是有意取舍。现代 rootless/rootless-era 安装逻辑优先放在 shell maintainer script；只有遇到 shell 不适合表达的安装后操作时，才重新评估是否把逻辑放入 CLI `postinst`。
+- `postinst` 是隐藏安装后入口；当前只允许执行 shell maintainer script 不适合表达的安装后修复，例如为 `jbroot(/usr/libexec/activator/user-reboot)` 设置 root:wheel 与 setuid/setgid mode。其他现代 rootless/rootless-era 安装逻辑仍优先放在 shell maintainer script。
 - Settings UI 真实逻辑属于独立动态库 `libactivatorsettings.dylib`，PreferenceBundle、Activator.app 和第三方越狱 App 都只是 host。
 - `libactivator.dylib` 只保留 public settings class compatibility shims，让旧第三方代码能链接和解析类名。
 - `LASettingsShims.m` 是占位兼容例外，不得作为后续 UI 或 runtime 实现的文件组织范式。

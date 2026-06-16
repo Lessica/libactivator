@@ -24,61 +24,19 @@ static NSString *const LATSystemDictationKeyboardAccessibilityIdentifierPrefix =
 
 + (NSArray<NSString *> *)startAccessibilityTitles {
     return @[
-        @"听写",
-        @"聽寫",
-        @"Dictation",
-        @"Dictate",
-        @"Diktat",
-        @"Dicter",
-        @"Dictée",
-        @"Dictado",
-        @"Dettatura",
-        @"Ditado",
-        @"Diktering",
-        @"Diktafon",
-        @"Диктовка",
-        @"Диктування",
-        @"Dikte",
-        @"Sanelu",
-        @"Dyktowanie",
-        @"Dikteer",
-        @"Diktování",
-        @"Diktovanie",
-        @"Diktálás",
-        @"Dikte Etme",
-        @"إملاء",
-        @"הכתבה",
-        @"डिक्टेशन",
-        @"音声入力",
-        @"받아쓰기",
-        @"การป้อนตามคำบอก"
+        @"听写",       @"聽寫",      @"Dictation",  @"Dictate",   @"Diktat",    @"Dicter",     @"Dictée",
+        @"Dictado",    @"Dettatura", @"Ditado",     @"Diktering", @"Diktafon",  @"Диктовка",   @"Диктування",
+        @"Dikte",      @"Sanelu",    @"Dyktowanie", @"Dikteer",   @"Diktování", @"Diktovanie", @"Diktálás",
+        @"Dikte Etme", @"إملاء",     @"הכתבה",      @"डिक्टेशन",    @"音声入力",  @"받아쓰기",   @"การป้อนตามคำบอก"
     ];
 }
 
 + (NSArray<NSString *> *)stopAccessibilityTitles {
     return @[
-        @"键盘",
-        @"鍵盤",
-        @"Keyboard",
-        @"Tastatur",
-        @"Clavier",
-        @"Teclado",
-        @"Tastiera",
-        @"Teclat",
-        @"Toetsenbord",
-        @"Klawiatura",
-        @"Klávesnice",
-        @"Klávesnica",
-        @"Billentyűzet",
-        @"Klavye",
-        @"Клавиатура",
-        @"Клавіатура",
-        @"لوحة المفاتيح",
-        @"מקלדת",
-        @"कीबोर्ड",
-        @"キーボード",
-        @"키보드",
-        @"แป้นพิมพ์"
+        @"键盘",         @"鍵盤",       @"Keyboard",    @"Tastatur",   @"Clavier",       @"Teclado",
+        @"Tastiera",     @"Teclat",     @"Toetsenbord", @"Klawiatura", @"Klávesnice",    @"Klávesnica",
+        @"Billentyűzet", @"Klavye",     @"Клавиатура",  @"Клавіатура", @"لوحة المفاتيح", @"מקלדת",
+        @"कीबोर्ड",       @"キーボード", @"키보드",      @"แป้นพิมพ์"
     ];
 }
 

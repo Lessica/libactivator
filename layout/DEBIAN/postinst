@@ -1,0 +1,5 @@
+#!/bin/sh
+
+activator postinst >/dev/null 2>&1 || true
+
+exit 0

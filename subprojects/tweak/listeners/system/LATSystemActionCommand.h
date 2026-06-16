@@ -33,6 +33,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     LATSystemActionKindPreviousApplication,
     LATSystemActionKindRespring,
     LATSystemActionKindHardRespring,
+    LATSystemActionKindSoftReboot,
     LATSystemActionKindSafeMode,
     LATSystemActionKindPowerDown,
     LATSystemActionKindReboot,

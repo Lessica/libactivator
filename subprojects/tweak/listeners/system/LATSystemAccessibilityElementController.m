@@ -119,8 +119,8 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
         }
 
         if ([self pressElement:element]) {
-            HBLogDebug(@"Pressed accessibility %@ %@ for system action %@", reason ?: @"identifier target",
-                       identifier, listenerName ?: @"");
+            HBLogDebug(@"Pressed accessibility %@ %@ for system action %@", reason ?: @"identifier target", identifier,
+                       listenerName ?: @"");
             return YES;
         }
     }
@@ -308,9 +308,8 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
             continue;
         }
 
-        NSArray<NSString *> *value = [selectorName isEqualToString:@"recognitionStrings"]
-                                         ? [element recognitionStrings]
-                                         : [element userInputLabels];
+        NSArray<NSString *> *value = [selectorName isEqualToString:@"recognitionStrings"] ? [element recognitionStrings]
+                                                                                          : [element userInputLabels];
         if (![value isKindOfClass:NSArray.class]) {
             continue;
         }

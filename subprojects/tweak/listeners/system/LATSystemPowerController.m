@@ -10,6 +10,11 @@
 
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
+#import <roothide.h>
+#import <spawn.h>
+#import <string.h>
+
+extern char **environ;
 
 static const NSUInteger LATSBSRelaunchActionOptionsRestartRenderServer = (1 << 0);
 
@@ -41,6 +46,8 @@ static const NSUInteger LATSBSRelaunchActionOptionsRestartRenderServer = (1 << 0
                                actionName:(NSString *)actionName;
 @end
 
+static NSString *LATUserRebootHelperPath(void) { return jbroot(@"/usr/libexec/activator/user-reboot"); }
+
 @implementation LATSystemPowerController
 
 - (BOOL)respringForListenerName:(NSString *)listenerName {
@@ -51,6 +58,26 @@ static const NSUInteger LATSBSRelaunchActionOptionsRestartRenderServer = (1 << 0
     return [self sendRelaunchActionForListenerName:listenerName
                                            options:LATSBSRelaunchActionOptionsRestartRenderServer
                                         actionName:@"Hard respring"];
+}
+
+- (BOOL)softRebootForListenerName:(NSString *)listenerName {
+    NSString *helperPath = LATUserRebootHelperPath();
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        const char *fileSystemPath = helperPath.fileSystemRepresentation;
+        if (fileSystemPath == NULL) {
+            HBLogError(@"Unable to resolve user reboot helper path for system action %@", listenerName ?: @"");
+            return;
+        }
+
+        pid_t pid = 0;
+        char *const argv[] = {(char *)fileSystemPath, NULL};
+        int status = posix_spawn(&pid, fileSystemPath, NULL, NULL, argv, environ);
+        if (status != 0) {
+            HBLogError(@"Unable to spawn user reboot helper for system action %@: %s", listenerName ?: @"",
+                       strerror(status));
+        }
+    });
+    return YES;
 }
 
 - (BOOL)sendRelaunchActionForListenerName:(NSString *)listenerName

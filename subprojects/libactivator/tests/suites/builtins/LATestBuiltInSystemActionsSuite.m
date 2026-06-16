@@ -48,6 +48,7 @@
         @"libactivator.system.previous-app" : @"previousApp",
         @"libactivator.system.respring" : @"respring",
         @"libactivator.system.hard-respring" : @"hardRespring",
+        @"libactivator.system.soft-reboot" : @"softReboot",
         @"libactivator.system.safemode" : @"safeMode",
         @"libactivator.system.powerdown" : @"powerDown",
         @"libactivator.system.reboot" : @"reboot",

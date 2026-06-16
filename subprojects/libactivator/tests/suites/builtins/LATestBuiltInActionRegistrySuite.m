@@ -24,6 +24,7 @@
     NSString *hardwareSystemName = @"libactivator.system.spotlight";
     NSString *nowPlayingName = @"libactivator.audio.launch-playing-app";
     NSString *ringerName = @"libactivator.audio.reset-ringer-state";
+    NSString *softRebootName = @"libactivator.system.soft-reboot";
     NSString *telephonyName = @"libactivator.phone.answer-call";
     NSString *metadataOnlyName = @"libactivator.system.clear-switcher";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
@@ -79,6 +80,13 @@
     [recorder expect:[activator hasSeenListenerWithName:ringerName]
             caseName:@"ringer-action-seen"
               reason:@"Built-in ringer action listener was not recorded as seen"];
+    [recorder expect:[[activator availableListenerNames] containsObject:softRebootName] &&
+                     [activator hasListenerWithName:softRebootName]
+            caseName:@"soft-reboot-action-registered"
+              reason:@"Built-in soft reboot action listener was not registered"];
+    [recorder expect:[activator hasSeenListenerWithName:softRebootName]
+            caseName:@"soft-reboot-action-seen"
+              reason:@"Built-in soft reboot action listener was not recorded as seen"];
     [recorder expect:[[activator availableListenerNames] containsObject:telephonyName] &&
                      [activator hasListenerWithName:telephonyName]
             caseName:@"telephony-action-registered"

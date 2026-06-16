@@ -13,6 +13,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface LATSystemPowerController : NSObject
 - (BOOL)respringForListenerName:(NSString *)listenerName;
 - (BOOL)hardRespringForListenerName:(NSString *)listenerName;
+- (BOOL)softRebootForListenerName:(NSString *)listenerName;
 - (BOOL)safeModeForListenerName:(NSString *)listenerName;
 - (BOOL)powerDownForListenerName:(NSString *)listenerName;
 - (BOOL)rebootForListenerName:(NSString *)listenerName;

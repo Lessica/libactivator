@@ -9,12 +9,19 @@
 #import <Foundation/Foundation.h>
 
 #import <Activator/Activator.h>
+#import <errno.h>
+#import <roothide.h>
+#import <string.h>
+#import <sys/stat.h>
+#import <unistd.h>
 
 #import "LAActivator+Private.h"
 
 #ifndef PACKAGE_VERSION
 #define PACKAGE_VERSION "unknown"
 #endif
+
+static NSString *LAUserRebootHelperPath(void) { return jbroot(@"/usr/libexec/activator/user-reboot"); }
 
 @interface LACommandLineTool : NSObject
 - (instancetype)initWithArgc:(int)argc argv:(char *[])argv;
@@ -241,6 +248,23 @@
 #endif
 
 - (int)runPostInstallCommand {
+    NSString *helperPath = LAUserRebootHelperPath();
+    const char *fileSystemPath = helperPath.fileSystemRepresentation;
+    if (fileSystemPath == NULL) {
+        fprintf(stderr, "Unable to resolve user-reboot helper path\n");
+        return 1;
+    }
+
+    if (chown(fileSystemPath, 0, 0) != 0) {
+        fprintf(stderr, "Unable to set owner for %s: %s\n", fileSystemPath, strerror(errno));
+        return 1;
+    }
+
+    mode_t mode = S_ISUID | S_ISGID | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+    if (chmod(fileSystemPath, mode) != 0) {
+        fprintf(stderr, "Unable to set mode for %s: %s\n", fileSystemPath, strerror(errno));
+        return 1;
+    }
     return 0;
 }
 

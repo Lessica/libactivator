@@ -15,7 +15,7 @@
 | 主线 | 状态 | 下一步 |
 | --- | --- | --- |
 | Staged 但未注册的 listener/action | 剩 `clear-switcher`、`watch.haptic.tap` 两项 blocked | 分别重新 probe 现代 SpringBoard switcher 清理入口、Watch haptic 能力与设备差异。 |
-| Additive 暂缓 action | `system.soft-reboot` blocked 且已从 staged/runtime 移除 | 需要非 SpringBoard helper 或合适 privileged execution path，不能直接在 SpringBoard 进程内调用 `reboot3(RB2_USERREBOOT)`。 |
+| Additive power action | `system.soft-reboot` 已恢复 | 由 `jbroot(/usr/libexec/activator/user-reboot)` setuid/setgid helper 执行 `reboot3(RB2_USERREBOOT)`；SpringBoard listener 只负责 `posix_spawn` helper。 |
 | 未实现 event family | 1.9.13 event 中仍有 33 个未实现 | 按 multi-touch、SpringBoard/icon、lock screen clock、headset button、motion、HUD tap、gesture bar、scheduled、car/watch/clamshell 分组推进。 |
 | Settings UI 与 menu | 尚未进入 runtime 主线 | 实现 `libactivatorsettings.dylib`、assignments/profile/blacklist UI、menu editor 和 menu listener runtime provider。 |
 | Handled-default interception | 尚未设计 | 单独设计物理按键和 status bar scroll-to-top 等默认行为拦截，不并入现有 event source gate。 |
@@ -39,10 +39,9 @@
 
 1. `libactivator.system.clear-switcher`：首轮现代路径真机验证无效，当前只保留 metadata，不注册 runtime listener。后续需要重新确认 iOS 15+ Switcher app layout 清理入口。
 2. `libactivator.watch.haptic.tap`：依赖 Watch 能力和设备差异，当前 blocked，不作为默认 listener 主线。
-3. `libactivator.system.soft-reboot`：2.x additive 暂缓项，SpringBoard 进程内不可直接执行当前参考路径；需要 helper 或 privileged path。
-4. Obsolete social/settings actions：`settings.facebook`、`settings.twitter`、`facebook.compose-post`、`twitter.compose-tweet`、`weibo.compose-post` 已从 staged resource 移除，不恢复。
-5. `previews` 语义：core preview dispatch API 存在，但 built-in vibration / watch haptic preview 尚未作为实际动作支持。
-6. `is-unprotected` 与 `supports-unlocking-device`：旧 API protection prompt、unprotected 豁免和完整主动解锁流程尚未兑现；当前只有 callback-only unlock-to-send compatibility。
+3. Obsolete social/settings actions：`settings.facebook`、`settings.twitter`、`facebook.compose-post`、`twitter.compose-tweet`、`weibo.compose-post` 已从 staged resource 移除，不恢复。
+4. `previews` 语义：core preview dispatch API 存在，但 built-in vibration / watch haptic preview 尚未作为实际动作支持。
+5. `is-unprotected` 与 `supports-unlocking-device`：旧 API protection prompt、unprotected 豁免和完整主动解锁流程尚未兑现；当前只有 callback-only unlock-to-send compatibility。
 
 ## Events 剩余工作
 

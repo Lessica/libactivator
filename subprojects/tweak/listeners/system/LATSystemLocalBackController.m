@@ -78,7 +78,8 @@
 
 #pragma mark - Accessibility Back
 
-- (BOOL)performAccessibilityLocalBackWithElements:(NSArray<AXElement *> *)elements listenerName:(NSString *)listenerName {
+- (BOOL)performAccessibilityLocalBackWithElements:(NSArray<AXElement *> *)elements
+                                     listenerName:(NSString *)listenerName {
     if ([self pressFirstBackButtonElementInElements:elements listenerName:listenerName]) {
         return YES;
     }
