@@ -48,7 +48,7 @@
 不恢复或架构外：
 
 - 仍保留为已移除的旧 URL / old social compose / bedtime 等 obsolete 项不进入主线。
-- `libactivator.system.voice-control` 不恢复；旧实现依赖 `SBVoiceControlAlert`，现代系统没有可对齐旧 cancel/toggle 语义的替代入口。
+- `libactivator.system.voice-control` 已按现代 Voice Control 功能恢复为 toggle；实现依据是 AccessibilitySettings 中 `-[CACSettingsController setCommandAndControlEnabled:specifier:]` 只调用 `_AXSCommandAndControlSetEnabled([value boolValue])`。
 - `libactivator.system.local-back` / `libactivator.system.back` 依赖用户 App 注入，当前架构不实现。
 - `libactivator.ipod.music-controls` / `libactivator.system.show-now-playing-bar` 已按现代等价入口恢复：灭屏时先点亮屏幕，再打开 Control Center；Control Center 已可见时切换 Now Playing 模块展开状态。
 

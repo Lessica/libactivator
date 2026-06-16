@@ -51,6 +51,7 @@ ActivatorTweak_FILES += listeners/system/LATSystemRingerStateResetter.m
 ActivatorTweak_FILES += listeners/system/LATSystemScreenshotController.m
 ActivatorTweak_FILES += listeners/system/LATSystemSwitcherController.m
 ActivatorTweak_FILES += listeners/system/LATSystemVolumeHUDPresenter.m
+ActivatorTweak_FILES += listeners/system/LATSystemVoiceControlController.m
 ActivatorTweak_FILES += listeners/system/LATSystemWalletController.m
 ActivatorTweak_FILES += listeners/compose/LATComposeActionCommand.m
 ActivatorTweak_FILES += listeners/compose/LATComposeActionPresenter.m

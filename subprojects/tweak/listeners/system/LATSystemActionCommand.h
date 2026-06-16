@@ -41,6 +41,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     LATSystemActionKindRotatePortrait,
     LATSystemActionKindRotatePortraitUpsideDown,
     LATSystemActionKindVirtualAssistant,
+    LATSystemActionKindVoiceControl,
     LATSystemActionKindWallet,
 };
 

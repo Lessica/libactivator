@@ -25,7 +25,7 @@
     NSString *nowPlayingName = @"libactivator.audio.launch-playing-app";
     NSString *ringerName = @"libactivator.audio.reset-ringer-state";
     NSString *telephonyName = @"libactivator.phone.answer-call";
-    NSString *metadataOnlyName = @"libactivator.system.voice-control";
+    NSString *metadataOnlyName = @"libactivator.system.clear-switcher";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
 
     [activator registerEventDataSource:dataSource forEventName:eventName];

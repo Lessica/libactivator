@@ -25,6 +25,7 @@
 #import "system/LATSystemRingerStateResetter.h"
 #import "system/LATSystemScreenshotController.h"
 #import "system/LATSystemSwitcherController.h"
+#import "system/LATSystemVoiceControlController.h"
 #import "system/LATSystemVolumeHUDPresenter.h"
 #import "system/LATSystemWalletController.h"
 
@@ -52,6 +53,7 @@
 @property(nonatomic, strong) LATSystemScreenshotController *screenshotController;
 @property(nonatomic, strong) LATSystemSwitcherController *switcherController;
 @property(nonatomic, strong) LATSystemVolumeHUDPresenter *volumeHUDPresenter;
+@property(nonatomic, strong) LATSystemVoiceControlController *voiceControlController;
 @property(nonatomic, strong) LATSystemWalletController *walletController;
 
 @end
@@ -80,6 +82,7 @@
         _reachabilityController = [[LATSystemReachabilityController alloc] init];
         _screenshotController = [[LATSystemScreenshotController alloc] init];
         _switcherController = [[LATSystemSwitcherController alloc] init];
+        _voiceControlController = [[LATSystemVoiceControlController alloc] init];
         _walletController = [[LATSystemWalletController alloc] init];
     }
     return self;
@@ -209,6 +212,9 @@
     case LATSystemActionKindVirtualAssistant:
         [self.assistantController activateVirtualAssistantForListenerName:listenerName];
         break;
+    case LATSystemActionKindVoiceControl:
+        [self.voiceControlController toggleVoiceControlForListenerName:listenerName];
+        break;
     case LATSystemActionKindWallet:
         [self.walletController activateWalletForListenerName:listenerName];
         break;
@@ -318,6 +324,9 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.virtual-assistant"
                                                     selectorName:@"activateSiri"
                                                             kind:LATSystemActionKindVirtualAssistant],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.voice-control"
+                                                    selectorName:@"voiceControl"
+                                                            kind:LATSystemActionKindVoiceControl],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.wallet"
                                                     selectorName:@"openWallet"
                                                             kind:LATSystemActionKindWallet],

@@ -56,6 +56,7 @@
         @"libactivator.system.rotate.portrait" : @"rotatePortrait",
         @"libactivator.system.rotate.portrait-upside-down" : @"rotatePortraitUpsideDown",
         @"libactivator.system.virtual-assistant" : @"activateSiri",
+        @"libactivator.system.voice-control" : @"voiceControl",
         @"libactivator.system.wallet" : @"openWallet",
     };
     NSSet<NSString *> *supportedNames = [NSSet setWithArray:[systemActionClass supportedListenerNames]];
