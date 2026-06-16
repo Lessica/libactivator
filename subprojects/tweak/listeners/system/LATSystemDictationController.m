@@ -12,9 +12,17 @@
 
 #import <HBLog.h>
 
-static NSString *const LATKeyboardAccessibilityIdentifierPrefix = @"0:";
+static NSString *const LATSystemDictationKeyboardAccessibilityIdentifierPrefix = @"0:";
 
-static NSArray<NSString *> *LATKeyboardDictationStartTitles(void) {
+@interface LATSystemDictationController ()
+@property(nonatomic, strong) LATSystemAccessibilityElementController *accessibilityElementController;
+@end
+
+@implementation LATSystemDictationController
+
+#pragma mark - Localized Titles
+
++ (NSArray<NSString *> *)startAccessibilityTitles {
     return @[
         @"听写",
         @"聽寫",
@@ -47,7 +55,7 @@ static NSArray<NSString *> *LATKeyboardDictationStartTitles(void) {
     ];
 }
 
-static NSArray<NSString *> *LATKeyboardDictationStopTitles(void) {
++ (NSArray<NSString *> *)stopAccessibilityTitles {
     return @[
         @"键盘",
         @"鍵盤",
@@ -74,11 +82,7 @@ static NSArray<NSString *> *LATKeyboardDictationStopTitles(void) {
     ];
 }
 
-@interface LATSystemDictationController ()
-@property(nonatomic, strong) LATSystemAccessibilityElementController *accessibilityElementController;
-@end
-
-@implementation LATSystemDictationController
+#pragma mark - Lifecycle
 
 - (instancetype)init {
     return [self initWithAccessibilityElementController:[[LATSystemAccessibilityElementController alloc] init]];
@@ -93,16 +97,18 @@ static NSArray<NSString *> *LATKeyboardDictationStopTitles(void) {
     return self;
 }
 
+#pragma mark - Public API
+
 - (BOOL)startDictationForListenerName:(NSString *)listenerName {
     NSString *copiedListenerName = [listenerName copy];
     return [self.accessibilityElementController
         performWithCurrentElementsForListenerName:copiedListenerName
                                    retryUnhandled:YES
-                                           action:^BOOL(NSArray *elements) {
+                                           action:^BOOL(NSArray<AXElement *> *elements) {
                                                BOOL handled = [self.accessibilityElementController
                                                    pressFirstElementInElements:elements
-                                                                matchingTitles:LATKeyboardDictationStopTitles()
-                                                          identifierHasPrefix:nil
+                                                                matchingTitles:self.class.stopAccessibilityTitles
+                                                           identifierHasPrefix:nil
                                                                   listenerName:copiedListenerName
                                                                         reason:@"keyboard dictation stop target"];
                                                if (handled) {
@@ -111,12 +117,14 @@ static NSArray<NSString *> *LATKeyboardDictationStopTitles(void) {
 
                                                handled = [self.accessibilityElementController
                                                    pressFirstElementInElements:elements
-                                                                matchingTitles:LATKeyboardDictationStartTitles()
-                                                          identifierHasPrefix:LATKeyboardAccessibilityIdentifierPrefix
+                                                                matchingTitles:self.class.startAccessibilityTitles
+                                                           identifierHasPrefix:
+                                                               LATSystemDictationKeyboardAccessibilityIdentifierPrefix
                                                                   listenerName:copiedListenerName
                                                                         reason:@"keyboard dictation start target"];
                                                if (!handled) {
-                                                   HBLogDebug(@"No keyboard dictation accessibility target handled system action %@",
+                                                   HBLogDebug(@"No keyboard dictation accessibility target handled "
+                                                              @"system action %@",
                                                               copiedListenerName ?: @"");
                                                }
                                                return handled;

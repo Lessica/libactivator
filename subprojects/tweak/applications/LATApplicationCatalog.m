@@ -12,9 +12,11 @@
 
 #import <HBLog.h>
 
+@class LSApplicationProxy;
+
 @interface LSApplicationWorkspace : NSObject
 + (instancetype)defaultWorkspace;
-- (NSArray *)allInstalledApplications;
+- (NSArray<LSApplicationProxy *> *)allInstalledApplications;
 @end
 
 @interface LSApplicationProxy : NSObject
@@ -26,11 +28,11 @@
 #pragma mark - Public API
 
 - (NSArray<LATApplicationDescriptor *> *)visibleApplicationDescriptors {
-    NSArray *applicationProxies = [self allInstalledApplicationProxies];
+    NSArray<LSApplicationProxy *> *applicationProxies = [self allInstalledApplicationProxies];
     NSMutableDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier =
         [[NSMutableDictionary alloc] initWithCapacity:applicationProxies.count];
 
-    for (id applicationProxy in applicationProxies) {
+    for (LSApplicationProxy *applicationProxy in applicationProxies) {
         LATApplicationDescriptor *descriptor =
             [LATApplicationDescriptor descriptorWithApplicationProxy:applicationProxy];
         if (![descriptor isVisibleApplication]) {
@@ -57,11 +59,11 @@
 
 #pragma mark - Internal
 
-- (NSArray *)allInstalledApplicationProxies {
+- (NSArray<LSApplicationProxy *> *)allInstalledApplicationProxies {
     LSApplicationWorkspace *workspace = [LSApplicationWorkspace defaultWorkspace];
 
     if ([workspace respondsToSelector:@selector(allInstalledApplications)]) {
-        NSArray *applications = [workspace allInstalledApplications];
+        NSArray<LSApplicationProxy *> *applications = [workspace allInstalledApplications];
         return [applications isKindOfClass:NSArray.class] ? applications : @[];
     }
 

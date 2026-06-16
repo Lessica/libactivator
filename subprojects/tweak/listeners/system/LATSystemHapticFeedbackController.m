@@ -38,7 +38,7 @@
         return;
     }
 
-    id generator = [[generatorClass alloc] initWithStyle:style];
+    UIImpactFeedbackGenerator *generator = [[generatorClass alloc] initWithStyle:style];
     if ([generator respondsToSelector:@selector(prepare)]) {
         [generator prepare];
     }
@@ -56,7 +56,7 @@
         return;
     }
 
-    id generator = [[generatorClass alloc] init];
+    UINotificationFeedbackGenerator *generator = [[generatorClass alloc] init];
     if ([generator respondsToSelector:@selector(prepare)]) {
         [generator prepare];
     }

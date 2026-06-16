@@ -19,7 +19,9 @@ typedef void (*LAAXSApplicationAccessibilitySetEnabledFunction)(BOOL enabled);
 static LAAXSApplicationAccessibilityEnabledFunction gApplicationAccessibilityEnabledFunction = NULL;
 static LAAXSApplicationAccessibilitySetEnabledFunction gApplicationAccessibilitySetEnabledFunction = NULL;
 
-static BOOL LAResolveApplicationAccessibilityFunctions(void) {
+@implementation LAApplicationAccessibility
+
++ (BOOL)resolveFunctions {
     static dispatch_once_t sOnceToken;
     dispatch_once(&sOnceToken, ^{
         void *handle = dlopen(LAAccessibilityLibraryPath.UTF8String, RTLD_LAZY);
@@ -39,17 +41,15 @@ static BOOL LAResolveApplicationAccessibilityFunctions(void) {
     return YES;
 }
 
-@implementation LAApplicationAccessibility
-
 + (BOOL)isEnabled {
-    if (!LAResolveApplicationAccessibilityFunctions()) {
+    if (![self resolveFunctions]) {
         return NO;
     }
     return gApplicationAccessibilityEnabledFunction();
 }
 
 + (BOOL)setEnabled:(BOOL)enabled {
-    if (!LAResolveApplicationAccessibilityFunctions()) {
+    if (![self resolveFunctions]) {
         return NO;
     }
     gApplicationAccessibilitySetEnabledFunction(enabled);

@@ -15,8 +15,8 @@
 #import <Activator/Activator.h>
 #import <HBLog.h>
 
-@interface NSObject (LATCACLocaleUtilitiesPrivate)
-+ (id)localizedUIStringForKey:(NSString *)key;
+@interface CACLocaleUtilities : NSObject
++ (NSString *)localizedUIStringForKey:(NSString *)key;
 @end
 
 @interface LATSystemLocalBackController ()
@@ -26,6 +26,8 @@
 
 @implementation LATSystemLocalBackController
 
+#pragma mark - Lifecycle
+
 - (instancetype)init {
     self = [super init];
     if (self) {
@@ -33,6 +35,8 @@
     }
     return self;
 }
+
+#pragma mark - Public API
 
 - (BOOL)performBackForEvent:(LAEvent *)event activator:(LAActivator *)activator listenerName:(NSString *)listenerName {
     NSString *eventMode = activator.currentEventMode ?: event.mode;
@@ -53,12 +57,15 @@
     [self.accessibilityElementController
         performWithCurrentElementsForListenerName:copiedListenerName
                                    retryUnhandled:YES
-                                           action:^BOOL(NSArray *elements) {
-                                               return [self performAccessibilityLocalBackWithElements:elements
-                                                                                         listenerName:copiedListenerName];
+                                           action:^BOOL(NSArray<AXElement *> *elements) {
+                                               return
+                                                   [self performAccessibilityLocalBackWithElements:elements
+                                                                                      listenerName:copiedListenerName];
                                            }];
     return YES;
 }
+
+#pragma mark - HID Fallback
 
 - (BOOL)sendHomeButtonForListenerName:(NSString *)listenerName {
     if (!self.homeButtonSender) {
@@ -69,7 +76,9 @@
                                                  reason:listenerName ?: @"libactivator.system.back"];
 }
 
-- (BOOL)performAccessibilityLocalBackWithElements:(NSArray *)elements listenerName:(NSString *)listenerName {
+#pragma mark - Accessibility Back
+
+- (BOOL)performAccessibilityLocalBackWithElements:(NSArray<AXElement *> *)elements listenerName:(NSString *)listenerName {
     if ([self pressFirstBackButtonElementInElements:elements listenerName:listenerName]) {
         return YES;
     }
@@ -87,14 +96,14 @@
     return NO;
 }
 
-- (BOOL)pressFirstBackButtonElementInElements:(NSArray *)elements listenerName:(NSString *)listenerName {
+- (BOOL)pressFirstBackButtonElementInElements:(NSArray<AXElement *> *)elements listenerName:(NSString *)listenerName {
     return [self.accessibilityElementController pressFirstElementInElements:elements
                                                               matchingTrait:LATSystemAccessibilityBackButtonTrait
                                                                listenerName:listenerName
                                                                      reason:@"back button trait target"];
 }
 
-- (BOOL)pressFirstElementInElements:(NSArray *)elements
+- (BOOL)pressFirstElementInElements:(NSArray<AXElement *> *)elements
                       matchingTitle:(NSString *)title
                        listenerName:(NSString *)listenerName {
     if (title.length == 0) {
@@ -107,15 +116,17 @@
                                                                      reason:@"title target"];
 }
 
-- (BOOL)performEscapeActionForElements:(NSArray *)elements listenerName:(NSString *)listenerName {
+- (BOOL)performEscapeActionForElements:(NSArray<AXElement *> *)elements listenerName:(NSString *)listenerName {
     return [self.accessibilityElementController performEscapeActionForElements:elements listenerName:listenerName];
 }
+
+#pragma mark - Localization
 
 - (NSString *)safariBackButtonTitle {
     Class localeUtilitiesClass = NSClassFromString(@"CACLocaleUtilities");
     SEL selector = @selector(localizedUIStringForKey:);
     if ([localeUtilitiesClass respondsToSelector:selector]) {
-        id value = [localeUtilitiesClass localizedUIStringForKey:@"SafariBackButtonLabel"];
+        NSString *value = [(id)localeUtilitiesClass localizedUIStringForKey:@"SafariBackButtonLabel"];
         if ([value isKindOfClass:NSString.class] && [value length] > 0) {
             return value;
         }

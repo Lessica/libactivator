@@ -29,12 +29,12 @@ static const uint32_t LATCameraHIDUsageVolumeDecrement = 0xEA;
 static const NSTimeInterval LATCameraPendingShutterTimeout = 4.0;
 static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
 
-@interface UIApplication (LATCameraActionListenerPrivate)
-- (nullable NSArray *)appsRegisteredForVolumeEvents;
-@end
-
 @interface SBApplication : NSObject
 - (nullable NSString *)bundleIdentifier;
+@end
+
+@interface UIApplication (LATCameraActionListenerPrivate)
+- (nullable NSArray<SBApplication *> *)appsRegisteredForVolumeEvents;
 @end
 
 @interface LATCameraActionListener ()
@@ -266,8 +266,8 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
         return NO;
     }
 
-    NSArray *registeredApplications = [application appsRegisteredForVolumeEvents];
-    id registeredApplication = registeredApplications.firstObject;
+    NSArray<SBApplication *> *registeredApplications = [application appsRegisteredForVolumeEvents];
+    SBApplication *registeredApplication = registeredApplications.firstObject;
     if (![registeredApplication respondsToSelector:@selector(bundleIdentifier)]) {
         return NO;
     }

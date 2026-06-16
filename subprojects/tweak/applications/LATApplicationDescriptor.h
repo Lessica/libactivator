@@ -8,6 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
+@class LSApplicationProxy;
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATApplicationDescriptor : NSObject
@@ -24,7 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Factories
 
-+ (nullable instancetype)descriptorWithApplicationProxy:(nullable id)applicationProxy;
++ (nullable instancetype)descriptorWithApplicationProxy:(nullable LSApplicationProxy *)applicationProxy;
 + (instancetype)descriptorWithIdentifier:(NSString *)identifier
                              displayName:(NSString *)displayName
                          applicationType:(NSString *)applicationType

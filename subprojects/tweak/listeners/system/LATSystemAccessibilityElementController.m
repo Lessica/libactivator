@@ -14,21 +14,21 @@
 #import <HBLog.h>
 #import <dlfcn.h>
 
-@interface NSObject (LATSystemAccessibilityElementPrivate)
-+ (id)systemApplication;
-- (NSArray *)currentApplications;
-- (NSArray *)visibleElements;
-- (unsigned long long)traits;
+@interface AXElement : NSObject
++ (AXElement *)systemApplication;
+- (NSArray<AXElement *> *)currentApplications;
+- (NSArray<AXElement *> *)visibleElements;
+- (NSUInteger)traits;
 - (NSString *)label;
 - (NSString *)speechInputLabel;
-- (NSArray *)recognitionStrings;
-- (NSArray *)userInputLabels;
+- (NSArray<NSString *> *)recognitionStrings;
+- (NSArray<NSString *> *)userInputLabels;
 - (NSString *)identifier;
 - (BOOL)press;
 - (BOOL)performAction:(int)action;
 @end
 
-unsigned long long const LATSystemAccessibilityBackButtonTrait = 0x08000000ULL;
+NSUInteger const LATSystemAccessibilityBackButtonTrait = 0x08000000ULL;
 int const LATSystemAccessibilityEscapeAction = 2013;
 
 static NSString *const LATSpeechRecognitionCommandAndControlFrameworkPath =
@@ -39,6 +39,8 @@ static NSString *const LATAccessibilityUtilitiesFrameworkPath =
 static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
 
 @implementation LATSystemAccessibilityElementController
+
+#pragma mark - Public API
 
 - (BOOL)performWithCurrentElementsForListenerName:(NSString *)listenerName
                                    retryUnhandled:(BOOL)retryUnhandled
@@ -88,137 +90,22 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
     return YES;
 }
 
-- (BOOL)performAction:(LATSystemAccessibilityElementAction)action listenerName:(NSString *)listenerName {
-    @try {
-        NSArray *elements = [self currentVisibleAccessibilityElementsForListenerName:listenerName];
-        if (elements.count == 0) {
-            HBLogDebug(@"No current accessibility elements for system action %@", listenerName ?: @"");
-            return NO;
-        }
-        return action(elements);
-    } @catch (NSException *exception) {
-        HBLogError(@"Failed to inspect accessibility elements for system action %@: %@", listenerName ?: @"",
-                   exception);
-        return NO;
-    }
-}
-
-- (NSArray *)currentVisibleAccessibilityElementsForListenerName:(NSString *)listenerName {
-    Class elementClass = NSClassFromString(@"AXElement");
-    SEL systemApplicationSelector = @selector(systemApplication);
-    if (![elementClass respondsToSelector:systemApplicationSelector]) {
-        HBLogError(@"AXElement is unavailable for system action %@", listenerName ?: @"");
-        return @[];
-    }
-
-    id systemApplication = [elementClass systemApplication];
-    NSArray *applications = nil;
-    if ([systemApplication respondsToSelector:@selector(currentApplications)]) {
-        applications = [systemApplication currentApplications];
-    }
-    if (![applications isKindOfClass:NSArray.class]) {
-        applications = @[];
-    }
-
-    NSMutableArray *elements = [NSMutableArray array];
-    for (id application in applications) {
-        [self addUniqueElement:application toElements:elements];
-        if (![application respondsToSelector:@selector(visibleElements)]) {
+- (BOOL)performEscapeActionForElements:(NSArray<AXElement *> *)elements listenerName:(NSString *)listenerName {
+    for (AXElement *element in elements) {
+        if (![element respondsToSelector:@selector(performAction:)]) {
             continue;
         }
 
-        NSArray *visibleElements = [application visibleElements];
-        if (![visibleElements isKindOfClass:NSArray.class]) {
-            continue;
-        }
-        for (id element in visibleElements) {
-            [self addUniqueElement:element toElements:elements];
-        }
-    }
-    return elements;
-}
-
-- (void)addUniqueElement:(id)element toElements:(NSMutableArray *)elements {
-    if (!element || [elements containsObject:element]) {
-        return;
-    }
-    [elements addObject:element];
-}
-
-- (BOOL)pressFirstElementInElements:(NSArray *)elements
-                      matchingTrait:(unsigned long long)trait
-                       listenerName:(NSString *)listenerName
-                             reason:(NSString *)reason {
-    for (id element in elements) {
-        if (![element respondsToSelector:@selector(traits)]) {
-            continue;
-        }
-
-        unsigned long long traits = [element traits];
-        if ((traits & trait) == 0) {
-            continue;
-        }
-
-        if ([self pressElement:element]) {
-            HBLogDebug(@"Pressed accessibility %@ for system action %@", reason ?: @"trait target",
-                       listenerName ?: @"");
+        BOOL handled = [element performAction:LATSystemAccessibilityEscapeAction];
+        if (handled) {
+            HBLogDebug(@"Performed accessibility escape action for system action %@", listenerName ?: @"");
             return YES;
         }
     }
     return NO;
 }
 
-- (BOOL)pressFirstElementInElements:(NSArray *)elements
-                      matchingTitle:(NSString *)title
-                       listenerName:(NSString *)listenerName
-                             reason:(NSString *)reason {
-    if (title.length == 0) {
-        return NO;
-    }
-
-    for (id element in elements) {
-        if (![self element:element hasTitle:title]) {
-            continue;
-        }
-
-        if ([self pressElement:element]) {
-            HBLogDebug(@"Pressed accessibility %@ %@ for system action %@", reason ?: @"title target", title,
-                       listenerName ?: @"");
-            return YES;
-        }
-    }
-    return NO;
-}
-
-- (BOOL)pressFirstElementInElements:(NSArray *)elements
-                     matchingTitles:(NSArray<NSString *> *)titles
-                identifierHasPrefix:(NSString *)identifierPrefix
-                       listenerName:(NSString *)listenerName
-                             reason:(NSString *)reason {
-    if (titles.count == 0) {
-        return NO;
-    }
-
-    for (id element in elements) {
-        if (identifierPrefix.length > 0 && ![[self identifierForElement:element] hasPrefix:identifierPrefix]) {
-            continue;
-        }
-
-        NSString *matchedTitle = [self firstTitleInTitles:titles matchingElement:element];
-        if (matchedTitle.length == 0) {
-            continue;
-        }
-
-        if ([self pressElement:element]) {
-            HBLogDebug(@"Pressed accessibility %@ %@ for system action %@", reason ?: @"title target",
-                       matchedTitle, listenerName ?: @"");
-            return YES;
-        }
-    }
-    return NO;
-}
-
-- (BOOL)pressFirstElementInElements:(NSArray *)elements
+- (BOOL)pressFirstElementInElements:(NSArray<AXElement *> *)elements
                  matchingIdentifier:(NSString *)identifier
                        listenerName:(NSString *)listenerName
                              reason:(NSString *)reason {
@@ -226,7 +113,7 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
         return NO;
     }
 
-    for (id element in elements) {
+    for (AXElement *element in elements) {
         if (![[self identifierForElement:element] isEqualToString:identifier]) {
             continue;
         }
@@ -240,7 +127,148 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
     return NO;
 }
 
-- (BOOL)element:(id)element hasTitle:(NSString *)title {
+- (BOOL)pressFirstElementInElements:(NSArray<AXElement *> *)elements
+                      matchingTitle:(NSString *)title
+                       listenerName:(NSString *)listenerName
+                             reason:(NSString *)reason {
+    if (title.length == 0) {
+        return NO;
+    }
+
+    for (AXElement *element in elements) {
+        if (![self element:element hasTitle:title]) {
+            continue;
+        }
+
+        if ([self pressElement:element]) {
+            HBLogDebug(@"Pressed accessibility %@ %@ for system action %@", reason ?: @"title target", title,
+                       listenerName ?: @"");
+            return YES;
+        }
+    }
+    return NO;
+}
+
+- (BOOL)pressFirstElementInElements:(NSArray<AXElement *> *)elements
+                     matchingTitles:(NSArray<NSString *> *)titles
+                identifierHasPrefix:(NSString *)identifierPrefix
+                       listenerName:(NSString *)listenerName
+                             reason:(NSString *)reason {
+    if (titles.count == 0) {
+        return NO;
+    }
+
+    for (AXElement *element in elements) {
+        if (identifierPrefix.length > 0 && ![[self identifierForElement:element] hasPrefix:identifierPrefix]) {
+            continue;
+        }
+
+        NSString *matchedTitle = [self firstTitleInTitles:titles matchingElement:element];
+        if (matchedTitle.length == 0) {
+            continue;
+        }
+
+        if ([self pressElement:element]) {
+            HBLogDebug(@"Pressed accessibility %@ %@ for system action %@", reason ?: @"title target", matchedTitle,
+                       listenerName ?: @"");
+            return YES;
+        }
+    }
+    return NO;
+}
+
+- (BOOL)pressFirstElementInElements:(NSArray<AXElement *> *)elements
+                      matchingTrait:(NSUInteger)trait
+                       listenerName:(NSString *)listenerName
+                             reason:(NSString *)reason {
+    for (AXElement *element in elements) {
+        if (![element respondsToSelector:@selector(traits)]) {
+            continue;
+        }
+
+        NSUInteger traits = [element traits];
+        if ((traits & trait) == 0) {
+            continue;
+        }
+
+        if ([self pressElement:element]) {
+            HBLogDebug(@"Pressed accessibility %@ for system action %@", reason ?: @"trait target",
+                       listenerName ?: @"");
+            return YES;
+        }
+    }
+    return NO;
+}
+
+- (BOOL)pressElement:(AXElement *)element {
+    if (![element respondsToSelector:@selector(press)]) {
+        return NO;
+    }
+    return [element press];
+}
+
+#pragma mark - Element Enumeration
+
+- (void)addUniqueElement:(AXElement *)element toElements:(NSMutableArray<AXElement *> *)elements {
+    if (!element || [elements containsObject:element]) {
+        return;
+    }
+    [elements addObject:element];
+}
+
+- (NSArray<AXElement *> *)currentVisibleAccessibilityElementsForListenerName:(NSString *)listenerName {
+    Class elementClass = NSClassFromString(@"AXElement");
+    SEL systemApplicationSelector = @selector(systemApplication);
+    if (![elementClass respondsToSelector:systemApplicationSelector]) {
+        HBLogError(@"AXElement is unavailable for system action %@", listenerName ?: @"");
+        return @[];
+    }
+
+    AXElement *systemApplication = [(id)elementClass systemApplication];
+    NSArray<AXElement *> *applications = nil;
+    if ([systemApplication respondsToSelector:@selector(currentApplications)]) {
+        applications = [systemApplication currentApplications];
+    }
+    if (![applications isKindOfClass:NSArray.class]) {
+        applications = @[];
+    }
+
+    NSMutableArray<AXElement *> *elements = [NSMutableArray array];
+    for (AXElement *application in applications) {
+        [self addUniqueElement:application toElements:elements];
+        if (![application respondsToSelector:@selector(visibleElements)]) {
+            continue;
+        }
+
+        NSArray<AXElement *> *visibleElements = [application visibleElements];
+        if (![visibleElements isKindOfClass:NSArray.class]) {
+            continue;
+        }
+        for (AXElement *element in visibleElements) {
+            [self addUniqueElement:element toElements:elements];
+        }
+    }
+    return elements;
+}
+
+- (BOOL)performAction:(LATSystemAccessibilityElementAction)action listenerName:(NSString *)listenerName {
+    @try {
+        NSArray<AXElement *> *elements = [self currentVisibleAccessibilityElementsForListenerName:listenerName];
+        if (elements.count == 0) {
+            HBLogDebug(@"No current accessibility elements for system action %@", listenerName ?: @"");
+            return NO;
+        }
+        return action(elements);
+    } @catch (NSException *exception) {
+        HBLogError(@"Failed to inspect accessibility elements for system action %@: %@", listenerName ?: @"",
+                   exception);
+        return NO;
+    }
+}
+
+#pragma mark - Element Matching
+
+- (BOOL)element:(AXElement *)element hasTitle:(NSString *)title {
     for (NSString *candidate in [self titleCandidatesForElement:element]) {
         if ([candidate caseInsensitiveCompare:title] == NSOrderedSame) {
             return YES;
@@ -249,7 +277,7 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
     return NO;
 }
 
-- (NSString *)firstTitleInTitles:(NSArray<NSString *> *)titles matchingElement:(id)element {
+- (nullable NSString *)firstTitleInTitles:(NSArray<NSString *> *)titles matchingElement:(AXElement *)element {
     for (NSString *title in titles) {
         if ([self element:element hasTitle:title]) {
             return title;
@@ -258,7 +286,7 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
     return nil;
 }
 
-- (NSArray<NSString *> *)titleCandidatesForElement:(id)element {
+- (NSArray<NSString *> *)titleCandidatesForElement:(AXElement *)element {
     NSMutableArray<NSString *> *candidates = [NSMutableArray array];
     NSArray<NSString *> *stringSelectors = @[ @"label", @"speechInputLabel" ];
     for (NSString *selectorName in stringSelectors) {
@@ -267,7 +295,7 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
             continue;
         }
 
-        id value = [selectorName isEqualToString:@"label"] ? [element label] : [element speechInputLabel];
+        NSString *value = [selectorName isEqualToString:@"label"] ? [element label] : [element speechInputLabel];
         if ([value isKindOfClass:NSString.class] && [value length] > 0) {
             [candidates addObject:value];
         }
@@ -280,12 +308,13 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
             continue;
         }
 
-        id value =
-            [selectorName isEqualToString:@"recognitionStrings"] ? [element recognitionStrings] : [element userInputLabels];
+        NSArray<NSString *> *value = [selectorName isEqualToString:@"recognitionStrings"]
+                                         ? [element recognitionStrings]
+                                         : [element userInputLabels];
         if (![value isKindOfClass:NSArray.class]) {
             continue;
         }
-        for (id candidate in (NSArray *)value) {
+        for (NSString *candidate in value) {
             if ([candidate isKindOfClass:NSString.class] && [candidate length] > 0) {
                 [candidates addObject:candidate];
             }
@@ -294,37 +323,17 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
     return candidates;
 }
 
-- (NSString *)identifierForElement:(id)element {
+- (nullable NSString *)identifierForElement:(AXElement *)element {
     SEL selector = @selector(identifier);
     if (![element respondsToSelector:selector]) {
         return nil;
     }
 
-    id value = [element identifier];
+    NSString *value = [element identifier];
     return [value isKindOfClass:NSString.class] ? value : nil;
 }
 
-- (BOOL)pressElement:(id)element {
-    if (![element respondsToSelector:@selector(press)]) {
-        return NO;
-    }
-    return [element press];
-}
-
-- (BOOL)performEscapeActionForElements:(NSArray *)elements listenerName:(NSString *)listenerName {
-    for (id element in elements) {
-        if (![element respondsToSelector:@selector(performAction:)]) {
-            continue;
-        }
-
-        BOOL handled = [element performAction:LATSystemAccessibilityEscapeAction];
-        if (handled) {
-            HBLogDebug(@"Performed accessibility escape action for system action %@", listenerName ?: @"");
-            return YES;
-        }
-    }
-    return NO;
-}
+#pragma mark - Accessibility Setup
 
 - (BOOL)enableApplicationAccessibilityIfNeededForListenerName:(NSString *)listenerName {
     BOOL enabled = [LAActivator.sharedInstance la_applicationAccessibilityEnabled];

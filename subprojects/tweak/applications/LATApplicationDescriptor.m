@@ -34,12 +34,12 @@
 
 #pragma mark - Factories
 
-+ (instancetype)descriptorWithApplicationProxy:(id)applicationProxy {
++ (instancetype)descriptorWithApplicationProxy:(LSApplicationProxy *)applicationProxy {
     if (!applicationProxy) {
         return nil;
     }
 
-    LSApplicationProxy *proxy = (LSApplicationProxy *)applicationProxy;
+    LSApplicationProxy *proxy = applicationProxy;
     NSString *identifier = nil;
     if ([proxy respondsToSelector:@selector(bundleIdentifier)]) {
         identifier = proxy.bundleIdentifier;
@@ -187,13 +187,13 @@
 
 #pragma mark - Helpers
 
-+ (NSArray<NSString *> *)normalizedStringArray:(id)value {
++ (NSArray<NSString *> *)normalizedStringArray:(NSArray *)value {
     if (![value isKindOfClass:NSArray.class]) {
         return @[];
     }
 
     NSMutableArray<NSString *> *strings = [[NSMutableArray alloc] init];
-    for (id object in (NSArray *)value) {
+    for (NSString *object in value) {
         if ([object isKindOfClass:NSString.class]) {
             [strings addObject:object];
         }
@@ -217,7 +217,7 @@
 + (NSString *)displayNameForApplicationProxy:(LSApplicationProxy *)proxy fallbackIdentifier:(NSString *)identifier {
     NSString *cachedDisplayName = nil;
     @try {
-        id value = [proxy valueForKey:@"_localizedName"];
+        NSString *value = [proxy valueForKey:@"_localizedName"];
         if ([value isKindOfClass:NSString.class]) {
             cachedDisplayName = value;
         }
