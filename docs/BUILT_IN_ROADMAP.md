@@ -14,7 +14,7 @@
 
 | 主线 | 状态 | 下一步 |
 | --- | --- | --- |
-| Staged 但未注册的 listener/action | 剩 `clear-switcher`、`watch.haptic.tap` 两项 blocked | 分别重新 probe 现代 SpringBoard switcher 清理入口、Watch haptic 能力与设备差异。 |
+| Staged 但未注册的 listener/action | 剩 `watch.haptic.tap` 一项 blocked | 需要确认 Watch haptic 能力与设备差异。 |
 | Additive power action | `system.soft-reboot` 已恢复 | 由 `jbroot(/usr/libexec/activator/user-reboot)` setuid/setgid helper 执行 `reboot3(RB2_USERREBOOT)`；SpringBoard listener 只负责 `posix_spawn` helper。 |
 | 未实现 event family | 1.9.13 event 中仍有 33 个未实现 | 按 multi-touch、SpringBoard/icon、lock screen clock、headset button、motion、HUD tap、gesture bar、scheduled、car/watch/clamshell 分组推进。 |
 | Settings UI 与 menu | 尚未进入 runtime 主线 | 实现 `libactivatorsettings.dylib`、assignments/profile/blacklist UI、menu editor 和 menu listener runtime provider。 |
@@ -37,11 +37,10 @@
 
 当前不再按 1.9.13 的 117 项静态资源散列推进；剩余工作只跟踪未注册、已移除、暂缓或语义待复核的条目。
 
-1. `libactivator.system.clear-switcher`：首轮现代路径真机验证无效，当前只保留 metadata，不注册 runtime listener。后续需要重新确认 iOS 15+ Switcher app layout 清理入口。
-2. `libactivator.watch.haptic.tap`：依赖 Watch 能力和设备差异，当前 blocked，不作为默认 listener 主线。
-3. Obsolete social/settings actions：`settings.facebook`、`settings.twitter`、`facebook.compose-post`、`twitter.compose-tweet`、`weibo.compose-post` 已从 staged resource 移除，不恢复。
-4. `previews` 语义：core preview dispatch API 存在，但 built-in vibration / watch haptic preview 尚未作为实际动作支持。
-5. `is-unprotected` 与 `supports-unlocking-device`：旧 API protection prompt、unprotected 豁免和完整主动解锁流程尚未兑现；当前只有 callback-only unlock-to-send compatibility。
+1. `libactivator.watch.haptic.tap`：依赖 Watch 能力和设备差异，当前 blocked，不作为默认 listener 主线。
+2. Obsolete social/settings actions：`settings.facebook`、`settings.twitter`、`facebook.compose-post`、`twitter.compose-tweet`、`weibo.compose-post` 已从 staged resource 移除，不恢复。
+3. `previews` 语义：core preview dispatch API 存在，但 built-in vibration / watch haptic preview 尚未作为实际动作支持。
+4. `is-unprotected` 与 `supports-unlocking-device`：旧 API protection prompt、unprotected 豁免和完整主动解锁流程尚未兑现；当前只有 callback-only unlock-to-send compatibility。
 
 ## Events 剩余工作
 

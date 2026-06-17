@@ -28,6 +28,7 @@ typedef NS_ENUM(NSUInteger, LATSystemActionKind) {
     LATSystemActionKindActivateReachability,
     LATSystemActionKindKeyboardDictation,
     LATSystemActionKindActivateSwitcher,
+    LATSystemActionKindClearSwitcher,
     LATSystemActionKindEditScreenshot,
     LATSystemActionKindPowerMenu,
     LATSystemActionKindPreviousApplication,

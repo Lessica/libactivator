@@ -43,6 +43,7 @@
         @"libactivator.system.activate-reachability" : @"activateReachability",
         @"libactivator.keyboard.dictation" : @"startDictation",
         @"libactivator.system.activate-switcher" : @"activateSwitcherFromActivator:event:",
+        @"libactivator.system.clear-switcher" : @"clearSwitcher",
         @"libactivator.system.edit-screenshot" : @"editScreenshot",
         @"libactivator.system.power-menu" : @"powerDownView",
         @"libactivator.system.previous-app" : @"previousApp",

@@ -26,7 +26,7 @@
     NSString *ringerName = @"libactivator.audio.reset-ringer-state";
     NSString *softRebootName = @"libactivator.system.soft-reboot";
     NSString *telephonyName = @"libactivator.phone.answer-call";
-    NSString *metadataOnlyName = @"libactivator.system.clear-switcher";
+    NSString *metadataOnlyName = @"libactivator.watch.haptic.tap";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
 
     [activator registerEventDataSource:dataSource forEventName:eventName];

@@ -93,7 +93,9 @@
                                                                      runtimeStateSource:_registry.runtimeStateSource];
         _reachabilityController = [[LATSystemReachabilityController alloc] init];
         _screenshotController = [[LATSystemScreenshotController alloc] init];
-        _switcherController = [[LATSystemSwitcherController alloc] init];
+        _switcherController =
+            [[LATSystemSwitcherController alloc] initWithMediaEventSource:_registry.mediaEventSource
+                                                       runtimeStateSource:_registry.runtimeStateSource];
         _voiceControlController = [[LATSystemVoiceControlController alloc] init];
         _walletController = [[LATSystemWalletController alloc] init];
     }
@@ -180,6 +182,9 @@
         break;
     case LATSystemActionKindActivateSwitcher:
         [self.switcherController activateSwitcherForListenerName:listenerName];
+        break;
+    case LATSystemActionKindClearSwitcher:
+        [self.switcherController clearSwitcherForListenerName:listenerName];
         break;
     case LATSystemActionKindEditScreenshot:
         [self.screenshotController editScreenshotForListenerName:listenerName];
@@ -317,6 +322,9 @@
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.activate-switcher"
                                                     selectorName:@"activateSwitcherFromActivator:event:"
                                                             kind:LATSystemActionKindActivateSwitcher],
+            [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.clear-switcher"
+                                                    selectorName:@"clearSwitcher"
+                                                            kind:LATSystemActionKindClearSwitcher],
             [[LATSystemActionCommand alloc] initWithListenerName:@"libactivator.system.edit-screenshot"
                                                     selectorName:@"editScreenshot"
                                                             kind:LATSystemActionKindEditScreenshot],
