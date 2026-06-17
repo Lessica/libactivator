@@ -8,10 +8,10 @@
 
 #import <Foundation/Foundation.h>
 
-NS_ASSUME_NONNULL_BEGIN
-
 @class LAActivator;
 @class LATestRecorder;
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface LATestBuiltInComposeActionsSuite : NSObject
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;

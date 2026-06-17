@@ -21,7 +21,7 @@
     AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
     if (![server respondsToSelector:@selector(setOrientation:)]) {
         HBLogError(@"AXSpringBoardServer cannot set orientation for system action %@", listenerName ?: @"");
-        return YES;
+        return NO;
     }
     [server setOrientation:orientation];
     return YES;

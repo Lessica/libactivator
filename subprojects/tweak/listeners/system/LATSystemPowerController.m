@@ -40,15 +40,39 @@ static const NSUInteger LATSBSRelaunchActionOptionsRestartRenderServer = (1 << 0
 - (void)safeModeFromActivator;
 @end
 
-@interface LATSystemPowerController ()
+@implementation LATSystemPowerController
+
 - (BOOL)sendRelaunchActionForListenerName:(NSString *)listenerName
                                   options:(NSUInteger)options
-                               actionName:(NSString *)actionName;
-@end
+                               actionName:(NSString *)actionName {
+    Class actionClass = NSClassFromString(@"SBSRelaunchAction");
+    Class serviceClass = NSClassFromString(@"FBSSystemService");
+    if (![actionClass respondsToSelector:@selector(actionWithReason:options:targetURL:)] ||
+        ![serviceClass respondsToSelector:@selector(sharedService)]) {
+        HBLogError(@"Unable to perform %@ for system action %@ because FrontBoard relaunch SPI is unavailable",
+                   actionName ?: @"relaunch", listenerName ?: @"");
+        return NO;
+    }
 
-static NSString *LATUserRebootHelperPath(void) { return jbroot(@"/usr/libexec/activator/user-reboot"); }
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        SBSRelaunchAction *action =
+            [(id)actionClass actionWithReason:(listenerName ?: @"libactivator") options:options targetURL:nil];
+        FBSSystemService *service = [(id)serviceClass sharedService];
+        if (!action || ![service respondsToSelector:@selector(sendActions:withResult:)]) {
+            HBLogError(@"FBSSystemService cannot perform %@ for system action %@", actionName ?: @"relaunch",
+                       listenerName ?: @"");
+            return;
+        }
 
-@implementation LATSystemPowerController
+        [service sendActions:[NSSet setWithObject:action]
+                  withResult:^(NSError *error) {
+                      if (error) {
+                          HBLogError(@"%@ action %@ failed: %@", actionName ?: @"Relaunch", listenerName ?: @"", error);
+                      }
+                  }];
+    });
+    return YES;
+}
 
 - (BOOL)respringForListenerName:(NSString *)listenerName {
     return [self sendRelaunchActionForListenerName:listenerName options:0 actionName:@"Respring"];
@@ -61,7 +85,7 @@ static NSString *LATUserRebootHelperPath(void) { return jbroot(@"/usr/libexec/ac
 }
 
 - (BOOL)softRebootForListenerName:(NSString *)listenerName {
-    NSString *helperPath = LATUserRebootHelperPath();
+    NSString *helperPath = jbroot(@"/usr/libexec/activator/user-reboot");
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         const char *fileSystemPath = helperPath.fileSystemRepresentation;
         if (fileSystemPath == NULL) {
@@ -80,37 +104,6 @@ static NSString *LATUserRebootHelperPath(void) { return jbroot(@"/usr/libexec/ac
     return YES;
 }
 
-- (BOOL)sendRelaunchActionForListenerName:(NSString *)listenerName
-                                  options:(NSUInteger)options
-                               actionName:(NSString *)actionName {
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-        Class actionClass = NSClassFromString(@"SBSRelaunchAction");
-        Class serviceClass = NSClassFromString(@"FBSSystemService");
-        if (![actionClass respondsToSelector:@selector(actionWithReason:options:targetURL:)] ||
-            ![serviceClass respondsToSelector:@selector(sharedService)]) {
-            HBLogError(@"Unable to perform %@ for system action %@ because FrontBoard relaunch SPI is unavailable",
-                       actionName ?: @"relaunch", listenerName ?: @"");
-            return;
-        }
-
-        SBSRelaunchAction *action =
-            [(id)actionClass actionWithReason:(listenerName ?: @"libactivator") options:options targetURL:nil];
-        FBSSystemService *service = [(id)serviceClass sharedService];
-        if (![service respondsToSelector:@selector(sendActions:withResult:)]) {
-            HBLogError(@"FBSSystemService does not support sendActions:withResult:");
-            return;
-        }
-
-        [service sendActions:[NSSet setWithObject:action]
-                  withResult:^(NSError *error) {
-                      if (error) {
-                          HBLogError(@"%@ action %@ failed: %@", actionName ?: @"Relaunch", listenerName ?: @"", error);
-                      }
-                  }];
-    });
-    return YES;
-}
-
 - (BOOL)safeModeForListenerName:(NSString *)listenerName {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         HBLogWarn(@"Triggering Safe Mode for system action %@ via safeModeFromActivator exception",
@@ -122,28 +115,24 @@ static NSString *LATUserRebootHelperPath(void) { return jbroot(@"/usr/libexec/ac
 
 - (BOOL)powerDownForListenerName:(NSString *)listenerName {
     SBRestartManager *restartManager = [self restartManagerForListenerName:listenerName];
-    if (!restartManager) {
+    if ([restartManager respondsToSelector:@selector(shutdownForReason:)]) {
+        [restartManager shutdownForReason:nil];
         return YES;
     }
-    if (![restartManager respondsToSelector:@selector(shutdownForReason:)]) {
-        HBLogError(@"SBRestartManager does not support shutdownForReason: for system action %@", listenerName ?: @"");
-        return YES;
-    }
-    [restartManager shutdownForReason:nil];
-    return YES;
+
+    HBLogError(@"SpringBoard cannot power down for system action %@", listenerName ?: @"");
+    return NO;
 }
 
 - (BOOL)rebootForListenerName:(NSString *)listenerName {
     SBRestartManager *restartManager = [self restartManagerForListenerName:listenerName];
-    if (!restartManager) {
+    if ([restartManager respondsToSelector:@selector(rebootForReason:)]) {
+        [restartManager rebootForReason:nil];
         return YES;
     }
-    if (![restartManager respondsToSelector:@selector(rebootForReason:)]) {
-        HBLogError(@"SBRestartManager does not support rebootForReason: for system action %@", listenerName ?: @"");
-        return YES;
-    }
-    [restartManager rebootForReason:nil];
-    return YES;
+
+    HBLogError(@"SpringBoard cannot reboot for system action %@", listenerName ?: @"");
+    return NO;
 }
 
 - (nullable SBRestartManager *)restartManagerForListenerName:(NSString *)listenerName {

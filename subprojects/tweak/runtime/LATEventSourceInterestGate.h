@@ -10,14 +10,14 @@
 
 @class LAActivator;
 
-NS_ASSUME_NONNULL_BEGIN
-
 typedef NS_ENUM(NSUInteger, LATEventSourceInterestFamily) {
     LATEventSourceInterestFamilyEdgeGesture,
     LATEventSourceInterestFamilyForceTouch,
     LATEventSourceInterestFamilyStatusBar,
     LATEventSourceInterestFamilyMultiTouch,
 };
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface LATEventSourceInterestGate : NSObject
 

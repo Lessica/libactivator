@@ -38,7 +38,7 @@ static BOOL gPendingNowPlayingControlsShouldToggle = NO;
 @interface LATSystemCenterController ()
 @property(nonatomic, weak, nullable) LATRuntimeStateSource *runtimeStateSource;
 + (BOOL)performPendingNowPlayingControlsActionIfPossibleForListenerName:(nullable NSString *)listenerName;
-- (void)showNowPlayingControlsWithPoweredDisplayForListenerName:(NSString *)listenerName;
+- (BOOL)showNowPlayingControlsWithPoweredDisplayForListenerName:(NSString *)listenerName;
 @end
 
 @implementation LATSystemCenterController
@@ -94,7 +94,7 @@ static BOOL gPendingNowPlayingControlsShouldToggle = NO;
         }
         [moduleCollectionViewController dismissExpandedModuleAnimated:NO completion:nil];
         HBLogDebug(@"Requested Control Center Now Playing module dismissal for system action %@", listenerName ?: @"");
-        return YES;
+        return NO;
     }
 
     if (!shouldToggle && canCheckExpandedState && nowPlayingModuleExpanded) {
@@ -123,41 +123,43 @@ static BOOL gPendingNowPlayingControlsShouldToggle = NO;
     }
     if (![server respondsToSelector:@selector(showControlCenter:)]) {
         HBLogError(@"AXSpringBoardServer cannot toggle Control Center for system action %@", listenerName ?: @"");
-        return YES;
+        return NO;
     }
     if (![server showControlCenter:!visible]) {
         HBLogWarn(@"AXSpringBoardServer refused to toggle Control Center for system action %@", listenerName ?: @"");
+        return NO;
     }
-    return YES;
+    return !visible;
 }
 
 - (BOOL)showNowPlayingControlsForListenerName:(NSString *)listenerName {
+    __block BOOL handled = NO;
     dispatch_block_t showBlock = ^{
-        [self showNowPlayingControlsWithPoweredDisplayForListenerName:listenerName];
+        handled = [self showNowPlayingControlsWithPoweredDisplayForListenerName:listenerName];
     };
 
     LATRuntimeStateSource *runtimeStateSource = self.runtimeStateSource;
     if (!runtimeStateSource) {
         HBLogWarn(@"Runtime state source is unavailable for Now Playing controls action %@", listenerName ?: @"");
         showBlock();
-        return YES;
+        return handled;
     }
 
     if ([runtimeStateSource screenIsOn]) {
         showBlock();
-        return YES;
+        return handled;
     }
 
     if (![runtimeStateSource wakeScreenForReason:(listenerName ?: @"libactivator.now-playing-controls")
                                       completion:showBlock]) {
         HBLogWarn(@"Screen wake was not started for Now Playing controls action %@", listenerName ?: @"");
         showBlock();
-        return YES;
+        return handled;
     }
     return YES;
 }
 
-- (void)showNowPlayingControlsWithPoweredDisplayForListenerName:(NSString *)listenerName {
+- (BOOL)showNowPlayingControlsWithPoweredDisplayForListenerName:(NSString *)listenerName {
     AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
     BOOL visible = NO;
     if ([server respondsToSelector:@selector(isControlCenterVisible)]) {
@@ -169,17 +171,18 @@ static BOOL gPendingNowPlayingControlsShouldToggle = NO;
 
     if (![server respondsToSelector:@selector(showControlCenter:)]) {
         HBLogError(@"AXSpringBoardServer cannot show Control Center for system action %@", listenerName ?: @"");
-        return;
+        return NO;
     }
 
     if (!visible && ![server showControlCenter:YES]) {
         HBLogWarn(@"AXSpringBoardServer refused to show Control Center for system action %@", listenerName ?: @"");
-        return;
+        return NO;
     }
 
     if (visible) {
-        [self.class performPendingNowPlayingControlsActionIfPossibleForListenerName:listenerName];
+        return [self.class performPendingNowPlayingControlsActionIfPossibleForListenerName:listenerName];
     }
+    return YES;
 }
 
 - (BOOL)activateNotificationCenterForListenerName:(NSString *)listenerName {
@@ -189,26 +192,28 @@ static BOOL gPendingNowPlayingControlsShouldToggle = NO;
     if (visibilityKnown && visible) {
         if ([server respondsToSelector:@selector(hideNotificationCenter)]) {
             [server hideNotificationCenter];
-            return YES;
+            return NO;
         }
         if ([server respondsToSelector:@selector(showNotificationCenter:)]) {
             if (![server showNotificationCenter:NO]) {
                 HBLogWarn(@"AXSpringBoardServer refused to hide Notification Center for system action %@",
                           listenerName ?: @"");
+                return NO;
             }
-            return YES;
+            return NO;
         }
         if ([server respondsToSelector:@selector(toggleNotificationCenter)]) {
             [server toggleNotificationCenter];
-            return YES;
+            return NO;
         }
         HBLogError(@"AXSpringBoardServer cannot hide Notification Center for system action %@", listenerName ?: @"");
-        return YES;
+        return NO;
     }
     if ([server respondsToSelector:@selector(showNotificationCenter:)]) {
         if (![server showNotificationCenter:YES]) {
             HBLogWarn(@"AXSpringBoardServer refused to show Notification Center for system action %@",
                       listenerName ?: @"");
+            return NO;
         }
         return YES;
     }
@@ -221,7 +226,7 @@ static BOOL gPendingNowPlayingControlsShouldToggle = NO;
         return YES;
     }
     HBLogError(@"AXSpringBoardServer cannot toggle Notification Center for system action %@", listenerName ?: @"");
-    return YES;
+    return NO;
 }
 
 - (nullable AXSpringBoardServer *)axSpringBoardServerForListenerName:(NSString *)listenerName {

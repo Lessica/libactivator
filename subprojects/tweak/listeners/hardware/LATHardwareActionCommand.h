@@ -12,6 +12,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
     LATHardwareActionKindHID,
+    LATHardwareActionKindMediaRemote,
+    LATHardwareActionKindScreenshot,
     LATHardwareActionKindVibrate,
 };
 
@@ -22,12 +24,17 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
 @property(nonatomic, assign, readonly) LATHardwareActionKind kind;
 @property(nonatomic, assign, readonly) uint32_t page;
 @property(nonatomic, assign, readonly) uint32_t usage;
+@property(nonatomic, assign, readonly) NSInteger mediaRemoteCommand;
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithListenerName:(NSString *)listenerName
                         selectorName:(NSString *)selectorName
                                 page:(uint32_t)page
                                usage:(uint32_t)usage;
+- (instancetype)initWithMediaRemoteListenerName:(NSString *)listenerName
+                                   selectorName:(NSString *)selectorName
+                           mediaRemoteCommand:(NSInteger)mediaRemoteCommand;
+- (instancetype)initWithScreenshotListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName;
 - (instancetype)initWithVibrateListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName;
 
 @end

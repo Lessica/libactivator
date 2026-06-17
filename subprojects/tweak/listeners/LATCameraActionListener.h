@@ -22,6 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
                         registry:(nullable LATBuiltInRegistry *)registry NS_DESIGNATED_INITIALIZER;
 
 + (nullable NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
+- (BOOL)listenerNameMatchesRequiredMetadata:(NSString *)listenerName activator:(nullable LAActivator *)activator;
 
 @end
 

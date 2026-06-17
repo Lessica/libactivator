@@ -59,7 +59,7 @@ static NSString *const LATSystemDictationKeyboardAccessibilityIdentifierPrefix =
 
 - (BOOL)startDictationForListenerName:(NSString *)listenerName {
     NSString *copiedListenerName = [listenerName copy];
-    return [self.accessibilityElementController
+    BOOL requestSubmitted = [self.accessibilityElementController
         performWithCurrentElementsForListenerName:copiedListenerName
                                    retryUnhandled:YES
                                            action:^BOOL(NSArray<AXElement *> *elements) {
@@ -87,6 +87,11 @@ static NSString *const LATSystemDictationKeyboardAccessibilityIdentifierPrefix =
                                                }
                                                return handled;
                                            }];
+    if (!requestSubmitted) {
+        HBLogError(@"Unable to submit keyboard dictation accessibility request for system action %@",
+                   copiedListenerName ?: @"");
+    }
+    return YES;
 }
 
 @end

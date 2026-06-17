@@ -60,14 +60,12 @@
         return;
     }
 
-    event.handled = YES;
-
     switch (command.kind) {
     case LATTelephonyActionKindAnswerCall:
-        [self.callController answerIncomingCallForListenerName:listenerName];
+        event.handled = [self.callController answerIncomingCallForListenerName:listenerName];
         break;
     case LATTelephonyActionKindDisconnectCall:
-        [self.callController disconnectCallsForListenerName:listenerName];
+        event.handled = [self.callController disconnectCallsForListenerName:listenerName];
         break;
     }
 }

@@ -22,6 +22,7 @@ typedef void (^LATNowPlayingApplicationDisplayIdentifierCompletion)(NSString *_N
 // on the main queue so listener code can stay independent from MediaRemote threading details.
 - (BOOL)requestNowPlayingApplicationDisplayIdentifierWithCompletion:
     (LATNowPlayingApplicationDisplayIdentifierCompletion)completion;
+- (BOOL)getKnownNowPlayingApplicationPlaying:(BOOL *)isPlaying;
 
 @end
 

@@ -8,9 +8,9 @@
 
 #import <UIKit/UIKit.h>
 
-NS_ASSUME_NONNULL_BEGIN
-
 @class LATEventSourceInterestGate;
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface LATForceTouchEventSource : NSObject
 

@@ -15,8 +15,8 @@
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInComposeActions"];
 
-    Class<LATestSelectorBackedBuiltInListener> composeActionClass =
-        (Class<LATestSelectorBackedBuiltInListener>)NSClassFromString(@"LATComposeActionListener");
+    Class<LATestComposeActionListener> composeActionClass =
+        (Class<LATestComposeActionListener>)NSClassFromString(@"LATComposeActionListener");
     [recorder expect:composeActionClass != Nil
             caseName:@"compose-action-class-available"
               reason:@"LATComposeActionListener class was not loaded in SpringBoard"];
@@ -47,7 +47,18 @@
                   reason:@"Compose action selector mapping did not match bundled metadata"];
     }
 
-    id<LAListener> composeAction = [[(Class)composeActionClass alloc] init];
+    id<LATestComposeActionListener> composeAction = [[(Class)composeActionClass alloc] init];
+    for (NSString *listenerName in expectedSelectors) {
+        [recorder expect:[composeAction shouldHandleListenerName:listenerName activator:activator]
+                caseName:[NSString stringWithFormat:@"compose-action-valid-metadata-handled-%@", listenerName]
+                  reason:@"Compose action did not consume a listener name with matching selector metadata"];
+    }
+
+    [recorder expect:![composeAction shouldHandleListenerName:@"libactivator.mail.compose-message"
+                                                    activator:nil]
+            caseName:@"compose-action-missing-metadata-unhandled"
+              reason:@"Compose action consumed a listener name without matching selector metadata"];
+
     LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.compose"
                                                   mode:LAEventModeSpringBoard];
     [composeAction activator:activator

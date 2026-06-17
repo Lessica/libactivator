@@ -28,6 +28,14 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)shouldHandleListenerName:(NSString *)listenerName activator:(nullable LAActivator *)activator;
 @end
 
+@protocol LATestComposeActionListener <LATestSelectorBackedBuiltInListener, LAListener>
+- (BOOL)shouldHandleListenerName:(NSString *)listenerName activator:(nullable LAActivator *)activator;
+@end
+
+@protocol LATestCameraActionListener <LATestSelectorBackedBuiltInListener, LAListener>
+- (BOOL)listenerNameMatchesRequiredMetadata:(NSString *)listenerName activator:(nullable LAActivator *)activator;
+@end
+
 @protocol LATestURLActionListener <LATestBuiltInListenerAllowlist>
 + (BOOL)listenerNameHasRequiredMetadata:(NSString *)listenerName activator:(LAActivator *)activator;
 - (nullable NSString *)urlStringForListenerName:(NSString *)listenerName activator:(LAActivator *)activator;

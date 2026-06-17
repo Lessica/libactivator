@@ -53,14 +53,20 @@
         return;
     }
 
-    event.handled = YES;
-
-    if (![self listenerSelectorMatchesCommand:command activator:activator]) {
+    if (![self shouldHandleListenerName:listenerName activator:activator]) {
         HBLogWarn(@"Compose action %@ metadata selector does not match %@", listenerName ?: @"", command.selectorName);
         return;
     }
 
-    [self.presenter performComposeAction:command.kind listenerName:listenerName];
+    event.handled = [self.presenter performComposeAction:command.kind listenerName:listenerName];
+}
+
+- (BOOL)shouldHandleListenerName:(NSString *)listenerName activator:(LAActivator *)activator {
+    LATComposeActionCommand *command = [self.class commandsByListenerName][listenerName ?: @""];
+    if (!command) {
+        return NO;
+    }
+    return [self listenerSelectorMatchesCommand:command activator:activator];
 }
 
 - (BOOL)listenerSelectorMatchesCommand:(LATComposeActionCommand *)command activator:(LAActivator *)activator {

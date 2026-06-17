@@ -21,6 +21,35 @@
         _kind = LATHardwareActionKindHID;
         _page = page;
         _usage = usage;
+        _mediaRemoteCommand = 0;
+    }
+    return self;
+}
+
+- (instancetype)initWithMediaRemoteListenerName:(NSString *)listenerName
+                                   selectorName:(NSString *)selectorName
+                             mediaRemoteCommand:(NSInteger)mediaRemoteCommand {
+    self = [super init];
+    if (self) {
+        _listenerName = [listenerName copy];
+        _selectorName = [selectorName copy];
+        _kind = LATHardwareActionKindMediaRemote;
+        _page = 0;
+        _usage = 0;
+        _mediaRemoteCommand = mediaRemoteCommand;
+    }
+    return self;
+}
+
+- (instancetype)initWithScreenshotListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName {
+    self = [super init];
+    if (self) {
+        _listenerName = [listenerName copy];
+        _selectorName = [selectorName copy];
+        _kind = LATHardwareActionKindScreenshot;
+        _page = 0;
+        _usage = 0;
+        _mediaRemoteCommand = 0;
     }
     return self;
 }
@@ -33,6 +62,7 @@
         _kind = LATHardwareActionKindVibrate;
         _page = 0;
         _usage = 0;
+        _mediaRemoteCommand = 0;
     }
     return self;
 }

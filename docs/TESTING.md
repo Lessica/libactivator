@@ -59,7 +59,7 @@ scripts/run-tests.sh
 - 纯模型、序列化、assignment、profile、blacklist、resource manager、cache、IPC codec 这类不依赖 SpringBoard UI 的测试优先放入 stable。
 - 需要真实 listener object、data source、dispatch 回调、built-in action 对象、touch drain 的测试，如果行为由 SpringBoard runtime owner 承载，应放入 SpringBoard-owned stable suite，并优先验证外层 dispatch 行为。
 - built-in action stable suite 只覆盖代码 allowlist、metadata/selector gate、runtime registration、obsolete/unsupported name 不注册，以及不产生设备副作用的纯 dispatch 语义。
-- 全量 listener handled 语义审计以 `LISTENER_HANDLED_BASELINE.md` 为基准；stable tests 可以覆盖无副作用 handled 断言，但不能为了证明真实动作效果而给 production path 增加 fake。
+- 新增或重做 built-in listener/action 的 handled 语义必须先有旧实现依据或明确的现代差异准则；stable tests 可以覆盖无副作用 handled 断言，但不能为了证明真实动作效果而给 production path 增加 fake。
 - 会打开 URL、启动 App、投递 HID、显示系统 UI、修改 ringer/audio 状态的行为不进入 stable fake path；应通过 Frida probe、`run-device-runtime` 或手工真机清单验证。
 - 需要打开 App、回主屏幕、锁屏、解锁、App Switcher、强杀 App 的测试默认不进 stable，先放 `run-device-runtime` 或手工观察。
 - 为测试而新增 production 入口必须先证明必要性，并用 `LIBACTIVATOR_TEST_SUPPORT` 宏隔离。普通构建不能包含 testing IPC、testing path 或测试自动化接口。

@@ -128,8 +128,6 @@
         return;
     }
 
-    event.handled = YES;
-
     if (![self listenerMetadataMatchesCommand:command activator:activator]) {
         HBLogWarn(@"System action %@ metadata does not match expected command", listenerName ?: @"");
         return;
@@ -137,93 +135,93 @@
 
     switch (command.kind) {
     case LATSystemActionKindVolumeHUD:
-        [self.volumeHUDPresenter presentVolumeHUDForListenerName:listenerName];
+        event.handled = [self.volumeHUDPresenter presentVolumeHUDForListenerName:listenerName];
         break;
     case LATSystemActionKindNowPlayingApplication:
-        [self.nowPlayingApplicationLauncher launchNowPlayingApplicationForListenerName:listenerName];
+        event.handled = [self.nowPlayingApplicationLauncher launchNowPlayingApplicationForListenerName:listenerName];
         break;
     case LATSystemActionKindRingerReset:
-        [self.ringerStateResetter resetRingerStateForListenerName:listenerName];
+        event.handled = [self.ringerStateResetter resetRingerStateForListenerName:listenerName];
         break;
     case LATSystemActionKindRingerMute:
     case LATSystemActionKindRingerUnmute:
     case LATSystemActionKindRingerToggle:
-        [self.ringerMuteController applyCommand:command];
+        event.handled = [self.ringerMuteController applyCommand:command];
         break;
     case LATSystemActionKindFirstSpringBoardPage:
-        [self.homeScreenController resetToFirstSpringBoardPageForListenerName:listenerName];
+        event.handled = [self.homeScreenController resetToFirstSpringBoardPageForListenerName:listenerName];
         break;
     case LATSystemActionKindLockScreenShow:
-        [self.lockScreenController showLockScreenForListenerName:listenerName];
+        event.handled = [self.lockScreenController showLockScreenForListenerName:listenerName];
         break;
     case LATSystemActionKindLockScreenDismiss:
-        [self.lockScreenController dismissLockScreenForListenerName:listenerName];
+        event.handled = [self.lockScreenController dismissLockScreenForListenerName:listenerName];
         break;
     case LATSystemActionKindLockScreenToggle:
-        [self.lockScreenController toggleLockScreenForListenerName:listenerName];
+        event.handled = [self.lockScreenController toggleLockScreenForListenerName:listenerName];
         break;
     case LATSystemActionKindLockAndWipeCredentials:
-        [self.lockScreenController lockAndWipeCredentialsForListenerName:listenerName];
+        event.handled = [self.lockScreenController lockAndWipeCredentialsForListenerName:listenerName];
         break;
     case LATSystemActionKindActivateControlCenter:
-        [self.centerController activateControlCenterForListenerName:listenerName];
+        event.handled = [self.centerController activateControlCenterForListenerName:listenerName];
         break;
     case LATSystemActionKindShowNowPlayingControls:
-        [self.centerController showNowPlayingControlsForListenerName:listenerName];
+        event.handled = [self.centerController showNowPlayingControlsForListenerName:listenerName];
         break;
     case LATSystemActionKindActivateNotificationCenter:
-        [self.centerController activateNotificationCenterForListenerName:listenerName];
+        event.handled = [self.centerController activateNotificationCenterForListenerName:listenerName];
         break;
     case LATSystemActionKindActivateReachability:
-        [self.reachabilityController activateReachabilityForListenerName:listenerName];
+        event.handled = [self.reachabilityController activateReachabilityForListenerName:listenerName];
         break;
     case LATSystemActionKindKeyboardDictation:
-        [self.dictationController startDictationForListenerName:listenerName];
+        event.handled = [self.dictationController startDictationForListenerName:listenerName];
         break;
     case LATSystemActionKindActivateSwitcher:
-        [self.switcherController activateSwitcherForListenerName:listenerName];
+        event.handled = [self.switcherController activateSwitcherForListenerName:listenerName];
         break;
     case LATSystemActionKindClearSwitcher:
-        [self.switcherController clearSwitcherForListenerName:listenerName];
+        event.handled = [self.switcherController clearSwitcherForListenerName:listenerName];
         break;
     case LATSystemActionKindEditScreenshot:
-        [self.screenshotController editScreenshotForListenerName:listenerName];
+        event.handled = [self.screenshotController editScreenshotForListenerName:listenerName];
         break;
     case LATSystemActionKindPowerMenu:
-        [self.powerMenuController showPowerMenuForListenerName:listenerName];
+        event.handled = [self.powerMenuController showPowerMenuForListenerName:listenerName];
         break;
     case LATSystemActionKindPreviousApplication:
         event.handled = [self.previousApplicationController launchPreviousApplicationForListenerName:listenerName];
         break;
     case LATSystemActionKindRespring:
-        [self.powerController respringForListenerName:listenerName];
+        event.handled = [self.powerController respringForListenerName:listenerName];
         break;
     case LATSystemActionKindHardRespring:
-        [self.powerController hardRespringForListenerName:listenerName];
+        event.handled = [self.powerController hardRespringForListenerName:listenerName];
         break;
     case LATSystemActionKindSoftReboot:
-        [self.powerController softRebootForListenerName:listenerName];
+        event.handled = [self.powerController softRebootForListenerName:listenerName];
         break;
     case LATSystemActionKindSafeMode:
-        [self.powerController safeModeForListenerName:listenerName];
+        event.handled = [self.powerController safeModeForListenerName:listenerName];
         break;
     case LATSystemActionKindPowerDown:
-        [self.powerController powerDownForListenerName:listenerName];
+        event.handled = [self.powerController powerDownForListenerName:listenerName];
         break;
     case LATSystemActionKindReboot:
-        [self.powerController rebootForListenerName:listenerName];
+        event.handled = [self.powerController rebootForListenerName:listenerName];
         break;
     case LATSystemActionKindHapticFlick:
-        [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeFlick
-                                                    listenerName:listenerName];
+        event.handled = [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeFlick
+                                                                    listenerName:listenerName];
         break;
     case LATSystemActionKindHapticTap:
-        [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeTap
-                                                    listenerName:listenerName];
+        event.handled = [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeTap
+                                                                    listenerName:listenerName];
         break;
     case LATSystemActionKindHapticQuirk:
-        [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeQuirk
-                                                    listenerName:listenerName];
+        event.handled = [self.hapticFeedbackController performHapticFeedbackType:LATSystemHapticFeedbackTypeQuirk
+                                                                    listenerName:listenerName];
         break;
     case LATSystemActionKindBack:
         event.handled = [self.localBackController performBackForEvent:event
@@ -231,29 +229,32 @@
                                                          listenerName:listenerName];
         break;
     case LATSystemActionKindLocalBack:
-        [self.localBackController performLocalBackForListenerName:listenerName];
+        event.handled = [self.localBackController performLocalBackForListenerName:listenerName];
         break;
     case LATSystemActionKindRotateLandscapeLeft:
-        [self.orientationController rotateToOrientation:UIInterfaceOrientationLandscapeLeft listenerName:listenerName];
+        event.handled = [self.orientationController rotateToOrientation:UIInterfaceOrientationLandscapeLeft
+                                                           listenerName:listenerName];
         break;
     case LATSystemActionKindRotateLandscapeRight:
-        [self.orientationController rotateToOrientation:UIInterfaceOrientationLandscapeRight listenerName:listenerName];
+        event.handled = [self.orientationController rotateToOrientation:UIInterfaceOrientationLandscapeRight
+                                                           listenerName:listenerName];
         break;
     case LATSystemActionKindRotatePortrait:
-        [self.orientationController rotateToOrientation:UIInterfaceOrientationPortrait listenerName:listenerName];
+        event.handled = [self.orientationController rotateToOrientation:UIInterfaceOrientationPortrait
+                                                           listenerName:listenerName];
         break;
     case LATSystemActionKindRotatePortraitUpsideDown:
-        [self.orientationController rotateToOrientation:UIInterfaceOrientationPortraitUpsideDown
-                                           listenerName:listenerName];
+        event.handled = [self.orientationController rotateToOrientation:UIInterfaceOrientationPortraitUpsideDown
+                                                           listenerName:listenerName];
         break;
     case LATSystemActionKindVirtualAssistant:
-        [self.assistantController activateVirtualAssistantForListenerName:listenerName];
+        event.handled = [self.assistantController activateVirtualAssistantForListenerName:listenerName];
         break;
     case LATSystemActionKindVoiceControl:
-        [self.voiceControlController toggleVoiceControlForListenerName:listenerName];
+        event.handled = [self.voiceControlController toggleVoiceControlForListenerName:listenerName];
         break;
     case LATSystemActionKindWallet:
-        [self.walletController activateWalletForListenerName:listenerName];
+        event.handled = [self.walletController activateWalletForListenerName:listenerName];
         break;
     }
 }

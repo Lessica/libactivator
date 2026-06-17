@@ -377,6 +377,17 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
     }];
 }
 
+- (BOOL)getKnownNowPlayingApplicationPlaying:(BOOL *)isPlaying {
+    LAAssertMainQueue();
+    if (!self.hasKnownNowPlayingPlaybackState) {
+        return NO;
+    }
+    if (isPlaying) {
+        *isPlaying = self.nowPlayingApplicationPlaying;
+    }
+    return YES;
+}
+
 - (void)requestNowPlayingPlaybackStateWithCompletion:(void (^)(BOOL isPlaying))completion {
     LAAssertMainQueue();
     NSParameterAssert(completion);

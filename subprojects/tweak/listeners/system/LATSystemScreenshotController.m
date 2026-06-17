@@ -11,7 +11,13 @@
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
 
+@interface SBScreenshotManager : NSObject
+- (BOOL)writingScreenshot;
+- (BOOL)_isWritingSnapshot;
+@end
+
 @interface UIApplication (ScreenshotController)
+- (SBScreenshotManager *)screenshotManager;
 - (void)_takeScreenshotAndEdit:(BOOL)edit;
 - (void)takeScreenshotAndEdit:(BOOL)edit;
 - (void)takeScreenshot;
@@ -19,18 +25,37 @@
 
 @implementation LATSystemScreenshotController
 
+- (BOOL)takeScreenshotForListenerName:(NSString *)listenerName {
+    UIApplication *application = UIApplication.sharedApplication;
+    if ([application respondsToSelector:@selector(screenshotManager)]) {
+        SBScreenshotManager *manager = [application screenshotManager];
+        if ([manager respondsToSelector:@selector(writingScreenshot)] && [manager writingScreenshot]) {
+            return NO;
+        }
+        if ([manager respondsToSelector:@selector(_isWritingSnapshot)] && [manager _isWritingSnapshot]) {
+            return NO;
+        }
+    }
+
+    if ([application respondsToSelector:@selector(takeScreenshot)]) {
+        [application takeScreenshot];
+        return YES;
+    }
+
+    HBLogError(@"SpringBoard cannot take screenshot for system action %@", listenerName ?: @"");
+    return NO;
+}
+
 - (BOOL)editScreenshotForListenerName:(NSString *)listenerName {
     UIApplication *application = UIApplication.sharedApplication;
     if ([application respondsToSelector:@selector(_takeScreenshotAndEdit:)]) {
         [application _takeScreenshotAndEdit:YES];
+        return YES;
     } else if ([application respondsToSelector:@selector(takeScreenshotAndEdit:)]) {
         [application takeScreenshotAndEdit:YES];
-    } else if ([application respondsToSelector:@selector(takeScreenshot)]) {
-        [application takeScreenshot];
-    } else {
-        HBLogError(@"SpringBoard cannot edit screenshot for system action %@", listenerName ?: @"");
+        return YES;
     }
-    return YES;
+    return [self takeScreenshotForListenerName:listenerName];
 }
 
 @end

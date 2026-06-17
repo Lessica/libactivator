@@ -8,9 +8,9 @@
 
 #import <Activator/Activator.h>
 
-NS_ASSUME_NONNULL_BEGIN
-
 @class LAPersistence;
+
+NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((visibility("hidden")))
 @interface LAServerBackend : NSObject

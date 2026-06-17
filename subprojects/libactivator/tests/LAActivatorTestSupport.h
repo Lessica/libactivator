@@ -10,9 +10,9 @@
 
 #import <Foundation/Foundation.h>
 
-NS_ASSUME_NONNULL_BEGIN
-
 @class LAActivator;
+
+NS_ASSUME_NONNULL_BEGIN
 
 __attribute__((visibility("hidden")))
 @interface LAActivatorTestSupport : NSObject

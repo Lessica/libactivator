@@ -8,10 +8,10 @@
 
 #import <Foundation/Foundation.h>
 
-NS_ASSUME_NONNULL_BEGIN
-
 @class LATRuntimeStateSource;
 @class UIViewController;
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface LATSystemCenterController : NSObject
 

@@ -15,8 +15,8 @@
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInCameraActions"];
 
-    Class<LATestSelectorBackedBuiltInListener> cameraActionClass =
-        (Class<LATestSelectorBackedBuiltInListener>)NSClassFromString(@"LATCameraActionListener");
+    Class<LATestCameraActionListener> cameraActionClass =
+        (Class<LATestCameraActionListener>)NSClassFromString(@"LATCameraActionListener");
     [recorder expect:cameraActionClass != Nil
             caseName:@"camera-action-class-available"
               reason:@"LATCameraActionListener class was not loaded in SpringBoard"];
@@ -45,7 +45,16 @@
                   reason:@"Camera action selector mapping did not match bundled metadata"];
     }
 
-    id<LAListener> cameraAction = [[(Class)cameraActionClass alloc] init];
+    id<LATestCameraActionListener> cameraAction = [[(Class)cameraActionClass alloc] init];
+    [recorder expect:[cameraAction listenerNameMatchesRequiredMetadata:@"libactivator.camera.invoke-shutter"
+                                                             activator:activator]
+            caseName:@"camera-action-valid-metadata-gated"
+              reason:@"Camera action did not accept a listener name with matching selector metadata"];
+    [recorder expect:![cameraAction listenerNameMatchesRequiredMetadata:@"libactivator.camera.invoke-shutter"
+                                                              activator:nil]
+            caseName:@"camera-action-missing-metadata-unhandled"
+              reason:@"Camera action accepted a listener name without matching selector metadata"];
+
     LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.camera"
                                                   mode:LAEventModeSpringBoard];
     [cameraAction activator:activator

@@ -15,6 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LATComposeActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
 + (nullable NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
+- (BOOL)shouldHandleListenerName:(NSString *)listenerName activator:(nullable LAActivator *)activator;
 @end
 
 NS_ASSUME_NONNULL_END

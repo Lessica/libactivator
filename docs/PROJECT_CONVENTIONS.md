@@ -95,7 +95,7 @@
 - 需要操作 SpringBoard / CoverSheet UI 层级的 SPI 必须在主队列执行；服务类 SPI 需要避开主队列时，不得把 UI 控制器方法也放到后台队列。
 - tweak-side synthetic HID 必须通过 `LATHIDEventSender` 统一发送，并用高位 `senderID` 标记；HID event source 在解析物理按键前应过滤该标记，避免 action 发出的 HID 被 built-in event source 回流识别。
 - `otherListenerDidHandleEvent:` 是全局 handled-edge notification：事件从未处理变成已处理时发送一次，通知除当前处理者以外的已注册 listener；不从当前待分发列表中移除后续 listener。
-- `LAEvent.handled` 表示事件已被 listener 消费，不表示 action 最终执行成功。built-in action listener 收到自己 allowlist 内的合法 listener name 后，应在 runtime 层消费事件；执行失败记录英文诊断，但不应把原始事件继续泄漏出去。
+- `LAEvent.handled` 表示事件已被 listener 消费，不表示 action 最终执行成功。built-in action 的消费时机必须按 1.9.13 selector 返回值、资源 metadata、旧源码或已接受的现代差异逐项确定；不能把 allowlist 内的合法 listener name 默认等同于消费事件。执行失败是否回滚 handled 也按该 listener 的已落盘语义决定。不得为了对齐 handled 语义而改变已经选定的现代实现方案；只能在方案不变的前提下对齐可对齐的返回值。旧实现和现代实现差异较大时，应从旧实现总结 handled 策略，制定当前方案的现代 handled 准则，例如 request-submission 或 synchronous-gate，并按该准则实施；仍无法决定的分支才记录为 `partial` 或待决策差异。
 
 ## CLI 与 Settings UI
 

@@ -21,7 +21,7 @@
     AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
     if (![server respondsToSelector:@selector(armApplePay)]) {
         HBLogError(@"AXSpringBoardServer cannot arm Apple Pay for system action %@", listenerName ?: @"");
-        return YES;
+        return NO;
     }
     [server armApplePay];
     return YES;

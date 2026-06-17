@@ -22,24 +22,29 @@
 @implementation LATSystemHomeScreenController
 
 - (BOOL)resetToFirstSpringBoardPageForListenerName:(NSString *)listenerName {
+    Class facilityClass = NSClassFromString(@"SBSServiceFacilityClient");
+    Class serviceClass = NSClassFromString(@"SBSSystemServiceClient");
+    if (![facilityClass respondsToSelector:@selector(checkOutClientWithClass:)] || !serviceClass) {
+        HBLogError(@"Unable to reset to first SpringBoard page for system action %@ because SBS system service is "
+                   @"unavailable",
+                   listenerName ?: @"");
+        return NO;
+    }
+
+    SBSSystemServiceClient *service = [facilityClass checkOutClientWithClass:serviceClass];
+    BOOL supportsSafeReset = [service respondsToSelector:@selector(resetToHomeScreenAnimated:useSafeTransitions:)];
+    BOOL supportsReset = [service respondsToSelector:@selector(resetToHomeScreenAnimated:)];
+    if (!supportsSafeReset && !supportsReset) {
+        HBLogError(@"SBSSystemServiceClient does not support resetToHomeScreenAnimated:");
+        return NO;
+    }
+
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-        Class facilityClass = NSClassFromString(@"SBSServiceFacilityClient");
-        Class serviceClass = NSClassFromString(@"SBSSystemServiceClient");
-        if (![facilityClass respondsToSelector:@selector(checkOutClientWithClass:)] || !serviceClass) {
-            HBLogError(@"Unable to reset to first SpringBoard page for system action %@ because SBS system service is "
-                       @"unavailable",
-                       listenerName ?: @"");
+        if (supportsSafeReset) {
+            [service resetToHomeScreenAnimated:YES useSafeTransitions:YES];
             return;
         }
-
-        SBSSystemServiceClient *service = [facilityClass checkOutClientWithClass:serviceClass];
-        if ([service respondsToSelector:@selector(resetToHomeScreenAnimated:useSafeTransitions:)]) {
-            [service resetToHomeScreenAnimated:YES useSafeTransitions:YES];
-        } else if ([service respondsToSelector:@selector(resetToHomeScreenAnimated:)]) {
-            [service resetToHomeScreenAnimated:YES];
-        } else {
-            HBLogError(@"SBSSystemServiceClient does not support resetToHomeScreenAnimated:");
-        }
+        [service resetToHomeScreenAnimated:YES];
     });
     return YES;
 }

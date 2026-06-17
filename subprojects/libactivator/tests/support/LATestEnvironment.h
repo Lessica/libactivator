@@ -24,10 +24,10 @@
 #import <Foundation/Foundation.h>
 #import <roothide.h>
 
-NS_ASSUME_NONNULL_BEGIN
-
 @class LAActivator;
 @class LARuntimeContext;
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface LATestEnvironment : NSObject
 

@@ -8,8 +8,6 @@
 
 #import <Foundation/Foundation.h>
 
-NS_ASSUME_NONNULL_BEGIN
-
 @class LAActivator;
 @class LAEvent;
 
@@ -18,6 +16,8 @@ NS_ASSUME_NONNULL_BEGIN
 #else
 #define LA_IPC_EXTERN extern __attribute__((visibility("hidden")))
 #endif
+
+NS_ASSUME_NONNULL_BEGIN
 
 LA_IPC_EXTERN NSString *const LAIPCServerName;
 

@@ -8,9 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
-NS_ASSUME_NONNULL_BEGIN
-
 @class LATestSpringBoardClient;
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface LATestClientFacadeSuite : NSObject
 - (instancetype)initWithClient:(LATestSpringBoardClient *)client NS_DESIGNATED_INITIALIZER;

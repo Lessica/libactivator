@@ -10,9 +10,12 @@
 
 #import "LATBuiltInListenerRegistrant.h"
 
+@class LATMediaEventSource;
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATHardwareActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
+- (instancetype)initWithMediaEventSource:(nullable LATMediaEventSource *)mediaEventSource;
 @end
 
 NS_ASSUME_NONNULL_END

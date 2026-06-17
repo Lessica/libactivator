@@ -11,6 +11,10 @@
 
 @class LATestRecorder;
 
+NS_ASSUME_NONNULL_BEGIN
+
 @interface LATestBuiltInTelephonyActionsSuite : NSObject
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 @end
+
+NS_ASSUME_NONNULL_END

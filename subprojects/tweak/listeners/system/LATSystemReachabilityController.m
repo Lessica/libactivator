@@ -24,10 +24,11 @@
     if (![helper respondsToSelector:@selector(isReachabilityActive)] ||
         ![helper respondsToSelector:@selector(setReachabilityActive:)]) {
         HBLogError(@"AXSpringBoardServerHelper cannot toggle Reachability for system action %@", listenerName ?: @"");
-        return YES;
+        return NO;
     }
-    [helper setReachabilityActive:![helper isReachabilityActive]];
-    return YES;
+    BOOL wasActive = [helper isReachabilityActive];
+    [helper setReachabilityActive:!wasActive];
+    return !wasActive;
 }
 
 - (nullable AXSpringBoardServerHelper *)axSpringBoardServerHelperForListenerName:(NSString *)listenerName {

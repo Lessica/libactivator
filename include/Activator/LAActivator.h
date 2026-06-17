@@ -8,11 +8,6 @@
 
 #import "LAActivatorVersion.h"
 
-NS_ASSUME_NONNULL_BEGIN
-
-// Main event dispatcher that is responsible for sending events, maintaining the list of actions/events, and querying
-// information about them
-
 @class UIImage;
 
 @class LAEvent;
@@ -21,6 +16,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol LAListener;
 @protocol LAEventDataSource;
+
+NS_ASSUME_NONNULL_BEGIN
+
+// Main event dispatcher that is responsible for sending events, maintaining the list of actions/events, and querying
+// information about them
 
 @interface LAActivator : NSObject
 LA_PRIVATE_IVARS(LAActivator)

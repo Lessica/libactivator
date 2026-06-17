@@ -92,18 +92,20 @@
 
     SBSwitcherController *switcherController = [self activeDisplaySwitcherController];
     if ([switcherController respondsToSelector:@selector(toggleMainSwitcherWithSource:animated:)]) {
-        if (![switcherController toggleMainSwitcherWithSource:0x14 animated:YES]) {
+        BOOL toggled = [switcherController toggleMainSwitcherWithSource:0x14 animated:YES];
+        if (!toggled) {
             HBLogWarn(@"SBSwitcherController refused to toggle main switcher for system action %@",
                       listenerName ?: @"");
         }
-        return YES;
+        return toggled;
     }
     if ([switcherController respondsToSelector:@selector(toggleMainSwitcherNoninteractivelyWithSource:animated:)]) {
-        if (![switcherController toggleMainSwitcherNoninteractivelyWithSource:0x14 animated:YES]) {
+        BOOL toggled = [switcherController toggleMainSwitcherNoninteractivelyWithSource:0x14 animated:YES];
+        if (!toggled) {
             HBLogWarn(@"SBSwitcherController refused to toggle main switcher noninteractively for system action %@",
                       listenerName ?: @"");
         }
-        return YES;
+        return toggled;
     }
 
     SBMainSwitcherViewController *legacySwitcher = [self legacyMainSwitcherViewController];
@@ -113,7 +115,7 @@
     }
 
     HBLogError(@"SpringBoard cannot activate switcher for system action %@", listenerName ?: @"");
-    return YES;
+    return NO;
 }
 
 - (BOOL)clearSwitcherForListenerName:(NSString *)listenerName {

@@ -9,12 +9,12 @@
 #import <CoreGraphics/CoreGraphics.h>
 #import <Foundation/Foundation.h>
 
+@class LAActivator, LAEvent, UIImage;
+
 NS_ASSUME_NONNULL_BEGIN
 
 // Listeners represent specific actions that can be performed in response to an event
 // Must be registered with LAActivator inside SpringBoard via the registerListener:forName: method
-
-@class LAActivator, LAEvent, UIImage;
 
 @protocol LAListener <NSObject>
 @optional

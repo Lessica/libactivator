@@ -77,8 +77,7 @@
 
 - (BOOL)performComposeAction:(LATComposeActionKind)kind listenerName:(NSString *)listenerName {
     if (kind == LATComposeActionKindNote) {
-        [self activateSystemPaperForListenerName:listenerName];
-        return YES;
+        return [self activateSystemPaperForListenerName:listenerName];
     }
 
     if ([self dismissPresentedComposeViewControllerAnimated:YES]) {
@@ -87,10 +86,9 @@
 
     UIViewController *composeViewController = [self composeViewControllerForKind:kind listenerName:listenerName];
     if (!composeViewController) {
-        return YES;
+        return NO;
     }
-    [self presentComposeViewController:composeViewController listenerName:listenerName];
-    return YES;
+    return [self presentComposeViewController:composeViewController listenerName:listenerName];
 }
 
 #pragma mark - MessageUI Compose
@@ -167,13 +165,12 @@
 
 #pragma mark - System Paper
 
-- (void)activateSystemPaperForListenerName:(NSString *)listenerName {
+- (BOOL)activateSystemPaperForListenerName:(NSString *)listenerName {
     if ([self shouldUseSystemNotesPresentation]) {
-        [self activateSystemNotesPresentationForListenerName:listenerName];
-        return;
+        return [self activateSystemNotesPresentationForListenerName:listenerName];
     }
 
-    [self activateSystemPaperRemoteAlertForListenerName:listenerName];
+    return [self activateSystemPaperRemoteAlertForListenerName:listenerName];
 }
 
 - (BOOL)shouldUseSystemNotesPresentation {
@@ -181,12 +178,12 @@
     return idiom == UIUserInterfaceIdiomPad || idiom == UIUserInterfaceIdiomMac;
 }
 
-- (void)activateSystemNotesPresentationForListenerName:(NSString *)listenerName {
+- (BOOL)activateSystemNotesPresentationForListenerName:(NSString *)listenerName {
     Class configurationClass = NSClassFromString(@"SBSSystemNotesPresentationConfiguration");
     Class handleClass = NSClassFromString(@"SBSSystemNotesPresentationHandle");
     if (!configurationClass || !handleClass) {
         HBLogError(@"System Notes presentation classes are unavailable for compose action %@", listenerName ?: @"");
-        return;
+        return NO;
     }
 
     SBSSystemNotesPresentationConfiguration *configuration =
@@ -196,17 +193,18 @@
     SBSSystemNotesPresentationHandle *handle = [[handleClass alloc] initWithConfiguration:configuration];
     if (![handle respondsToSelector:@selector(activate)]) {
         HBLogError(@"System Notes presentation handle cannot activate compose action %@", listenerName ?: @"");
-        return;
+        return NO;
     }
 
     [handle activate];
     HBLogDebug(@"Activated System Notes presentation for compose action %@", listenerName ?: @"");
+    return YES;
 }
 
-- (void)activateSystemPaperRemoteAlertForListenerName:(NSString *)listenerName {
+- (BOOL)activateSystemPaperRemoteAlertForListenerName:(NSString *)listenerName {
     if (self.systemPaperRemoteAlertHandle) {
         HBLogDebug(@"System Paper remote alert already exists for compose action %@", listenerName ?: @"");
-        return;
+        return YES;
     }
 
     Class definitionClass = NSClassFromString(@"SBSRemoteAlertDefinition");
@@ -215,7 +213,7 @@
     Class activationContextClass = NSClassFromString(@"SBSRemoteAlertActivationContext");
     if (!definitionClass || !configurationContextClass || !handleClass || !activationContextClass) {
         HBLogError(@"System Paper remote alert classes are unavailable for compose action %@", listenerName ?: @"");
-        return;
+        return NO;
     }
 
     SBSRemoteAlertDefinition *definition =
@@ -227,13 +225,14 @@
     SBSRemoteAlertActivationContext *activationContext = [[activationContextClass alloc] init];
     if (![handle respondsToSelector:@selector(activateWithContext:)]) {
         HBLogError(@"System Paper remote alert handle cannot activate compose action %@", listenerName ?: @"");
-        return;
+        return NO;
     }
 
     [handle registerObserver:self];
     [handle activateWithContext:activationContext];
     self.systemPaperRemoteAlertHandle = handle;
     HBLogDebug(@"Activated System Paper remote alert for compose action %@", listenerName ?: @"");
+    return YES;
 }
 
 - (void)cleanupSystemPaperRemoteAlertHandle:(SBSRemoteAlertHandle *)handle {
@@ -248,7 +247,11 @@
 
 #pragma mark - Presentation Window
 
-- (void)presentComposeViewController:(UIViewController *)composeViewController listenerName:(NSString *)listenerName {
+- (BOOL)presentComposeViewController:(UIViewController *)composeViewController listenerName:(NSString *)listenerName {
+    if (!composeViewController) {
+        return NO;
+    }
+
     UIWindow *keyWindow = [self currentKeyWindow];
     UIWindow *presentationWindow = self.presentationWindow;
     if (!presentationWindow) {
@@ -273,6 +276,7 @@
     self.presentedComposeViewController = composeViewController;
     [rootViewController presentViewController:composeViewController animated:YES completion:nil];
     HBLogDebug(@"Presented compose action %@", listenerName ?: @"");
+    return YES;
 }
 
 - (nullable UIWindow *)currentKeyWindow {

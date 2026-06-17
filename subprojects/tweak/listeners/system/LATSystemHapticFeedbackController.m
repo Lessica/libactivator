@@ -26,7 +26,7 @@
         break;
     default:
         HBLogError(@"Unknown haptic feedback type %ld for system action %@", (long)feedbackType, listenerName ?: @"");
-        break;
+        return NO;
     }
     return YES;
 }

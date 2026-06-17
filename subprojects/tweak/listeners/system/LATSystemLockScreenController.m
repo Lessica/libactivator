@@ -46,11 +46,11 @@ static NSString *const LATLockOptionsForceLockKey = @"SBUILockOptionsForceLockKe
 - (BOOL)showLockScreenForListenerName:(NSString *)listenerName {
     SBLockScreenManager *manager = [self lockScreenManagerForListenerName:listenerName];
     if (!manager) {
-        return YES;
+        return NO;
     }
     if (![manager respondsToSelector:@selector(remoteLock:)]) {
         HBLogError(@"SBLockScreenManager does not support remoteLock: for system action %@", listenerName ?: @"");
-        return YES;
+        return NO;
     }
     [manager remoteLock:YES];
     return YES;
@@ -96,11 +96,11 @@ static NSString *const LATLockOptionsForceLockKey = @"SBUILockOptionsForceLockKe
 - (BOOL)toggleLockScreenForListenerName:(NSString *)listenerName {
     SBLockScreenManager *manager = [self lockScreenManagerForListenerName:listenerName];
     if (!manager) {
-        return YES;
+        return NO;
     }
     if (![manager respondsToSelector:@selector(isUILocked)]) {
         HBLogError(@"SBLockScreenManager does not support isUILocked for system action %@", listenerName ?: @"");
-        return YES;
+        return NO;
     }
     if ([manager isUILocked]) {
         [self dismissLockScreenForListenerName:listenerName];
@@ -128,7 +128,8 @@ static NSString *const LATLockOptionsForceLockKey = @"SBUILockOptionsForceLockKe
 
     HBLogError(@"SBLockScreenManager does not support biometric lockout options for system action %@",
                listenerName ?: @"");
-    return [self showLockScreenForListenerName:listenerName];
+    [self showLockScreenForListenerName:listenerName];
+    return YES;
 }
 
 - (nullable SBLockScreenManager *)lockScreenManagerForListenerName:(NSString *)listenerName {

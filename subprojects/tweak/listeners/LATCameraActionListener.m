@@ -115,20 +115,23 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
         return;
     }
 
-    event.handled = YES;
-
-    if (![self listenerSelectorMatchesMetadataForActivator:activator]) {
+    if (![self listenerNameMatchesRequiredMetadata:listenerName activator:activator]) {
         HBLogWarn(@"Camera action %@ metadata selector does not match %@", listenerName ?: @"",
                   LATCameraActionSelectorInvokeShutter);
         return;
     }
 
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self performCameraShutterForEvent:event activator:activator];
-    });
+    event.handled = [self performCameraShutterForEvent:event activator:activator];
 }
 
 #pragma mark - Metadata Validation
+
+- (BOOL)listenerNameMatchesRequiredMetadata:(NSString *)listenerName activator:(LAActivator *)activator {
+    if (![listenerName isEqualToString:LATCameraActionListenerNameInvokeShutter]) {
+        return NO;
+    }
+    return [self listenerSelectorMatchesMetadataForActivator:activator];
+}
 
 - (BOOL)listenerSelectorMatchesMetadataForActivator:(LAActivator *)activator {
     id selector = [activator infoDictionaryValueOfKey:@"selector"
@@ -138,38 +141,38 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
 
 #pragma mark - Shutter Flow
 
-- (void)performCameraShutterForEvent:(LAEvent *)event activator:(LAActivator *)activator {
+- (BOOL)performCameraShutterForEvent:(LAEvent *)event activator:(LAActivator *)activator {
     if ([self shouldOpenLockScreenCameraForEvent:event activator:activator] ||
         [self.lockScreenCameraLauncher isLockScreenCameraVisible]) {
         [self beginPendingShutterForLockScreenCamera:YES];
         if ([self.lockScreenCameraLauncher isLockScreenCameraVisible]) {
             [self schedulePendingLockScreenCameraShutterCompletionWithReason:@"lock screen camera already visible"];
-            return;
+            return NO;
         }
 
         if ([self.lockScreenCameraLauncher enqueueOpenLockScreenCameraWithCompletion:^{
                 [self schedulePendingLockScreenCameraShutterCompletionWithReason:
                           @"lock screen camera activation completed"];
             }]) {
-            return;
+            return NO;
         }
 
         [self cancelPendingShutterWithReason:@"Lock screen camera launch failed"];
-        return;
+        return NO;
     }
 
     LATRuntimeStateSource *runtimeStateSource = self.registry.runtimeStateSource;
     [runtimeStateSource refreshForegroundDisplayIdentifier];
 
     if ([runtimeStateSource.displayIdentifierForCurrentApplication isEqualToString:LATCameraApplicationIdentifier]) {
-        [self sendCameraShutterHIDWithReason:@"camera foreground"];
-        return;
+        return [self sendCameraShutterHIDWithReason:@"camera foreground"];
     }
 
     [self beginPendingShutterForLockScreenCamera:NO];
     if (![self.launcher enqueueLaunchApplicationWithIdentifier:LATCameraApplicationIdentifier]) {
         [self cancelPendingShutterWithReason:@"Camera launch failed"];
     }
+    return NO;
 }
 
 - (BOOL)shouldOpenLockScreenCameraForEvent:(LAEvent *)event activator:(LAActivator *)activator {

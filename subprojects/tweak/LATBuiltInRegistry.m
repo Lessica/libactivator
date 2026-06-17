@@ -162,6 +162,9 @@
     if (registrantClass == LATSystemActionListener.class) {
         return [[LATSystemActionListener alloc] initWithLauncher:self.applicationLauncher registry:self];
     }
+    if (registrantClass == LATHardwareActionListener.class) {
+        return [[LATHardwareActionListener alloc] initWithMediaEventSource:self.mediaEventSource];
+    }
     if (registrantClass == LATCameraActionListener.class) {
         return [[LATCameraActionListener alloc] initWithLauncher:self.applicationLauncher registry:self];
     }

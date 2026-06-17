@@ -29,10 +29,15 @@
 }
 
 - (BOOL)answerIncomingCallForListenerName:(NSString *)listenerName {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self answerIncomingCallOnMainForListenerName:listenerName];
+    if (NSThread.isMainThread) {
+        return [self answerIncomingCallOnMainForListenerName:listenerName];
+    }
+
+    __block BOOL answered = NO;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        answered = [self answerIncomingCallOnMainForListenerName:listenerName];
     });
-    return YES;
+    return answered;
 }
 
 - (BOOL)answerIncomingCallOnMainForListenerName:(NSString *)listenerName {
@@ -67,10 +72,15 @@
 }
 
 - (BOOL)disconnectCallsForListenerName:(NSString *)listenerName {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self disconnectCallsOnMainForListenerName:listenerName];
+    if (NSThread.isMainThread) {
+        return [self disconnectCallsOnMainForListenerName:listenerName];
+    }
+
+    __block BOOL disconnected = NO;
+    dispatch_sync(dispatch_get_main_queue(), ^{
+        disconnected = [self disconnectCallsOnMainForListenerName:listenerName];
     });
-    return YES;
+    return disconnected;
 }
 
 - (BOOL)disconnectCallsOnMainForListenerName:(NSString *)listenerName {

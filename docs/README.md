@@ -13,7 +13,6 @@
 
 - `BUILT_IN_ROADMAP.md`：内置 event / listener / action 的阶段路线与模块归属。
 - `BUILT_IN_ACTION_TRACKER.md`：内置 listener/action 的逐项状态、依据和首次验证方式。
-- `LISTENER_HANDLED_BASELINE.md`：全量 listener 测试和 `event.handled` 语义级对齐的工作基准。
 
 ## 更新规则
 

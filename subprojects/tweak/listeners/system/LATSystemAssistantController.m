@@ -27,17 +27,17 @@
     AXSpringBoardServer *server = [self axSpringBoardServerForListenerName:listenerName];
     if ([server respondsToSelector:@selector(isSiriVisible)] && [server isSiriVisible]) {
         if ([server respondsToSelector:@selector(dismissSiri)] && [server dismissSiri]) {
-            return YES;
+            return NO;
         }
         HBLogError(@"AXSpringBoardServer cannot dismiss Siri for system action %@", listenerName ?: @"");
-        return YES;
+        return NO;
     }
 
     AXPISystemActionHelper *helper =
         [self accessibilityPhysicalInteractionSystemActionHelperForListenerName:listenerName];
     if (![helper respondsToSelector:@selector(activateSiri)]) {
         HBLogError(@"AXPISystemActionHelper cannot activate Siri for system action %@", listenerName ?: @"");
-        return YES;
+        return NO;
     }
     [helper activateSiri];
     return YES;
