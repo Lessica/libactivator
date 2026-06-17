@@ -20,46 +20,46 @@ extern int reboot3(uint64_t flags, ...);
 
 #define RB2_USERREBOOT (0x2000000000000000llu)
 
-typedef void (*LAUNCHDataDictionaryApplier)(const char *name, launch_data_t value, void *context);
+typedef void (*data_dictionary_applier)(const char *name, launch_data_t value, void *context);
 
 typedef struct {
-    LAUNCHDataDictionaryApplier applier;
+    data_dictionary_applier applier;
     void *context;
-} LAUNCHDataDictionaryIteration;
+} data_dictionary_iteration;
 
 typedef struct {
-    bool hasDYLD;
-} LAUNCHEnvironmentContext;
+    bool has_dyld;
+} environment_context;
 
 typedef struct {
-    pid_t parentPID;
-    struct stat correctExecutable;
+    pid_t parent_pid;
+    struct stat correct_executable;
     bool allowed;
-} LAUNCHCallerValidationContext;
+} caller_validation_context;
 
-static void LAUNCHDataDictionaryIterator(launch_data_t value, const char *name, void *context) {
-    LAUNCHDataDictionaryIteration *iteration = (LAUNCHDataDictionaryIteration *)context;
+static void data_dictionary_iterator(launch_data_t value, const char *name, void *context) {
+    data_dictionary_iteration *iteration = (data_dictionary_iteration *)context;
     iteration->applier(name, value, iteration->context);
 }
 
-static void LAUNCHDataDictionaryApply(launch_data_t data, LAUNCHDataDictionaryApplier applier, void *context) {
-    LAUNCHDataDictionaryIteration iteration = {
+static void data_dictionary_apply(launch_data_t data, data_dictionary_applier applier, void *context) {
+    data_dictionary_iteration iteration = {
         .applier = applier,
         .context = context,
     };
-    launch_data_dict_iterate(data, LAUNCHDataDictionaryIterator, &iteration);
+    launch_data_dict_iterate(data, data_dictionary_iterator, &iteration);
 }
 
-static void LAUNCHDetectDYLDEnvironmentVariable(const char *name, launch_data_t value, void *context) {
+static void detect_dyld_environment_variable(const char *name, launch_data_t value, void *context) {
     (void)value;
 
-    LAUNCHEnvironmentContext *environmentContext = (LAUNCHEnvironmentContext *)context;
+    environment_context *environment = (environment_context *)context;
     if (strncmp(name, "DYLD_", 5) == 0) {
-        environmentContext->hasDYLD = true;
+        environment->has_dyld = true;
     }
 }
 
-static launch_data_t LAUNCHJobProgramData(launch_data_t job) {
+static launch_data_t job_program_data(launch_data_t job) {
     launch_data_t string = launch_data_dict_lookup(job, LAUNCH_JOBKEY_PROGRAM);
     if (string != NULL && launch_data_get_type(string) == LAUNCH_DATA_STRING) {
         return string;
@@ -82,14 +82,14 @@ static launch_data_t LAUNCHJobProgramData(launch_data_t job) {
     return string;
 }
 
-static void LAUNCHValidateCallerLaunchJob(const char *name, launch_data_t value, void *context) {
+static void validate_caller_launch_job(const char *name, launch_data_t value, void *context) {
     (void)name;
 
     if (launch_data_get_type(value) != LAUNCH_DATA_DICTIONARY) {
         return;
     }
 
-    LAUNCHCallerValidationContext *validationContext = (LAUNCHCallerValidationContext *)context;
+    caller_validation_context *validation = (caller_validation_context *)context;
 
     launch_data_t integer = launch_data_dict_lookup(value, LAUNCH_JOBKEY_PID);
     if (integer == NULL || launch_data_get_type(integer) != LAUNCH_DATA_INTEGER) {
@@ -97,22 +97,22 @@ static void LAUNCHValidateCallerLaunchJob(const char *name, launch_data_t value,
     }
 
     pid_t pid = (pid_t)launch_data_get_integer(integer);
-    if (pid != validationContext->parentPID) {
+    if (pid != validation->parent_pid) {
         return;
     }
 
     launch_data_t variables = launch_data_dict_lookup(value, LAUNCH_JOBKEY_ENVIRONMENTVARIABLES);
     if (variables != NULL && launch_data_get_type(variables) == LAUNCH_DATA_DICTIONARY) {
-        LAUNCHEnvironmentContext environmentContext = {
-            .hasDYLD = false,
+        environment_context environment = {
+            .has_dyld = false,
         };
-        LAUNCHDataDictionaryApply(variables, LAUNCHDetectDYLDEnvironmentVariable, &environmentContext);
-        if (environmentContext.hasDYLD) {
+        data_dictionary_apply(variables, detect_dyld_environment_variable, &environment);
+        if (environment.has_dyld) {
             return;
         }
     }
 
-    launch_data_t string = LAUNCHJobProgramData(value);
+    launch_data_t string = job_program_data(value);
     if (string == NULL) {
         return;
     }
@@ -127,13 +127,13 @@ static void LAUNCHValidateCallerLaunchJob(const char *name, launch_data_t value,
         return;
     }
 
-    if (validationContext->correctExecutable.st_dev == check.st_dev &&
-        validationContext->correctExecutable.st_ino == check.st_ino) {
-        validationContext->allowed = true;
+    if (validation->correct_executable.st_dev == check.st_dev &&
+        validation->correct_executable.st_ino == check.st_ino) {
+        validation->allowed = true;
     }
 }
 
-static bool LAUNCHParentIsSpringBoard(void) {
+static bool parent_is_springboard(void) {
     struct stat correct;
     if (lstat("/System/Library/CoreServices/SpringBoard.app/SpringBoard", &correct) == -1) {
         return false;
@@ -154,22 +154,22 @@ static bool LAUNCHParentIsSpringBoard(void) {
         return false;
     }
 
-    LAUNCHCallerValidationContext validationContext = {
-        .parentPID = getppid(),
-        .correctExecutable = correct,
+    caller_validation_context validation = {
+        .parent_pid = getppid(),
+        .correct_executable = correct,
         .allowed = false,
     };
-    LAUNCHDataDictionaryApply(response, LAUNCHValidateCallerLaunchJob, &validationContext);
+    data_dictionary_apply(response, validate_caller_launch_job, &validation);
     launch_data_free(response);
 
-    return validationContext.allowed;
+    return validation.allowed;
 }
 
 int main(int argc, char *argv[]) {
     (void)argc;
     (void)argv;
 
-    if (!LAUNCHParentIsSpringBoard()) {
+    if (!parent_is_springboard()) {
         fprintf(stderr, "Unauthorized caller\n");
         return EX_NOPERM;
     }
@@ -178,13 +178,16 @@ int main(int argc, char *argv[]) {
         perror("setgid");
         return EX_OSERR;
     }
+
     if (setuid(0) != 0) {
         perror("setuid");
         return EX_OSERR;
     }
+
     if (reboot3(RB2_USERREBOOT) != 0) {
         perror("reboot3");
         return EX_UNAVAILABLE;
     }
+
     return 0;
 }
