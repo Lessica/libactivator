@@ -62,6 +62,10 @@
         HBLogWarn(@"Application action %@ has no registered descriptor", listenerName ?: @"");
         return;
     }
+    if (![self shouldHandleApplicationDescriptor:descriptor forEvent:event activator:activator]) {
+        HBLogDebug(@"Application action %@ already targets the current application", listenerName ?: @"");
+        return;
+    }
 
     event.handled = YES;
     if ([self shouldOpenLockScreenCameraForDescriptor:descriptor
@@ -76,6 +80,24 @@
     }
 
     [self.launcher enqueueLaunchApplicationWithIdentifier:descriptor.identifier];
+}
+
+- (BOOL)shouldHandleApplicationDescriptor:(LATApplicationDescriptor *)descriptor
+                                 forEvent:(LAEvent *)event
+                                activator:(LAActivator *)activator {
+    if (!descriptor || descriptor.identifier.length == 0) {
+        return NO;
+    }
+
+    NSString *eventMode = event.mode ?: activator.currentEventMode;
+    if ([eventMode isEqualToString:LAEventModeApplication]) {
+        NSString *currentApplicationIdentifier = [self currentApplicationIdentifierWithActivator:activator];
+        if ([currentApplicationIdentifier isEqualToString:descriptor.identifier]) {
+            return NO;
+        }
+    }
+
+    return YES;
 }
 
 - (BOOL)shouldOpenLockScreenCameraForDescriptor:(LATApplicationDescriptor *)descriptor
@@ -93,6 +115,15 @@
     }
 
     return self.registry.runtimeStateSource.isUILocked;
+}
+
+- (NSString *)currentApplicationIdentifierWithActivator:(LAActivator *)activator {
+    LATRuntimeStateSource *runtimeStateSource = self.registry.runtimeStateSource;
+    if (runtimeStateSource) {
+        [runtimeStateSource refreshForegroundDisplayIdentifier];
+        return [runtimeStateSource displayIdentifierForCurrentApplication];
+    }
+    return activator.displayIdentifierForCurrentApplication;
 }
 
 - (NSString *)activator:(LAActivator *)activator requiresLocalizedTitleForListenerName:(NSString *)listenerName {

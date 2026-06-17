@@ -22,6 +22,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)setApplicationDescriptors:(NSDictionary<NSString *, LATApplicationDescriptor *> *)descriptorsByIdentifier;
 - (nullable LATApplicationDescriptor *)applicationDescriptorForIdentifier:(NSString *)identifier;
+- (BOOL)shouldHandleApplicationDescriptor:(nullable LATApplicationDescriptor *)descriptor
+                                 forEvent:(LAEvent *)event
+                                activator:(LAActivator *)activator;
 
 @end
 

@@ -51,13 +51,16 @@
 
 ## Compose、Phone 与 Camera
 
+- 旧 `_LASimpleListener` 的 metadata-backed URL action 使用 `openURLWithActivator:event:listenerName:`，只有 `url` metadata 存在时才调用 SpringBoard URL 打开并返回 handled；缺少 URL metadata 时返回未处理。Phone tab actions 是单独 selector，内部硬编码 URL 并固定返回 handled。当前 `LATURLActionListener` 对齐该策略：unsupported name 不消费，metadata-backed URL action 只有解析出可提交 URL 才消费，hardcoded Phone URL action 不依赖 URL metadata，真实打开失败不回滚 handled。
 - `libactivator.mail.compose-message`、`libactivator.sms.compose-message`、`libactivator.notes.compose-note` 旧实现都使用临时 `UIWindow` presenter；当 compose UI 已存在时，再次触发会关闭当前 UI。当前 Mail/SMS 继续 runtime 加载 `MessageUI.framework`；Notes 旧 `Social.framework` / sharing extension 路径在现代 iOS 验证无效，不保留 fallback。
 - Phone tab actions 旧实现内部打开 URL。当前实现按真机验证使用 `mobilephone-favorites:`、`mobilephone-recents:`、`mobilephone-contacts:`、`vmshow:`；`phone.keypad` 恢复旧 `mobilephone-recents:keypad` URL，但现代 iOS 需要只注入 `com.apple.mobilephone` 的 companion tweak 才能切到 keypad。
 - `libactivator.phone.answer-call` 和 `disconnect-call` 的 1.9.13 resource metadata 都曾使用 selector `answerCall`。当前将 `disconnect-call` 规范化为 `disconnectCall`，并由 telephony listener 继续以 selector metadata gate 区分动作。
+- 旧 `_LASimpleListener -activator:receiveEvent:forListenerName:` 读取 listener 的 `selector` metadata 并调用对应 selector，只有 selector 方法返回真值时才标记 handled。当前 `LATTelephonyActionListener` 对齐该 gate：unsupported name、selector metadata 缺失或不匹配均不消费；匹配后先消费事件，再提交 CoreTelephony answer/disconnect 请求。
 - `answer-call` 需要持久 CoreTelephony call state observer；单次读取 current calls 会出现首个来电可接、后续来电不可接但仍可挂断的问题。
 - `libactivator.camera.invoke-shutter` 旧语义是先尝试相机快门，失败时打开 Camera 并等待 ready 后重试。当前现代实现拆成 SpringBoard listener 与只注入 Camera 的 companion tweak：锁屏状态优先 CoverSheet camera，非锁屏状态下只有当前前台为 `com.apple.camera` 时才直接发送 Consumer page `VolumeDecrement` HID。
 - Camera ready 不能只相信 launch completion 或 `UIApplication setWantsVolumeButtonEvents:YES`。当前 companion tweak 以 `CAMViewfinderViewController -_updateEnabledControlsWithReason:forceLog:` 当场满足 Camera app active 且已请求 volume button events 为条件，延迟复核后发送 `libactivator.camera.ready`。
 - Synthetic volume HID 发送前，SpringBoard 端只使用可直接访问的 `appsRegisteredForVolumeEvents.firstObject.bundleIdentifier == com.apple.camera` 作为保守 gate。
+- 旧 `LAApplicationListener` 的普通 dynamic application listener 在 SpringBoard mode 下有 App object 即延迟调用 `activateApplication:` 并标记 handled；lockscreen mode 下旧实现只有非密码保护状态才解锁并标记 handled；application mode 下复用 `activateApplication:` 返回值，目标 App 等于当前前台 App 时返回未处理。当前 `LATApplicationActionListener` 对齐可见分支：缺少 descriptor 不消费，application mode 目标为当前 App 不消费，其他有 descriptor 的启动路径消费后异步提交；真实锁屏解锁/启动结果由 device-runtime 或手工验收覆盖。
 - `libactivator.system.previous-app` 在 1.9.13 中是单独 `_LAPreviousApplicationListener`，不是 `_LASimpleListener` selector。当前实现用 `LATRuntimeStateSource` O(1) 缓存最近打开 App 和前一个不同 App，再由 `LATSystemPreviousApplicationController` 打开目标 identifier。
 
 ## Back 与键盘动作

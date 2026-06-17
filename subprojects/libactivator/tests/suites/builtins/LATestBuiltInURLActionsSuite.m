@@ -111,6 +111,22 @@
             caseName:@"url-action-hardcoded-phone-keypad-url"
               reason:@"Hardcoded Phone keypad URL action did not resolve to the expected URL"];
 
+    BOOL allSupportedNamesResolveURL = YES;
+    for (NSString *listenerName in supportedNames) {
+        allSupportedNamesResolveURL =
+            allSupportedNamesResolveURL && [urlAction URLForListenerName:listenerName activator:activator] != nil;
+    }
+    [recorder expect:allSupportedNamesResolveURL
+            caseName:@"url-action-supported-names-resolve-handled-url"
+              reason:@"At least one supported URL action did not resolve a URL that can be handled"];
+
+    [recorder expect:[urlAction URLForListenerName:@"libactivator.clock.timer" activator:nil] == nil
+            caseName:@"url-action-missing-metadata-unhandled"
+              reason:@"Metadata-backed URL action resolved without URL metadata"];
+    [recorder expect:[urlAction URLForListenerName:@"libactivator.phone.recents" activator:nil] != nil
+            caseName:@"url-action-hardcoded-phone-url-handled-without-metadata"
+              reason:@"Hardcoded Phone URL action should not depend on URL metadata"];
+
     NSString *selectedVersionedURL = [urlAction urlStringInURLsValue:@[
         @"prefs:root=General",
         @0,

@@ -54,13 +54,13 @@
         return;
     }
 
-    event.handled = YES;
-
-    if (![self listenerSelectorMatchesCommand:command activator:activator]) {
+    if (![self shouldHandleListenerName:listenerName activator:activator]) {
         HBLogWarn(@"Telephony action %@ metadata selector does not match %@", listenerName ?: @"",
                   command.selectorName);
         return;
     }
+
+    event.handled = YES;
 
     switch (command.kind) {
     case LATTelephonyActionKindAnswerCall:
@@ -70,6 +70,14 @@
         [self.callController disconnectCallsForListenerName:listenerName];
         break;
     }
+}
+
+- (BOOL)shouldHandleListenerName:(NSString *)listenerName activator:(LAActivator *)activator {
+    LATTelephonyActionCommand *command = [self.class commandsByListenerName][listenerName ?: @""];
+    if (!command) {
+        return NO;
+    }
+    return [self listenerSelectorMatchesCommand:command activator:activator];
 }
 
 - (BOOL)listenerSelectorMatchesCommand:(LATTelephonyActionCommand *)command activator:(LAActivator *)activator {

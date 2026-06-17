@@ -96,21 +96,27 @@
         return;
     }
 
-    event.handled = YES;
-
-    NSString *urlString = [self urlStringForListenerName:listenerName activator:activator];
-    if (urlString.length == 0) {
+    NSURL *url = [self URLForListenerName:listenerName activator:activator];
+    if (!url) {
         HBLogWarn(@"URL action %@ has no URL metadata", listenerName ?: @"");
         return;
     }
 
-    NSURL *url = [NSURL URLWithString:urlString];
-    if (url.scheme.length == 0) {
-        HBLogWarn(@"URL action %@ has invalid URL metadata: %@", listenerName ?: @"", urlString);
-        return;
+    event.handled = YES;
+    [self openURL:url listenerName:listenerName];
+}
+
+- (NSURL *)URLForListenerName:(NSString *)listenerName activator:(LAActivator *)activator {
+    NSString *urlString = [self urlStringForListenerName:listenerName activator:activator];
+    if (urlString.length == 0) {
+        return nil;
     }
 
-    [self openURL:url listenerName:listenerName];
+    NSURL *url = [NSURL URLWithString:urlString];
+    if (url.scheme.length == 0) {
+        return nil;
+    }
+    return url;
 }
 
 - (NSString *)urlStringForListenerName:(NSString *)listenerName activator:(LAActivator *)activator {

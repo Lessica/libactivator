@@ -24,10 +24,15 @@ NS_ASSUME_NONNULL_BEGIN
 + (BOOL)listenerNameHasRequiredMetadata:(NSString *)listenerName activator:(LAActivator *)activator;
 @end
 
+@protocol LATestTelephonyActionListener <LATestSelectorBackedBuiltInListener, LAListener>
+- (BOOL)shouldHandleListenerName:(NSString *)listenerName activator:(nullable LAActivator *)activator;
+@end
+
 @protocol LATestURLActionListener <LATestBuiltInListenerAllowlist>
 + (BOOL)listenerNameHasRequiredMetadata:(NSString *)listenerName activator:(LAActivator *)activator;
 - (nullable NSString *)urlStringForListenerName:(NSString *)listenerName activator:(LAActivator *)activator;
 - (nullable NSString *)urlStringInURLsValue:(id)value;
+- (nullable NSURL *)URLForListenerName:(NSString *)listenerName activator:(nullable LAActivator *)activator;
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName;
 @end
 
@@ -57,6 +62,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol LATestDynamicApplicationProvider <NSObject>
 + (NSArray<id<LATestDynamicApplicationDescriptor>> *)visibleApplicationDescriptors;
+@end
+
+@protocol LATestDynamicApplicationActionListener <LAListener>
+- (instancetype)initWithLauncher:(nullable id)launcher registry:(nullable id)registry;
+- (void)setApplicationDescriptors:(NSDictionary<NSString *, id<LATestDynamicApplicationDescriptor>> *)descriptorsByIdentifier;
+- (BOOL)shouldHandleApplicationDescriptor:(nullable id<LATestDynamicApplicationDescriptor>)descriptor
+                                 forEvent:(LAEvent *)event
+                                activator:(LAActivator *)activator;
 @end
 
 NS_ASSUME_NONNULL_END

@@ -15,8 +15,8 @@
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInTelephonyActions"];
 
-    Class<LATestSelectorBackedBuiltInListener> telephonyActionClass =
-        (Class<LATestSelectorBackedBuiltInListener>)NSClassFromString(@"LATTelephonyActionListener");
+    Class<LATestTelephonyActionListener> telephonyActionClass =
+        (Class<LATestTelephonyActionListener>)NSClassFromString(@"LATTelephonyActionListener");
     [recorder expect:telephonyActionClass != Nil
             caseName:@"telephony-action-class-available"
               reason:@"LATTelephonyActionListener class was not loaded in SpringBoard"];
@@ -59,7 +59,18 @@
             caseName:@"phone-url-action-not-owned-by-telephony-listener"
               reason:@"Phone tab URL action remained in LATTelephonyActionListener"];
 
-    id<LAListener> telephonyAction = [[(Class)telephonyActionClass alloc] init];
+    id<LATestTelephonyActionListener> telephonyAction = [[(Class)telephonyActionClass alloc] init];
+    for (NSString *listenerName in expectedSelectors) {
+        [recorder expect:[telephonyAction shouldHandleListenerName:listenerName activator:activator]
+                caseName:[NSString stringWithFormat:@"telephony-action-valid-metadata-handled-%@", listenerName]
+                  reason:@"Telephony action did not consume a listener name with matching selector metadata"];
+    }
+
+    [recorder expect:![telephonyAction shouldHandleListenerName:@"libactivator.phone.answer-call"
+                                                      activator:nil]
+            caseName:@"telephony-action-missing-metadata-unhandled"
+              reason:@"Telephony action consumed a listener name without matching selector metadata"];
+
     LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.telephony"
                                                   mode:LAEventModeSpringBoard];
     [telephonyAction activator:activator

@@ -13,6 +13,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATTelephonyActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
+- (BOOL)shouldHandleListenerName:(NSString *)listenerName activator:(nullable LAActivator *)activator;
 @end
 
 NS_ASSUME_NONNULL_END

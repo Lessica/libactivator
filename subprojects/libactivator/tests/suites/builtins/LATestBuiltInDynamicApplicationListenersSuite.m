@@ -8,6 +8,7 @@
 
 #import "LATestBuiltInDynamicApplicationListenersSuite.h"
 
+#import "LARuntimeContext.h"
 #import "LATestEnvironment.h"
 #import "LATestTestingProtocols.h"
 
@@ -20,7 +21,8 @@
         (Class<LATestDynamicApplicationProvider>)NSClassFromString(@"LATApplicationListenerProvider");
     Class<LATestDynamicApplicationDescriptorFactory> descriptorClass =
         (Class<LATestDynamicApplicationDescriptorFactory>)NSClassFromString(@"LATApplicationDescriptor");
-    Class listenerClass = NSClassFromString(@"LATApplicationActionListener");
+    Class<LATestDynamicApplicationActionListener> listenerClass =
+        (Class<LATestDynamicApplicationActionListener>)NSClassFromString(@"LATApplicationActionListener");
 
     [recorder expect:providerClass != Nil
             caseName:@"dynamic-application-provider-class-available"
@@ -80,6 +82,10 @@
     }
 
     [self runDescriptorModelTestsWithRecorder:recorder descriptorClass:descriptorClass];
+    [self runHandledSemanticsTestsWithRecorder:recorder
+                                     activator:activator
+                               descriptorClass:descriptorClass
+                                 listenerClass:listenerClass];
 }
 
 + (void)runDescriptorModelTestsWithRecorder:(LATestRecorder *)recorder
@@ -159,6 +165,78 @@
     [recorder expect:[webClipDescriptor isWebClip] && ![webClipDescriptor isVisibleApplication]
             caseName:@"dynamic-application-webclip-filtered"
               reason:@"WebClip descriptor was not filtered"];
+}
+
++ (void)runHandledSemanticsTestsWithRecorder:(LATestRecorder *)recorder
+                                   activator:(LAActivator *)activator
+                             descriptorClass:(Class<LATestDynamicApplicationDescriptorFactory>)descriptorClass
+                               listenerClass:(Class<LATestDynamicApplicationActionListener>)listenerClass {
+    id<LATestDynamicApplicationDescriptor> currentDescriptor =
+        [descriptorClass descriptorWithIdentifier:@"com.example.current"
+                                      displayName:@"Current"
+                                  applicationType:@"User"
+                                          appTags:@[]
+                                    recordAppTags:@[]
+                                    bundleAppTags:@[]
+                                 launchProhibited:NO];
+    id<LATestDynamicApplicationDescriptor> targetDescriptor =
+        [descriptorClass descriptorWithIdentifier:@"com.example.target"
+                                      displayName:@"Target"
+                                  applicationType:@"User"
+                                          appTags:@[]
+                                    recordAppTags:@[]
+                                    bundleAppTags:@[]
+                                 launchProhibited:NO];
+
+    id<LATestDynamicApplicationActionListener> listener = [[(Class)listenerClass alloc] initWithLauncher:nil
+                                                                                                registry:nil];
+    [listener setApplicationDescriptors:@{
+        currentDescriptor.identifier : currentDescriptor,
+        targetDescriptor.identifier : targetDescriptor,
+    }];
+
+    [LATestEnvironment cleanRuntimeInputStateWithActivator:activator];
+    LARuntimeContext *runtimeContext = [LATestEnvironment runtimeContextForActivator:activator];
+    [runtimeContext updateEventMode:LAEventModeApplication
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:currentDescriptor.identifier
+                           screenOn:YES];
+
+    LAEvent *applicationModeEvent = [LAEvent eventWithName:@"libactivator.test.dynamic.application"
+                                                      mode:LAEventModeApplication];
+    [recorder expect:![listener shouldHandleApplicationDescriptor:currentDescriptor
+                                                        forEvent:applicationModeEvent
+                                                       activator:activator]
+            caseName:@"dynamic-application-current-app-unhandled"
+              reason:@"Dynamic application listener consumed an event targeting the current application"];
+    [recorder expect:[listener shouldHandleApplicationDescriptor:targetDescriptor
+                                                       forEvent:applicationModeEvent
+                                                      activator:activator]
+            caseName:@"dynamic-application-different-app-handled"
+              reason:@"Dynamic application listener did not consume an event targeting a different application"];
+    [recorder expect:![listener shouldHandleApplicationDescriptor:nil
+                                                        forEvent:applicationModeEvent
+                                                       activator:activator]
+            caseName:@"dynamic-application-missing-descriptor-unhandled"
+              reason:@"Dynamic application listener consumed an event without a descriptor"];
+
+    LAEvent *springBoardEvent = [LAEvent eventWithName:@"libactivator.test.dynamic.application"
+                                                  mode:LAEventModeSpringBoard];
+    [recorder expect:[listener shouldHandleApplicationDescriptor:currentDescriptor
+                                                       forEvent:springBoardEvent
+                                                      activator:activator]
+            caseName:@"dynamic-application-springboard-mode-handled"
+              reason:@"Dynamic application listener did not consume a SpringBoard-mode application launch"];
+
+    LAEvent *lockScreenEvent = [LAEvent eventWithName:@"libactivator.test.dynamic.application"
+                                                 mode:LAEventModeLockScreen];
+    [recorder expect:[listener shouldHandleApplicationDescriptor:currentDescriptor
+                                                       forEvent:lockScreenEvent
+                                                      activator:activator]
+            caseName:@"dynamic-application-lockscreen-mode-handled"
+              reason:@"Dynamic application listener did not consume a lockscreen-mode application launch"];
+
+    [LATestEnvironment cleanRuntimeInputStateWithActivator:activator];
 }
 
 @end

@@ -13,13 +13,13 @@
 | Family | 支持范围 | 当前 handled 基线 | 首轮测试口径 |
 | --- | --- | --- | --- |
 | Nothing | `libactivator.system.nothing` | 合法 name 立即 `handled = YES`。 | stable 已直接发送并断言 handled。 |
-| URL actions | Clock、Settings、Phone URL action | unsupported name 不消费；合法 name 在 URL 解析和打开前先消费，URL 缺失、无效或打开失败不回滚 handled。 | stable 覆盖 allowlist、metadata、URL 解析和 unsupported unhandled；不在 stable 打开真实 URL。 |
+| URL actions | Clock、Settings、Phone URL action | 已对齐旧 `_LASimpleListener`：unsupported name 不消费；metadata-backed URL action 只有解析出可提交 URL 时才消费；Phone tab hardcoded URL action 不依赖 URL metadata 且解析成功即消费；真实打开失败不回滚 handled。 | stable 覆盖 allowlist、metadata、URL 解析、缺失 metadata 不消费、hardcoded Phone URL 可消费和 unsupported unhandled；不在 stable 打开真实 URL。 |
 | Hardware actions | Media key、volume、brightness、Home/Sleep、screenshot、Spotlight、vibrate、keyboard | unsupported name 不消费；合法 command 在 metadata recheck 和 HID/vibrate 副作用前先消费。 | stable 覆盖 allowlist、selector metadata 和 unsupported unhandled；真实 HID/vibrate 走手工或 device-runtime。 |
 | System actions | Modal/system UI、lock、ringer、power、orientation、haptic、back、switcher 等 | unsupported name 不消费；多数合法 command 先消费再提交动作。`system.previous-app` 和 `system.back` 当前按 controller 结果回写 handled，是首轮 1.9.13 对齐重点。 | stable 覆盖 allowlist、selector metadata、特殊 metadata 和 unsupported unhandled；副作用动作不在 stable 直接触发。 |
 | Camera action | `libactivator.camera.invoke-shutter` | unsupported name 不消费；合法 name 先消费，再异步执行 shutter/open camera 流程。 | stable 覆盖 allowlist、selector metadata 和 unsupported unhandled；真实相机效果走手工或 device-runtime。 |
 | Compose actions | Mail、SMS、Notes compose | unsupported name 不消费；合法 command 在 metadata recheck 和 presenter 副作用前先消费。 | stable 覆盖 allowlist、selector metadata 和 unsupported unhandled；真实 compose UI 不进 stable。 |
-| Telephony actions | Answer、disconnect call | unsupported name 不消费；合法 command 在 metadata recheck 和 CoreTelephony 副作用前先消费。 | stable 覆盖 allowlist、selector metadata 和 unsupported unhandled；真实来电场景走手工或 device-runtime。 |
-| Dynamic application listeners | SpringBoard 可见应用 listener | 未注册 descriptor 不消费；已注册 application listener 先消费，再提交 app launch 或 lock screen camera path。 | stable 覆盖 descriptor 分类、provider、注册和一个真实可控 dynamic listener dispatch；更广泛 app launch 走 device-runtime。 |
+| Telephony actions | Answer、disconnect call | 已对齐旧 `_LASimpleListener`：unsupported name 不消费；selector metadata 缺失或不匹配不消费；合法 command 在 CoreTelephony 副作用前先消费，真实来电/挂断结果不回滚 handled。 | stable 覆盖 allowlist、selector metadata、合法 metadata 消费、缺失 metadata 不消费和 unsupported unhandled；真实来电场景走手工或 device-runtime。 |
+| Dynamic application listeners | SpringBoard 可见应用 listener | 已对齐旧 `LAApplicationListener`：未注册 descriptor 不消费；SpringBoard mode 和 lockscreen mode 下有 descriptor 即消费并提交启动；application mode 下只有目标 App 不是当前前台 App 时才消费。 | stable 覆盖 descriptor 分类、provider、注册、missing descriptor 不消费、当前 App 不消费、不同 App/SpringBoard/lockscreen 路径消费；真实 app launch 走 device-runtime。 |
 
 ## 推进顺序
 
