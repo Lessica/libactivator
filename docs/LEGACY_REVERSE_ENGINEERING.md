@@ -46,7 +46,7 @@
 - `libactivator.system.power-menu` 的现代有效入口是 `SBMainWorkspace.sharedInstance[IfExists] presentPowerDownTransientOverlay`。
 - `libactivator.system.edit-screenshot` 语义是立即截图并进入编辑，优先 `_takeScreenshotAndEdit:`，fallback `takeScreenshotAndEdit:`，再 fallback 普通 `takeScreenshot`。
 - `libactivator.system.safemode` 语义是主动制造 SpringBoard exception 以触发 loader Safe Mode，owner 已接受该行为。
-- `libactivator.system.clear-switcher` 参考 QuitAll 的 iOS 15 `SBMainSwitcherViewController` 删除路径，并按 iOS 16+ `SBMainSwitcherControllerCoordinator` removal SPI 做现代实现；默认跳过 Now-Playing App。执行时先判断当前 App 和现有 switcher layouts，当前处于 Now-Playing App、switcher 为空或仅有 Now-Playing App 时不打开 App Switcher；否则先打开 App Switcher，再清理列表。
+- `libactivator.system.clear-switcher` 参考 QuitAll 的 iOS 15 `SBMainSwitcherViewController` 删除路径，并按 iOS 16+ `SBMainSwitcherControllerCoordinator` removal SPI 做现代实现；默认跳过 Now-Playing App。执行时先判断当前 App 和现有 switcher layouts，当前处于 Now-Playing App、switcher 为空或仅有 Now-Playing App 时不打开 App Switcher；否则先打开 App Switcher，再清理列表。该行为已通过真机验收。
 - `libactivator.system.lock-and-wipe-credentials` 语义是锁屏并强制 biometric lockout，不是删除 passcode 或清除系统凭据。
 
 ## Compose、Phone 与 Camera

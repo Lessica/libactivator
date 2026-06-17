@@ -15,11 +15,10 @@
 | 主线 | 状态 | 下一步 |
 | --- | --- | --- |
 | Staged 但未注册的 listener/action | 剩 `watch.haptic.tap` 一项 blocked | 需要确认 Watch haptic 能力与设备差异。 |
-| Additive power action | `system.soft-reboot` 已恢复 | 由 `jbroot(/usr/libexec/activator/user-reboot)` setuid/setgid helper 执行 `reboot3(RB2_USERREBOOT)`；SpringBoard listener 只负责 `posix_spawn` helper。 |
 | 未实现 event family | 1.9.13 event 中仍有 33 个未实现 | 按 multi-touch、SpringBoard/icon、lock screen clock、headset button、motion、HUD tap、gesture bar、scheduled、car/watch/clamshell 分组推进。 |
 | Settings UI 与 menu | 尚未进入 runtime 主线 | 实现 `libactivatorsettings.dylib`、assignments/profile/blacklist UI、menu editor 和 menu listener runtime provider。 |
 | Handled-default interception | 尚未设计 | 单独设计物理按键和 status bar scroll-to-top 等默认行为拦截，不并入现有 event source gate。 |
-| `event.handled` 语义复核 | 跨 listener family 遗留审计 | 对齐旧 master / 1.9.13 的 handled 时机、toggle/deactivate 行为和失败消费语义。 |
+| Listener 全量测试与 `event.handled` 语义复核 | 可推进 | 以 `LISTENER_HANDLED_BASELINE.md` 为基准，对齐旧 master / 1.9.13 的 handled 时机、toggle/deactivate 行为和失败消费语义。 |
 
 ## 承载模块边界
 
@@ -41,6 +40,7 @@
 2. Obsolete social/settings actions：`settings.facebook`、`settings.twitter`、`facebook.compose-post`、`twitter.compose-tweet`、`weibo.compose-post` 已从 staged resource 移除，不恢复。
 3. `previews` 语义：core preview dispatch API 存在，但 built-in vibration / watch haptic preview 尚未作为实际动作支持。
 4. `is-unprotected` 与 `supports-unlocking-device`：旧 API protection prompt、unprotected 豁免和完整主动解锁流程尚未兑现；当前只有 callback-only unlock-to-send compatibility。
+5. 全量 listener 测试与 `event.handled` 语义复核：按 `LISTENER_HANDLED_BASELINE.md` 的 family 矩阵推进，先补无副作用 stable tests，再记录需要真机 checklist 的副作用路径。
 
 ## Events 剩余工作
 
@@ -97,5 +97,6 @@ CLI 是 production compatibility tool，不是测试入口。
 - 新增 event source family 必须有独立 acquisition adapter，不把采集 hook 混入现有 action listener。
 - 每个新 family 至少拆出一个 stable suite；测试重点是 registration、metadata lookup、`hasSeen`、mode/blacklist/dispatch 语义和 metadata-only 不注册。
 - `event.handled` 表示 listener 消费事件或 adapter 提交事件，不表示系统最终状态变化完成；真实系统状态变化进入设备手工 checklist。
+- listener/action handled 语义审计必须同步更新 `LISTENER_HANDLED_BASELINE.md`，避免测试只覆盖当前实现而没有 1.9.13 对齐结论。
 - 不为 stable tests 给真实 action path 增加高侵入 hook；优先测试真实分层边界和可观察状态。
 - 实现前先记录现代 SPI 选择；如果接口不确定，先标 `blocked` 并和 owner 确认，不用 public API fallback 掩盖行为差异。

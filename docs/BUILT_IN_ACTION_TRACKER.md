@@ -15,7 +15,7 @@
 | Catalog | 1.9.13 资源 | 当前 staged | 当前剩余关注点 |
 | --- | ---: | ---: | --- |
 | Events | 121 | 123 | 2 个 2.x additive now-playing 状态事件已加入；1.9.13 event 中仍有 33 个 runtime source 未实现。 |
-| Static listeners/actions | 117 | 119 | 5 个 obsolete 旧项已移除，7 个 2.x additive name 曾加入；当前仍需关注 staged 但未注册的 1 个 name。 |
+| Static listeners/actions | 117 | 119 | 5 个 obsolete 旧项已移除，7 个 2.x additive name 曾加入；除 `libactivator.watch.haptic.tap` 因设备能力保持 metadata-only 外，静态 listener/action 已进入全量测试与 handled 语义审计阶段。 |
 
 当前 listener staged 移除项：`libactivator.settings.facebook`、`libactivator.settings.twitter`、`libactivator.twitter.compose-tweet`、`libactivator.facebook.compose-post`、`libactivator.weibo.compose-post`。
 
@@ -37,7 +37,7 @@
 
 | Key | staged 覆盖 | 当前状态 | 剩余问题 |
 | --- | ---: | --- | --- |
-| `selector` | 118 | `partial-by-name` | 已实现 listener family 会校验 selector metadata；blocked/out-of-scope action name 仍按下方剩余表跟踪。 |
+| `selector` | 118 | `implemented-by-name` | 已实现 listener family 会校验 selector metadata；`libactivator.watch.haptic.tap` 仍按 metadata-only 跟踪。 |
 | `exclusive-assignment-groups` | 111 | `implemented-api` | core 查询已存在；阻止 UI 中选择冲突 action 属于后续 Settings UI。 |
 | `previews` | 5 | `partial` | core preview dispatch API 已存在，但 built-in `system.vibrate` preview 和 watch haptic preview 尚未作为实际动作支持。 |
 | `apply-rounded-corners` | 72 | `settings-ui-only` | 旧 UI 图标展示 hint，后续由 Settings UI 决定是否消费。 |
@@ -77,7 +77,7 @@
 ## 遗留问题
 
 - 所有 listener 的 `event.handled` 语义需要与旧 master / 1.9.13 实现重新逐项对齐。重点确认每个 built-in listener 是在接收合法 listener name 后立即消费事件，还是只在 SPI/URL/UI 请求实际提交成功后标记 handled；同时确认 toggle/deactivate 类 listener 在目标 UI 已打开时的旧行为。
-- `libactivator.system.clear-switcher` 已按 iOS 15 `SBMainSwitcherViewController` 与 iOS 16+ `SBMainSwitcherControllerCoordinator` 路径注册 runtime listener；默认跳过 Now-Playing App。执行时先判断当前 App 和现有 switcher layouts，当前处于 Now-Playing App、switcher 为空或仅有 Now-Playing App 时不打开 App Switcher；否则先打开 App Switcher，再清理列表。真实清理副作用仍需真机 checklist 覆盖。
+- 全量 listener 测试和 handled 语义审计以 `LISTENER_HANDLED_BASELINE.md` 为工作基准；完成一个 family 后同步更新该基准和对应 stable suite。
 - Handled-default interception 尚未设计。当前 hardware button、status bar、edge gesture、force touch 都只负责识别和 dispatch，不根据 `event.handled` 吞掉系统默认行为。后续如果恢复拦截，应单独设计 hook 返回值、原始事件转发、fallback 重发和 `event.handled` 回传路径。
 - 物理按键与 status bar scroll-to-top 是当前最明确可能需要拦截层的 family；edge gesture / force touch 当前继续保持 no-intercept 语义。
 - `libactivator.system.local-back` 会在需要时持久打开 application accessibility；后续 Settings UI 需要显式提供用户可见的启停开关，底层复用 `LAActivator` 私有 application accessibility 接口或其公开化后的等价接口。
