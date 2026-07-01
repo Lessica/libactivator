@@ -39,6 +39,7 @@
 @interface LATBuiltInRegistry ()
 
 // Dependencies
+@property(nonatomic, weak) LAActivator *activator;
 @property(nonatomic, strong) LATApplicationLauncher *applicationLauncher;
 
 // Listener registration
@@ -70,6 +71,7 @@
 
     self = [super init];
     if (self) {
+        _activator = activator;
         _applicationLauncher = [[LATApplicationLauncher alloc] init];
         _registeredListeners = [[NSMutableArray alloc] init];
 
@@ -119,6 +121,10 @@
     [self.forceTouchEventSource start];
     [self.statusBarEventSource start];
     [self.edgeGestureEventSource start];
+}
+
+- (BOOL)legacyHomeButtonTouchStreamHookShouldBeInstalled {
+    return [self.activator la_hasRealHomeButton];
 }
 
 - (BOOL)fingerprintSensorEventSourceShouldBeRegisteredWithActivator:(LAActivator *)activator {

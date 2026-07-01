@@ -22,6 +22,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (nullable LARuntimeContext *)la_runtimeContext;
 
+#pragma mark - Device Capabilities
+
+- (BOOL)la_hasRealHomeButton;
+
 #pragma mark - Application Accessibility
 
 - (BOOL)la_applicationAccessibilityEnabled;

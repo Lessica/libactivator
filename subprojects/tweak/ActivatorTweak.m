@@ -12,6 +12,7 @@
 #import "LATBuiltInRegistry.h"
 #import "LATButtonEventSource.h"
 #import "LATEdgeGestureEventSource.h"
+#import "LATEventSourceInterestGate.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
 #import "LATNetworkEventSource.h"
@@ -33,11 +34,17 @@ CHDeclareClass(SBVolumeControl);
 CHDeclareClass(SBHIconManager);
 CHDeclareClass(SBWiFiManager);
 CHDeclareClass(_UISystemGestureWindow);
+CHDeclareClass(__UISystemGestureManager);
 CHDeclareClass(UIStatusBar_Modern);
 
 static NSString *const LATRuntimeStateSourceCoverSheetTransition = @"cover-sheet-transition";
 static NSString *const LATRuntimeStateSourceIconManagerRootFolder = @"icon-manager-root-folder";
 static NSString *const LATRuntimeStateSourceMainSwitcher = @"main-switcher";
+
+typedef NS_ENUM(unsigned char, LATSystemGestureDispatchMode) {
+    LATSystemGestureDispatchModeIgnore = 1,
+    LATSystemGestureDispatchModeContinueSending = 2,
+};
 
 static LATBuiltInRegistry *gBuiltInRegistry = nil;
 
@@ -237,6 +244,21 @@ CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, eve
     [gBuiltInRegistry.runtimeStateSource noteSystemTouchEvent:event];
 }
 
+#pragma mark - __UISystemGestureManager
+
+CHOptimizedMethod0(self, unsigned char, __UISystemGestureManager, _dispatchModeForExternalGestureCompletion) {
+    unsigned char dispatchMode = CHSuper0(__UISystemGestureManager, _dispatchModeForExternalGestureCompletion);
+    LATEventSourceInterestGate *interestGate = gBuiltInRegistry.eventSourceInterestGate;
+    BOOL shouldKeepSending =
+        !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] ||
+        (gBuiltInRegistry.forceTouchEventSource &&
+         [interestGate isInterestedInFamily:LATEventSourceInterestFamilyForceTouch]);
+    if (dispatchMode == LATSystemGestureDispatchModeIgnore && shouldKeepSending) {
+        return LATSystemGestureDispatchModeContinueSending;
+    }
+    return dispatchMode;
+}
+
 #pragma mark - UIStatusBar_Modern
 
 CHOptimizedMethod2(self, void, UIStatusBar_Modern, touchesBegan, NSSet *, touches, withEvent, UIEvent *, event) {
@@ -300,6 +322,7 @@ static void LATLoadSpringBoardClasses(void) {
     CHLoadClass_(&SBHIconManager$, NSClassFromString(@"SBHIconManager"));
     CHLoadClass_(&SBWiFiManager$, NSClassFromString(@"SBWiFiManager"));
     CHLoadClass_(&_UISystemGestureWindow$, NSClassFromString(@"_UISystemGestureWindow"));
+    CHLoadClass_(&__UISystemGestureManager$, NSClassFromString(@"__UISystemGestureManager"));
     CHLoadClass_(&UIStatusBar_Modern$, NSClassFromString(@"UIStatusBar_Modern"));
 }
 
@@ -338,6 +361,9 @@ static void LATInstallHooks(void) {
         CHHook0(SBWiFiManager, _updateCurrentNetwork);
         CHHook0(SBWiFiManager, _linkDidChange);
         CHHook1(_UISystemGestureWindow, sendEvent);
+        if ([gBuiltInRegistry legacyHomeButtonTouchStreamHookShouldBeInstalled]) {
+            CHHook0(__UISystemGestureManager, _dispatchModeForExternalGestureCompletion);
+        }
         CHHook2(SpringBoard, __handleHIDEvent, withUIEvent);
         CHHook1(SpringBoard, __handleHIDEvent);
         CHHook1(SpringBoard, applicationDidFinishLaunching);

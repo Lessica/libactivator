@@ -54,6 +54,10 @@ __attribute__((visibility("hidden")))
 - (nullable NSData *)iconDataForListenerName:(NSString *)listenerName small:(BOOL)small scale:(nullable CGFloat *)scale;
 - (nullable UIImage *)iconForListenerName:(NSString *)listenerName small:(BOOL)small scale:(CGFloat)scale;
 
+#pragma mark - Capabilities
+
+- (BOOL)requiredCapabilityIsSatisfied:(NSString *)capability;
+
 @end
 
 NS_ASSUME_NONNULL_END

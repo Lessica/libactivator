@@ -208,6 +208,12 @@ LAActivator *LASharedActivator;
     return self.runtimeContext;
 }
 
+#pragma mark - Device Capabilities
+
+- (BOOL)la_hasRealHomeButton {
+    return [LAResourceManager.sharedManager requiredCapabilityIsSatisfied:@"real-home-button"];
+}
+
 #pragma mark - Application Accessibility
 
 - (BOOL)la_applicationAccessibilityEnabled {
