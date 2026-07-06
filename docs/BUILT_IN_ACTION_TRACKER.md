@@ -14,7 +14,7 @@
 
 | Catalog | 1.9.13 资源 | 当前 staged | 当前剩余关注点 |
 | --- | ---: | ---: | --- |
-| Events | 121 | 123 | 2 个 2.x additive now-playing 状态事件已加入；1.9.13 event 中仍有 33 个 runtime source 未实现。 |
+| Events | 121 | 123 | 2 个 2.x additive now-playing 状态事件已加入；1.9.13 event 中仍有 24 个 runtime source 未实现。 |
 | Static listeners/actions | 117 | 119 | 5 个 obsolete 旧项已移除，7 个 2.x additive name 曾加入；除 `libactivator.watch.haptic.tap` 因设备能力保持 metadata-only 外，当前静态 listener/action 的 handled 语义审计已收口。 |
 
 当前 listener staged 移除项：`libactivator.settings.facebook`、`libactivator.settings.twitter`、`libactivator.twitter.compose-tweet`、`libactivator.facebook.compose-post`、`libactivator.weibo.compose-post`。
@@ -60,11 +60,10 @@
 
 ## Events 未完成交叉比对
 
-1.9.13 event 资源共 121 个。当前未实现的 1.9.13 event name 共 33 个，按 family 归类如下。
+1.9.13 event 资源共 121 个。当前未实现的 1.9.13 event name 共 24 个，按 family 归类如下。Multi-touch gesture family（3/4/5 指 tap、pinch、spread 共 9 个 event）已通过 `LATMultiTouchEventSource` + `LATMultiTouchGestureRecognizer` 接入 `_UISystemGestureWindow -sendEvent:`，状态为 `implemented`，并从未完成计数移除；stable tests 与 owner 实机手工冒烟均已通过。资源 metadata 中这 9 个 event 的 `compatible-modes` 均为 `springboard`、`application`，不包含 `lockscreen`。
 
 | Family | Event names | 当前状态 | 下一步 |
 | --- | --- | --- | --- |
-| Multi-touch gesture | `libactivator.three-finger.tap`、`libactivator.three-finger.pinch`、`libactivator.three-finger.spread`、`libactivator.four-finger.tap`、`libactivator.four-finger.pinch`、`libactivator.four-finger.spread`、`libactivator.five-finger.tap`、`libactivator.five-finger.pinch`、`libactivator.five-finger.spread` | `candidate` | 下一主线。先 probe SpringBoard 或系统手势层能否在不注入用户 App 的前提下观察多指触摸，再决定 recognizer/classifier 与 assignment-aware gate 位置。 |
 | SpringBoard / icon gestures | `libactivator.springboard.pinch`、`libactivator.springboard.spread`、`libactivator.icon.flick.up`、`libactivator.icon.flick.down`、`libactivator.icon.flick.left`、`libactivator.icon.flick.right` | `candidate` | 只针对 SpringBoard UI 层实现；需确认现代 Home Screen / icon view hook 点。 |
 | Lock screen clock gestures | `libactivator.lockscreen.clock.double-tap`、`libactivator.lockscreen.clock.tap-hold`、`libactivator.lockscreen.clock.swipe-left`、`libactivator.lockscreen.clock.swipe-right`、`libactivator.lockscreen.clock.swipe-down` | `blocked` | CoverSheet/lock screen clock 视图结构与 passcode/notification/camera 入口强相关，需单独 probe。 |
 | Headset button | `libactivator.headset-button.press.single`、`libactivator.headset-button.hold.short` | `blocked` | 已实现 headset connected/disconnected，但线控按钮需要确认现代 audio route / HID / MediaRemote 信号来源。 |
@@ -76,9 +75,9 @@
 
 ## 遗留问题
 
-- Handled-default interception 尚未设计。当前 hardware button、status bar、edge gesture、force touch 都只负责识别和 dispatch，不根据 `event.handled` 吞掉系统默认行为。后续如果恢复拦截，应单独设计 hook 返回值、原始事件转发、fallback 重发和 `event.handled` 回传路径。
-- 物理按键与 status bar scroll-to-top 是当前最明确可能需要拦截层的 family；edge gesture / force touch 当前继续保持 no-intercept 语义。
+- Handled-default interception 尚未设计。当前 hardware button、status bar、edge gesture、force touch、multi-touch 都只负责识别和 dispatch，不根据 `event.handled` 吞掉系统默认行为。后续如果恢复拦截，应单独设计 hook 返回值、原始事件转发、fallback 重发和 `event.handled` 回传路径。
+- 物理按键与 status bar scroll-to-top 是当前最明确可能需要拦截层的 family；edge gesture / force touch / multi-touch 当前继续保持 no-intercept 语义。
 - `libactivator.system.local-back` 会在需要时持久打开 application accessibility；后续 Settings UI 需要显式提供用户可见的启停开关，底层复用 `LAActivator` 私有 application accessibility 接口或其公开化后的等价接口。
 - Fingerprint sensor 遗留 1.9.13 changelog 项：“Suppress Touch ID events while showing an auth alert in Touch ID-enabled apps”。当前尚未识别现代 LocalAuthentication / biometric auth UI 状态，不做该 suppression。
 - `LAEventNameSlideInFromTop` 只是 public alias 到 `LAEventNameStatusBarSwipeDown`；不要新增独立 `libactivator.slide-in.top` 资源或 runtime name。
-- 高成本触摸 family 应使用 assignment-aware runtime gate；当前已接入 `EdgeGesture`、`ForceTouch`、`StatusBar`，`MultiTouch` 保留 family bit 但尚未实现 recognizer。
+- 高成本触摸 family 应使用 assignment-aware runtime gate；当前已接入 `EdgeGesture`、`ForceTouch`、`StatusBar`、`MultiTouch`。这些 source 继续保持 no-intercept 语义，不根据 `event.handled` 吞掉系统默认行为。

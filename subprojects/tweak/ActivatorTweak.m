@@ -15,6 +15,7 @@
 #import "LATEventSourceInterestGate.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
+#import "LATMultiTouchEventSource.h"
 #import "LATNetworkEventSource.h"
 #import "LATRuntimeStateSource.h"
 #import "LATStatusBarEventSource.h"
@@ -240,6 +241,7 @@ CHOptimizedMethod0(self, void, SBWiFiManager, _linkDidChange) {
 CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, event) {
     [gBuiltInRegistry.edgeGestureEventSource noteSystemGestureWindow:(UIWindow *)self event:event];
     [gBuiltInRegistry.forceTouchEventSource noteSystemGestureWindow:(UIWindow *)self event:event];
+    [gBuiltInRegistry.multiTouchEventSource noteSystemGestureWindow:(UIWindow *)self event:event];
     CHSuper1(_UISystemGestureWindow, sendEvent, event);
     [gBuiltInRegistry.runtimeStateSource noteSystemTouchEvent:event];
 }
@@ -252,7 +254,8 @@ CHOptimizedMethod0(self, unsigned char, __UISystemGestureManager, _dispatchModeF
     BOOL shouldKeepSending =
         !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] ||
         (gBuiltInRegistry.forceTouchEventSource &&
-         [interestGate isInterestedInFamily:LATEventSourceInterestFamilyForceTouch]);
+         [interestGate isInterestedInFamily:LATEventSourceInterestFamilyForceTouch]) ||
+        [interestGate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch];
     if (dispatchMode == LATSystemGestureDispatchModeIgnore && shouldKeepSending) {
         return LATSystemGestureDispatchModeContinueSending;
     }

@@ -26,6 +26,7 @@
 - 当前项目不使用旧 `com.apple.UIKit` filter 注入用户 App。现代 status bar 点位在 SpringBoard 内多个 `UIStatusBar_Modern` 实例上处理，每个实例应拥有独立识别 session，避免旧全局状态在多实例状态栏下串扰。
 - Force touch 由 1.9.13 的 `ActivatorSystemGestureRecognizer` 承载，事件名包括 statusbar、screen-left、screen-right、screen-bottom-left、screen-bottom、screen-bottom-right。旧实现读取 `UITouch.force`，不是直接读取 HID pressure；当前语义也应以 `UITouch.force` 为来源。
 - Force touch 区域结论：`y < 38pt` 为 statusbar；底部 `38pt` 内按 `x` 四分位划分 bottom-left/bottom/bottom-right；非底部/状态栏区域中 `x < 14pt` 为 left，`x > width - 14pt` 为 right。阈值约 `5.0`，当前实现使用 `force >= 5.0` 作为可测试边界。
+- Multi-touch 同样由 1.9.13 的 `ActivatorSystemGestureRecognizer` 承载，只识别 3/4/5 指 tap、pinch、spread。Pinch 使用当前 span / baseline span `< 0.75`，spread 使用 `> 1.33333337`，tap 在 touches ended 时要求从起点到终点的总移动量 `< 10pt`；span 语义是以稳定锚点 touch 为基准，累加 active touches 到锚点的 squared distance，不使用 velocity 或 acceleration。当前项目保持 no-intercept 语义，旧版 handled 后取消触摸属于后续 handled-default interception backlog。
 
 ## Now Playing 与媒体动作
 

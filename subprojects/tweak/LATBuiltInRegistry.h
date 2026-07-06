@@ -18,6 +18,7 @@
 @class LATForceTouchEventSource;
 @class LATLockStateEventSource;
 @class LATMediaEventSource;
+@class LATMultiTouchEventSource;
 @class LATNetworkEventSource;
 @class LATPowerStateEventSource;
 @class LATRuntimeStateSource;
@@ -41,6 +42,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong, readonly, nullable) LATForceTouchEventSource *forceTouchEventSource;
 @property(nonatomic, strong, readonly) LATLockStateEventSource *lockStateEventSource;
 @property(nonatomic, strong, readonly) LATMediaEventSource *mediaEventSource;
+@property(nonatomic, strong, readonly) LATMultiTouchEventSource *multiTouchEventSource;
 @property(nonatomic, strong, readonly) LATNetworkEventSource *networkEventSource;
 @property(nonatomic, strong, readonly) LATPowerStateEventSource *powerStateEventSource;
 @property(nonatomic, strong, readonly) LATStatusBarEventSource *statusBarEventSource;

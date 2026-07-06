@@ -15,6 +15,8 @@
 #import "LATEventSourceInterestGate.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
+#import "LATMultiTouchGestureRecognizer.h"
+#import "LATMultiTouchEventSource.h"
 #import "LATStatusBarEventSource.h"
 #import "LATestEnvironment.h"
 #import "LATestEventDataSource.h"
@@ -75,6 +77,12 @@
     [recorder expect:NSClassFromString(@"LATForceTouchEventSource") != Nil
             caseName:@"force-touch-event-source-loaded"
               reason:@"LATForceTouchEventSource class was not loaded in SpringBoard"];
+    [recorder expect:NSClassFromString(@"LATMultiTouchGestureRecognizer") != Nil
+            caseName:@"multi-touch-gesture-recognizer-loaded"
+              reason:@"LATMultiTouchGestureRecognizer class was not loaded in SpringBoard"];
+    [recorder expect:NSClassFromString(@"LATMultiTouchEventSource") != Nil
+            caseName:@"multi-touch-event-source-loaded"
+              reason:@"LATMultiTouchEventSource class was not loaded in SpringBoard"];
     [recorder expect:NSClassFromString(@"LATRuntimeStateSource") != Nil
             caseName:@"runtime-state-source-loaded"
               reason:@"LATRuntimeStateSource class was not loaded in SpringBoard"];
@@ -381,12 +389,15 @@
 
     [self runFingerprintSensorAvailabilityTestsWithRecorder:recorder activator:activator];
     [self runForceTouchAvailabilityTestsWithRecorder:recorder activator:activator];
+    [self runMultiTouchAvailabilityTestsWithRecorder:recorder activator:activator];
     [self runEventSourceInterestGateTestsWithRecorder:recorder activator:activator];
     [self runStatusBarRecognizerTestsWithRecorder:recorder activator:activator];
     [self runEdgeGestureClassifierTestsWithRecorder:recorder];
+    [self runMultiTouchGestureRecognizerTestsWithRecorder:recorder];
     [self runFingerprintSensorRecognizerTestsWithRecorder:recorder activator:activator];
     [self runEdgeGestureEventSourceDispatchTestsWithRecorder:recorder activator:activator];
     [self runForceTouchEventSourceTestsWithRecorder:recorder activator:activator];
+    [self runMultiTouchEventSourceDispatchTestsWithRecorder:recorder activator:activator];
 }
 
 + (NSUInteger)dispatchCountForEventName:(NSString *)eventName activator:(LAActivator *)activator {
@@ -458,6 +469,20 @@
     }
 }
 
++ (void)runMultiTouchAvailabilityTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    NSArray<NSString *> *eventNames = [self multiTouchEventNames];
+    for (NSString *eventName in eventNames) {
+        [recorder expect:[[activator availableEventNames] containsObject:eventName]
+                caseName:[NSString stringWithFormat:@"multi-touch-event-available-%@", eventName]
+                  reason:[NSString stringWithFormat:@"%@ metadata was not available", eventName]];
+        [recorder expect:[activator eventWithName:eventName isCompatibleWithMode:LAEventModeSpringBoard] &&
+                         [activator eventWithName:eventName isCompatibleWithMode:LAEventModeApplication] &&
+                         ![activator eventWithName:eventName isCompatibleWithMode:LAEventModeLockScreen]
+                caseName:[NSString stringWithFormat:@"multi-touch-event-unlocked-modes-compatible-%@", eventName]
+                  reason:[NSString stringWithFormat:@"%@ did not match the legacy unlocked-mode compatibility", eventName]];
+    }
+}
+
 + (void)runEventSourceInterestGateTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     Class gateClass = NSClassFromString(@"LATEventSourceInterestGate");
     if (!gateClass) {
@@ -470,10 +495,16 @@
         [catalogGate la_testingEventNamesForFamily:LATEventSourceInterestFamilyEdgeGesture];
     NSArray<NSString *> *statusBarCatalog =
         [catalogGate la_testingEventNamesForFamily:LATEventSourceInterestFamilyStatusBar];
+    NSArray<NSString *> *multiTouchCatalog =
+        [catalogGate la_testingEventNamesForFamily:LATEventSourceInterestFamilyMultiTouch];
     [recorder expect:[edgeCatalog containsObject:LAEventNameStatusBarSwipeDown] &&
                      [statusBarCatalog containsObject:LAEventNameStatusBarSwipeDown]
             caseName:@"interest-gate-shares-statusbar-swipe-down"
               reason:@"Status bar swipe down was not present in both edge and status bar interest families"];
+    [recorder expect:[multiTouchCatalog containsObject:LAEventNameThreeFingerTap] &&
+                     [multiTouchCatalog containsObject:LAEventNameFiveFingerSpread]
+            caseName:@"interest-gate-catalog-includes-multi-touch"
+              reason:@"Multi-touch events were not present in the multi-touch interest family"];
 
     NSString *testEventName = @"libactivator.test.core";
     NSString *testListenerName = @"libactivator.test.listener.a";
@@ -494,9 +525,11 @@
     [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilyEdgeGesture];
     [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilyForceTouch];
     [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilyStatusBar];
+    [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilyMultiTouch];
     [gate start];
 
-    [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture]
+    [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
+                     ![gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch]
             caseName:@"interest-gate-no-assignment"
               reason:@"Interest gate was enabled without a current-mode assignment"];
 
@@ -504,7 +537,8 @@
         toListenerWithName:testListenerName];
     [recorder expect:[gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
                      [gate isInterestedInFamily:LATEventSourceInterestFamilyForceTouch] &&
-                     [gate isInterestedInFamily:LATEventSourceInterestFamilyStatusBar]
+                     [gate isInterestedInFamily:LATEventSourceInterestFamilyStatusBar] &&
+                     [gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch]
             caseName:@"interest-gate-current-mode-assignment"
               reason:@"Interest gate did not enable families with a current-mode assignment"];
 
@@ -512,7 +546,8 @@
                underneathLockScreen:LAEventModeApplication
                   displayIdentifier:@"com.apple.Preferences"
                            screenOn:YES];
-    [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture]
+    [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
+                     ![gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch]
             caseName:@"interest-gate-mode-change-invalidates"
               reason:@"Interest gate did not refresh after the current event mode changed"];
 
@@ -520,12 +555,14 @@
                underneathLockScreen:LAEventModeSpringBoard
                   displayIdentifier:nil
                            screenOn:YES];
-    [recorder expect:[gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture]
+    [recorder expect:[gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
+                     [gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch]
             caseName:@"interest-gate-mode-change-restores"
               reason:@"Interest gate did not restore interest after returning to the assigned event mode"];
 
     [activator unregisterListenerWithName:testListenerName];
-    [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture]
+    [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
+                     ![gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch]
             caseName:@"interest-gate-listener-change-invalidates"
               reason:@"Interest gate did not refresh after the assigned listener became unavailable"];
 
@@ -556,17 +593,17 @@
                         [self edgeGesturePointWithX:200.0 y:798.0],
                     ]
                                                                                    phase:0]
-                                          bounds:bounds
-                                       timestamp:0.0];
+                                                 bounds:bounds
+                                              timestamp:0.0];
         edgeSource.interestGate = edgeGate;
         LATestTouchEvent *event = [[LATestTouchEvent alloc] init];
         [edgeSource noteSystemGestureWindow:window event:event];
         NSString *eventName = [edgeSource la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[
                                               [self edgeGesturePointWithX:200.0 y:700.0],
                                           ]
-                                                                                                         phase:1]
-                                                                bounds:bounds
-                                                             timestamp:0.1];
+                                                                                                    phase:1]
+                                                                   bounds:bounds
+                                                                timestamp:0.1];
         [recorder expect:event.allTouchesRequestCount == 0 && eventName == nil
                 caseName:@"edge-interest-gate-before-snapshots-and-resets"
                   reason:@"Edge source read touches or kept classifier state while interest was disabled"];
@@ -598,6 +635,34 @@
     } else {
         [recorder skip:@"force-touch-interest-gate-before-snapshots-and-resets"
                 reason:@"LATForceTouchEventSource was not loaded"];
+    }
+
+    Class multiTouchSourceClass = NSClassFromString(@"LATMultiTouchEventSource");
+    if (multiTouchSourceClass) {
+        LATEventSourceInterestGate *multiTouchGate = [[gateClass alloc] initWithActivator:activator];
+        [multiTouchGate la_testingSetEventNames:@[] forFamily:LATEventSourceInterestFamilyMultiTouch];
+        [multiTouchGate start];
+
+        LATMultiTouchEventSource *multiTouchSource = [[multiTouchSourceClass alloc] init];
+        [multiTouchSource start];
+        [activator la_resetDispatchCounts];
+        [multiTouchSource la_testingUpdateWithTouchLocations:@[
+                              [self multiTouchPointWithX:100.0 y:200.0],
+                              [self multiTouchPointWithX:200.0 y:200.0],
+                              [self multiTouchPointWithX:300.0 y:200.0],
+                          ]
+                                                          phase:UITouchPhaseBegan
+                                                         bounds:bounds
+                                                      timestamp:0.0];
+        multiTouchSource.interestGate = multiTouchGate;
+        LATestTouchEvent *event = [[LATestTouchEvent alloc] init];
+        [multiTouchSource noteSystemGestureWindow:window event:event];
+        [recorder expect:event.allTouchesRequestCount == 0 && ![multiTouchSource la_testingHasRecognitionState]
+                caseName:@"multi-touch-interest-gate-before-snapshots-and-resets"
+                  reason:@"Multi-touch source read touches or kept recognition state while interest was disabled"];
+    } else {
+        [recorder skip:@"multi-touch-interest-gate-before-snapshots-and-resets"
+                reason:@"LATMultiTouchEventSource was not loaded"];
     }
 
     Class statusBarSourceClass = NSClassFromString(@"LATStatusBarEventSource");
@@ -1502,8 +1567,8 @@
         la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
                                                                                                           y:700.0] ]
                                                                        phase:1]
-                              bounds:bounds
-                           timestamp:0.1];
+                                     bounds:bounds
+                                  timestamp:0.1];
     [recorder expect:notStartedEventName == nil && [self dispatchCountForEventName:LAEventNameSlideInFromBottom
                                                                          activator:activator] == 0
             caseName:@"edge-gesture-event-source-ignores-events-before-start"
@@ -1522,14 +1587,14 @@
         la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
                                                                                                           y:700.0] ]
                                                                        phase:1]
-                              bounds:bounds
-                           timestamp:0.1];
+                                     bounds:bounds
+                                  timestamp:0.1];
     NSString *secondEventName = [dispatchSource
         la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
                                                                                                           y:650.0] ]
                                                                        phase:1]
-                              bounds:bounds
-                           timestamp:0.2];
+                                     bounds:bounds
+                                  timestamp:0.2];
     [recorder expect:[firstEventName isEqualToString:LAEventNameSlideInFromBottom] && secondEventName == nil &&
                      [self dispatchCountForEventName:LAEventNameSlideInFromBottom activator:activator] == 1
             caseName:@"edge-gesture-event-source-dispatches-once"
@@ -1548,8 +1613,8 @@
         la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
                                                                                                           y:750.0] ]
                                                                        phase:1]
-                              bounds:bounds
-                           timestamp:0.1];
+                                     bounds:bounds
+                                  timestamp:0.1];
     [recorder expect:shortMoveEventName == nil && [self dispatchCountForEventName:LAEventNameSlideInFromBottom
                                                                         activator:activator] == 0
             caseName:@"edge-gesture-event-source-ignores-unclassified-move"
@@ -1568,8 +1633,8 @@
         la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:160.0
                                                                                                           y:788.0] ]
                                                                        phase:1]
-                              bounds:bounds
-                           timestamp:0.1];
+                                     bounds:bounds
+                                  timestamp:0.1];
     [recorder expect:[dragAlongEventName isEqualToString:LAEventScreenBottomSwipeRight] &&
                      [self dispatchCountForEventName:LAEventScreenBottomSwipeRight activator:activator] == 1
             caseName:@"edge-gesture-event-source-dispatches-drag-along"
@@ -1588,14 +1653,14 @@
         la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:10.0
                                                                                                           y:400.0] ]
                                                                        phase:1]
-                              bounds:bounds
-                           timestamp:0.1];
+                                     bounds:bounds
+                                  timestamp:0.1];
     NSString *dragOffEventName = [dragOffSource
         la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:10.0
                                                                                                           y:400.0] ]
                                                                        phase:3]
-                              bounds:bounds
-                           timestamp:0.2];
+                                     bounds:bounds
+                                  timestamp:0.2];
     [recorder expect:dragOffMoveEventName == nil && [dragOffEventName isEqualToString:LAEventNameDragOffLeft] &&
                      [self dispatchCountForEventName:LAEventNameDragOffLeft activator:activator] == 1
             caseName:@"edge-gesture-event-source-dispatches-drag-off"
@@ -1626,8 +1691,8 @@
         la_testingNoteTouchSnapshots:[self edgeGestureSnapshotsWithLocations:@[ [self edgeGesturePointWithX:200.0
                                                                                                           y:700.0] ]
                                                                        phase:1]
-                              bounds:bounds
-                           timestamp:0.4];
+                                     bounds:bounds
+                                  timestamp:0.4];
     [fingerprintSource la_testingResolvePendingSinglePress];
     [recorder expect:[fingerprintSlideEventName isEqualToString:LAEventNameFingerprintSensorPressSingleAndSlideIn] &&
                      [self dispatchCountForEventName:LAEventNameFingerprintSensorPressSingleAndSlideIn
@@ -1636,6 +1701,517 @@
                      [self dispatchCountForEventName:LAEventNameFingerprintSensorPressSingle activator:activator] == 0
             caseName:@"edge-gesture-routes-bottom-slide-to-fingerprint-slide-in"
               reason:@"Bottom slide after fingerprint press did not route to the fingerprint slide-in event"];
+}
+
++ (void)runMultiTouchGestureRecognizerTestsWithRecorder:(LATestRecorder *)recorder {
+    Class recognizerClass = NSClassFromString(@"LATMultiTouchGestureRecognizer");
+    if (!recognizerClass) {
+        [recorder skip:@"multi-touch-gesture-recognizer-logic" reason:@"LATMultiTouchGestureRecognizer was not loaded"];
+        return;
+    }
+
+    LATMultiTouchGestureRecognizer *recognizer = [[recognizerClass alloc] init];
+    CGRect bounds = CGRectMake(0.0, 0.0, 400.0, 800.0);
+    NSArray<NSDictionary<NSString *, id> *> *movementCases = @[
+        @{
+            @"Case" : @"multi-touch-classifies-three-finger-pinch",
+            @"EventName" : LAEventNameThreeFingerPinch,
+            @"Start" : @[
+                [self multiTouchPointWithX:100.0 y:200.0],
+                [self multiTouchPointWithX:200.0 y:200.0],
+                [self multiTouchPointWithX:300.0 y:200.0],
+            ],
+            @"Move" : @[
+                [self multiTouchPointWithX:130.0 y:200.0],
+                [self multiTouchPointWithX:200.0 y:200.0],
+                [self multiTouchPointWithX:270.0 y:200.0],
+            ],
+        },
+        @{
+            @"Case" : @"multi-touch-classifies-three-finger-spread",
+            @"EventName" : LAEventNameThreeFingerSpread,
+            @"Start" : @[
+                [self multiTouchPointWithX:100.0 y:200.0],
+                [self multiTouchPointWithX:200.0 y:200.0],
+                [self multiTouchPointWithX:300.0 y:200.0],
+            ],
+            @"Move" : @[
+                [self multiTouchPointWithX:50.0 y:200.0],
+                [self multiTouchPointWithX:200.0 y:200.0],
+                [self multiTouchPointWithX:350.0 y:200.0],
+            ],
+        },
+        @{
+            @"Case" : @"multi-touch-classifies-four-finger-pinch",
+            @"EventName" : LAEventNameFourFingerPinch,
+            @"Start" : @[
+                [self multiTouchPointWithX:80.0 y:200.0],
+                [self multiTouchPointWithX:160.0 y:200.0],
+                [self multiTouchPointWithX:240.0 y:200.0],
+                [self multiTouchPointWithX:320.0 y:200.0],
+            ],
+            @"Move" : @[
+                [self multiTouchPointWithX:116.0 y:200.0],
+                [self multiTouchPointWithX:172.0 y:200.0],
+                [self multiTouchPointWithX:228.0 y:200.0],
+                [self multiTouchPointWithX:284.0 y:200.0],
+            ],
+        },
+        @{
+            @"Case" : @"multi-touch-classifies-four-finger-spread",
+            @"EventName" : LAEventNameFourFingerSpread,
+            @"Start" : @[
+                [self multiTouchPointWithX:80.0 y:200.0],
+                [self multiTouchPointWithX:160.0 y:200.0],
+                [self multiTouchPointWithX:240.0 y:200.0],
+                [self multiTouchPointWithX:320.0 y:200.0],
+            ],
+            @"Move" : @[
+                [self multiTouchPointWithX:20.0 y:200.0],
+                [self multiTouchPointWithX:140.0 y:200.0],
+                [self multiTouchPointWithX:260.0 y:200.0],
+                [self multiTouchPointWithX:380.0 y:200.0],
+            ],
+        },
+        @{
+            @"Case" : @"multi-touch-classifies-five-finger-pinch",
+            @"EventName" : LAEventNameFiveFingerPinch,
+            @"Start" : @[
+                [self multiTouchPointWithX:50.0 y:200.0],
+                [self multiTouchPointWithX:125.0 y:200.0],
+                [self multiTouchPointWithX:200.0 y:200.0],
+                [self multiTouchPointWithX:275.0 y:200.0],
+                [self multiTouchPointWithX:350.0 y:200.0],
+            ],
+            @"Move" : @[
+                [self multiTouchPointWithX:80.0 y:200.0],
+                [self multiTouchPointWithX:140.0 y:200.0],
+                [self multiTouchPointWithX:200.0 y:200.0],
+                [self multiTouchPointWithX:260.0 y:200.0],
+                [self multiTouchPointWithX:320.0 y:200.0],
+            ],
+        },
+        @{
+            @"Case" : @"multi-touch-classifies-five-finger-spread",
+            @"EventName" : LAEventNameFiveFingerSpread,
+            @"Start" : @[
+                [self multiTouchPointWithX:50.0 y:200.0],
+                [self multiTouchPointWithX:125.0 y:200.0],
+                [self multiTouchPointWithX:200.0 y:200.0],
+                [self multiTouchPointWithX:275.0 y:200.0],
+                [self multiTouchPointWithX:350.0 y:200.0],
+            ],
+            @"Move" : @[
+                [self multiTouchPointWithX:0.0 y:200.0],
+                [self multiTouchPointWithX:100.0 y:200.0],
+                [self multiTouchPointWithX:200.0 y:200.0],
+                [self multiTouchPointWithX:300.0 y:200.0],
+                [self multiTouchPointWithX:400.0 y:200.0],
+            ],
+        },
+    ];
+
+    for (NSDictionary<NSString *, id> *testCase in movementCases) {
+        NSString *eventName = [self classifiedMultiTouchEventNameWithRecognizer:recognizer
+                                                                         bounds:bounds
+                                                                 startLocations:testCase[@"Start"]
+                                                                  moveLocations:testCase[@"Move"]];
+        NSString *expectedEventName = testCase[@"EventName"];
+        [recorder expect:[eventName isEqualToString:expectedEventName]
+                caseName:testCase[@"Case"]
+                  reason:[NSString stringWithFormat:@"Expected %@ but classified %@", expectedEventName, eventName]];
+    }
+
+    NSArray<NSDictionary<NSString *, id> *> *tapCases = @[
+        @{
+            @"Case" : @"multi-touch-classifies-three-finger-tap",
+            @"EventName" : LAEventNameThreeFingerTap,
+            @"Locations" : @[
+                [self multiTouchPointWithX:100.0 y:200.0],
+                [self multiTouchPointWithX:200.0 y:200.0],
+                [self multiTouchPointWithX:300.0 y:200.0],
+            ],
+        },
+        @{
+            @"Case" : @"multi-touch-classifies-four-finger-tap",
+            @"EventName" : LAEventNameFourFingerTap,
+            @"Locations" : @[
+                [self multiTouchPointWithX:80.0 y:200.0],
+                [self multiTouchPointWithX:160.0 y:200.0],
+                [self multiTouchPointWithX:240.0 y:200.0],
+                [self multiTouchPointWithX:320.0 y:200.0],
+            ],
+        },
+        @{
+            @"Case" : @"multi-touch-classifies-five-finger-tap",
+            @"EventName" : LAEventNameFiveFingerTap,
+            @"Locations" : @[
+                [self multiTouchPointWithX:50.0 y:200.0],
+                [self multiTouchPointWithX:125.0 y:200.0],
+                [self multiTouchPointWithX:200.0 y:200.0],
+                [self multiTouchPointWithX:275.0 y:200.0],
+                [self multiTouchPointWithX:350.0 y:200.0],
+            ],
+        },
+    ];
+
+    for (NSDictionary<NSString *, id> *testCase in tapCases) {
+        NSString *eventName = [self classifiedMultiTouchTapEventNameWithRecognizer:recognizer
+                                                                            bounds:bounds
+                                                                    startLocations:testCase[@"Locations"]
+                                                                      endLocations:testCase[@"Locations"]];
+        NSString *expectedEventName = testCase[@"EventName"];
+        [recorder expect:[eventName isEqualToString:expectedEventName]
+                caseName:testCase[@"Case"]
+                  reason:[NSString stringWithFormat:@"Expected %@ but classified %@", expectedEventName, eventName]];
+    }
+
+    NSString *twoFingerEventName =
+        [self classifiedMultiTouchEventNameWithRecognizer:recognizer
+                                                   bounds:bounds
+                                           startLocations:@[
+                                               [self multiTouchPointWithX:100.0 y:200.0],
+                                               [self multiTouchPointWithX:300.0 y:200.0],
+                                           ]
+                                            moveLocations:@[
+                                                [self multiTouchPointWithX:150.0 y:200.0],
+                                                [self multiTouchPointWithX:250.0 y:200.0],
+                                            ]];
+    [recorder expect:twoFingerEventName == nil
+            caseName:@"multi-touch-ignores-two-finger-session"
+              reason:@"Two-finger movement was classified as a multi-touch Activator event"];
+
+    NSString *sixFingerEventName =
+        [self classifiedMultiTouchEventNameWithRecognizer:recognizer
+                                                   bounds:bounds
+                                           startLocations:@[
+                                               [self multiTouchPointWithX:0.0 y:200.0],
+                                               [self multiTouchPointWithX:80.0 y:200.0],
+                                               [self multiTouchPointWithX:160.0 y:200.0],
+                                               [self multiTouchPointWithX:240.0 y:200.0],
+                                               [self multiTouchPointWithX:320.0 y:200.0],
+                                               [self multiTouchPointWithX:400.0 y:200.0],
+                                           ]
+                                            moveLocations:@[
+                                                [self multiTouchPointWithX:0.0 y:200.0],
+                                                [self multiTouchPointWithX:70.0 y:200.0],
+                                                [self multiTouchPointWithX:140.0 y:200.0],
+                                                [self multiTouchPointWithX:260.0 y:200.0],
+                                                [self multiTouchPointWithX:330.0 y:200.0],
+                                                [self multiTouchPointWithX:400.0 y:200.0],
+                                            ]];
+    [recorder expect:sixFingerEventName == nil
+            caseName:@"multi-touch-ignores-six-finger-session"
+              reason:@"Six-finger movement was classified as a multi-touch Activator event"];
+
+    [recognizer reset];
+    [recognizer la_testingUpdateWithTouchLocations:@[
+                         [self multiTouchPointWithX:100.0 y:200.0],
+                         [self multiTouchPointWithX:200.0 y:200.0],
+                         [self multiTouchPointWithX:300.0 y:200.0],
+                     ]
+                                             phase:UITouchPhaseBegan
+                                            bounds:bounds
+                                         timestamp:0.0];
+    NSString *cancelledEventName = [recognizer la_testingUpdateWithTouchLocations:@[
+                                                       [self multiTouchPointWithX:100.0 y:200.0],
+                                                       [self multiTouchPointWithX:200.0 y:200.0],
+                                                       [self multiTouchPointWithX:300.0 y:200.0],
+                                                   ]
+                                                                                  phase:UITouchPhaseCancelled
+                                                                                 bounds:bounds
+                                                                              timestamp:0.1];
+    [recorder expect:cancelledEventName == nil && ![recognizer la_testingHasRecognitionState]
+            caseName:@"multi-touch-cancel-resets-session"
+              reason:@"Cancelled multi-touch session dispatched or kept recognition state"];
+
+    [recognizer reset];
+    [recognizer la_testingUpdateWithTouchLocations:@[
+                         [self multiTouchPointWithX:100.0 y:200.0],
+                         [self multiTouchPointWithX:200.0 y:200.0],
+                         [self multiTouchPointWithX:300.0 y:200.0],
+                     ]
+                                             phase:UITouchPhaseBegan
+                                            bounds:bounds
+                                         timestamp:0.0];
+    NSString *firstPinchEventName = [recognizer la_testingUpdateWithTouchLocations:@[
+                                                       [self multiTouchPointWithX:130.0 y:200.0],
+                                                       [self multiTouchPointWithX:200.0 y:200.0],
+                                                       [self multiTouchPointWithX:270.0 y:200.0],
+                                                   ]
+                                                                                  phase:UITouchPhaseMoved
+                                                                                 bounds:bounds
+                                                                              timestamp:0.1];
+    NSString *secondPinchEventName = [recognizer la_testingUpdateWithTouchLocations:@[
+                                                        [self multiTouchPointWithX:140.0 y:200.0],
+                                                        [self multiTouchPointWithX:200.0 y:200.0],
+                                                        [self multiTouchPointWithX:260.0 y:200.0],
+                                                    ]
+                                                                                   phase:UITouchPhaseMoved
+                                                                                  bounds:bounds
+                                                                               timestamp:0.2];
+    [recorder expect:[firstPinchEventName isEqualToString:LAEventNameThreeFingerPinch] && secondPinchEventName == nil
+            caseName:@"multi-touch-classifies-once-per-session"
+              reason:@"A single multi-touch session did not classify exactly once"];
+
+    NSArray<NSValue *> *thresholdStartLocations = @[
+        [self multiTouchPointWithX:0.0 y:200.0],
+        [self multiTouchPointWithX:100.0 y:200.0],
+        [self multiTouchPointWithX:200.0 y:200.0],
+    ];
+    NSString *pinchAboveThresholdEventName =
+        [self classifiedMultiTouchEventNameWithRecognizer:recognizer
+                                                   bounds:bounds
+                                           startLocations:thresholdStartLocations
+                                            moveLocations:@[
+                                                [self multiTouchPointWithX:0.0 y:200.0],
+                                                [self multiTouchPointWithX:86.61 y:200.0],
+                                                [self multiTouchPointWithX:173.22 y:200.0],
+                                            ]];
+    NSString *pinchBelowThresholdEventName =
+        [self classifiedMultiTouchEventNameWithRecognizer:recognizer
+                                                   bounds:bounds
+                                           startLocations:thresholdStartLocations
+                                            moveLocations:@[
+                                                [self multiTouchPointWithX:0.0 y:200.0],
+                                                [self multiTouchPointWithX:86.59 y:200.0],
+                                                [self multiTouchPointWithX:173.18 y:200.0],
+                                            ]];
+    [recorder expect:pinchAboveThresholdEventName == nil &&
+                     [pinchBelowThresholdEventName isEqualToString:LAEventNameThreeFingerPinch]
+            caseName:@"multi-touch-pinch-threshold-is-strict"
+              reason:@"Pinch classification did not stay on the legacy strict threshold"];
+
+    NSString *spreadBelowThresholdEventName =
+        [self classifiedMultiTouchEventNameWithRecognizer:recognizer
+                                                   bounds:bounds
+                                           startLocations:thresholdStartLocations
+                                            moveLocations:@[
+                                                [self multiTouchPointWithX:0.0 y:200.0],
+                                                [self multiTouchPointWithX:115.46 y:200.0],
+                                                [self multiTouchPointWithX:230.92 y:200.0],
+                                            ]];
+    NSString *spreadAboveThresholdEventName =
+        [self classifiedMultiTouchEventNameWithRecognizer:recognizer
+                                                   bounds:bounds
+                                           startLocations:thresholdStartLocations
+                                            moveLocations:@[
+                                                [self multiTouchPointWithX:0.0 y:200.0],
+                                                [self multiTouchPointWithX:115.48 y:200.0],
+                                                [self multiTouchPointWithX:230.96 y:200.0],
+                                            ]];
+    [recorder expect:spreadBelowThresholdEventName == nil &&
+                     [spreadAboveThresholdEventName isEqualToString:LAEventNameThreeFingerSpread]
+            caseName:@"multi-touch-spread-threshold-is-strict"
+              reason:@"Spread classification did not stay on the legacy strict threshold"];
+
+    NSArray<NSValue *> *tapStartLocations = @[
+        [self multiTouchPointWithX:0.0 y:200.0],
+        [self multiTouchPointWithX:100.0 y:200.0],
+        [self multiTouchPointWithX:200.0 y:200.0],
+    ];
+    NSString *tapBelowMovementLimitEventName =
+        [self classifiedMultiTouchTapEventNameWithRecognizer:recognizer
+                                                      bounds:bounds
+                                              startLocations:tapStartLocations
+                                                endLocations:@[
+                                                    [self multiTouchPointWithX:9.0 y:200.0],
+                                                    [self multiTouchPointWithX:100.0 y:200.0],
+                                                    [self multiTouchPointWithX:200.0 y:200.0],
+                                                ]];
+    NSString *tapAtMovementLimitEventName =
+        [self classifiedMultiTouchTapEventNameWithRecognizer:recognizer
+                                                      bounds:bounds
+                                              startLocations:tapStartLocations
+                                                endLocations:@[
+                                                    [self multiTouchPointWithX:10.0 y:200.0],
+                                                    [self multiTouchPointWithX:100.0 y:200.0],
+                                                    [self multiTouchPointWithX:200.0 y:200.0],
+                                                ]];
+    [recorder expect:[tapBelowMovementLimitEventName isEqualToString:LAEventNameThreeFingerTap] &&
+                     tapAtMovementLimitEventName == nil
+            caseName:@"multi-touch-tap-movement-limit-is-strict"
+              reason:@"Tap classification did not stay below the legacy movement limit"];
+}
+
++ (void)runMultiTouchEventSourceDispatchTestsWithRecorder:(LATestRecorder *)recorder
+                                                activator:(LAActivator *)activator {
+    Class sourceClass = NSClassFromString(@"LATMultiTouchEventSource");
+    if (!sourceClass) {
+        [recorder skip:@"multi-touch-event-source-dispatch" reason:@"LATMultiTouchEventSource was not loaded"];
+        return;
+    }
+
+    CGRect bounds = CGRectMake(0.0, 0.0, 400.0, 800.0);
+
+    LATMultiTouchEventSource *notStartedSource = [[sourceClass alloc] init];
+    [activator la_resetDispatchCounts];
+    [notStartedSource la_testingUpdateWithTouchLocations:@[
+                             [self multiTouchPointWithX:100.0 y:200.0],
+                             [self multiTouchPointWithX:200.0 y:200.0],
+                             [self multiTouchPointWithX:300.0 y:200.0],
+                         ]
+                                                       phase:UITouchPhaseBegan
+                                             bounds:bounds
+                                          timestamp:0.0];
+    NSString *notStartedEventName = [notStartedSource
+        la_testingUpdateWithTouchLocations:@[
+                                      [self multiTouchPointWithX:130.0 y:200.0],
+                                      [self multiTouchPointWithX:200.0 y:200.0],
+                                      [self multiTouchPointWithX:270.0 y:200.0],
+                                  ]
+                                                        phase:UITouchPhaseMoved
+                              bounds:bounds
+                           timestamp:0.1];
+    [recorder expect:notStartedEventName == nil && [self dispatchCountForEventName:LAEventNameThreeFingerPinch
+                                                                         activator:activator] == 0
+            caseName:@"multi-touch-event-source-ignores-events-before-start"
+              reason:@"Multi-touch event source dispatched before it was started"];
+
+    LATMultiTouchEventSource *dispatchSource = [[sourceClass alloc] init];
+    [dispatchSource start];
+    [activator la_resetDispatchCounts];
+    [dispatchSource la_testingUpdateWithTouchLocations:@[
+                           [self multiTouchPointWithX:100.0 y:200.0],
+                           [self multiTouchPointWithX:200.0 y:200.0],
+                           [self multiTouchPointWithX:300.0 y:200.0],
+                       ]
+                                                     phase:UITouchPhaseBegan
+                                           bounds:bounds
+                                        timestamp:0.0];
+    NSString *firstEventName = [dispatchSource
+        la_testingUpdateWithTouchLocations:@[
+                                      [self multiTouchPointWithX:130.0 y:200.0],
+                                      [self multiTouchPointWithX:200.0 y:200.0],
+                                      [self multiTouchPointWithX:270.0 y:200.0],
+                                  ]
+                                                        phase:UITouchPhaseMoved
+                              bounds:bounds
+                           timestamp:0.1];
+    NSString *secondEventName = [dispatchSource
+        la_testingUpdateWithTouchLocations:@[
+                                      [self multiTouchPointWithX:140.0 y:200.0],
+                                      [self multiTouchPointWithX:200.0 y:200.0],
+                                      [self multiTouchPointWithX:260.0 y:200.0],
+                                  ]
+                                                        phase:UITouchPhaseMoved
+                              bounds:bounds
+                           timestamp:0.2];
+    [recorder expect:[firstEventName isEqualToString:LAEventNameThreeFingerPinch] && secondEventName == nil &&
+                     [self dispatchCountForEventName:LAEventNameThreeFingerPinch activator:activator] == 1
+            caseName:@"multi-touch-event-source-dispatches-once"
+              reason:@"Multi-touch event source did not dispatch exactly once for a classified gesture"];
+
+    LATMultiTouchEventSource *tapSource = [[sourceClass alloc] init];
+    [tapSource start];
+    [activator la_resetDispatchCounts];
+    NSArray<NSValue *> *tapLocations = @[
+        [self multiTouchPointWithX:100.0 y:200.0],
+        [self multiTouchPointWithX:200.0 y:200.0],
+        [self multiTouchPointWithX:300.0 y:200.0],
+    ];
+    [tapSource la_testingUpdateWithTouchLocations:tapLocations
+                                            phase:UITouchPhaseBegan
+                                           bounds:bounds
+                                        timestamp:0.0];
+    NSString *tapEventName = [tapSource la_testingUpdateWithTouchLocations:tapLocations
+                                                                     phase:UITouchPhaseEnded
+                                                                    bounds:bounds
+                                                                 timestamp:0.1];
+    [recorder expect:[tapEventName isEqualToString:LAEventNameThreeFingerTap] &&
+                     [self dispatchCountForEventName:LAEventNameThreeFingerTap activator:activator] == 1
+            caseName:@"multi-touch-event-source-dispatches-tap"
+              reason:@"Multi-touch event source did not dispatch a completed tap"];
+
+    LATMultiTouchEventSource *invalidSource = [[sourceClass alloc] init];
+    [invalidSource start];
+    [activator la_resetDispatchCounts];
+    NSString *twoFingerEventName =
+        [self classifiedMultiTouchEventNameWithEventSource:invalidSource
+                                                    bounds:bounds
+                                            startLocations:@[
+                                                [self multiTouchPointWithX:100.0 y:200.0],
+                                                [self multiTouchPointWithX:300.0 y:200.0],
+                                            ]
+                                             moveLocations:@[
+                                                 [self multiTouchPointWithX:150.0 y:200.0],
+                                                 [self multiTouchPointWithX:250.0 y:200.0],
+                                             ]];
+    [recorder expect:twoFingerEventName == nil &&
+                     [self dispatchCountForEventName:LAEventNameThreeFingerPinch activator:activator] == 0
+            caseName:@"multi-touch-event-source-ignores-two-finger-session"
+              reason:@"Multi-touch event source dispatched for an unsupported two-finger session"];
+
+    LATMultiTouchEventSource *sixFingerSource = [[sourceClass alloc] init];
+    [sixFingerSource start];
+    [activator la_resetDispatchCounts];
+    NSString *sixFingerEventName =
+        [self classifiedMultiTouchEventNameWithEventSource:sixFingerSource
+                                                    bounds:bounds
+                                            startLocations:@[
+                                                [self multiTouchPointWithX:0.0 y:200.0],
+                                                [self multiTouchPointWithX:80.0 y:200.0],
+                                                [self multiTouchPointWithX:160.0 y:200.0],
+                                                [self multiTouchPointWithX:240.0 y:200.0],
+                                                [self multiTouchPointWithX:320.0 y:200.0],
+                                                [self multiTouchPointWithX:400.0 y:200.0],
+                                            ]
+                                             moveLocations:@[
+                                                 [self multiTouchPointWithX:0.0 y:200.0],
+                                                 [self multiTouchPointWithX:70.0 y:200.0],
+                                                 [self multiTouchPointWithX:140.0 y:200.0],
+                                                 [self multiTouchPointWithX:260.0 y:200.0],
+                                                 [self multiTouchPointWithX:330.0 y:200.0],
+                                                 [self multiTouchPointWithX:400.0 y:200.0],
+                                             ]];
+    [recorder expect:sixFingerEventName == nil &&
+                     [self dispatchCountForEventName:LAEventNameFiveFingerSpread activator:activator] == 0
+            caseName:@"multi-touch-event-source-ignores-six-finger-session"
+              reason:@"Multi-touch event source dispatched for an unsupported six-finger session"];
+}
+
++ (NSString *)classifiedMultiTouchEventNameWithRecognizer:(LATMultiTouchGestureRecognizer *)recognizer
+                                                   bounds:(CGRect)bounds
+                                           startLocations:(NSArray<NSValue *> *)startLocations
+                                            moveLocations:(NSArray<NSValue *> *)moveLocations {
+    [recognizer reset];
+    [recognizer la_testingUpdateWithTouchLocations:startLocations
+                                             phase:UITouchPhaseBegan
+                                            bounds:bounds
+                                         timestamp:0.0];
+    return [recognizer la_testingUpdateWithTouchLocations:moveLocations
+                                                    phase:UITouchPhaseMoved
+                                                   bounds:bounds
+                                                timestamp:0.1];
+}
+
++ (NSString *)classifiedMultiTouchTapEventNameWithRecognizer:(LATMultiTouchGestureRecognizer *)recognizer
+                                                      bounds:(CGRect)bounds
+                                              startLocations:(NSArray<NSValue *> *)startLocations
+                                                endLocations:(NSArray<NSValue *> *)endLocations {
+    [recognizer reset];
+    [recognizer la_testingUpdateWithTouchLocations:startLocations
+                                             phase:UITouchPhaseBegan
+                                            bounds:bounds
+                                         timestamp:0.0];
+    return [recognizer la_testingUpdateWithTouchLocations:endLocations
+                                                    phase:UITouchPhaseEnded
+                                                   bounds:bounds
+                                                timestamp:0.1];
+}
+
++ (NSString *)classifiedMultiTouchEventNameWithEventSource:(LATMultiTouchEventSource *)source
+                                                    bounds:(CGRect)bounds
+                                            startLocations:(NSArray<NSValue *> *)startLocations
+                                             moveLocations:(NSArray<NSValue *> *)moveLocations {
+    [source la_testingUpdateWithTouchLocations:startLocations
+                                         phase:UITouchPhaseBegan
+                                        bounds:bounds
+                                     timestamp:0.0];
+    return [source la_testingUpdateWithTouchLocations:moveLocations
+                                                phase:UITouchPhaseMoved
+                                               bounds:bounds
+                                            timestamp:0.1];
 }
 
 + (NSString *)classifiedEdgeGestureEventNameWithClassifier:(LATEdgeGestureClassifier *)classifier
@@ -1667,6 +2243,21 @@
     return [NSValue valueWithCGPoint:CGPointMake(x, y)];
 }
 
++ (NSArray<NSDictionary<NSString *, id> *> *)edgeGestureSnapshotsWithLocations:(NSArray<NSValue *> *)locations
+                                                                         phase:(NSInteger)phase {
+    NSMutableArray<NSDictionary<NSString *, id> *> *snapshots = [[NSMutableArray alloc] init];
+    [locations enumerateObjectsUsingBlock:^(NSValue *locationValue, NSUInteger index, BOOL *stop) {
+        (void)stop;
+        NSString *identifier = [NSString stringWithFormat:@"touch-%lu", (unsigned long)index];
+        [snapshots addObject:@{
+            @"Identifier" : identifier,
+            @"Phase" : @(phase),
+            @"Location" : locationValue,
+        }];
+    }];
+    return snapshots;
+}
+
 + (NSArray<NSString *> *)forceTouchEventNames {
     return @[
         LAEventNameForceTouchScreenBottom,
@@ -1676,6 +2267,24 @@
         LAEventNameForceTouchScreenRight,
         LAEventNameForceTouchStatusBar,
     ];
+}
+
++ (NSArray<NSString *> *)multiTouchEventNames {
+    return @[
+        LAEventNameThreeFingerTap,
+        LAEventNameThreeFingerPinch,
+        LAEventNameThreeFingerSpread,
+        LAEventNameFourFingerTap,
+        LAEventNameFourFingerPinch,
+        LAEventNameFourFingerSpread,
+        LAEventNameFiveFingerTap,
+        LAEventNameFiveFingerPinch,
+        LAEventNameFiveFingerSpread,
+    ];
+}
+
++ (NSValue *)multiTouchPointWithX:(CGFloat)x y:(CGFloat)y {
+    return [NSValue valueWithCGPoint:CGPointMake(x, y)];
 }
 
 + (NSValue *)forceTouchPointWithX:(CGFloat)x y:(CGFloat)y {
@@ -1692,21 +2301,6 @@
         @"Phase" : @(phase),
         @"Location" : [NSValue valueWithCGPoint:location],
     };
-}
-
-+ (NSArray<NSDictionary<NSString *, id> *> *)edgeGestureSnapshotsWithLocations:(NSArray<NSValue *> *)locations
-                                                                         phase:(NSInteger)phase {
-    NSMutableArray<NSDictionary<NSString *, id> *> *snapshots = [[NSMutableArray alloc] init];
-    [locations enumerateObjectsUsingBlock:^(NSValue *locationValue, NSUInteger index, BOOL *stop) {
-        (void)stop;
-        NSString *identifier = [NSString stringWithFormat:@"touch-%lu", (unsigned long)index];
-        [snapshots addObject:@{
-            @"Identifier" : identifier,
-            @"Phase" : @(phase),
-            @"Location" : locationValue,
-        }];
-    }];
-    return snapshots;
 }
 
 @end

@@ -15,7 +15,7 @@
 | 主线 | 状态 | 下一步 |
 | --- | --- | --- |
 | Staged 但未注册的 listener/action | 剩 `watch.haptic.tap` 一项 blocked | 需要确认 Watch haptic 能力与设备差异。 |
-| 未实现 event family | 1.9.13 event 中仍有 33 个未实现 | 按 multi-touch、SpringBoard/icon、lock screen clock、headset button、motion、HUD tap、gesture bar、scheduled、car/watch/clamshell 分组推进。 |
+| 未实现 event family | 1.9.13 event 中仍有 24 个未实现 | 按 SpringBoard/icon、lock screen clock、headset button、motion、HUD tap、gesture bar、scheduled、car/watch/clamshell 分组推进。 |
 | Settings UI 与 menu | 尚未进入 runtime 主线 | 实现 `libactivatorsettings.dylib`、assignments/profile/blacklist UI、menu editor 和 menu listener runtime provider。 |
 | Handled-default interception | 尚未设计 | 单独设计物理按键和 status bar scroll-to-top 等默认行为拦截，不并入现有 event source gate。 |
 | 新增 listener/action 准入 | 持续规则 | 新增或重做 built-in listener/action 时，先落旧实现依据、现代差异和 handled 准则，再补对应测试或真机清单。 |
@@ -46,15 +46,14 @@
 
 优先级按实现收益和可验证性排序：
 
-1. Multi-touch gesture family：`three/four/five-finger tap/pinch/spread` 共 9 个 event。先 probe SpringBoard 或系统手势层能否在不注入用户 App 的前提下观察多指触摸；若需要持续全局识别，必须接入 assignment-aware runtime gate。
-2. SpringBoard/icon gesture family：`springboard.pinch`、`springboard.spread`、`icon.flick.*` 共 6 个 event。只针对 SpringBoard UI 层实现，先确认现代 Home Screen / icon view hook 点。
-3. Lock screen clock gesture family：clock double tap、tap hold、swipe left/right/down 共 5 个 event。与 CoverSheet、通知中心、相机入口、passcode 状态强相关，需要单独 probe。
-4. Headset button：press single、hold short 共 2 个 event。已实现 headset connected/disconnected，但线控按钮需要确认现代音频 route、HID 或 MediaRemote 信号来源。
-5. Motion shake：确认是否能在 SpringBoard 进程内可靠接入，不为该事件注入用户 App。
-6. Volume HUD tap：依赖音量 HUD 触摸，应作为独立 HUD/UI hook，而不是 HID 按键热路径。
-7. Gesture bar double tap：与 home indicator / gesture bar 设备能力和 iOS 版本强相关，需要按设备 probe。
-8. Scheduled sunrise/sunset：需要定位旧实现语义和现代定位/日出日落调度来源。
-9. Car / watch / smart cover：依赖外设、设备能力或私有服务，先保留 metadata，不用 metadata presence 推断可用性。
+1. SpringBoard/icon gesture family：`springboard.pinch`、`springboard.spread`、`icon.flick.*` 共 6 个 event。只针对 SpringBoard UI 层实现，先确认现代 Home Screen / icon view hook 点。
+2. Lock screen clock gesture family：clock double tap、tap hold、swipe left/right/down 共 5 个 event。与 CoverSheet、通知中心、相机入口、passcode 状态强相关，需要单独 probe。
+3. Headset button：press single、hold short 共 2 个 event。已实现 headset connected/disconnected，但线控按钮需要确认现代音频 route、HID 或 MediaRemote 信号来源。
+4. Motion shake：确认是否能在 SpringBoard 进程内可靠接入，不为该事件注入用户 App。
+5. Volume HUD tap：依赖音量 HUD 触摸，应作为独立 HUD/UI hook，而不是 HID 按键热路径。
+6. Gesture bar double tap：与 home indicator / gesture bar 设备能力和 iOS 版本强相关，需要按设备 probe。
+7. Scheduled sunrise/sunset：需要定位旧实现语义和现代定位/日出日落调度来源。
+8. Car / watch / smart cover：依赖外设、设备能力或私有服务，先保留 metadata，不用 metadata presence 推断可用性。
 
 ## Handled-default Interception Backlog
 
@@ -62,7 +61,7 @@
 
 - 可能需要拦截的主要 family 是物理按键和 status bar scroll-to-top。
 - HID 层未来可以考虑完全拦截后根据 `event.handled` 决定是否 fallback 重发 synthetic event。
-- Edge gesture、drag-along/off、force touch 当前保持 no-intercept 语义；如未来要改变，必须逐 family 设计 hook 返回值、原始事件转发和 `event.handled` 回传路径。
+- Edge gesture、drag-along/off、force touch、multi-touch 当前保持 no-intercept 语义；如未来要改变，必须逐 family 设计 hook 返回值、原始事件转发和 `event.handled` 回传路径。
 - 不能把“event 已提交给 dispatch engine”当成“应拦截默认行为”；只有 listener 真正 handled 后才能决定是否拦截。
 
 ## Settings UI 与菜单

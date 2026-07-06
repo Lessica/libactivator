@@ -25,6 +25,7 @@
 #import "LATHardwareActionListener.h"
 #import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
+#import "LATMultiTouchEventSource.h"
 #import "LATNetworkEventSource.h"
 #import "LATNothingListener.h"
 #import "LATPowerStateEventSource.h"
@@ -58,6 +59,7 @@
 @property(nonatomic, strong, readwrite, nullable) LATForceTouchEventSource *forceTouchEventSource;
 @property(nonatomic, strong, readwrite) LATLockStateEventSource *lockStateEventSource;
 @property(nonatomic, strong, readwrite) LATMediaEventSource *mediaEventSource;
+@property(nonatomic, strong, readwrite) LATMultiTouchEventSource *multiTouchEventSource;
 @property(nonatomic, strong, readwrite) LATNetworkEventSource *networkEventSource;
 @property(nonatomic, strong, readwrite) LATPowerStateEventSource *powerStateEventSource;
 @property(nonatomic, strong, readwrite) LATStatusBarEventSource *statusBarEventSource;
@@ -98,6 +100,8 @@
         _edgeGestureEventSource.interestGate = _eventSourceInterestGate;
         _edgeGestureEventSource.fingerprintSensorEventSource = _fingerprintSensorEventSource;
         _forceTouchEventSource.interestGate = _eventSourceInterestGate;
+        _multiTouchEventSource = [[LATMultiTouchEventSource alloc] init];
+        _multiTouchEventSource.interestGate = _eventSourceInterestGate;
 
         [self registerBuiltInListenersWithActivator:activator];
     }
@@ -119,6 +123,7 @@
     [self.fingerprintSensorEventSource start];
     [self.eventSourceInterestGate start];
     [self.forceTouchEventSource start];
+    [self.multiTouchEventSource start];
     [self.statusBarEventSource start];
     [self.edgeGestureEventSource start];
 }
