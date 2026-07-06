@@ -12,7 +12,7 @@
 
 #import <Activator/Activator.h>
 
-static NSUInteger const LATEventSourceInterestFamilyCount = LATEventSourceInterestFamilyMultiTouch + 1;
+static NSUInteger const LATEventSourceInterestFamilyCount = LATEventSourceInterestFamilySpringBoardIconGesture + 1;
 
 @interface LATEventSourceInterestGate ()
 
@@ -158,6 +158,8 @@ static NSUInteger const LATEventSourceInterestFamilyCount = LATEventSourceIntere
         return [self statusBarEventNames];
     case LATEventSourceInterestFamilyMultiTouch:
         return [self multiTouchEventNames];
+    case LATEventSourceInterestFamilySpringBoardIconGesture:
+        return [self springBoardIconGestureEventNames];
     }
 }
 
@@ -240,6 +242,17 @@ static NSUInteger const LATEventSourceInterestFamilyCount = LATEventSourceIntere
         LAEventNameFiveFingerTap,
         LAEventNameFiveFingerPinch,
         LAEventNameFiveFingerSpread,
+    ];
+}
+
+- (NSArray<NSString *> *)springBoardIconGestureEventNames {
+    return @[
+        LAEventNameSpringBoardPinch,
+        LAEventNameSpringBoardSpread,
+        LAEventNameSpringBoardIconFlickUp,
+        LAEventNameSpringBoardIconFlickDown,
+        LAEventNameSpringBoardIconFlickLeft,
+        LAEventNameSpringBoardIconFlickRight,
     ];
 }
 

@@ -30,6 +30,7 @@
 #import "LATNothingListener.h"
 #import "LATPowerStateEventSource.h"
 #import "LATRuntimeStateSource.h"
+#import "LATSpringBoardIconGestureEventSource.h"
 #import "LATStatusBarEventSource.h"
 #import "LATSystemActionListener.h"
 #import "LATTelephonyActionListener.h"
@@ -62,6 +63,7 @@
 @property(nonatomic, strong, readwrite) LATMultiTouchEventSource *multiTouchEventSource;
 @property(nonatomic, strong, readwrite) LATNetworkEventSource *networkEventSource;
 @property(nonatomic, strong, readwrite) LATPowerStateEventSource *powerStateEventSource;
+@property(nonatomic, strong, readwrite) LATSpringBoardIconGestureEventSource *springBoardIconGestureEventSource;
 @property(nonatomic, strong, readwrite) LATStatusBarEventSource *statusBarEventSource;
 
 @end
@@ -102,6 +104,8 @@
         _forceTouchEventSource.interestGate = _eventSourceInterestGate;
         _multiTouchEventSource = [[LATMultiTouchEventSource alloc] init];
         _multiTouchEventSource.interestGate = _eventSourceInterestGate;
+        _springBoardIconGestureEventSource = [[LATSpringBoardIconGestureEventSource alloc] init];
+        _springBoardIconGestureEventSource.interestGate = _eventSourceInterestGate;
 
         [self registerBuiltInListenersWithActivator:activator];
     }
@@ -124,6 +128,7 @@
     [self.eventSourceInterestGate start];
     [self.forceTouchEventSource start];
     [self.multiTouchEventSource start];
+    [self.springBoardIconGestureEventSource start];
     [self.statusBarEventSource start];
     [self.edgeGestureEventSource start];
 }

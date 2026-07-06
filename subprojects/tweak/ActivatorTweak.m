@@ -18,6 +18,7 @@
 #import "LATMultiTouchEventSource.h"
 #import "LATNetworkEventSource.h"
 #import "LATRuntimeStateSource.h"
+#import "LATSpringBoardIconGestureEventSource.h"
 #import "LATStatusBarEventSource.h"
 #import "system/LATSystemCenterController.h"
 
@@ -33,6 +34,7 @@ CHDeclareClass(SBMainSwitcherViewController);
 CHDeclareClass(SBMainSwitcherControllerCoordinator);
 CHDeclareClass(SBVolumeControl);
 CHDeclareClass(SBHIconManager);
+CHDeclareClass(SBIconScrollView);
 CHDeclareClass(SBWiFiManager);
 CHDeclareClass(_UISystemGestureWindow);
 CHDeclareClass(__UISystemGestureManager);
@@ -55,6 +57,7 @@ static Class gDashboardCameraPageViewControllerClass = nil;
 static Class gInCallTransientOverlayViewControllerClass = nil;
 static Class gLockScreenEmergencyCallViewControllerClass = nil;
 static Class gIconControllerClass = nil;
+static Class gIconScrollViewClass = nil;
 
 @interface CCUIModuleCollectionViewController : UIViewController
 - (void)viewDidLoad;
@@ -94,6 +97,9 @@ static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
 
 @interface SBMainSwitcherControllerCoordinator : NSObject
 - (BOOL)isAnySwitcherVisible;
+@end
+
+@interface SBIconScrollView : UIScrollView
 @end
 
 static void LATUpdateMainSwitcherVisibility(SBMainSwitcherViewController *switcher) {
@@ -224,6 +230,14 @@ CHOptimizedMethod1(self, void, SBHIconManager, rootFolderControllerViewDidDisapp
     [gBuiltInRegistry.runtimeStateSource refreshForegroundDisplayIdentifier];
 }
 
+#pragma mark - SBIconScrollView
+
+CHOptimizedMethod1(self, id, SBIconScrollView, initWithFrame, CGRect, frame) {
+    SBIconScrollView *scrollView = CHSuper1(SBIconScrollView, initWithFrame, frame);
+    [gBuiltInRegistry.springBoardIconGestureEventSource noteIconScrollViewDidInitialize:(UIScrollView *)scrollView];
+    return scrollView;
+}
+
 #pragma mark - SBWiFiManager
 
 CHOptimizedMethod0(self, void, SBWiFiManager, _updateCurrentNetwork) {
@@ -311,6 +325,7 @@ static void LATLoadRuntimeStateClasses(void) {
     gInCallTransientOverlayViewControllerClass = NSClassFromString(@"SBInCallTransientOverlayViewController");
     gLockScreenEmergencyCallViewControllerClass = NSClassFromString(@"SBLockScreenEmergencyCallViewController");
     gIconControllerClass = NSClassFromString(@"SBIconController");
+    gIconScrollViewClass = NSClassFromString(@"SBIconScrollView");
 }
 
 static void LATLoadSpringBoardClasses(void) {
@@ -323,6 +338,9 @@ static void LATLoadSpringBoardClasses(void) {
     CHLoadClass_(&SBMainSwitcherControllerCoordinator$, NSClassFromString(@"SBMainSwitcherControllerCoordinator"));
     CHLoadClass_(&SBVolumeControl$, NSClassFromString(@"SBVolumeControl"));
     CHLoadClass_(&SBHIconManager$, NSClassFromString(@"SBHIconManager"));
+    if (gIconScrollViewClass) {
+        CHLoadClass_(&SBIconScrollView$, gIconScrollViewClass);
+    }
     CHLoadClass_(&SBWiFiManager$, NSClassFromString(@"SBWiFiManager"));
     CHLoadClass_(&_UISystemGestureWindow$, NSClassFromString(@"_UISystemGestureWindow"));
     CHLoadClass_(&__UISystemGestureManager$, NSClassFromString(@"__UISystemGestureManager"));
@@ -359,6 +377,12 @@ static void LATInstallHooks(void) {
         if (@available(iOS 17, *)) {
             CHHook1(SBHIconManager, rootFolderControllerViewWillAppear);
             CHHook1(SBHIconManager, rootFolderControllerViewDidDisappear);
+        }
+
+        if (gIconScrollViewClass) {
+            CHHook1(SBIconScrollView, initWithFrame);
+        } else {
+            HBLogWarn(@"Skipping SBIconScrollView hooks because the class is unavailable");
         }
 
         CHHook0(SBWiFiManager, _updateCurrentNetwork);

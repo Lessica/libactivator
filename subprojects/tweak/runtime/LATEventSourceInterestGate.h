@@ -15,6 +15,7 @@ typedef NS_ENUM(NSUInteger, LATEventSourceInterestFamily) {
     LATEventSourceInterestFamilyForceTouch,
     LATEventSourceInterestFamilyStatusBar,
     LATEventSourceInterestFamilyMultiTouch,
+    LATEventSourceInterestFamilySpringBoardIconGesture,
 };
 
 NS_ASSUME_NONNULL_BEGIN

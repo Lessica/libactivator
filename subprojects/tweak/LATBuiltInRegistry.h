@@ -22,6 +22,7 @@
 @class LATNetworkEventSource;
 @class LATPowerStateEventSource;
 @class LATRuntimeStateSource;
+@class LATSpringBoardIconGestureEventSource;
 @class LATStatusBarEventSource;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -45,6 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong, readonly) LATMultiTouchEventSource *multiTouchEventSource;
 @property(nonatomic, strong, readonly) LATNetworkEventSource *networkEventSource;
 @property(nonatomic, strong, readonly) LATPowerStateEventSource *powerStateEventSource;
+@property(nonatomic, strong, readonly) LATSpringBoardIconGestureEventSource *springBoardIconGestureEventSource;
 @property(nonatomic, strong, readonly) LATStatusBarEventSource *statusBarEventSource;
 
 - (instancetype)init NS_UNAVAILABLE;

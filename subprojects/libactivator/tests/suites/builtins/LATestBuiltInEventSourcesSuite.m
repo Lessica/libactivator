@@ -17,6 +17,7 @@
 #import "LATForceTouchEventSource.h"
 #import "LATMultiTouchGestureRecognizer.h"
 #import "LATMultiTouchEventSource.h"
+#import "LATSpringBoardIconGestureEventSource.h"
 #import "LATStatusBarEventSource.h"
 #import "LATestEnvironment.h"
 #import "LATestEventDataSource.h"
@@ -83,6 +84,9 @@
     [recorder expect:NSClassFromString(@"LATMultiTouchEventSource") != Nil
             caseName:@"multi-touch-event-source-loaded"
               reason:@"LATMultiTouchEventSource class was not loaded in SpringBoard"];
+    [recorder expect:NSClassFromString(@"LATSpringBoardIconGestureEventSource") != Nil
+            caseName:@"springboard-icon-gesture-event-source-loaded"
+              reason:@"LATSpringBoardIconGestureEventSource class was not loaded in SpringBoard"];
     [recorder expect:NSClassFromString(@"LATRuntimeStateSource") != Nil
             caseName:@"runtime-state-source-loaded"
               reason:@"LATRuntimeStateSource class was not loaded in SpringBoard"];
@@ -390,10 +394,12 @@
     [self runFingerprintSensorAvailabilityTestsWithRecorder:recorder activator:activator];
     [self runForceTouchAvailabilityTestsWithRecorder:recorder activator:activator];
     [self runMultiTouchAvailabilityTestsWithRecorder:recorder activator:activator];
+    [self runSpringBoardIconGestureAvailabilityTestsWithRecorder:recorder activator:activator];
     [self runEventSourceInterestGateTestsWithRecorder:recorder activator:activator];
     [self runStatusBarRecognizerTestsWithRecorder:recorder activator:activator];
     [self runEdgeGestureClassifierTestsWithRecorder:recorder];
     [self runMultiTouchGestureRecognizerTestsWithRecorder:recorder];
+    [self runSpringBoardIconGestureEventSourceTestsWithRecorder:recorder activator:activator];
     [self runFingerprintSensorRecognizerTestsWithRecorder:recorder activator:activator];
     [self runEdgeGestureEventSourceDispatchTestsWithRecorder:recorder activator:activator];
     [self runForceTouchEventSourceTestsWithRecorder:recorder activator:activator];
@@ -483,6 +489,21 @@
     }
 }
 
++ (void)runSpringBoardIconGestureAvailabilityTestsWithRecorder:(LATestRecorder *)recorder
+                                                     activator:(LAActivator *)activator {
+    NSArray<NSString *> *eventNames = [self springBoardIconGestureEventNames];
+    for (NSString *eventName in eventNames) {
+        [recorder expect:[[activator availableEventNames] containsObject:eventName]
+                caseName:[NSString stringWithFormat:@"springboard-icon-gesture-event-available-%@", eventName]
+                  reason:[NSString stringWithFormat:@"%@ metadata was not available", eventName]];
+        [recorder expect:[activator eventWithName:eventName isCompatibleWithMode:LAEventModeSpringBoard] &&
+                         ![activator eventWithName:eventName isCompatibleWithMode:LAEventModeApplication] &&
+                         ![activator eventWithName:eventName isCompatibleWithMode:LAEventModeLockScreen]
+                caseName:[NSString stringWithFormat:@"springboard-icon-gesture-event-springboard-only-%@", eventName]
+                  reason:[NSString stringWithFormat:@"%@ did not match the SpringBoard-only compatibility", eventName]];
+    }
+}
+
 + (void)runEventSourceInterestGateTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     Class gateClass = NSClassFromString(@"LATEventSourceInterestGate");
     if (!gateClass) {
@@ -497,6 +518,8 @@
         [catalogGate la_testingEventNamesForFamily:LATEventSourceInterestFamilyStatusBar];
     NSArray<NSString *> *multiTouchCatalog =
         [catalogGate la_testingEventNamesForFamily:LATEventSourceInterestFamilyMultiTouch];
+    NSArray<NSString *> *springBoardIconCatalog =
+        [catalogGate la_testingEventNamesForFamily:LATEventSourceInterestFamilySpringBoardIconGesture];
     [recorder expect:[edgeCatalog containsObject:LAEventNameStatusBarSwipeDown] &&
                      [statusBarCatalog containsObject:LAEventNameStatusBarSwipeDown]
             caseName:@"interest-gate-shares-statusbar-swipe-down"
@@ -505,6 +528,11 @@
                      [multiTouchCatalog containsObject:LAEventNameFiveFingerSpread]
             caseName:@"interest-gate-catalog-includes-multi-touch"
               reason:@"Multi-touch events were not present in the multi-touch interest family"];
+    [recorder expect:[springBoardIconCatalog containsObject:LAEventNameSpringBoardPinch] &&
+                     [springBoardIconCatalog containsObject:LAEventNameSpringBoardSpread] &&
+                     [springBoardIconCatalog containsObject:LAEventNameSpringBoardIconFlickUp]
+            caseName:@"interest-gate-catalog-includes-springboard-icon-gestures"
+              reason:@"SpringBoard icon gesture events were not present in the SpringBoard icon interest family"];
 
     NSString *testEventName = @"libactivator.test.core";
     NSString *testListenerName = @"libactivator.test.listener.a";
@@ -526,10 +554,12 @@
     [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilyForceTouch];
     [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilyStatusBar];
     [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilyMultiTouch];
+    [gate la_testingSetEventNames:@[ testEventName ] forFamily:LATEventSourceInterestFamilySpringBoardIconGesture];
     [gate start];
 
     [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
-                     ![gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch]
+                     ![gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch] &&
+                     ![gate isInterestedInFamily:LATEventSourceInterestFamilySpringBoardIconGesture]
             caseName:@"interest-gate-no-assignment"
               reason:@"Interest gate was enabled without a current-mode assignment"];
 
@@ -538,7 +568,8 @@
     [recorder expect:[gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
                      [gate isInterestedInFamily:LATEventSourceInterestFamilyForceTouch] &&
                      [gate isInterestedInFamily:LATEventSourceInterestFamilyStatusBar] &&
-                     [gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch]
+                     [gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch] &&
+                     [gate isInterestedInFamily:LATEventSourceInterestFamilySpringBoardIconGesture]
             caseName:@"interest-gate-current-mode-assignment"
               reason:@"Interest gate did not enable families with a current-mode assignment"];
 
@@ -547,7 +578,8 @@
                   displayIdentifier:@"com.apple.Preferences"
                            screenOn:YES];
     [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
-                     ![gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch]
+                     ![gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch] &&
+                     ![gate isInterestedInFamily:LATEventSourceInterestFamilySpringBoardIconGesture]
             caseName:@"interest-gate-mode-change-invalidates"
               reason:@"Interest gate did not refresh after the current event mode changed"];
 
@@ -556,13 +588,15 @@
                   displayIdentifier:nil
                            screenOn:YES];
     [recorder expect:[gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
-                     [gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch]
+                     [gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch] &&
+                     [gate isInterestedInFamily:LATEventSourceInterestFamilySpringBoardIconGesture]
             caseName:@"interest-gate-mode-change-restores"
               reason:@"Interest gate did not restore interest after returning to the assigned event mode"];
 
     [activator unregisterListenerWithName:testListenerName];
     [recorder expect:![gate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] &&
-                     ![gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch]
+                     ![gate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch] &&
+                     ![gate isInterestedInFamily:LATEventSourceInterestFamilySpringBoardIconGesture]
             caseName:@"interest-gate-listener-change-invalidates"
               reason:@"Interest gate did not refresh after the assigned listener became unavailable"];
 
@@ -663,6 +697,29 @@
     } else {
         [recorder skip:@"multi-touch-interest-gate-before-snapshots-and-resets"
                 reason:@"LATMultiTouchEventSource was not loaded"];
+    }
+
+    Class springBoardIconSourceClass = NSClassFromString(@"LATSpringBoardIconGestureEventSource");
+    if (springBoardIconSourceClass) {
+        LATEventSourceInterestGate *springBoardIconGate = [[gateClass alloc] initWithActivator:activator];
+        [springBoardIconGate la_testingSetEventNames:@[] forFamily:LATEventSourceInterestFamilySpringBoardIconGesture];
+        [springBoardIconGate start];
+
+        LATSpringBoardIconGestureEventSource *springBoardIconSource = [[springBoardIconSourceClass alloc] init];
+        [springBoardIconSource start];
+        [activator la_resetDispatchCounts];
+        [springBoardIconSource la_testingHandlePinchScale:1.0 state:UIGestureRecognizerStateBegan bounds:bounds];
+        springBoardIconSource.interestGate = springBoardIconGate;
+        NSString *eventName = [springBoardIconSource la_testingHandlePinchScale:0.94
+                                                                          state:UIGestureRecognizerStateChanged
+                                                                         bounds:bounds];
+        [recorder expect:eventName == nil && ![springBoardIconSource la_testingHasRecognitionState] &&
+                         [self dispatchCountForEventName:LAEventNameSpringBoardPinch activator:activator] == 0
+                caseName:@"springboard-icon-interest-gate-resets-pinch-state"
+                  reason:@"SpringBoard icon source kept pinch state or dispatched while interest was disabled"];
+    } else {
+        [recorder skip:@"springboard-icon-interest-gate-resets-pinch-state"
+                reason:@"LATSpringBoardIconGestureEventSource was not loaded"];
     }
 
     Class statusBarSourceClass = NSClassFromString(@"LATStatusBarEventSource");
@@ -2034,6 +2091,87 @@
               reason:@"Tap classification did not stay below the legacy movement limit"];
 }
 
++ (void)runSpringBoardIconGestureEventSourceTestsWithRecorder:(LATestRecorder *)recorder
+                                                    activator:(LAActivator *)activator {
+    Class sourceClass = NSClassFromString(@"LATSpringBoardIconGestureEventSource");
+    if (!sourceClass) {
+        [recorder skip:@"springboard-icon-gesture-event-source" reason:@"LATSpringBoardIconGestureEventSource was not loaded"];
+        return;
+    }
+
+    CGRect bounds = CGRectMake(0.0, 0.0, 400.0, 800.0);
+
+    LATSpringBoardIconGestureEventSource *notStartedSource = [[sourceClass alloc] init];
+    [activator la_resetDispatchCounts];
+    NSString *notStartedEventName = [notStartedSource la_testingHandlePinchScale:0.94
+                                                                           state:UIGestureRecognizerStateChanged
+                                                                          bounds:bounds];
+    [recorder expect:notStartedEventName == nil &&
+                     [self dispatchCountForEventName:LAEventNameSpringBoardPinch activator:activator] == 0
+            caseName:@"springboard-icon-gesture-ignores-events-before-start"
+              reason:@"SpringBoard icon gesture source dispatched before it was started"];
+
+    LATSpringBoardIconGestureEventSource *pinchSource = [[sourceClass alloc] init];
+    [pinchSource start];
+    [activator la_resetDispatchCounts];
+    [pinchSource la_testingHandlePinchScale:1.0 state:UIGestureRecognizerStateBegan bounds:bounds];
+    NSString *pinchAtThresholdEventName = [pinchSource la_testingHandlePinchScale:0.95
+                                                                            state:UIGestureRecognizerStateChanged
+                                                                           bounds:bounds];
+    NSString *pinchBelowThresholdEventName = [pinchSource la_testingHandlePinchScale:0.94
+                                                                              state:UIGestureRecognizerStateChanged
+                                                                             bounds:bounds];
+    NSString *secondPinchEventName = [pinchSource la_testingHandlePinchScale:0.90
+                                                                       state:UIGestureRecognizerStateChanged
+                                                                      bounds:bounds];
+    [recorder expect:pinchAtThresholdEventName == nil &&
+                     [pinchBelowThresholdEventName isEqualToString:LAEventNameSpringBoardPinch] &&
+                     secondPinchEventName == nil &&
+                     [self dispatchCountForEventName:LAEventNameSpringBoardPinch activator:activator] == 1
+            caseName:@"springboard-icon-gesture-dispatches-pinch-once"
+              reason:@"SpringBoard icon pinch threshold or once-per-session behavior was wrong"];
+
+    LATSpringBoardIconGestureEventSource *spreadSource = [[sourceClass alloc] init];
+    [spreadSource start];
+    [activator la_resetDispatchCounts];
+    [spreadSource la_testingHandlePinchScale:1.0 state:UIGestureRecognizerStateBegan bounds:bounds];
+    NSString *spreadAtThresholdEventName = [spreadSource la_testingHandlePinchScale:1.05
+                                                                              state:UIGestureRecognizerStateChanged
+                                                                             bounds:bounds];
+    NSString *spreadAboveThresholdEventName = [spreadSource la_testingHandlePinchScale:1.06
+                                                                                 state:UIGestureRecognizerStateChanged
+                                                                                bounds:bounds];
+    NSString *secondSpreadEventName = [spreadSource la_testingHandlePinchScale:1.10
+                                                                         state:UIGestureRecognizerStateChanged
+                                                                        bounds:bounds];
+    [recorder expect:spreadAtThresholdEventName == nil &&
+                     [spreadAboveThresholdEventName isEqualToString:LAEventNameSpringBoardSpread] &&
+                     secondSpreadEventName == nil &&
+                     [self dispatchCountForEventName:LAEventNameSpringBoardSpread activator:activator] == 1
+            caseName:@"springboard-icon-gesture-dispatches-spread-once"
+              reason:@"SpringBoard icon spread threshold or once-per-session behavior was wrong"];
+
+    LATSpringBoardIconGestureEventSource *resetSource = [[sourceClass alloc] init];
+    [resetSource start];
+    [activator la_resetDispatchCounts];
+    [resetSource la_testingHandlePinchScale:1.0 state:UIGestureRecognizerStateBegan bounds:bounds];
+    NSString *cancelledEventName = [resetSource la_testingHandlePinchScale:0.94
+                                                                     state:UIGestureRecognizerStateCancelled
+                                                                    bounds:bounds];
+    BOOL cancelledReset = ![resetSource la_testingHasRecognitionState];
+    [resetSource la_testingHandlePinchScale:1.0 state:UIGestureRecognizerStateBegan bounds:bounds];
+    NSString *afterCancelEventName = [resetSource la_testingHandlePinchScale:1.06
+                                                                       state:UIGestureRecognizerStateChanged
+                                                                      bounds:bounds];
+    [resetSource la_testingHandlePinchScale:1.06 state:UIGestureRecognizerStateEnded bounds:bounds];
+    [recorder expect:cancelledEventName == nil && cancelledReset &&
+                     [afterCancelEventName isEqualToString:LAEventNameSpringBoardSpread] &&
+                     ![resetSource la_testingHasRecognitionState] &&
+                     [self dispatchCountForEventName:LAEventNameSpringBoardSpread activator:activator] == 1
+            caseName:@"springboard-icon-gesture-cancel-and-end-reset-session"
+              reason:@"SpringBoard icon source did not reset state after cancellation or end"];
+}
+
 + (void)runMultiTouchEventSourceDispatchTestsWithRecorder:(LATestRecorder *)recorder
                                                 activator:(LAActivator *)activator {
     Class sourceClass = NSClassFromString(@"LATMultiTouchEventSource");
@@ -2280,6 +2418,17 @@
         LAEventNameFiveFingerTap,
         LAEventNameFiveFingerPinch,
         LAEventNameFiveFingerSpread,
+    ];
+}
+
++ (NSArray<NSString *> *)springBoardIconGestureEventNames {
+    return @[
+        LAEventNameSpringBoardPinch,
+        LAEventNameSpringBoardSpread,
+        LAEventNameSpringBoardIconFlickUp,
+        LAEventNameSpringBoardIconFlickDown,
+        LAEventNameSpringBoardIconFlickLeft,
+        LAEventNameSpringBoardIconFlickRight,
     ];
 }
 

@@ -28,6 +28,7 @@ ActivatorTweak_FILES += events/LATFingerprintSensorEventSource.m
 ActivatorTweak_FILES += events/LATForceTouchEventSource.m
 ActivatorTweak_FILES += events/LATMultiTouchGestureRecognizer.m
 ActivatorTweak_FILES += events/LATMultiTouchEventSource.m
+ActivatorTweak_FILES += events/LATSpringBoardIconGestureEventSource.m
 ActivatorTweak_FILES += listeners/LATApplicationActionListener.m
 ActivatorTweak_FILES += listeners/LATCameraActionListener.m
 ActivatorTweak_FILES += listeners/LATComposeActionListener.m
