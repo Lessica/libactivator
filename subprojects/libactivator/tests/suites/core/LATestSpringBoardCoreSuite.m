@@ -81,6 +81,20 @@
     [recorder expect:removableDataSource.removalCount == 1 && ![activator hasEventWithName:removableEventName]
             caseName:@"event-removal-supported"
               reason:@"Supported event removal did not remove the event data source"];
+
+    LATestEventDataSource *reentrantRemovalDataSource = [[LATestEventDataSource alloc] init];
+    LATestEventDataSource *reentrantReplacementDataSource = [[LATestEventDataSource alloc] init];
+    reentrantRemovalDataSource.supportsRemoval = YES;
+    reentrantRemovalDataSource.removalHandler = ^{
+        [activator registerEventDataSource:reentrantReplacementDataSource forEventName:removableEventName];
+    };
+    [activator registerEventDataSource:reentrantRemovalDataSource forEventName:removableEventName];
+    [activator removeEventWithName:removableEventName];
+    [recorder expect:reentrantRemovalDataSource.removalCount == 1 &&
+                     [activator eventDataSourceForEventName:removableEventName] == reentrantReplacementDataSource
+            caseName:@"event-removal-preserves-reentrant-replacement"
+              reason:@"Event removal deleted a replacement registered by the removal callback"];
+    [activator unregisterEventDataSourceWithEventName:removableEventName];
     [activator unregisterEventDataSourceWithEventName:nonremovableEventName];
     __block NSUInteger eventNotificationCount = 0;
     id eventObserver =
@@ -102,6 +116,169 @@
             caseName:@"new-event-data-source-availability-notification"
               reason:@"New event data source registration did not post availability notification"];
     [NSNotificationCenter.defaultCenter removeObserver:eventObserver];
+
+    NSString *ownerSafeEventName = @"libactivator.test.owner-safe-event";
+    LATestEventDataSource *ownerDataSource = [[LATestEventDataSource alloc] init];
+    LATestEventDataSource *contenderDataSource = [[LATestEventDataSource alloc] init];
+    __block NSUInteger ownerEventNotificationCount = 0;
+    id ownerEventObserver =
+        [NSNotificationCenter.defaultCenter addObserverForName:LAActivatorAvailableEventsChangedNotification
+                                                        object:activator
+                                                         queue:nil
+                                                    usingBlock:^(__unused NSNotification *notification) {
+                                                        ownerEventNotificationCount += 1;
+                                                    }];
+    BOOL ownerRegistered = [activator la_registerEventDataSourceIfAbsent:ownerDataSource
+                                                            forEventName:ownerSafeEventName];
+    BOOL contenderRegistered = [activator la_registerEventDataSourceIfAbsent:contenderDataSource
+                                                                forEventName:ownerSafeEventName];
+    [recorder expect:ownerRegistered && !contenderRegistered &&
+                     [activator eventDataSourceForEventName:ownerSafeEventName] == ownerDataSource &&
+                     ownerEventNotificationCount == 1
+            caseName:@"event-data-source-register-if-absent"
+              reason:@"Owner-safe event registration did not preserve ownership and notification semantics"];
+    [activator registerEventDataSource:contenderDataSource forEventName:ownerSafeEventName];
+    BOOL staleOwnerRemoved = [activator la_unregisterEventDataSourceWithEventName:ownerSafeEventName
+                                                              ifOwnedByDataSource:ownerDataSource];
+    [recorder expect:!staleOwnerRemoved &&
+                     [activator eventDataSourceForEventName:ownerSafeEventName] == contenderDataSource &&
+                     ownerEventNotificationCount == 1
+            caseName:@"event-data-source-owner-safe-unregister-rejects-stale-owner"
+              reason:@"Owner-safe event removal changed state or notified for a stale owner"];
+    BOOL currentOwnerRemoved = [activator la_unregisterEventDataSourceWithEventName:ownerSafeEventName
+                                                                ifOwnedByDataSource:contenderDataSource];
+    [recorder expect:currentOwnerRemoved && ![activator hasEventWithName:ownerSafeEventName] &&
+                     ownerEventNotificationCount == 2
+            caseName:@"event-data-source-owner-safe-unregister"
+              reason:@"Owner-safe event removal did not remove and notify for the current owner"];
+    [NSNotificationCenter.defaultCenter removeObserver:ownerEventObserver];
+
+    [recorder expect:![activator eventWithNameSupportsConfiguration:eventName] &&
+                     [activator configurationViewControllerForEventWithName:eventName] == nil
+            caseName:@"event-configuration-unsupported-without-descriptor"
+              reason:@"Event configuration was exposed without a class and bundle descriptor"];
+
+    NSString *configurationEventName = @"libactivator.test.configuration-event";
+    LATestEventDataSource *configurationDataSource = [[LATestEventDataSource alloc] init];
+    configurationDataSource.configurationClassName = NSStringFromClass(LAEventConfigurationViewController.class);
+    [activator registerEventDataSource:configurationDataSource forEventName:configurationEventName];
+    [recorder expect:![activator eventWithNameSupportsConfiguration:configurationEventName]
+            caseName:@"event-configuration-requires-bundle"
+              reason:@"Event configuration was exposed without a configuration bundle"];
+
+    configurationDataSource.configurationBundle = [NSBundle bundleForClass:LAEventConfigurationViewController.class];
+    NSDictionary<NSString *, NSString *> *configurationDescriptor =
+        [activator la_eventConfigurationDescriptorForEventName:configurationEventName];
+    [recorder expect:[activator eventWithNameSupportsConfiguration:configurationEventName] &&
+                     [configurationDescriptor[LAIPCKeyEventConfigurationClassName]
+                         isEqualToString:configurationDataSource.configurationClassName] &&
+                     [configurationDescriptor[LAIPCKeyEventConfigurationBundlePath]
+                         isEqualToString:configurationDataSource.configurationBundle.bundlePath]
+            caseName:@"event-configuration-descriptor"
+              reason:@"Event configuration descriptor did not preserve its class name and bundle path"];
+
+    LAEventConfigurationViewController *configurationController =
+        [activator configurationViewControllerForEventWithName:configurationEventName];
+    [recorder expect:[configurationController isKindOfClass:LAEventConfigurationViewController.class] &&
+                     [configurationController.eventName isEqualToString:configurationEventName]
+            caseName:@"event-configuration-controller-factory"
+              reason:@"Event configuration factory did not create the requested controller locally"];
+
+    NSDictionary *initialConfiguration = @{
+        @"Enabled" : @YES,
+        @"Threshold" : @2,
+    };
+    configurationDataSource.configuration = initialConfiguration;
+    [recorder
+          expect:[[activator la_configurationForEventWithName:configurationEventName] isEqual:initialConfiguration] &&
+                 configurationDataSource.configurationRequestCount == 1
+        caseName:@"event-configuration-get-bridge"
+          reason:@"Event configuration bridge did not request the data source configuration"];
+
+    NSDictionary *savedConfiguration = @{
+        @"Enabled" : @NO,
+        @"Threshold" : @4,
+    };
+    BOOL configurationSaved = [activator la_saveConfiguration:savedConfiguration
+                                             forEventWithName:configurationEventName];
+    [recorder expect:configurationSaved && configurationDataSource.configurationSaveCount == 1 &&
+                     [configurationDataSource.lastSavedConfiguration isEqual:savedConfiguration]
+            caseName:@"event-configuration-save-bridge"
+              reason:@"Event configuration bridge did not save a property-list configuration"];
+    BOOL invalidConfigurationSaved = [activator la_saveConfiguration:[[NSObject alloc] init]
+                                                    forEventWithName:configurationEventName];
+    [recorder expect:!invalidConfigurationSaved && configurationDataSource.configurationSaveCount == 1
+            caseName:@"event-configuration-save-rejects-non-property-list"
+              reason:@"Event configuration bridge accepted a non-property-list configuration"];
+
+    NSDictionary *nestedInvalidConfiguration = @{
+        @"Enabled" : @YES,
+        @"Nested" : @{
+            @"Invalid" : [[NSObject alloc] init],
+        },
+    };
+    BOOL nestedInvalidConfigurationSaved = [activator la_saveConfiguration:nestedInvalidConfiguration
+                                                          forEventWithName:configurationEventName];
+    [recorder expect:!nestedInvalidConfigurationSaved && configurationDataSource.configurationSaveCount == 1 &&
+                     [configurationDataSource.lastSavedConfiguration isEqual:savedConfiguration] &&
+                     [configurationDataSource.configuration isEqual:savedConfiguration]
+            caseName:@"event-configuration-save-atomically-rejects-nested-non-property-list"
+              reason:@"Event configuration bridge partially accepted a nested non-property-list configuration"];
+
+    configurationDataSource.configuration = nestedInvalidConfiguration;
+    [recorder expect:[activator la_configurationForEventWithName:configurationEventName] == nil &&
+                     configurationDataSource.configurationRequestCount == 2
+            caseName:@"event-configuration-get-atomically-rejects-nested-non-property-list"
+              reason:@"Event configuration bridge returned a partially sanitized provider snapshot"];
+    configurationDataSource.configuration = savedConfiguration;
+
+    LATestEventDataSource *configurationReplacementDataSource = [[LATestEventDataSource alloc] init];
+    configurationReplacementDataSource.configurationClassName =
+        NSStringFromClass(LAEventConfigurationViewController.class);
+    configurationReplacementDataSource.configurationBundle =
+        [NSBundle bundleForClass:LAEventConfigurationViewController.class];
+    configurationReplacementDataSource.configuration = @{@"Source" : @"replacement"};
+    configurationDataSource.configuration = @{@"Source" : @"snapshot"};
+    configurationDataSource.configurationDescriptorRequestHandler = ^{
+        [activator registerEventDataSource:configurationReplacementDataSource forEventName:configurationEventName];
+    };
+    id snapshotConfiguration = [activator la_configurationForEventWithName:configurationEventName];
+    configurationDataSource.configurationDescriptorRequestHandler = nil;
+    [recorder expect:snapshotConfiguration == nil && configurationDataSource.configurationRequestCount == 2 &&
+                     configurationReplacementDataSource.configurationRequestCount == 0
+            caseName:@"event-configuration-get-rejects-stale-owner"
+              reason:@"Event configuration get read from a data source that lost ownership during descriptor lookup"];
+
+    [activator registerEventDataSource:configurationDataSource forEventName:configurationEventName];
+    configurationDataSource.configurationDescriptorRequestHandler = ^{
+        [activator registerEventDataSource:configurationReplacementDataSource forEventName:configurationEventName];
+    };
+    NSDictionary *snapshotSavedConfiguration = @{@"Source" : @"saved-snapshot"};
+    BOOL snapshotConfigurationSaved = [activator la_saveConfiguration:snapshotSavedConfiguration
+                                                     forEventWithName:configurationEventName];
+    configurationDataSource.configurationDescriptorRequestHandler = nil;
+    [recorder expect:!snapshotConfigurationSaved && configurationDataSource.configurationSaveCount == 1 &&
+                     [configurationDataSource.lastSavedConfiguration isEqual:savedConfiguration] &&
+                     configurationReplacementDataSource.configurationSaveCount == 0
+            caseName:@"event-configuration-save-rejects-stale-owner"
+              reason:@"Event configuration save wrote to a data source that lost ownership during descriptor lookup"];
+
+    [activator registerEventDataSource:configurationDataSource forEventName:configurationEventName];
+    configurationDataSource.configurationClassName = NSStringFromClass(LAEventConfigurationViewController.class);
+    configurationDataSource.configurationBundle = [NSBundle bundleForClass:NSObject.class];
+    [recorder expect:[activator eventWithNameSupportsConfiguration:configurationEventName] &&
+                     [activator configurationViewControllerForEventWithName:configurationEventName] == nil
+            caseName:@"event-configuration-controller-requires-bundle-provenance"
+              reason:@"Event configuration factory accepted a controller from outside the descriptor bundle"];
+
+    configurationDataSource.configurationClassName = NSStringFromClass(NSObject.class);
+    configurationDataSource.configurationBundle = [NSBundle bundleForClass:NSObject.class];
+    [recorder expect:[activator eventWithNameSupportsConfiguration:configurationEventName] &&
+                     [activator configurationViewControllerForEventWithName:configurationEventName] == nil
+            caseName:@"event-configuration-controller-requires-base-class"
+              reason:@"Event configuration factory created a controller with an invalid base class"];
+    [activator unregisterEventDataSourceWithEventName:configurationEventName];
+
     [recorder expect:[activator hasListenerWithName:listenerAName]
             caseName:@"listener-registry"
               reason:@"Listener was not registered"];

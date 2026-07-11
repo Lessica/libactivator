@@ -59,6 +59,9 @@ NSString *const LAIPCMessageAssignmentWarningForEvent = @"libactivator.request.a
 NSString *const LAIPCMessageEventIsUnprotected = @"libactivator.request.event-is-unprotected";
 NSString *const LAIPCMessageEventSupportsRemoval = @"libactivator.request.event-supports-removal";
 NSString *const LAIPCMessageEventSupportsConfiguration = @"libactivator.request.event-supports-configuration";
+NSString *const LAIPCMessageEventConfigurationDescriptor = @"libactivator.request.event-configuration-descriptor";
+NSString *const LAIPCMessageEventConfiguration = @"libactivator.request.event-configuration";
+NSString *const LAIPCMessageSaveEventConfiguration = @"libactivator.request.save-event-configuration";
 
 #pragma mark - Listener Metadata Messages
 
@@ -111,6 +114,7 @@ NSString *const LAIPCTestingCommandRunDeviceRuntime = @"run-device-runtime";
 NSString *const LAIPCTestingCommandRuntimeState = @"runtime-state";
 NSString *const LAIPCTestingCommandPrepareUserInfoProbe = @"prepare-user-info-probe";
 NSString *const LAIPCTestingCommandUserInfoProbeResult = @"user-info-probe-result";
+NSString *const LAIPCTestingCommandPrepareEventConfigurationProbe = @"prepare-event-configuration-probe";
 #endif
 
 #pragma mark - UserInfo Keys
@@ -131,6 +135,9 @@ NSString *const LAIPCKeyPreferenceValue = @"PreferenceValue";
 NSString *const LAIPCKeyInfoDictionaryKey = @"InfoDictionaryKey";
 NSString *const LAIPCKeyScale = @"Scale";
 NSString *const LAIPCKeyApplicationAccessibilityEnabled = @"ApplicationAccessibilityEnabled";
+NSString *const LAIPCKeyEventConfiguration = @"EventConfiguration";
+NSString *const LAIPCKeyEventConfigurationClassName = @"className";
+NSString *const LAIPCKeyEventConfigurationBundlePath = @"bundlePath";
 
 #if LIBACTIVATOR_TEST_SUPPORT
 NSString *const LAIPCKeyTestingCommand = @"TestingCommand";

@@ -12,7 +12,7 @@
 #import "LATBuiltInRegistry.h"
 #import "LATButtonEventSource.h"
 #import "LATEdgeGestureEventSource.h"
-#import "LATEventSourceInterestGate.h"
+#import "LATEventSourceRegistry.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
 #import "LATMultiTouchEventSource.h"
@@ -305,12 +305,11 @@ CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, eve
 
 CHOptimizedMethod0(self, unsigned char, __UISystemGestureManager, _dispatchModeForExternalGestureCompletion) {
     unsigned char dispatchMode = CHSuper0(__UISystemGestureManager, _dispatchModeForExternalGestureCompletion);
-    LATEventSourceInterestGate *interestGate = gBuiltInRegistry.eventSourceInterestGate;
-    BOOL shouldKeepSending =
-        !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture] ||
-        (gBuiltInRegistry.forceTouchEventSource &&
-         [interestGate isInterestedInFamily:LATEventSourceInterestFamilyForceTouch]) ||
-        [interestGate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch];
+    LATEventSourceRegistry *eventSourceRegistry = gBuiltInRegistry.eventSourceRegistry;
+    BOOL shouldKeepSending = [eventSourceRegistry isInterestedInEventSource:gBuiltInRegistry.edgeGestureEventSource] ||
+                             (gBuiltInRegistry.forceTouchEventSource &&
+                              [eventSourceRegistry isInterestedInEventSource:gBuiltInRegistry.forceTouchEventSource]) ||
+                             [eventSourceRegistry isInterestedInEventSource:gBuiltInRegistry.multiTouchEventSource];
     if (dispatchMode == LATSystemGestureDispatchModeIgnore && shouldKeepSending) {
         return LATSystemGestureDispatchModeContinueSending;
     }

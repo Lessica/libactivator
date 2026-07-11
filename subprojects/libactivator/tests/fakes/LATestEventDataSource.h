@@ -18,6 +18,14 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, assign) BOOL unprotectedEvent;
 @property(nonatomic, assign) BOOL supportsRemoval;
 @property(nonatomic, assign) NSInteger removalCount;
+@property(nonatomic, copy, nullable) void (^removalHandler)(void);
+@property(nonatomic, copy, nullable) NSString *configurationClassName;
+@property(nonatomic, strong, nullable) NSBundle *configurationBundle;
+@property(nonatomic, strong, nullable) id configuration;
+@property(nonatomic, strong, nullable) id lastSavedConfiguration;
+@property(nonatomic, copy, nullable) void (^configurationDescriptorRequestHandler)(void);
+@property(nonatomic, assign) NSInteger configurationRequestCount;
+@property(nonatomic, assign) NSInteger configurationSaveCount;
 @end
 
 NS_ASSUME_NONNULL_END

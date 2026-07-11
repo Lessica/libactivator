@@ -8,9 +8,11 @@
 
 #import <Foundation/Foundation.h>
 
+#import "LATEventSource.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATPowerStateEventSource : NSObject
+@interface LATPowerStateEventSource : NSObject <LATEventSource>
 
 // Main-queue confined. This source reads UIDevice battery state and submits events to the
 // SpringBoard dispatch engine, so callers must start it from the SpringBoard main queue.

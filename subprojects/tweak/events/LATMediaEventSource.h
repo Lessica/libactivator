@@ -8,11 +8,13 @@
 
 #import <Foundation/Foundation.h>
 
+#import "LATEventSource.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
 typedef void (^LATNowPlayingApplicationDisplayIdentifierCompletion)(NSString *_Nullable displayIdentifier);
 
-@interface LATMediaEventSource : NSObject
+@interface LATMediaEventSource : NSObject <LATEventSource>
 
 // Main-queue confined. This source owns media-related event acquisition and submits events to the
 // SpringBoard dispatch engine, so callers must start it from the SpringBoard main queue.

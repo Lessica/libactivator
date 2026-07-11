@@ -8,14 +8,19 @@
 
 #import <Foundation/Foundation.h>
 
+#import "LATEventSource.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATNetworkEventSource : NSObject
+@interface LATNetworkEventSource : NSObject <LATEventSource>
+
+@property(nonatomic, copy, readonly) NSSet<NSString *> *configuredEventNames;
 
 // Main-queue confined for start and state reads. Hook and network monitor entry
 // points may call noteNetworkStateMayHaveChangedWithReason: from any queue.
 - (void)start;
 - (void)noteNetworkStateMayHaveChangedWithReason:(NSString *)reason;
+- (void)updateConfiguredEventNames:(NSSet<NSString *> *)configuredEventNames;
 
 @end
 

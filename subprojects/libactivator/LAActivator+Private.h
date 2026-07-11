@@ -12,6 +12,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+extern NSString *const LAActivatorListenerRegistryChangedNotification;
+
 @interface LAActivator (Private)
 
 #pragma mark - Lifecycle
@@ -40,6 +42,15 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)registerListener:(id<LAListener>)listener forName:(NSString *)name ignoreHasSeen:(BOOL)ignoreHasSeen;
 - (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
+- (BOOL)la_registerEventDataSourceIfAbsent:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName;
+- (BOOL)la_unregisterEventDataSourceWithEventName:(NSString *)eventName
+                              ifOwnedByDataSource:(id<LAEventDataSource>)dataSource;
+
+#pragma mark - Event Configuration
+
+- (nullable NSDictionary<NSString *, NSString *> *)la_eventConfigurationDescriptorForEventName:(NSString *)eventName;
+- (nullable id)la_configurationForEventWithName:(NSString *)eventName;
+- (BOOL)la_saveConfiguration:(id)configuration forEventWithName:(NSString *)eventName;
 
 #pragma mark - Assignment Model
 
@@ -47,6 +58,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)la_addListenerAssignmentAndNotifyIfChanged:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (BOOL)la_removeListenerAssignmentAndNotifyIfChanged:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (BOOL)la_unassignEventAndNotifyIfChanged:(LAEvent *)event;
+- (BOOL)la_unassignEventNameFromAllProfilesAndNotifyIfChanged:(NSString *)eventName;
 
 #pragma mark - Profiles And Blacklist
 

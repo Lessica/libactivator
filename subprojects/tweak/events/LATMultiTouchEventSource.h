@@ -8,13 +8,15 @@
 
 #import <UIKit/UIKit.h>
 
-@class LATEventSourceInterestGate;
+#import "LATEventSource.h"
+
+@class LATEventSourceRegistry;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATMultiTouchEventSource : NSObject
+@interface LATMultiTouchEventSource : NSObject <LATEventSource>
 
-@property(nonatomic, weak, nullable) LATEventSourceInterestGate *interestGate;
+@property(nonatomic, weak, nullable) LATEventSourceRegistry *eventSourceRegistry;
 
 // Main-queue confined. This source observes system gesture window events and dispatches
 // Activator multi-touch events without consuming the original system touch handling.

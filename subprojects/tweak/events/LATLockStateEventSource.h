@@ -8,12 +8,14 @@
 
 #import <Foundation/Foundation.h>
 
+#import "LATEventSource.h"
+
 @class LATRuntimeStateSource;
 @class LATFingerprintSensorEventSource;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATLockStateEventSource : NSObject
+@interface LATLockStateEventSource : NSObject <LATEventSource>
 
 @property(nonatomic, weak, nullable) LATFingerprintSensorEventSource *fingerprintSensorEventSource;
 

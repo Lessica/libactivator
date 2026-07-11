@@ -8,13 +8,15 @@
 
 #import <UIKit/UIKit.h>
 
-@class LATEventSourceInterestGate;
+#import "LATEventSource.h"
+
+@class LATEventSourceRegistry;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATSpringBoardIconGestureEventSource : NSObject
+@interface LATSpringBoardIconGestureEventSource : NSObject <LATEventSource>
 
-@property(nonatomic, weak, nullable) LATEventSourceInterestGate *interestGate;
+@property(nonatomic, weak, nullable) LATEventSourceRegistry *eventSourceRegistry;
 
 // Main-queue confined. This source reuses SBIconScrollView's existing pinch
 // recognizer and dispatches SpringBoard icon pinch/spread events without adding

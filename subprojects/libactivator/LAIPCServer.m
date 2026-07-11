@@ -85,6 +85,9 @@
         LAIPCMessageEventIsUnprotected,
         LAIPCMessageEventSupportsRemoval,
         LAIPCMessageEventSupportsConfiguration,
+        LAIPCMessageEventConfigurationDescriptor,
+        LAIPCMessageEventConfiguration,
+        LAIPCMessageSaveEventConfiguration,
         LAIPCMessageListenerInfoDictionaryValue,
         LAIPCMessageListenerRequiresAssignment,
         LAIPCMessageCompatibleModesForListener,
@@ -434,6 +437,21 @@
     }
     if ([messageName isEqualToString:LAIPCMessageEventSupportsConfiguration]) {
         return [LAIPCCodec replyWithOK:YES value:@([_activator eventWithNameSupportsConfiguration:eventName])];
+    }
+    if ([messageName isEqualToString:LAIPCMessageEventConfigurationDescriptor]) {
+        NSDictionary *descriptor = [_activator la_eventConfigurationDescriptorForEventName:eventName];
+        return [LAIPCCodec replyWithOK:descriptor != nil value:descriptor];
+    }
+    if ([messageName isEqualToString:LAIPCMessageEventConfiguration]) {
+        return [LAIPCCodec replyWithOK:YES value:[_activator la_configurationForEventWithName:eventName]];
+    }
+    if ([messageName isEqualToString:LAIPCMessageSaveEventConfiguration]) {
+        id configuration = userInfo[LAIPCKeyEventConfiguration];
+        if (![LAIPCCodec isPropertyListValue:configuration]) {
+            return [LAIPCCodec replyWithOK:NO value:nil];
+        }
+        return [LAIPCCodec replyWithOK:[_activator la_saveConfiguration:configuration forEventWithName:eventName]
+                                 value:nil];
     }
     if ([messageName isEqualToString:LAIPCMessageRemoveEvent]) {
         [_activator removeEventWithName:eventName];

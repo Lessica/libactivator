@@ -65,6 +65,9 @@ LA_IPC_EXTERN NSString *const LAIPCMessageAssignmentWarningForEvent;
 LA_IPC_EXTERN NSString *const LAIPCMessageEventIsUnprotected;
 LA_IPC_EXTERN NSString *const LAIPCMessageEventSupportsRemoval;
 LA_IPC_EXTERN NSString *const LAIPCMessageEventSupportsConfiguration;
+LA_IPC_EXTERN NSString *const LAIPCMessageEventConfigurationDescriptor;
+LA_IPC_EXTERN NSString *const LAIPCMessageEventConfiguration;
+LA_IPC_EXTERN NSString *const LAIPCMessageSaveEventConfiguration;
 
 #pragma mark - Listener Metadata Messages
 
@@ -113,6 +116,7 @@ LA_IPC_EXTERN NSString *const LAIPCTestingCommandRunDeviceRuntime;
 LA_IPC_EXTERN NSString *const LAIPCTestingCommandRuntimeState;
 LA_IPC_EXTERN NSString *const LAIPCTestingCommandPrepareUserInfoProbe;
 LA_IPC_EXTERN NSString *const LAIPCTestingCommandUserInfoProbeResult;
+LA_IPC_EXTERN NSString *const LAIPCTestingCommandPrepareEventConfigurationProbe;
 #endif
 
 #pragma mark - UserInfo Keys
@@ -133,6 +137,9 @@ LA_IPC_EXTERN NSString *const LAIPCKeyPreferenceValue;
 LA_IPC_EXTERN NSString *const LAIPCKeyInfoDictionaryKey;
 LA_IPC_EXTERN NSString *const LAIPCKeyScale;
 LA_IPC_EXTERN NSString *const LAIPCKeyApplicationAccessibilityEnabled;
+LA_IPC_EXTERN NSString *const LAIPCKeyEventConfiguration;
+LA_IPC_EXTERN NSString *const LAIPCKeyEventConfigurationClassName;
+LA_IPC_EXTERN NSString *const LAIPCKeyEventConfigurationBundlePath;
 
 #if LIBACTIVATOR_TEST_SUPPORT
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingCommand;

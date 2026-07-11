@@ -35,6 +35,7 @@ libactivator_FILES += tests/support/LATestEnvironment.m
 libactivator_FILES += tests/support/LATestRecorder.m
 libactivator_FILES += tests/fakes/LATestCountingPersistence.m
 libactivator_FILES += tests/fakes/LATestEventDataSource.m
+libactivator_FILES += tests/fakes/LATestEventSource.m
 libactivator_FILES += tests/fakes/LATestListener.m
 libactivator_FILES += tests/fakes/LATestSimpleAbortListener.m
 libactivator_FILES += tests/fakes/LATestTouch.m
@@ -54,6 +55,7 @@ libactivator_FILES += tests/suites/builtins/LATestBuiltInComposeActionsSuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInTelephonyActionsSuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInDynamicApplicationListenersSuite.m
 libactivator_FILES += tests/suites/builtins/LATestBuiltInEventSourcesSuite.m
+libactivator_FILES += tests/suites/builtins/LATestEventSourceRegistrySuite.m
 libactivator_FILES += tests/suites/runtime/LATestRuntimeInputSuite.m
 libactivator_FILES += tests/suites/runtime/LATestRuntimeDeviceSuite.m
 libactivator_CFLAGS += -DLIBACTIVATOR_TEST_SUPPORT=1

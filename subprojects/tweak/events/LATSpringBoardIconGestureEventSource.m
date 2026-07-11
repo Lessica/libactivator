@@ -10,7 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LAQueueAssertions.h"
-#import "LATEventSourceInterestGate.h"
+#import "LATEventSourceRegistry.h"
 
 #import <Activator/Activator.h>
 #import <HBLog.h>
@@ -31,7 +31,9 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
 @interface LATSpringBoardIconGestureEventSource ()
 
 @property(nonatomic, assign, getter=isStarted) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 @property(nonatomic, strong) NSHashTable<UIPinchGestureRecognizer *> *installedRecognizers;
+@property(nonatomic, strong) NSMapTable<UIScrollView *, NSNumber *> *minimumZoomScalesByScrollView;
 @property(nonatomic, strong) NSMapTable<id, LATSpringBoardIconPinchSession *> *sessionsByRecognizer;
 
 #if DEBUG
@@ -42,12 +44,28 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
 
 @implementation LATSpringBoardIconGestureEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"springboard-icon-gesture";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNameSpringBoardPinch,
+        LAEventNameSpringBoardSpread,
+    ]];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAssignedInCurrentMode;
+}
 
 - (instancetype)init {
     self = [super init];
     if (self) {
         _installedRecognizers = [NSHashTable weakObjectsHashTable];
+        _minimumZoomScalesByScrollView = [NSMapTable weakToStrongObjectsMapTable];
         _sessionsByRecognizer = [NSMapTable weakToStrongObjectsMapTable];
 #if DEBUG
         _testingRecognizerKey = [[NSObject alloc] init];
@@ -58,18 +76,49 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
 
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
-    [self installInExistingIconScrollViews];
+    if ([self shouldProcessEvents]) {
+        [self installInExistingIconScrollViews];
+    }
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    [self removeRecognizerTargetsAndRestoreScrollViews];
+}
+
+- (void)eventSourceInterestDidChange:(BOOL)interested {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    if (interested && self.started) {
+        [self installInExistingIconScrollViews];
+    } else if (!interested) {
+        [self removeRecognizerTargetsAndRestoreScrollViews];
+    }
+}
+
+- (void)eventSourceInterestedEventNamesDidChange:(__unused NSSet<NSString *> *)interestedEventNames {
+    LAAssertMainQueue();
+    [self.sessionsByRecognizer removeAllObjects];
 }
 
 #pragma mark - Gesture Recognizer Attachment
 
 - (void)noteIconScrollViewDidInitialize:(UIScrollView *)scrollView {
     LAAssertMainQueue();
-    if (!scrollView) {
+    if (!self.started || !scrollView || ![self shouldProcessEvents]) {
         return;
     }
 
@@ -81,6 +130,9 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
     LAAssertMainQueue();
 
     if (scrollView.minimumZoomScale > LATSpringBoardIconGesturePinchThreshold) {
+        if (![self.minimumZoomScalesByScrollView objectForKey:scrollView]) {
+            [self.minimumZoomScalesByScrollView setObject:@(scrollView.minimumZoomScale) forKey:scrollView];
+        }
         scrollView.minimumZoomScale = LATSpringBoardIconGesturePinchThreshold;
     }
 }
@@ -127,22 +179,37 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
     }
 }
 
+- (void)removeRecognizerTargetsAndRestoreScrollViews {
+    LAAssertMainQueue();
+
+    for (UIPinchGestureRecognizer *recognizer in self.installedRecognizers.allObjects) {
+        [recognizer removeTarget:self action:@selector(iconScrollViewPinchGestureRecognized:)];
+    }
+    [self.installedRecognizers removeAllObjects];
+    [self.sessionsByRecognizer removeAllObjects];
+
+    for (UIScrollView *scrollView in self.minimumZoomScalesByScrollView.keyEnumerator) {
+        NSNumber *minimumZoomScale = [self.minimumZoomScalesByScrollView objectForKey:scrollView];
+        if (minimumZoomScale && scrollView.minimumZoomScale == LATSpringBoardIconGesturePinchThreshold) {
+            scrollView.minimumZoomScale = minimumZoomScale.doubleValue;
+        }
+    }
+    [self.minimumZoomScalesByScrollView removeAllObjects];
+}
+
 #pragma mark - Interest
 
 - (BOOL)shouldProcessEvents {
     LAAssertMainQueue();
-    LATEventSourceInterestGate *interestGate = self.interestGate;
-    return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilySpringBoardIconGesture];
+    LATEventSourceRegistry *eventSourceRegistry = self.eventSourceRegistry;
+    return !eventSourceRegistry || [eventSourceRegistry isInterestedInEventSource:self];
 }
 
 #pragma mark - Recognition
 
 - (void)iconScrollViewPinchGestureRecognized:(UIPinchGestureRecognizer *)recognizer {
     LAAssertMainQueue();
-    [self handlePinchRecognizer:recognizer
-                          scale:recognizer.scale
-                          state:recognizer.state
-                         bounds:recognizer.view.bounds];
+    [self handlePinchRecognizer:recognizer scale:recognizer.scale state:recognizer.state bounds:recognizer.view.bounds];
 }
 
 - (nullable NSString *)handlePinchRecognizer:(id)recognizer
@@ -206,8 +273,8 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
 
     LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     [LASharedActivator sendEventToListener:event];
-    HBLogInfo(@"Classified and dispatched SpringBoard icon gesture event=%@ scale=%.3f bounds=%@", eventName,
-              scale, NSStringFromCGRect(bounds));
+    HBLogInfo(@"Classified and dispatched SpringBoard icon gesture event=%@ scale=%.3f bounds=%@", eventName, scale,
+              NSStringFromCGRect(bounds));
 }
 
 #if DEBUG

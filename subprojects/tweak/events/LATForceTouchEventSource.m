@@ -10,7 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LAQueueAssertions.h"
-#import "LATEventSourceInterestGate.h"
+#import "LATEventSourceRegistry.h"
 
 #import <Activator/Activator.h>
 #import <HBLog.h>
@@ -48,6 +48,7 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 
 // Lifecycle
 @property(nonatomic, assign, getter=isStarted) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 
 // Recognition state
 @property(nonatomic, strong) NSMutableDictionary<id<NSCopying>, NSDictionary<NSString *, id> *> *activeSnapshots;
@@ -58,7 +59,26 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 
 @implementation LATForceTouchEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"force-touch";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNameForceTouchStatusBar,
+        LAEventNameForceTouchScreenLeft,
+        LAEventNameForceTouchScreenRight,
+        LAEventNameForceTouchScreenBottomLeft,
+        LAEventNameForceTouchScreenBottom,
+        LAEventNameForceTouchScreenBottomRight,
+    ]];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAssignedInCurrentMode;
+}
 
 - (instancetype)init {
     self = [super init];
@@ -70,10 +90,33 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    [self resetRecognitionState];
+}
+
+- (void)eventSourceInterestDidChange:(BOOL)interested {
+    LAAssertMainQueue();
+    if (!interested) {
+        [self resetRecognitionState];
+    }
+}
+
+- (void)eventSourceInterestedEventNamesDidChange:(__unused NSSet<NSString *> *)interestedEventNames {
+    LAAssertMainQueue();
+    [self resetRecognitionState];
 }
 
 #pragma mark - Touch Entry Points
@@ -101,8 +144,8 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 
 - (BOOL)shouldProcessEvents {
     LAAssertMainQueue();
-    LATEventSourceInterestGate *interestGate = self.interestGate;
-    return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyForceTouch];
+    LATEventSourceRegistry *eventSourceRegistry = self.eventSourceRegistry;
+    return !eventSourceRegistry || [eventSourceRegistry isInterestedInEventSource:self];
 }
 
 #pragma mark - Recognition

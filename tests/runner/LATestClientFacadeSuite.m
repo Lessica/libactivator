@@ -8,6 +8,7 @@
 
 #import "LATestClientFacadeSuite.h"
 
+#import "LAActivator+Private.h"
 #import "LAIPC.h"
 #import "LATestRunnerRecorder.h"
 #import "LATestSpringBoardClient.h"
@@ -60,6 +61,56 @@
     [recorder expect:![unknownTestingReply[LAIPCKeyOK] boolValue]
             caseName:@"unknown-testing-command-fallback"
               reason:@"Testing IPC did not fail safely for an unknown command"];
+
+    NSDictionary *configurationProbeReply = [self.client sendCommand:LAIPCTestingCommandPrepareEventConfigurationProbe];
+    NSDictionary *configurationProbeInfo = [configurationProbeReply[LAIPCKeyValue] isKindOfClass:NSDictionary.class]
+                                               ? configurationProbeReply[LAIPCKeyValue]
+                                               : nil;
+    NSString *configurationEventName = [configurationProbeInfo[LAIPCKeyEventName] isKindOfClass:NSString.class]
+                                           ? configurationProbeInfo[LAIPCKeyEventName]
+                                           : @"";
+    NSDictionary *configurationDescriptor =
+        [activator la_eventConfigurationDescriptorForEventName:configurationEventName];
+    [recorder expect:[configurationProbeReply[LAIPCKeyOK] boolValue] &&
+                     [activator eventWithNameSupportsConfiguration:configurationEventName]
+            caseName:@"event-configuration-support-round-trip"
+              reason:@"Client facade did not expose SpringBoard event configuration support"];
+    [recorder expect:[configurationDescriptor[LAIPCKeyEventConfigurationClassName]
+                         isEqual:configurationProbeInfo[LAIPCKeyEventConfigurationClassName]] &&
+                     [configurationDescriptor[LAIPCKeyEventConfigurationBundlePath]
+                         isEqual:configurationProbeInfo[LAIPCKeyEventConfigurationBundlePath]]
+            caseName:@"event-configuration-descriptor-round-trip"
+              reason:@"Client facade did not preserve the SpringBoard configuration descriptor"];
+
+    id initialEventConfiguration = [activator la_configurationForEventWithName:configurationEventName];
+    [recorder expect:[initialEventConfiguration isEqual:configurationProbeInfo[LAIPCKeyEventConfiguration]]
+            caseName:@"event-configuration-get-round-trip"
+              reason:@"Client facade did not retrieve the SpringBoard event configuration"];
+
+    NSDictionary *savedEventConfiguration = @{
+        @"Enabled" : @NO,
+        @"Threshold" : @5,
+    };
+    BOOL savedEventConfigurationAccepted = [activator la_saveConfiguration:savedEventConfiguration
+                                                          forEventWithName:configurationEventName];
+    id roundTrippedEventConfiguration = [activator la_configurationForEventWithName:configurationEventName];
+    [recorder expect:savedEventConfigurationAccepted && [roundTrippedEventConfiguration isEqual:savedEventConfiguration]
+            caseName:@"event-configuration-save-round-trip"
+              reason:@"Client facade did not save and retrieve the SpringBoard event configuration"];
+
+    NSDictionary *malformedEventConfiguration = @{
+        @"Enabled" : @YES,
+        @"Nested" : @{
+            @"Invalid" : [[NSObject alloc] init],
+        },
+    };
+    BOOL malformedEventConfigurationAccepted = [activator la_saveConfiguration:malformedEventConfiguration
+                                                              forEventWithName:configurationEventName];
+    id eventConfigurationAfterRejectedSave = [activator la_configurationForEventWithName:configurationEventName];
+    [recorder expect:!malformedEventConfigurationAccepted &&
+                     [eventConfigurationAfterRejectedSave isEqual:savedEventConfiguration]
+            caseName:@"event-configuration-save-rejects-malformed-payload"
+              reason:@"Client facade accepted or partially saved a malformed event configuration"];
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

@@ -18,6 +18,7 @@
 
 // Lifecycle
 @property(nonatomic, assign) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 
 // External power state
 @property(nonatomic, assign) BOOL hasKnownExternalPowerState;
@@ -25,16 +26,32 @@
 
 // Observation token
 @property(nonatomic, strong, nullable) id<NSObject> batteryStateObserver;
+@property(nonatomic, assign) BOOL enabledBatteryMonitoring;
 
 @end
 
 @implementation LATPowerStateEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"power-state";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNamePowerConnected,
+        LAEventNamePowerDisconnected,
+    ]];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAlways;
+}
 
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
@@ -42,6 +59,7 @@
     UIDevice *device = UIDevice.currentDevice;
     if (!device.batteryMonitoringEnabled) {
         device.batteryMonitoringEnabled = YES;
+        self.enabledBatteryMonitoring = YES;
     }
     [self refreshKnownPowerStateWithoutSendingEventForDevice:device];
 
@@ -57,15 +75,47 @@
 }
 
 - (void)dealloc {
-    if (_batteryStateObserver) {
-        [NSNotificationCenter.defaultCenter removeObserver:_batteryStateObserver];
+    [self removeBatteryStateObserver];
+    [self restoreBatteryMonitoringIfNeeded];
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
     }
+
+    self.invalidated = YES;
+    self.started = NO;
+    [self removeBatteryStateObserver];
+    [self restoreBatteryMonitoringIfNeeded];
+    self.hasKnownExternalPowerState = NO;
+    self.externallyPowered = NO;
+}
+
+- (void)restoreBatteryMonitoringIfNeeded {
+    if (!_enabledBatteryMonitoring) {
+        return;
+    }
+    UIDevice.currentDevice.batteryMonitoringEnabled = NO;
+    _enabledBatteryMonitoring = NO;
+}
+
+- (void)removeBatteryStateObserver {
+    if (!_batteryStateObserver) {
+        return;
+    }
+    [NSNotificationCenter.defaultCenter removeObserver:_batteryStateObserver];
+    _batteryStateObserver = nil;
 }
 
 #pragma mark - Notifications
 
 - (void)handleBatteryStateDidChangeForDevice:(UIDevice *)device {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
 
     BOOL externallyPowered = NO;
     if (![self readExternalPowerState:&externallyPowered forDevice:device]) {

@@ -8,15 +8,17 @@
 
 #import <UIKit/UIKit.h>
 
+#import "LATEventSource.h"
+
 @class LATFingerprintSensorEventSource;
-@class LATEventSourceInterestGate;
+@class LATEventSourceRegistry;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATEdgeGestureEventSource : NSObject
+@interface LATEdgeGestureEventSource : NSObject <LATEventSource>
 
 @property(nonatomic, weak, nullable) LATFingerprintSensorEventSource *fingerprintSensorEventSource;
-@property(nonatomic, weak, nullable) LATEventSourceInterestGate *interestGate;
+@property(nonatomic, weak, nullable) LATEventSourceRegistry *eventSourceRegistry;
 
 // Main-queue confined. This source observes system gesture window events and dispatches
 // Activator edge slide events without consuming the original system touch handling.

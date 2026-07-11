@@ -13,6 +13,7 @@
 
 - `BUILT_IN_ROADMAP.md`：内置 event / listener / action 的阶段路线与模块归属。
 - `BUILT_IN_ACTION_TRACKER.md`：内置 listener/action 的逐项状态、依据和首次验证方式。
+- `EVENT_SOURCE_ARCHITECTURE.md`：Event definition、acquisition source、动态 provider、lifecycle、interest 与 configuration 的长期内部边界。
 
 ## 更新规则
 

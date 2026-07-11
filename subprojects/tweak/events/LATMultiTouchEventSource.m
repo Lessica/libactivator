@@ -10,7 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LAQueueAssertions.h"
-#import "LATEventSourceInterestGate.h"
+#import "LATEventSourceRegistry.h"
 #import "LATMultiTouchGestureRecognizer.h"
 
 #import <Activator/Activator.h>
@@ -19,6 +19,7 @@
 @interface LATMultiTouchEventSource () <UIGestureRecognizerDelegate>
 
 @property(nonatomic, assign, getter=isStarted) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 @property(nonatomic, strong) LATMultiTouchGestureRecognizer *gestureRecognizer;
 @property(nonatomic, weak, nullable) UIWindow *gestureWindow;
 
@@ -26,7 +27,29 @@
 
 @implementation LATMultiTouchEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"multi-touch";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNameThreeFingerTap,
+        LAEventNameThreeFingerPinch,
+        LAEventNameThreeFingerSpread,
+        LAEventNameFourFingerTap,
+        LAEventNameFourFingerPinch,
+        LAEventNameFourFingerSpread,
+        LAEventNameFiveFingerTap,
+        LAEventNameFiveFingerPinch,
+        LAEventNameFiveFingerSpread,
+    ]];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAssignedInCurrentMode;
+}
 
 - (instancetype)init {
     self = [super init];
@@ -40,10 +63,42 @@
 
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    self.gestureRecognizer.enabled = NO;
+    [self.gestureRecognizer reset];
+    [self.gestureRecognizer.view removeGestureRecognizer:self.gestureRecognizer];
+    [self.gestureRecognizer removeTarget:self action:@selector(multiTouchRecognized:)];
+    self.gestureWindow = nil;
+}
+
+- (void)eventSourceInterestDidChange:(BOOL)interested {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.gestureRecognizer.enabled = interested;
+    if (!interested) {
+        [self.gestureRecognizer reset];
+    }
+}
+
+- (void)eventSourceInterestedEventNamesDidChange:(__unused NSSet<NSString *> *)interestedEventNames {
+    LAAssertMainQueue();
+    [self.gestureRecognizer reset];
 }
 
 #pragma mark - Touch Entry Points
@@ -62,8 +117,8 @@
 
 - (BOOL)shouldProcessEvents {
     LAAssertMainQueue();
-    LATEventSourceInterestGate *interestGate = self.interestGate;
-    return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyMultiTouch];
+    LATEventSourceRegistry *eventSourceRegistry = self.eventSourceRegistry;
+    return !eventSourceRegistry || [eventSourceRegistry isInterestedInEventSource:self];
 }
 
 #pragma mark - Recognition

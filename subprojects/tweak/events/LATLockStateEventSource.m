@@ -28,6 +28,7 @@
 
 // Lifecycle and notification token
 @property(nonatomic, assign) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 @property(nonatomic, assign) int lockStateToken;
 
 // Lock state
@@ -38,7 +39,22 @@
 
 @implementation LATLockStateEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"lock-state";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNameDeviceLocked,
+        LAEventNameDeviceUnlocked,
+    ]];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAlways;
+}
 
 - (instancetype)initWithRuntimeStateSource:(LATRuntimeStateSource *)runtimeStateSource {
     self = [super init];
@@ -49,14 +65,12 @@
 }
 
 - (void)dealloc {
-    if (_lockStateToken != 0) {
-        notify_cancel(_lockStateToken);
-    }
+    [self cancelLockStateObservation];
 }
 
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
@@ -76,10 +90,35 @@
     }
 }
 
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    [self cancelLockStateObservation];
+    self.hasKnownLockState = NO;
+    self.uiLocked = NO;
+}
+
+- (void)cancelLockStateObservation {
+    if (_lockStateToken == 0) {
+        return;
+    }
+    notify_cancel(_lockStateToken);
+    _lockStateToken = 0;
+}
+
 #pragma mark - Notifications
 
 - (void)handleLockStateNotification {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
+
     BOOL locked = NO;
     if (![self readUILocked:&locked]) {
         HBLogDebug(@"Unable to read lock state for device lock event source");

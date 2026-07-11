@@ -10,7 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LAQueueAssertions.h"
-#import "LATEventSourceInterestGate.h"
+#import "LATEventSourceRegistry.h"
 
 static NSTimeInterval const LATStatusBarEventSourceHoldDelay = 0.5;
 static NSTimeInterval const LATStatusBarEventSourceTapDelay = 0.33;
@@ -47,6 +47,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 
 // Lifecycle
 @property(nonatomic, assign) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 
 // Active sessions
 @property(nonatomic, strong) NSMapTable<id, LATStatusBarTouchSession *> *sessionsByStatusBarView;
@@ -55,7 +56,32 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 
 @implementation LATStatusBarEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"status-bar";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNameStatusBarTapSingle,
+        LAEventNameStatusBarTapSingleLeft,
+        LAEventNameStatusBarTapSingleRight,
+        LAEventNameStatusBarTapDouble,
+        LAEventNameStatusBarTapDoubleLeft,
+        LAEventNameStatusBarTapDoubleRight,
+        LAEventNameStatusBarHold,
+        LAEventNameStatusBarHoldLeft,
+        LAEventNameStatusBarHoldRight,
+        LAEventNameStatusBarSwipeLeft,
+        LAEventNameStatusBarSwipeRight,
+        LAEventNameStatusBarSwipeDown,
+    ]];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAssignedInCurrentMode;
+}
 
 - (instancetype)init {
     self = [super init];
@@ -67,10 +93,33 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    [self cancelAllSessions];
+}
+
+- (void)eventSourceInterestDidChange:(BOOL)interested {
+    LAAssertMainQueue();
+    if (!interested) {
+        [self cancelAllSessions];
+    }
+}
+
+- (void)eventSourceInterestedEventNamesDidChange:(__unused NSSet<NSString *> *)interestedEventNames {
+    LAAssertMainQueue();
+    [self cancelAllSessions];
 }
 
 #pragma mark - Touch Entry Points
@@ -164,8 +213,8 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 
 - (BOOL)shouldProcessEvents {
     LAAssertMainQueue();
-    LATEventSourceInterestGate *interestGate = self.interestGate;
-    return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyStatusBar];
+    LATEventSourceRegistry *eventSourceRegistry = self.eventSourceRegistry;
+    return !eventSourceRegistry || [eventSourceRegistry isInterestedInEventSource:self];
 }
 
 #pragma mark - Recognition
@@ -348,8 +397,8 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
                       generation:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (!view || generation != session.holdGeneration || !session.touchActive || session.hasSentEvent ||
-        [self.sessionsByStatusBarView objectForKey:view] != session) {
+    if (!self.started || !view || generation != session.holdGeneration || !session.touchActive ||
+        session.hasSentEvent || [self.sessionsByStatusBarView objectForKey:view] != session) {
         return;
     }
 
@@ -359,7 +408,7 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 - (void)sendTapForStatusBarView:(id)view session:(LATStatusBarTouchSession *)session generation:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (!view || generation != session.tapGeneration || session.touchActive || session.hasSentEvent ||
+    if (!self.started || !view || generation != session.tapGeneration || session.touchActive || session.hasSentEvent ||
         [self.sessionsByStatusBarView objectForKey:view] != session) {
         return;
     }
@@ -390,6 +439,16 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
         session.touchActive = NO;
     }
     [self.sessionsByStatusBarView removeObjectForKey:view];
+}
+
+- (void)cancelAllSessions {
+    LAAssertMainQueue();
+    for (LATStatusBarTouchSession *session in self.sessionsByStatusBarView.objectEnumerator) {
+        [self cancelHoldForSession:session];
+        [self cancelTapForSession:session];
+        session.touchActive = NO;
+    }
+    [self.sessionsByStatusBarView removeAllObjects];
 }
 
 #pragma mark - Event Dispatch

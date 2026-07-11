@@ -19,13 +19,14 @@
 #import "LATCameraActionListener.h"
 #import "LATComposeActionListener.h"
 #import "LATEdgeGestureEventSource.h"
-#import "LATEventSourceInterestGate.h"
+#import "LATEventSourceRegistry.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
 #import "LATHardwareActionListener.h"
 #import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
 #import "LATMultiTouchEventSource.h"
+#import "LATNetworkEventDataSource.h"
 #import "LATNetworkEventSource.h"
 #import "LATNothingListener.h"
 #import "LATPowerStateEventSource.h"
@@ -48,20 +49,18 @@
 @property(nonatomic, strong) LATApplicationListenerProvider *dynamicApplicationListenerProvider;
 @property(nonatomic, strong) NSMutableArray<id<LAListener>> *registeredListeners;
 
-// Lifecycle
-@property(nonatomic, assign) BOOL eventSourcesStarted;
-
 // Event sources
 @property(nonatomic, strong, readwrite) LATRuntimeStateSource *runtimeStateSource;
 @property(nonatomic, strong, readwrite) LATButtonEventSource *buttonEventSource;
 @property(nonatomic, strong, readwrite) LATEdgeGestureEventSource *edgeGestureEventSource;
-@property(nonatomic, strong, readwrite) LATEventSourceInterestGate *eventSourceInterestGate;
+@property(nonatomic, strong, readwrite) LATEventSourceRegistry *eventSourceRegistry;
 @property(nonatomic, strong, readwrite, nullable) LATFingerprintSensorEventSource *fingerprintSensorEventSource;
 @property(nonatomic, strong, readwrite, nullable) LATForceTouchEventSource *forceTouchEventSource;
 @property(nonatomic, strong, readwrite) LATLockStateEventSource *lockStateEventSource;
 @property(nonatomic, strong, readwrite) LATMediaEventSource *mediaEventSource;
 @property(nonatomic, strong, readwrite) LATMultiTouchEventSource *multiTouchEventSource;
 @property(nonatomic, strong, readwrite) LATNetworkEventSource *networkEventSource;
+@property(nonatomic, strong) LATNetworkEventDataSource *networkEventDataSource;
 @property(nonatomic, strong, readwrite) LATPowerStateEventSource *powerStateEventSource;
 @property(nonatomic, strong, readwrite) LATSpringBoardIconGestureEventSource *springBoardIconGestureEventSource;
 @property(nonatomic, strong, readwrite) LATStatusBarEventSource *statusBarEventSource;
@@ -83,12 +82,14 @@
         NSParameterAssert(runtimeContext);
 
         _runtimeStateSource = [[LATRuntimeStateSource alloc] initWithRuntimeContext:runtimeContext];
+        _eventSourceRegistry = [[LATEventSourceRegistry alloc] initWithActivator:activator];
         _lockStateEventSource = [[LATLockStateEventSource alloc] initWithRuntimeStateSource:_runtimeStateSource];
         _powerStateEventSource = [[LATPowerStateEventSource alloc] init];
         _mediaEventSource = [[LATMediaEventSource alloc] init];
         _networkEventSource = [[LATNetworkEventSource alloc] init];
+        _networkEventDataSource = [[LATNetworkEventDataSource alloc] initWithActivator:activator
+                                                                           eventSource:_networkEventSource];
         _buttonEventSource = [[LATButtonEventSource alloc] init];
-        _eventSourceInterestGate = [[LATEventSourceInterestGate alloc] initWithActivator:activator];
         if ([self fingerprintSensorEventSourceShouldBeRegisteredWithActivator:activator]) {
             _fingerprintSensorEventSource = [[LATFingerprintSensorEventSource alloc] init];
         }
@@ -97,15 +98,36 @@
         }
         _lockStateEventSource.fingerprintSensorEventSource = _fingerprintSensorEventSource;
         _statusBarEventSource = [[LATStatusBarEventSource alloc] init];
-        _statusBarEventSource.interestGate = _eventSourceInterestGate;
         _edgeGestureEventSource = [[LATEdgeGestureEventSource alloc] init];
-        _edgeGestureEventSource.interestGate = _eventSourceInterestGate;
         _edgeGestureEventSource.fingerprintSensorEventSource = _fingerprintSensorEventSource;
-        _forceTouchEventSource.interestGate = _eventSourceInterestGate;
         _multiTouchEventSource = [[LATMultiTouchEventSource alloc] init];
-        _multiTouchEventSource.interestGate = _eventSourceInterestGate;
         _springBoardIconGestureEventSource = [[LATSpringBoardIconGestureEventSource alloc] init];
-        _springBoardIconGestureEventSource.interestGate = _eventSourceInterestGate;
+
+        NSMutableArray<id<LATEventSource>> *eventSources =
+            [[NSMutableArray alloc] initWithObjects:_lockStateEventSource, _powerStateEventSource, _mediaEventSource,
+                                                    _networkEventSource, _buttonEventSource, nil];
+        if (_fingerprintSensorEventSource) {
+            [eventSources addObject:_fingerprintSensorEventSource];
+        }
+        if (_forceTouchEventSource) {
+            [eventSources addObject:_forceTouchEventSource];
+        }
+        [eventSources addObjectsFromArray:@[
+            _multiTouchEventSource,
+            _springBoardIconGestureEventSource,
+            _statusBarEventSource,
+            _edgeGestureEventSource,
+        ]];
+        for (id<LATEventSource> eventSource in eventSources) {
+            BOOL registered = eventSource == _networkEventSource
+                                  ? [_eventSourceRegistry registerEventSource:eventSource
+                                                         definitionDataSource:_networkEventDataSource]
+                                  : [_eventSourceRegistry registerEventSource:eventSource];
+            if (!registered) {
+                HBLogWarn(@"Unable to register built-in event source %@", eventSource.eventSourceIdentifier);
+            }
+        }
+        [_networkEventDataSource attachEventSourceRegistry:_eventSourceRegistry];
 
         [self registerBuiltInListenersWithActivator:activator];
     }
@@ -113,24 +135,8 @@
 }
 
 - (void)startEventSources {
-    if (self.eventSourcesStarted) {
-        return;
-    }
-    self.eventSourcesStarted = YES;
-
     [self.runtimeStateSource start];
-    [self.lockStateEventSource start];
-    [self.powerStateEventSource start];
-    [self.mediaEventSource start];
-    [self.networkEventSource start];
-    [self.buttonEventSource start];
-    [self.fingerprintSensorEventSource start];
-    [self.eventSourceInterestGate start];
-    [self.forceTouchEventSource start];
-    [self.multiTouchEventSource start];
-    [self.springBoardIconGestureEventSource start];
-    [self.statusBarEventSource start];
-    [self.edgeGestureEventSource start];
+    [self.eventSourceRegistry start];
 }
 
 - (void)noteApplicationCatalogMayHaveChangedWithReason:(NSString *)reason {

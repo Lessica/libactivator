@@ -62,9 +62,7 @@
 
     void (^changeHandler)(NSString *eventMode) = [self->_eventModeChangeHandler copy];
     if (changedEventMode.length > 0 && changeHandler) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            changeHandler(changedEventMode);
-        });
+        changeHandler(changedEventMode);
     }
     return changedEventMode;
 }

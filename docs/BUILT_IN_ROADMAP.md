@@ -27,7 +27,7 @@
 | event metadata | `layout/Library/Activator/Events/bundled.plist` 和 `LAResourceManager` | 只提供标题、分组、兼容模式、capability 等静态信息；不能替代 event source。 |
 | listener/action metadata | `layout/Library/Activator/Listeners/bundled.plist`、glyph 资源和 `LAResourceManager` | 只提供展示、兼容规则、图标和 selector/url metadata；不能替代 listener object。 |
 | static built-in actions | `ActivatorTweak.dylib` 中的 built-in listener registry | 由 SpringBoard 注册真实 `LAListener` object。 |
-| event sources | `ActivatorTweak.dylib` 中的 SpringBoard acquisition adapters | 从硬件按钮、触摸手势、SpringBoard 状态、通知或系统服务采集事件，再调用 dispatch engine。 |
+| event sources | `ActivatorTweak.dylib` 中的 `LATEventSourceRegistry`、dynamic definition provider 与 SpringBoard acquisition adapters | Registry 统一管理 producer/interest/definition catalog、显式启动顺序、invalidate、多 producer、owner-safe dynamic definition 和 assignment-aware interest；Network provider 已接入显式配置的 exact SSID event，adapter 从硬件按钮、触摸手势、SpringBoard 状态、通知或系统服务采集事件，再调用 dispatch engine。 |
 | dynamic application listeners | 独立 application listener family provider | 动态读取 SpringBoard app model，处理 app launch/action listener、glyph、显示名和特殊系统 App 行为。 |
 | menu listeners | Settings UI + runtime menu provider | 菜单内容来自用户配置，需等 Settings UI 菜单编辑能力落地后实现。 |
 | CLI | `subprojects/cli` 的 `/usr/bin/activator` | 生产兼容工具，使用 Public API 和生产 IPC，不依赖 testing IPC，也不是 test runner。 |
@@ -71,7 +71,7 @@
 范围：
 
 - modes/events/listeners 列表、搜索、assignments、profiles、blacklist。
-- listener/event configuration controller factory。
+- Settings host 对 listener/event configuration controller factory 的实际导航与保存 UI；当前只完成 event core descriptor、get/save IPC 和本进程 factory，listener configuration bridge 仍待实现。
 - menu editor 和 menu listener runtime provider。
 - `glyph.pdf` lookup、glyph/small icon 展示、localization、resource metadata 展示。
 - `glyph.pdf` 只作为 Settings UI 展示资源接入，不在 `libactivator` 核心里恢复 1.9.0 大图标 callback。

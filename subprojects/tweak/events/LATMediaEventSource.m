@@ -39,6 +39,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 // Lifecycle
 @property(nonatomic, assign) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 
 // Headset state
 @property(nonatomic, assign) BOOL hasKnownHeadsetState;
@@ -60,11 +61,34 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 // Dispatch queues
 @property(nonatomic, strong) dispatch_queue_t mediaRemoteQueue;
 
+// MediaRemote lifecycle
+@property(nonatomic, assign) NSUInteger identityRequestGeneration;
+@property(nonatomic, assign) BOOL wantsNowPlayingNotifications;
+@property(nonatomic, assign) BOOL wantsRouteChangeNotifications;
+
 @end
 
 @implementation LATMediaEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"media";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNameHeadsetConnected,
+        LAEventNameHeadsetDisconnected,
+        LAEventNameNowPlayingInfoChanged,
+        LAEventNameNowPlayingPaused,
+        LAEventNameNowPlayingPlaying,
+    ]];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAlways;
+}
 
 - (instancetype)init {
     self = [super init];
@@ -78,7 +102,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
@@ -90,27 +114,56 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 }
 
 - (void)dealloc {
+    [self removeObservers];
+    [self stopRequestingMediaRemoteNotifications];
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    self.identityRequestGeneration += 1;
+    [self removeObservers];
+    [self stopRequestingMediaRemoteNotifications];
+    self.hasKnownHeadsetState = NO;
+    self.headsetConnected = NO;
+    self.hasKnownNowPlayingPlaybackState = NO;
+    self.nowPlayingApplicationPlaying = NO;
+}
+
+- (void)removeObservers {
     NSNotificationCenter *notificationCenter = NSNotificationCenter.defaultCenter;
     if (_routeStatusObserver) {
         [notificationCenter removeObserver:_routeStatusObserver];
+        _routeStatusObserver = nil;
     }
     if (_pickableRoutesObserver) {
         [notificationCenter removeObserver:_pickableRoutesObserver];
+        _pickableRoutesObserver = nil;
     }
     if (_nowPlayingInfoObserver) {
         [notificationCenter removeObserver:_nowPlayingInfoObserver];
+        _nowPlayingInfoObserver = nil;
     }
     if (_nowPlayingApplicationIsPlayingObserver) {
         [notificationCenter removeObserver:_nowPlayingApplicationIsPlayingObserver];
+        _nowPlayingApplicationIsPlayingObserver = nil;
     }
     if (_activeAudioRouteObserver) {
         [notificationCenter removeObserver:_activeAudioRouteObserver];
+        _activeAudioRouteObserver = nil;
     }
     if (_systemPickableRoutesObserver) {
         [notificationCenter removeObserver:_systemPickableRoutesObserver];
+        _systemPickableRoutesObserver = nil;
     }
     if (_headphoneStateObserver) {
         [notificationCenter removeObserver:_headphoneStateObserver];
+        _headphoneStateObserver = nil;
     }
 }
 
@@ -119,19 +172,21 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 - (BOOL)requestNowPlayingApplicationDisplayIdentifierWithCompletion:
     (LATNowPlayingApplicationDisplayIdentifierCompletion)completion {
     LAAssertMainQueue();
-    if (!completion) {
+    if (!self.started || !completion) {
         return NO;
     }
 
     MRMediaRemoteSetWantsNowPlayingNotifications(true);
+    self.wantsNowPlayingNotifications = YES;
+    NSUInteger generation = self.identityRequestGeneration;
 
     if (MRMediaRemoteGetNowPlayingApplicationDisplayID) {
-        [self requestMediaRemoteDisplayIdentifierWithCompletion:completion];
+        [self requestMediaRemoteDisplayIdentifierWithGeneration:generation completion:completion];
         return YES;
     }
 
     if (SBSCopyDisplayIdentifierForProcessID) {
-        [self requestMediaRemoteProcessIdentifierWithCompletion:completion];
+        [self requestMediaRemoteProcessIdentifierWithGeneration:generation completion:completion];
         return YES;
     }
 
@@ -139,51 +194,55 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
     return NO;
 }
 
-- (void)requestMediaRemoteDisplayIdentifierWithCompletion:
-    (LATNowPlayingApplicationDisplayIdentifierCompletion)completion {
+- (void)requestMediaRemoteDisplayIdentifierWithGeneration:(NSUInteger)generation
+                                               completion:
+                                                   (LATNowPlayingApplicationDisplayIdentifierCompletion)completion {
+    __weak typeof(self) weakSelf = self;
     MRMediaRemoteGetNowPlayingApplicationDisplayID(self.mediaRemoteQueue, ^(CFStringRef displayID) {
         NSString *identifier = [(__bridge NSString *)displayID copy];
-        if (identifier.length > 0) {
-            [self finishNowPlayingApplicationIdentityRequestWithIdentifier:identifier completion:completion];
-            return;
-        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (!strongSelf.started || generation != strongSelf.identityRequestGeneration) {
+                return;
+            }
+            if (identifier.length > 0) {
+                completion(identifier);
+                return;
+            }
 
-        HBLogWarn(@"MediaRemote returned no now-playing application display identifier");
-        if (SBSCopyDisplayIdentifierForProcessID) {
-            [self requestMediaRemoteProcessIdentifierWithCompletion:completion];
-            return;
-        }
-
-        [self finishNowPlayingApplicationIdentityRequestWithIdentifier:nil completion:completion];
+            HBLogWarn(@"MediaRemote returned no now-playing application display identifier");
+            if (SBSCopyDisplayIdentifierForProcessID) {
+                [strongSelf requestMediaRemoteProcessIdentifierWithGeneration:generation completion:completion];
+                return;
+            }
+            completion(nil);
+        });
     });
 }
 
-- (void)requestMediaRemoteProcessIdentifierWithCompletion:
-    (LATNowPlayingApplicationDisplayIdentifierCompletion)completion {
+- (void)requestMediaRemoteProcessIdentifierWithGeneration:(NSUInteger)generation
+                                               completion:
+                                                   (LATNowPlayingApplicationDisplayIdentifierCompletion)completion {
+    __weak typeof(self) weakSelf = self;
     MRMediaRemoteGetNowPlayingApplicationPID(self.mediaRemoteQueue, ^(int PID) {
+        NSString *identifier = nil;
         if (PID <= 0) {
             HBLogWarn(@"MediaRemote returned no now-playing application process identifier");
-            [self finishNowPlayingApplicationIdentityRequestWithIdentifier:nil completion:completion];
-            return;
+        } else {
+            CFStringRef displayID = SBSCopyDisplayIdentifierForProcessID((pid_t)PID);
+            identifier = displayID ? CFBridgingRelease(displayID) : nil;
+            if (identifier.length == 0) {
+                HBLogError(@"Unable to resolve now-playing application display identifier for process %d", PID);
+            }
         }
 
-        CFStringRef displayID = SBSCopyDisplayIdentifierForProcessID((pid_t)PID);
-        NSString *identifier = displayID ? CFBridgingRelease(displayID) : nil;
-        if (identifier.length == 0) {
-            HBLogError(@"Unable to resolve now-playing application display identifier for process %d", PID);
-            [self finishNowPlayingApplicationIdentityRequestWithIdentifier:nil completion:completion];
-            return;
-        }
-
-        [self finishNowPlayingApplicationIdentityRequestWithIdentifier:identifier completion:completion];
-    });
-}
-
-- (void)finishNowPlayingApplicationIdentityRequestWithIdentifier:(NSString *)identifier
-                                                      completion:(LATNowPlayingApplicationDisplayIdentifierCompletion)
-                                                                     completion {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        completion(identifier);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (!strongSelf.started || generation != strongSelf.identityRequestGeneration) {
+                return;
+            }
+            completion(identifier);
+        });
     });
 }
 
@@ -212,6 +271,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
                 }];
 
     MRMediaRemoteSetWantsRouteChangeNotifications(true);
+    self.wantsRouteChangeNotifications = YES;
 }
 
 - (void)startMediaRemoteNowPlayingMonitoring {
@@ -238,7 +298,19 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
                 }];
 
     MRMediaRemoteSetWantsNowPlayingNotifications(true);
+    self.wantsNowPlayingNotifications = YES;
     [self refreshKnownNowPlayingPlaybackStateWithoutSendingEvent];
+}
+
+- (void)stopRequestingMediaRemoteNotifications {
+    if (_wantsRouteChangeNotifications) {
+        MRMediaRemoteSetWantsRouteChangeNotifications(false);
+        _wantsRouteChangeNotifications = NO;
+    }
+    if (_wantsNowPlayingNotifications) {
+        MRMediaRemoteSetWantsNowPlayingNotifications(false);
+        _wantsNowPlayingNotifications = NO;
+    }
 }
 
 - (void)startAVSystemControllerRouteMonitoring {
@@ -282,6 +354,9 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 - (void)handleMediaRemoteRouteNotification:(NSNotification *)notification {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
 
     HBLogInfo(@"MediaRemote route notification for media event source: name=%@ object=%@ userInfo=%@",
               notification.name ?: @"", notification.object ?: @"", notification.userInfo ?: @{});
@@ -290,11 +365,17 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 - (void)handleNowPlayingInfoDidChangeNotification {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
 
     __weak typeof(self) weakSelf = self;
     MRMediaRemoteGetNowPlayingInfo(self.mediaRemoteQueue, ^(__unused CFDictionaryRef information) {
         dispatch_async(dispatch_get_main_queue(), ^{
             __strong typeof(weakSelf) strongSelf = weakSelf;
+            if (!strongSelf.started) {
+                return;
+            }
             [strongSelf sendMediaEventWithName:LAEventNameNowPlayingInfoChanged];
         });
     });
@@ -302,6 +383,9 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 - (void)handleNowPlayingApplicationIsPlayingDidChangeNotification:(NSNotification *)notification {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
 
     id value = notification.userInfo[(__bridge NSString *)kMRMediaRemoteNowPlayingApplicationIsPlayingUserInfoKey];
     if ([value respondsToSelector:@selector(boolValue)]) {
@@ -316,6 +400,9 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 - (void)handlePotentialNowPlayingPlaybackState:(BOOL)isPlaying {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
 
     if (!self.hasKnownNowPlayingPlaybackState) {
         self.hasKnownNowPlayingPlaybackState = YES;
@@ -333,6 +420,9 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 - (void)handlePotentialHeadsetStateChange {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
 
     BOOL headsetConnected = NO;
     if (![self readHeadsetConnected:&headsetConnected]) {
@@ -369,7 +459,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
     LAAssertMainQueue();
 
     [self requestNowPlayingPlaybackStateWithCompletion:^(BOOL isPlaying) {
-        if (self.hasKnownNowPlayingPlaybackState) {
+        if (!self.started || self.hasKnownNowPlayingPlaybackState) {
             return;
         }
         self.hasKnownNowPlayingPlaybackState = YES;
@@ -379,7 +469,7 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 - (BOOL)getKnownNowPlayingApplicationPlaying:(BOOL *)isPlaying {
     LAAssertMainQueue();
-    if (!self.hasKnownNowPlayingPlaybackState) {
+    if (!self.started || !self.hasKnownNowPlayingPlaybackState) {
         return NO;
     }
     if (isPlaying) {
@@ -430,6 +520,9 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 
 - (void)sendMediaEventWithName:(NSString *)eventName {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
 
     NSString *eventMode = LASharedActivator.currentEventMode;
     if (eventMode.length == 0) {

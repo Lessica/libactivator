@@ -8,13 +8,15 @@
 
 #import <UIKit/UIKit.h>
 
-@class LATEventSourceInterestGate;
+#import "LATEventSource.h"
+
+@class LATEventSourceRegistry;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATStatusBarEventSource : NSObject
+@interface LATStatusBarEventSource : NSObject <LATEventSource>
 
-@property(nonatomic, weak, nullable) LATEventSourceInterestGate *interestGate;
+@property(nonatomic, weak, nullable) LATEventSourceRegistry *eventSourceRegistry;
 
 // Main-queue confined. This source observes SpringBoard-owned status bar views and submits
 // Activator events without consuming the original system touch handling.

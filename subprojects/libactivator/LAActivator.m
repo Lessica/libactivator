@@ -768,9 +768,14 @@ LAActivator *LASharedActivator;
         [self la_rejectSpringBoardOnlySelector:_cmd];
         return;
     }
+    id<LAListener> previousListener = [self.backend listenerForName:name];
     BOOL changedAvailability = [self.backend registerListener:listener forName:name markSeen:YES];
     if (listener && name.length > 0) {
         [self la_clearListenerMetadataCaches];
+        if (previousListener != listener) {
+            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorListenerRegistryChangedNotification
+                                                              object:self];
+        }
     }
     if (changedAvailability) {
         [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
@@ -782,9 +787,14 @@ LAActivator *LASharedActivator;
         [self la_rejectSpringBoardOnlySelector:_cmd];
         return;
     }
+    id<LAListener> previousListener = [self.backend listenerForName:name];
     BOOL changedAvailability = [self.backend registerListener:listener forName:name markSeen:!ignoreHasSeen];
     if (listener && name.length > 0) {
         [self la_clearListenerMetadataCaches];
+        if (previousListener != listener) {
+            [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorListenerRegistryChangedNotification
+                                                              object:self];
+        }
     }
     if (changedAvailability) {
         [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
@@ -798,6 +808,8 @@ LAActivator *LASharedActivator;
     }
     if ([self.backend unregisterListenerWithName:name]) {
         [self la_clearListenerMetadataCaches];
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorListenerRegistryChangedNotification
+                                                          object:self];
         [self la_postSystemNotificationName:LAActivatorAvailableListenersChangedNotification];
     }
 }
@@ -941,6 +953,18 @@ LAActivator *LASharedActivator;
 
 - (BOOL)la_unassignEventAndNotifyIfChanged:(LAEvent *)event {
     BOOL changed = [self la_unassignEvent:event];
+    if (changed) {
+        [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
+    }
+    return changed;
+}
+
+- (BOOL)la_unassignEventNameFromAllProfilesAndNotifyIfChanged:(NSString *)eventName {
+    if (!self.runningInsideSpringBoard) {
+        [self la_rejectSpringBoardOnlySelector:_cmd];
+        return NO;
+    }
+    BOOL changed = [self.backend unassignEventNameFromAllProfiles:eventName];
     if (changed) {
         [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
     }
@@ -1170,14 +1194,20 @@ LAActivator *LASharedActivator;
         [self.ipcClient sendMessageName:LAIPCMessageRemoveEvent userInfo:userInfo];
         return;
     }
-    if (![self eventWithNameSupportsRemoval:eventName]) {
+    id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
+    if (![dataSource respondsToSelector:@selector(eventWithNameSupportsRemoval:)] ||
+        ![dataSource eventWithNameSupportsRemoval:eventName] ||
+        [self eventDataSourceForEventName:eventName] != dataSource) {
         return;
     }
-    id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
-    if (dataSource && [dataSource respondsToSelector:@selector(removeEventWithName:)]) {
+    [self la_unassignEventNameFromAllProfilesAndNotifyIfChanged:eventName];
+    if ([self eventDataSourceForEventName:eventName] != dataSource) {
+        return;
+    }
+    if ([dataSource respondsToSelector:@selector(removeEventWithName:)]) {
         [dataSource removeEventWithName:eventName];
     }
-    [self unregisterEventDataSourceWithEventName:eventName];
+    [self la_unregisterEventDataSourceWithEventName:eventName ifOwnedByDataSource:dataSource];
 }
 
 - (void)registerEventDataSource:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName {
@@ -1190,6 +1220,18 @@ LAActivator *LASharedActivator;
     }
 }
 
+- (BOOL)la_registerEventDataSourceIfAbsent:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName {
+    if (!self.runningInsideSpringBoard) {
+        [self la_rejectSpringBoardOnlySelector:_cmd];
+        return NO;
+    }
+    BOOL added = [self.backend registerEventDataSourceIfAbsent:dataSource forEventName:eventName];
+    if (added) {
+        [self la_postSystemNotificationName:LAActivatorAvailableEventsChangedNotification];
+    }
+    return added;
+}
+
 - (void)unregisterEventDataSourceWithEventName:(NSString *)eventName {
     if (!self.runningInsideSpringBoard) {
         [self la_rejectSpringBoardOnlySelector:_cmd];
@@ -1200,12 +1242,158 @@ LAActivator *LASharedActivator;
     }
 }
 
+- (BOOL)la_unregisterEventDataSourceWithEventName:(NSString *)eventName
+                              ifOwnedByDataSource:(id<LAEventDataSource>)dataSource {
+    if (!self.runningInsideSpringBoard) {
+        [self la_rejectSpringBoardOnlySelector:_cmd];
+        return NO;
+    }
+    BOOL removed = [self.backend unregisterEventDataSourceWithEventName:eventName ifOwnedByDataSource:dataSource];
+    if (removed) {
+        [self la_postSystemNotificationName:LAActivatorAvailableEventsChangedNotification];
+    }
+    return removed;
+}
+
 - (BOOL)eventWithNameSupportsConfiguration:(NSString *)eventName {
-    return NO;
+    if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{LAIPCKeyEventName : eventName ?: @""};
+        return [self.ipcClient boolValueForMessageName:LAIPCMessageEventSupportsConfiguration
+                                              userInfo:userInfo
+                                          defaultValue:NO];
+    }
+    id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
+    if (![dataSource respondsToSelector:@selector(configurationViewControllerClassNameForEventWithName:bundle:)]) {
+        return NO;
+    }
+    NSBundle *bundle = nil;
+    NSString *className = [dataSource configurationViewControllerClassNameForEventWithName:eventName bundle:&bundle];
+    return [self eventDataSourceForEventName:eventName] == dataSource && className.length > 0 && bundle != nil;
 }
 
 - (LAEventConfigurationViewController *)configurationViewControllerForEventWithName:(NSString *)eventName {
-    return nil;
+    NSDictionary<NSString *, NSString *> *descriptor = [self la_eventConfigurationDescriptorForEventName:eventName];
+    NSString *className = descriptor[LAIPCKeyEventConfigurationClassName];
+    NSString *bundlePath = descriptor[LAIPCKeyEventConfigurationBundlePath];
+    if (className.length == 0 || bundlePath.length == 0) {
+        return nil;
+    }
+
+    NSBundle *bundle = [NSBundle bundleWithPath:bundlePath];
+    if (!bundle) {
+        return nil;
+    }
+    if (![bundle isLoaded]) {
+        NSError *error = nil;
+        if (![bundle loadAndReturnError:&error]) {
+            HBLogWarn(@"Unable to load event configuration bundle at %@: %@", bundlePath,
+                      error.localizedDescription ?: @"unknown error");
+            return nil;
+        }
+    }
+
+    Class controllerClass = [bundle classNamed:className];
+    if (![controllerClass isSubclassOfClass:LAEventConfigurationViewController.class]) {
+        return nil;
+    }
+    NSString *controllerBundlePath = [NSBundle bundleForClass:controllerClass].bundlePath.stringByStandardizingPath;
+    if (![controllerBundlePath isEqualToString:bundlePath.stringByStandardizingPath]) {
+        return nil;
+    }
+    return [[controllerClass alloc] initWithEventName:eventName];
+}
+
+- (NSDictionary<NSString *, NSString *> *)la_eventConfigurationDescriptorForEventName:(NSString *)eventName {
+    if (eventName.length == 0) {
+        return nil;
+    }
+    if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{LAIPCKeyEventName : eventName};
+        id value = [self.ipcClient propertyListValueForMessageName:LAIPCMessageEventConfigurationDescriptor
+                                                          userInfo:userInfo];
+        if (![value isKindOfClass:NSDictionary.class]) {
+            return nil;
+        }
+        NSString *className = [value[LAIPCKeyEventConfigurationClassName] isKindOfClass:NSString.class]
+                                  ? value[LAIPCKeyEventConfigurationClassName]
+                                  : nil;
+        NSString *bundlePath = [value[LAIPCKeyEventConfigurationBundlePath] isKindOfClass:NSString.class]
+                                   ? value[LAIPCKeyEventConfigurationBundlePath]
+                                   : nil;
+        if (className.length == 0 || bundlePath.length == 0) {
+            return nil;
+        }
+        return @{
+            LAIPCKeyEventConfigurationClassName : className,
+            LAIPCKeyEventConfigurationBundlePath : bundlePath,
+        };
+    }
+
+    id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
+    if (![dataSource respondsToSelector:@selector(configurationViewControllerClassNameForEventWithName:bundle:)]) {
+        return nil;
+    }
+    NSBundle *bundle = nil;
+    NSString *className = [dataSource configurationViewControllerClassNameForEventWithName:eventName bundle:&bundle];
+    NSString *bundlePath = bundle.bundlePath;
+    if ([self eventDataSourceForEventName:eventName] != dataSource || className.length == 0 || bundlePath.length == 0) {
+        return nil;
+    }
+    return @{
+        LAIPCKeyEventConfigurationClassName : className,
+        LAIPCKeyEventConfigurationBundlePath : bundlePath,
+    };
+}
+
+- (id)la_configurationForEventWithName:(NSString *)eventName {
+    if (eventName.length == 0) {
+        return nil;
+    }
+    if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{LAIPCKeyEventName : eventName};
+        return [self.ipcClient propertyListValueForMessageName:LAIPCMessageEventConfiguration userInfo:userInfo];
+    }
+    id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
+    if (![dataSource respondsToSelector:@selector(configurationViewControllerClassNameForEventWithName:bundle:)] ||
+        ![dataSource respondsToSelector:@selector(configurationForEventWithName:)]) {
+        return nil;
+    }
+    NSBundle *bundle = nil;
+    NSString *className = [dataSource configurationViewControllerClassNameForEventWithName:eventName bundle:&bundle];
+    if ([self eventDataSourceForEventName:eventName] != dataSource || className.length == 0 || !bundle) {
+        return nil;
+    }
+    id configuration = [dataSource configurationForEventWithName:eventName];
+    if ([self eventDataSourceForEventName:eventName] != dataSource || ![LAIPCCodec isPropertyListValue:configuration]) {
+        return nil;
+    }
+    return [self la_ipcPropertyListValue:configuration];
+}
+
+- (BOOL)la_saveConfiguration:(id)configuration forEventWithName:(NSString *)eventName {
+    if (eventName.length == 0 || ![LAIPCCodec isPropertyListValue:configuration]) {
+        return NO;
+    }
+    id propertyListConfiguration = [self la_ipcPropertyListValue:configuration];
+    if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{
+            LAIPCKeyEventName : eventName,
+            LAIPCKeyEventConfiguration : propertyListConfiguration,
+        };
+        return [self.ipcClient sendMessageName:LAIPCMessageSaveEventConfiguration userInfo:userInfo];
+    }
+    id<LAEventDataSource> dataSource = [self eventDataSourceForEventName:eventName];
+    if (![dataSource respondsToSelector:@selector(configurationViewControllerClassNameForEventWithName:bundle:)] ||
+        ![dataSource respondsToSelector:@selector(eventWithName:didSaveNewConfiguration:)]) {
+        return NO;
+    }
+    NSBundle *bundle = nil;
+    NSString *className = [dataSource configurationViewControllerClassNameForEventWithName:eventName bundle:&bundle];
+    if ([self eventDataSourceForEventName:eventName] != dataSource || className.length == 0 || !bundle) {
+        return NO;
+    }
+    [dataSource eventWithName:eventName didSaveNewConfiguration:propertyListConfiguration];
+    return [self eventDataSourceForEventName:eventName] == dataSource;
 }
 
 #pragma mark - Listener Metadata
@@ -1600,7 +1788,11 @@ LAActivator *LASharedActivator;
                                               userInfo:userInfo
                                           defaultValue:NO];
     }
-    return [self.backend setCurrentProfileNameIfChanged:currentProfileName];
+    BOOL changed = [self.backend setCurrentProfileNameIfChanged:currentProfileName];
+    if (changed) {
+        [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
+    }
+    return changed;
 }
 
 #pragma mark - Authorization

@@ -9,10 +9,11 @@
 #import <Foundation/Foundation.h>
 
 #import "IOKitSPI.h"
+#import "LATEventSource.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATFingerprintSensorEventSource : NSObject
+@interface LATFingerprintSensorEventSource : NSObject <LATEventSource>
 
 // Main-queue confined. This source observes Touch ID HID events and submits Activator events
 // without consuming the original system input.

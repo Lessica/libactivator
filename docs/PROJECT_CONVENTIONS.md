@@ -84,6 +84,10 @@
 ## Runtime 规则
 
 - runtime state 采用事件驱动缓存模型，不在热路径反复同步主线程查询 UI/SpringBoard 状态。
+- Public `LAEventDataSource` 只表示 event definition/metadata/configuration owner；tweak-side `LATEventSource` 才表示 runtime acquisition producer。一个 event name 只能有一个 definition owner，但可以有多个 acquisition producer。
+- Event Source registry 由 SpringBoard main queue 持有并显式有序注册 sources；禁止通过 runtime class scan 或 source 自注册隐藏 composition。`LATRuntimeStateSource` 不发送 `LAEvent`，不得注册成 Event Source。
+- 高成本 source 的 assignment-aware interest 默认从真实 producer catalog 推导；composite acquisition 可以用 `interestEventNames` 声明额外依赖，但这些 name 不进入 producer index。不得在独立 enum/switch 中维护第二份 gate 清单，也不得提前声明尚未实现的 event。
+- Dynamic event provider 必须先更新 authoritative configuration snapshot，再注册 definition 和 acquisition mapping；source 用 `definitionEventNames` 区分 dynamic definition 与 bundled producer name。从存活 source 删除 name 时，先 reload mapping，再只注销 registry 实际创建、已无 source 引用且仍由该 provider 持有的 definition；移除整个 source object 时才执行终止型 `invalidate`。配置对象和 IPC payload 必须 property-list-safe。
 - `libactivator.dylib` 是 dispatch / assignment owner，并只持有 dispatch 所需的 runtime snapshot；SpringBoard hook、Darwin notification、runtime reducer、触摸状态机和私有系统能力调用属于 `ActivatorTweak.dylib` 的 acquisition/capability layer。
 - 当前这些 acquisition 职责由 tweak-side `LATRuntimeStateSource` 承接，并写入 SpringBoard-side `LAActivator` 持有的 hidden `LARuntimeContext`。普通 client facade 不应创建本地 runtime cache。
 - 前台 App、主屏幕、App Switcher、锁屏、screen blank 等状态源应来自 SpringBoard 自身 hook 和已验证信号；不要引入 `BKSApplicationStateMonitor` 这类偏重全局观察者来观察 SpringBoard 自身。

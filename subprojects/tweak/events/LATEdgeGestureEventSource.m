@@ -11,7 +11,7 @@
 #import "LAActivator+Private.h"
 #import "LAQueueAssertions.h"
 #import "LATEdgeGestureClassifier.h"
-#import "LATEventSourceInterestGate.h"
+#import "LATEventSourceRegistry.h"
 #import "LATFingerprintSensorEventSource.h"
 
 #import <HBLog.h>
@@ -19,6 +19,7 @@
 @interface LATEdgeGestureEventSource ()
 
 @property(nonatomic, assign, getter=isStarted) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 @property(nonatomic, strong) LATEdgeGestureClassifier *classifier;
 #if DEBUG
 @property(nonatomic, assign) NSTimeInterval lastSideDiagnosticTimestamp;
@@ -28,7 +29,62 @@
 
 @implementation LATEdgeGestureEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"edge-gesture";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNameSlideInFromTopLeft,
+        LAEventNameStatusBarSwipeDown,
+        LAEventNameSlideInFromTopRight,
+        LAEventNameSlideInFromBottomLeft,
+        LAEventNameSlideInFromBottom,
+        LAEventNameSlideInFromBottomRight,
+        LAEventNameSlideInFromLeftTop,
+        LAEventNameSlideInFromLeft,
+        LAEventNameSlideInFromLeftBottom,
+        LAEventNameSlideInFromRightTop,
+        LAEventNameSlideInFromRight,
+        LAEventNameSlideInFromRightBottom,
+        LAEventNameTwoFingerSlideInFromTopLeft,
+        LAEventNameTwoFingerSlideInFromTop,
+        LAEventNameTwoFingerSlideInFromTopRight,
+        LAEventNameTwoFingerSlideInFromBottomLeft,
+        LAEventNameTwoFingerSlideInFromBottom,
+        LAEventNameTwoFingerSlideInFromBottomRight,
+        LAEventNameTwoFingerSlideInFromLeftTop,
+        LAEventNameTwoFingerSlideInFromLeft,
+        LAEventNameTwoFingerSlideInFromLeftBottom,
+        LAEventNameTwoFingerSlideInFromRightTop,
+        LAEventNameTwoFingerSlideInFromRight,
+        LAEventNameTwoFingerSlideInFromRightBottom,
+        LAEventScreenBottomSwipeLeft,
+        LAEventScreenBottomSwipeRight,
+        LAEventScreenLeftSwipeDown,
+        LAEventScreenLeftSwipeUp,
+        LAEventScreenRightSwipeDown,
+        LAEventScreenRightSwipeUp,
+        LAEventNameDragOffLeft,
+        LAEventNameDragOffRight,
+        LAEventNameDragOffTop,
+        LAEventNameDragOffBottom,
+    ]];
+}
+
+- (NSSet<NSString *> *)interestEventNames {
+    NSMutableSet<NSString *> *eventNames = [self.eventNames mutableCopy];
+    if (self.fingerprintSensorEventSource) {
+        [eventNames addObject:LAEventNameFingerprintSensorPressSingleAndSlideIn];
+    }
+    return [eventNames copy];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAssignedInCurrentMode;
+}
 
 - (instancetype)init {
     self = [super init];
@@ -40,10 +96,33 @@
 
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    [self.classifier reset];
+}
+
+- (void)eventSourceInterestDidChange:(BOOL)interested {
+    LAAssertMainQueue();
+    if (!interested) {
+        [self.classifier reset];
+    }
+}
+
+- (void)eventSourceInterestedEventNamesDidChange:(__unused NSSet<NSString *> *)interestedEventNames {
+    LAAssertMainQueue();
+    [self.classifier reset];
 }
 
 #pragma mark - Touch Entry Points
@@ -75,8 +154,8 @@
 
 - (BOOL)shouldProcessEvents {
     LAAssertMainQueue();
-    LATEventSourceInterestGate *interestGate = self.interestGate;
-    return !interestGate || [interestGate isInterestedInFamily:LATEventSourceInterestFamilyEdgeGesture];
+    LATEventSourceRegistry *eventSourceRegistry = self.eventSourceRegistry;
+    return !eventSourceRegistry || [eventSourceRegistry isInterestedInEventSource:self];
 }
 
 #pragma mark - Recognition

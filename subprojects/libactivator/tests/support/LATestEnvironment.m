@@ -47,6 +47,9 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.device.locked",
         @"libactivator.test.device.unlocked",
         @"libactivator.test.client-facade.user-info",
+        @"libactivator.test.event-source-registry.listener",
+        @"libactivator.test.event-source-registry.network-specific",
+        @"libactivator.test.event-source-registry.network-base",
         @"libactivator.test.url.missing",
         @"libactivator.test.url.invalid",
     ];
@@ -58,10 +61,20 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.removable-event",
         @"libactivator.test.nonremovable-event",
         @"libactivator.test.new-event-data-source",
+        @"libactivator.test.owner-safe-event",
+        @"libactivator.test.configuration-event",
         @"libactivator.test.dispatch",
         @"libactivator.test.built-in.nothing",
         @"libactivator.test.built-in.url",
         @"libactivator.test.client-facade.user-info",
+        @"libactivator.test.client-facade.configuration",
+        @"libactivator.test.event-source-registry.shared",
+        @"libactivator.test.event-source-registry.secondary",
+        @"libactivator.test.event-source-registry.dynamic-a",
+        @"libactivator.test.event-source-registry.dynamic-b",
+        @"libactivator.test.event-source-registry.foreign",
+        @"libactivator.test.event-source-registry.preowned",
+        @"libactivator.network.joined-wifi.libactivator-test-registry",
     ];
 }
 

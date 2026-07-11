@@ -23,6 +23,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 
 // Lifecycle
 @property(nonatomic, assign, getter=isStarted) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 
 // Touch ID state
 @property(nonatomic, assign, getter=isSensorDown) BOOL sensorDown;
@@ -45,14 +46,46 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 
 @implementation LATFingerprintSensorEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"fingerprint-sensor";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNameFingerprintSensorHold,
+        LAEventNameFingerprintSensorHoldLong,
+        LAEventNameFingerprintSensorPressSingle,
+        LAEventNameFingerprintSensorPressSingleAndHold,
+        LAEventNameFingerprintSensorPressSingleAndSlideIn,
+        LAEventNameFingerprintSensorPressTwice,
+    ]];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAlways;
+}
 
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    [self resetRecognitionState];
+    self.hasRecentDeviceUnlockTimestamp = NO;
+    self.lastDeviceUnlockTimestamp = 0.0;
 }
 
 #pragma mark - HID Events
@@ -72,6 +105,9 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 
 - (void)noteDeviceUnlockedAtTimestamp:(NSTimeInterval)timestamp {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
 
     self.hasRecentDeviceUnlockTimestamp = YES;
     self.lastDeviceUnlockTimestamp = timestamp;
@@ -178,7 +214,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 - (void)resolveSinglePressIfNeededWithGeneration:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (generation != self.singlePressGeneration || self.sensorDown || !self.hasPendingSinglePress ||
+    if (!self.started || generation != self.singlePressGeneration || self.sensorDown || !self.hasPendingSinglePress ||
         self.sequenceConsumed) {
         return;
     }
@@ -226,7 +262,7 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 - (void)sendShortHoldEventIfNeededWithGeneration:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (generation != self.holdGeneration || !self.sensorDown || self.sequenceConsumed) {
+    if (!self.started || generation != self.holdGeneration || !self.sensorDown || self.sequenceConsumed) {
         return;
     }
 
@@ -241,7 +277,8 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 - (void)sendLongHoldEventIfNeededWithGeneration:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (generation != self.holdGeneration || !self.sensorDown || self.secondPressDown || !self.hasShortHoldRecognized) {
+    if (!self.started || generation != self.holdGeneration || !self.sensorDown || self.secondPressDown ||
+        !self.hasShortHoldRecognized) {
         return;
     }
 

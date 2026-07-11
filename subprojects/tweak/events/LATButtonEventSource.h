@@ -9,10 +9,11 @@
 #import <Foundation/Foundation.h>
 
 #import "IOKitSPI.h"
+#import "LATEventSource.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATButtonEventSource : NSObject
+@interface LATButtonEventSource : NSObject <LATEventSource>
 
 // Main-queue confined. This source observes hardware button HID events and submits Activator events
 // without consuming the original system input.

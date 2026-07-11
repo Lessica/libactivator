@@ -13,13 +13,14 @@ ActivatorTweak_FILES += applications/LATApplicationDescriptor.m
 ActivatorTweak_FILES += applications/LATApplicationLauncher.m
 ActivatorTweak_FILES += applications/LATApplicationListenerProvider.m
 ActivatorTweak_FILES += applications/LATLockScreenCameraLauncher.m
-ActivatorTweak_FILES += runtime/LATEventSourceInterestGate.m
 ActivatorTweak_FILES += runtime/LATHIDEventSender.m
 ActivatorTweak_FILES += runtime/LATRuntimeStateSource.m
+ActivatorTweak_FILES += events/LATEventSourceRegistry.m
 ActivatorTweak_FILES += events/LATButtonEventSource.m
 ActivatorTweak_FILES += events/LATMediaEventSource.m
 ActivatorTweak_FILES += events/LATLockStateEventSource.m
 ActivatorTweak_FILES += events/LATPowerStateEventSource.m
+ActivatorTweak_FILES += events/LATNetworkEventDataSource.m
 ActivatorTweak_FILES += events/LATNetworkEventSource.m
 ActivatorTweak_FILES += events/LATStatusBarEventSource.m
 ActivatorTweak_FILES += events/LATEdgeGestureClassifier.m
@@ -72,6 +73,10 @@ ActivatorTweak_CFLAGS += -Iapplications
 ActivatorTweak_CFLAGS += -Ievents
 ActivatorTweak_CFLAGS += -Ilisteners
 ActivatorTweak_CFLAGS += -Iprivate
+
+ifeq ($(LIBACTIVATOR_TEST_SUPPORT),1)
+ActivatorTweak_CFLAGS += -DLIBACTIVATOR_TEST_SUPPORT=1
+endif
 ActivatorTweak_CFLAGS += -Iruntime
 ActivatorTweak_CFLAGS += -I../../include
 ActivatorTweak_CFLAGS += -I../libactivator

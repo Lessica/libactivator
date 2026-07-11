@@ -22,6 +22,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 
 // Lifecycle
 @property(nonatomic, assign) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 
 // Button states
 @property(nonatomic, assign, getter=isButtonSequenceConsumed) BOOL buttonSequenceConsumed;
@@ -57,14 +58,68 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 
 @implementation LATButtonEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"button";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNameLockHoldLong,      LAEventNameLockHoldShort,
+        LAEventNameLockPressDouble,   LAEventNameLockPressTriple,
+        LAEventNameLockPressWithMenu, LAEventNameMenuHoldLong,
+        LAEventNameMenuHoldShort,     LAEventNameMenuPressDouble,
+        LAEventNameMenuPressSingle,   LAEventNameMenuPressTriple,
+        LAEventNameVolumeBothPress,   LAEventNameVolumeDownHoldShort,
+        LAEventNameVolumeDownPress,   LAEventNameVolumeDownPressWithMenu,
+        LAEventNameVolumeDownUp,      LAEventNameVolumeMuteOff,
+        LAEventNameVolumeMuteOn,      LAEventNameVolumeToggleMuteTwice,
+        LAEventNameVolumeUpDown,      LAEventNameVolumeUpHoldShort,
+        LAEventNameVolumeUpPress,     LAEventNameVolumeUpPressWithMenu,
+    ]];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAlways;
+}
 
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    self.buttonSequenceConsumed = NO;
+    self.lockButtonDown = NO;
+    self.menuButtonDown = NO;
+    self.volumeDownButtonDown = NO;
+    self.volumeUpButtonDown = NO;
+    self.lockHoldGeneration += 1;
+    self.lockPressGeneration += 1;
+    self.lockPressCount = 0;
+    self.lockShortHoldRecognized = NO;
+    self.lockHoldShortEventToAbort = nil;
+    self.menuHoldGeneration += 1;
+    self.menuPressGeneration += 1;
+    self.menuPressCount = 0;
+    self.menuShortHoldRecognized = NO;
+    self.menuHoldShortEventToAbort = nil;
+    self.volumeDownHoldGeneration += 1;
+    self.volumeUpHoldGeneration += 1;
+    self.lastVolumePressUsage = 0;
+    self.lastVolumePressTime = 0.0;
+    self.lastRingerSwitchTime = 0.0;
 }
 
 #pragma mark - HID Events
@@ -324,7 +379,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 - (void)resolveLockPressSequenceWithPressCount:(NSUInteger)pressCount generation:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (generation != self.lockPressGeneration || self.lockButtonDown || self.buttonSequenceConsumed ||
+    if (!self.started || generation != self.lockPressGeneration || self.lockButtonDown || self.buttonSequenceConsumed ||
         self.lockPressCount != pressCount) {
         return;
     }
@@ -396,7 +451,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 - (void)resolveMenuPressSequenceWithPressCount:(NSUInteger)pressCount generation:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (generation != self.menuPressGeneration || self.menuButtonDown || self.buttonSequenceConsumed ||
+    if (!self.started || generation != self.menuPressGeneration || self.menuButtonDown || self.buttonSequenceConsumed ||
         self.menuPressCount != pressCount) {
         return;
     }
@@ -584,7 +639,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
                           currentGeneration:(NSUInteger)currentGeneration {
     LAAssertMainQueue();
 
-    if (generation != currentGeneration || !keyIsDown || self.buttonSequenceConsumed) {
+    if (!self.started || generation != currentGeneration || !keyIsDown || self.buttonSequenceConsumed) {
         return;
     }
 
@@ -610,7 +665,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 - (void)sendLockShortHoldEventIfNeededWithGeneration:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (generation != self.lockHoldGeneration || !self.lockButtonDown || self.buttonSequenceConsumed) {
+    if (!self.started || generation != self.lockHoldGeneration || !self.lockButtonDown || self.buttonSequenceConsumed) {
         return;
     }
 
@@ -624,7 +679,8 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 - (void)sendLockLongHoldEventIfNeededWithGeneration:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (generation != self.lockHoldGeneration || !self.lockButtonDown || !self.lockShortHoldRecognized) {
+    if (!self.started || generation != self.lockHoldGeneration || !self.lockButtonDown ||
+        !self.lockShortHoldRecognized) {
         return;
     }
 
@@ -654,7 +710,7 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 - (void)sendMenuShortHoldEventIfNeededWithGeneration:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (generation != self.menuHoldGeneration || !self.menuButtonDown || self.buttonSequenceConsumed) {
+    if (!self.started || generation != self.menuHoldGeneration || !self.menuButtonDown || self.buttonSequenceConsumed) {
         return;
     }
 
@@ -668,7 +724,8 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 - (void)sendMenuLongHoldEventIfNeededWithGeneration:(NSUInteger)generation {
     LAAssertMainQueue();
 
-    if (generation != self.menuHoldGeneration || !self.menuButtonDown || !self.menuShortHoldRecognized) {
+    if (!self.started || generation != self.menuHoldGeneration || !self.menuButtonDown ||
+        !self.menuShortHoldRecognized) {
         return;
     }
 

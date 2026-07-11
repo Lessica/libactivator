@@ -34,7 +34,10 @@ __attribute__((visibility("hidden")))
 
 - (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
 - (BOOL)registerEventDataSource:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName;
+- (BOOL)registerEventDataSourceIfAbsent:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName;
 - (BOOL)unregisterEventDataSourceWithEventName:(NSString *)eventName;
+- (BOOL)unregisterEventDataSourceWithEventName:(NSString *)eventName
+                           ifOwnedByDataSource:(id<LAEventDataSource>)dataSource;
 - (NSArray<NSString *> *)availableEventNames;
 - (BOOL)hasEventWithName:(NSString *)name;
 
@@ -47,6 +50,7 @@ __attribute__((visibility("hidden")))
 - (BOOL)addListenerName:(NSString *)listenerName toEvent:(LAEvent *)event;
 - (BOOL)removeListenerName:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (BOOL)unassignEvent:(LAEvent *)event;
+- (BOOL)unassignEventNameFromAllProfiles:(NSString *)eventName;
 - (NSArray<NSString *> *)assignedListenerNamesForEvent:(LAEvent *)event;
 - (NSArray<NSString *> *)assignedListenerNamesForEventName:(NSString *)eventName mode:(nullable NSString *)mode;
 - (NSArray<LAEvent *> *)eventsAssignedToListenerWithName:(NSString *)listenerName;

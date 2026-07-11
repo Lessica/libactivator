@@ -27,11 +27,13 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 
 // Lifecycle
 @property(nonatomic, assign) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
 @property(nonatomic, assign) BOOL refreshScheduled;
 
 // Wi-Fi state
 @property(nonatomic, assign) BOOL hasKnownWiFiNetworkName;
 @property(nonatomic, copy, nullable) NSString *currentWiFiNetworkName;
+@property(nonatomic, copy, readwrite) NSSet<NSString *> *configuredEventNames;
 
 // Observation tokens
 @property(nonatomic, strong, nullable) id<NSObject> signalStrengthObserver;
@@ -45,7 +47,28 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 
 @implementation LATNetworkEventSource
 
-#pragma mark - Lifecycle
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"network";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    NSMutableSet<NSString *> *eventNames = [NSMutableSet setWithArray:@[
+        LAEventNameNetworkJoinedWiFi,
+        LAEventNameNetworkLeftWiFi,
+    ]];
+    [eventNames unionSet:self.configuredEventNames];
+    return [eventNames copy];
+}
+
+- (NSSet<NSString *> *)definitionEventNames {
+    return self.configuredEventNames;
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAlways;
+}
 
 - (instancetype)init {
     self = [super init];
@@ -53,13 +76,19 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
         dispatch_queue_attr_t attr =
             dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL_WITH_AUTORELEASE_POOL, QOS_CLASS_UTILITY, 0);
         _pathMonitorQueue = dispatch_queue_create("libactivator.network-path", attr);
+        _configuredEventNames = [NSSet set];
     }
     return self;
 }
 
+- (void)updateConfiguredEventNames:(NSSet<NSString *> *)configuredEventNames {
+    LAAssertMainQueue();
+    self.configuredEventNames = [configuredEventNames copy] ?: [NSSet set];
+}
+
 - (void)start {
     LAAssertMainQueue();
-    if (self.started) {
+    if (self.started || self.isInvalidated) {
         return;
     }
     self.started = YES;
@@ -70,15 +99,36 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 }
 
 - (void)dealloc {
+    [self stopMonitoring];
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    self.refreshScheduled = NO;
+    [self stopMonitoring];
+    self.hasKnownWiFiNetworkName = NO;
+    self.currentWiFiNetworkName = nil;
+}
+
+- (void)stopMonitoring {
     NSNotificationCenter *notificationCenter = NSNotificationCenter.defaultCenter;
     if (_signalStrengthObserver) {
         [notificationCenter removeObserver:_signalStrengthObserver];
+        _signalStrengthObserver = nil;
     }
     if (_wakeFromSleepObserver) {
         [notificationCenter removeObserver:_wakeFromSleepObserver];
+        _wakeFromSleepObserver = nil;
     }
     if (_pathMonitor) {
         nw_path_monitor_cancel(_pathMonitor);
+        _pathMonitor = nil;
     }
 }
 
@@ -127,8 +177,11 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 - (void)noteNetworkStateMayHaveChangedWithReason:(NSString *)reason {
     if (![NSThread isMainThread]) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            [self scheduleNetworkStateRefreshWithReason:reason];
+            [self noteNetworkStateMayHaveChangedWithReason:reason];
         });
+        return;
+    }
+    if (!self.started) {
         return;
     }
     [self scheduleNetworkStateRefreshWithReason:reason];
@@ -136,7 +189,7 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 
 - (void)scheduleNetworkStateRefreshWithReason:(NSString *)reason {
     LAAssertMainQueue();
-    if (self.refreshScheduled) {
+    if (!self.started || self.refreshScheduled) {
         return;
     }
     self.refreshScheduled = YES;
@@ -144,6 +197,9 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LATNetworkStateRefreshDelay * NSEC_PER_SEC)),
                    dispatch_get_main_queue(), ^{
                        self.refreshScheduled = NO;
+                       if (!self.started) {
+                           return;
+                       }
                        [self handlePotentialNetworkStateChangeWithReason:reason];
                    });
 }
@@ -152,6 +208,9 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 
 - (void)handlePotentialNetworkStateChangeWithReason:(NSString *)reason {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
 
     NSString *networkName = [self readCurrentWiFiNetworkName];
     if (!self.hasKnownWiFiNetworkName) {
@@ -204,6 +263,9 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 
 - (void)sendWiFiEventWithBaseName:(NSString *)baseEventName networkName:(NSString *)networkName {
     LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
 
     NSString *eventMode = LASharedActivator.currentEventMode;
     if (eventMode.length == 0) {
@@ -212,15 +274,29 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 
     if (networkName.length > 0) {
         NSString *specificEventName = [baseEventName stringByAppendingFormat:@".%@", networkName];
-        LAEvent *specificEvent = [LAEvent eventWithName:specificEventName mode:eventMode];
-        [LASharedActivator sendEventToListener:specificEvent];
-        if (specificEvent.handled) {
-            return;
+        if ([self.configuredEventNames containsObject:specificEventName] &&
+            [LASharedActivator hasEventWithName:specificEventName]) {
+            LAEvent *specificEvent = [LAEvent eventWithName:specificEventName mode:eventMode];
+            [LASharedActivator sendEventToListener:specificEvent];
+            if (specificEvent.handled) {
+                return;
+            }
         }
     }
 
     LAEvent *event = [LAEvent eventWithName:baseEventName mode:eventMode];
     [LASharedActivator sendEventToListener:event];
 }
+
+#if LIBACTIVATOR_TEST_SUPPORT
+- (void)la_testingSendWiFiEventWithBaseName:(NSString *)baseEventName networkName:(NSString *)networkName {
+    LAAssertMainQueue();
+
+    BOOL started = self.started;
+    self.started = YES;
+    [self sendWiFiEventWithBaseName:baseEventName networkName:networkName];
+    self.started = started;
+}
+#endif
 
 @end

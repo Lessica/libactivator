@@ -22,6 +22,7 @@
 #import "LATestBuiltInURLActionsSuite.h"
 #import "LATestDispatchSuite.h"
 #import "LATestEnvironment.h"
+#import "LATestEventSourceRegistrySuite.h"
 #import "LATestEventSuite.h"
 #import "LATestIPCCodecSuite.h"
 #import "LATestPersistenceSuite.h"
@@ -38,6 +39,10 @@
 
 + (NSString *)userInfoProbeListenerName {
     return @"libactivator.test.client-facade.user-info";
+}
+
++ (NSString *)eventConfigurationProbeEventName {
+    return @"libactivator.test.client-facade.configuration";
 }
 
 + (NSDictionary *)handleCommandWithUserInfo:(NSDictionary *)userInfo activator:(LAActivator *)activator {
@@ -88,6 +93,23 @@
             @"UserInfo" : testListener.lastReceivedUserInfo ?: @{},
         }];
     }
+    if ([command isEqualToString:LAIPCTestingCommandPrepareEventConfigurationProbe]) {
+        NSString *eventName = [self eventConfigurationProbeEventName];
+        LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
+        dataSource.configurationClassName = NSStringFromClass(LAEventConfigurationViewController.class);
+        dataSource.configurationBundle = [NSBundle bundleForClass:LAEventConfigurationViewController.class];
+        dataSource.configuration = @{
+            @"Enabled" : @YES,
+            @"Threshold" : @2,
+        };
+        [activator registerEventDataSource:dataSource forEventName:eventName];
+        return [self okReplyWithValue:@{
+            LAIPCKeyEventName : eventName,
+            LAIPCKeyEventConfigurationClassName : dataSource.configurationClassName,
+            LAIPCKeyEventConfigurationBundlePath : dataSource.configurationBundle.bundlePath,
+            LAIPCKeyEventConfiguration : dataSource.configuration,
+        }];
+    }
     return [self failureReply];
 }
 
@@ -120,6 +142,7 @@
     [LATestBuiltInComposeActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInTelephonyActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInDynamicApplicationListenersSuite runWithRecorder:recorder activator:activator];
+    [LATestEventSourceRegistrySuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInEventSourcesSuite runWithRecorder:recorder activator:activator];
     [LATestEnvironment cleanActivator:activator];
     return [recorder resultDictionary];

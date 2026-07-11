@@ -434,6 +434,20 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     return added;
 }
 
+- (BOOL)registerEventDataSourceIfAbsent:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName {
+    if (!dataSource || eventName.length == 0) {
+        return NO;
+    }
+    __block BOOL added = NO;
+    [self performWithStateLock:^{
+        if (!self.eventDataSources[eventName]) {
+            self.eventDataSources[eventName] = dataSource;
+            added = YES;
+        }
+    }];
+    return added;
+}
+
 - (BOOL)unregisterEventDataSourceWithEventName:(NSString *)eventName {
     if (eventName.length == 0) {
         return NO;
@@ -442,6 +456,21 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     [self performWithStateLock:^{
         removed = self.eventDataSources[eventName] != nil;
         [self.eventDataSources removeObjectForKey:eventName];
+    }];
+    return removed;
+}
+
+- (BOOL)unregisterEventDataSourceWithEventName:(NSString *)eventName
+                           ifOwnedByDataSource:(id<LAEventDataSource>)dataSource {
+    if (!dataSource || eventName.length == 0) {
+        return NO;
+    }
+    __block BOOL removed = NO;
+    [self performWithStateLock:^{
+        if (self.eventDataSources[eventName] == dataSource) {
+            [self.eventDataSources removeObjectForKey:eventName];
+            removed = YES;
+        }
     }];
     return removed;
 }
@@ -506,6 +535,28 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
 - (BOOL)unassignEvent:(LAEvent *)event {
     return [self assignEvent:event toListenersWithNames:@[]];
+}
+
+- (BOOL)unassignEventNameFromAllProfiles:(NSString *)eventName {
+    if (eventName.length == 0) {
+        return NO;
+    }
+
+    __block BOOL changed = NO;
+    [self performWithStateLock:^{
+        for (NSMutableDictionary *profile in self.profiles.allValues) {
+            NSMutableDictionary *assignments = profile[LAActivatorAssignmentsKey];
+            if (![assignments isKindOfClass:NSMutableDictionary.class] || !assignments[eventName]) {
+                continue;
+            }
+            [assignments removeObjectForKey:eventName];
+            changed = YES;
+        }
+        if (changed) {
+            [self savePersistentState];
+        }
+    }];
+    return changed;
 }
 
 - (BOOL)addListenerName:(NSString *)listenerName toEvent:(LAEvent *)event {

@@ -53,6 +53,30 @@
 
 - (void)removeEventWithName:(NSString *)eventName {
     self.removalCount += 1;
+    if (self.removalHandler) {
+        self.removalHandler();
+    }
+}
+
+- (NSString *)configurationViewControllerClassNameForEventWithName:(NSString *)eventName bundle:(NSBundle **)bundle {
+    if (bundle) {
+        *bundle = self.configurationBundle;
+    }
+    if (self.configurationDescriptorRequestHandler) {
+        self.configurationDescriptorRequestHandler();
+    }
+    return self.configurationClassName;
+}
+
+- (id)configurationForEventWithName:(NSString *)eventName {
+    self.configurationRequestCount += 1;
+    return self.configuration;
+}
+
+- (void)eventWithName:(NSString *)eventName didSaveNewConfiguration:(id)configuration {
+    self.configurationSaveCount += 1;
+    self.configuration = configuration;
+    self.lastSavedConfiguration = configuration;
 }
 
 @end
