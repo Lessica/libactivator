@@ -22,6 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
                          listener:(LATApplicationActionListener *)listener;
 
 - (void)start;
+- (void)noteApplicationsMayHaveChangedWithReason:(NSString *)reason;
 - (void)refreshApplications;
 
 + (NSArray<LATApplicationDescriptor *> *)visibleApplicationDescriptors;

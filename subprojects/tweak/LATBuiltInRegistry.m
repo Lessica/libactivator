@@ -133,6 +133,10 @@
     [self.edgeGestureEventSource start];
 }
 
+- (void)noteApplicationCatalogMayHaveChangedWithReason:(NSString *)reason {
+    [self.dynamicApplicationListenerProvider noteApplicationsMayHaveChangedWithReason:reason];
+}
+
 - (BOOL)legacyHomeButtonTouchStreamHookShouldBeInstalled {
     return [self.activator la_hasRealHomeButton];
 }

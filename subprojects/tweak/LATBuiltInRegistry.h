@@ -53,6 +53,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithActivator:(LAActivator *)activator NS_DESIGNATED_INITIALIZER;
 
 - (void)startEventSources;
+- (void)noteApplicationCatalogMayHaveChangedWithReason:(NSString *)reason;
 - (BOOL)legacyHomeButtonTouchStreamHookShouldBeInstalled;
 
 @end

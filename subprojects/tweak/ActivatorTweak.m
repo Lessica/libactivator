@@ -27,6 +27,7 @@
 #import <UIKit/UIKit.h>
 
 CHDeclareClass(SpringBoard);
+CHDeclareClass(SBApplicationController);
 CHDeclareClass(CCUIModuleCollectionViewController);
 CHDeclareClass(UIViewController);
 CHDeclareClass(SBCoverSheetPrimarySlidingViewController);
@@ -51,6 +52,7 @@ typedef NS_ENUM(unsigned char, LATSystemGestureDispatchMode) {
 
 static LATBuiltInRegistry *gBuiltInRegistry = nil;
 
+static Class gApplicationControllerClass = nil;
 static Class gCoverSheetViewControllerClass = nil;
 static Class gPosterSwitcherViewControllerClass = nil;
 static Class gDashboardCameraPageViewControllerClass = nil;
@@ -64,9 +66,21 @@ static Class gIconScrollViewClass = nil;
 - (void)viewWillAppear:(BOOL)animated;
 @end
 
+@interface SBApplicationController : NSObject
+- (void)applicationsAdded:(id)added;
+- (void)applicationsDemoted:(id)demoted;
+- (void)applicationsRemoved:(id)removed;
+- (void)applicationsReplaced:(id)replaced;
+- (void)applicationsUpdated:(id)updated;
+@end
+
 static void LATNoteHIDEvent(IOHIDEventRef event) {
     [gBuiltInRegistry.buttonEventSource noteHIDEvent:event];
     [gBuiltInRegistry.fingerprintSensorEventSource noteHIDEvent:event];
+}
+
+static void LATNoteApplicationCatalogMayHaveChanged(NSString *reason) {
+    [gBuiltInRegistry noteApplicationCatalogMayHaveChangedWithReason:reason];
 }
 
 static void LATNoteViewControllerVisibility(id viewController, BOOL visible) {
@@ -157,6 +171,33 @@ CHOptimizedMethod0(self, void, CCUIModuleCollectionViewController, viewDidLoad) 
 CHOptimizedMethod1(self, void, CCUIModuleCollectionViewController, viewWillAppear, BOOL, animated) {
     CHSuper1(CCUIModuleCollectionViewController, viewWillAppear, animated);
     [LATSystemCenterController noteModuleCollectionViewControllerWillAppear:self];
+}
+
+#pragma mark - SBApplicationController
+
+CHOptimizedMethod1(self, void, SBApplicationController, applicationsAdded, id, added) {
+    CHSuper1(SBApplicationController, applicationsAdded, added);
+    LATNoteApplicationCatalogMayHaveChanged(@"applications-added");
+}
+
+CHOptimizedMethod1(self, void, SBApplicationController, applicationsDemoted, id, demoted) {
+    CHSuper1(SBApplicationController, applicationsDemoted, demoted);
+    LATNoteApplicationCatalogMayHaveChanged(@"applications-demoted");
+}
+
+CHOptimizedMethod1(self, void, SBApplicationController, applicationsRemoved, id, removed) {
+    CHSuper1(SBApplicationController, applicationsRemoved, removed);
+    LATNoteApplicationCatalogMayHaveChanged(@"applications-removed");
+}
+
+CHOptimizedMethod1(self, void, SBApplicationController, applicationsReplaced, id, replaced) {
+    CHSuper1(SBApplicationController, applicationsReplaced, replaced);
+    LATNoteApplicationCatalogMayHaveChanged(@"applications-replaced");
+}
+
+CHOptimizedMethod1(self, void, SBApplicationController, applicationsUpdated, id, updated) {
+    CHSuper1(SBApplicationController, applicationsUpdated, updated);
+    LATNoteApplicationCatalogMayHaveChanged(@"applications-updated");
 }
 
 #pragma mark - SBCoverSheetPrimarySlidingViewController
@@ -319,6 +360,7 @@ CHOptimizedMethod1(self, void, SpringBoard, applicationDidFinishLaunching, id, a
 #pragma mark - Hook Installation
 
 static void LATLoadRuntimeStateClasses(void) {
+    gApplicationControllerClass = NSClassFromString(@"SBApplicationController");
     gCoverSheetViewControllerClass = NSClassFromString(@"CSCoverSheetViewController");
     gPosterSwitcherViewControllerClass = NSClassFromString(@"CSPosterSwitcherViewController");
     gDashboardCameraPageViewControllerClass = NSClassFromString(@"SBDashBoardCameraPageViewController");
@@ -331,6 +373,9 @@ static void LATLoadRuntimeStateClasses(void) {
 static void LATLoadSpringBoardClasses(void) {
     CHLoadClass(UIViewController);
     CHLoadClass_(&SpringBoard$, NSClassFromString(@"SpringBoard"));
+    if (gApplicationControllerClass) {
+        CHLoadClass_(&SBApplicationController$, gApplicationControllerClass);
+    }
     CHLoadClass_(&CCUIModuleCollectionViewController$, NSClassFromString(@"CCUIModuleCollectionViewController"));
     CHLoadClass_(&SBCoverSheetPrimarySlidingViewController$,
                  NSClassFromString(@"SBCoverSheetPrimarySlidingViewController"));
@@ -347,6 +392,39 @@ static void LATLoadSpringBoardClasses(void) {
     CHLoadClass_(&UIStatusBar_Modern$, NSClassFromString(@"UIStatusBar_Modern"));
 }
 
+static void LATInstallApplicationControllerHooks(void) {
+    if (!gApplicationControllerClass) {
+        HBLogWarn(@"Skipping SBApplicationController application catalog hooks because the class is unavailable");
+        return;
+    }
+
+    if ([gApplicationControllerClass instancesRespondToSelector:@selector(applicationsAdded:)]) {
+        CHHook1(SBApplicationController, applicationsAdded);
+    } else {
+        HBLogWarn(@"Skipping SBApplicationController applicationsAdded: hook because the method is unavailable");
+    }
+    if ([gApplicationControllerClass instancesRespondToSelector:@selector(applicationsDemoted:)]) {
+        CHHook1(SBApplicationController, applicationsDemoted);
+    } else {
+        HBLogWarn(@"Skipping SBApplicationController applicationsDemoted: hook because the method is unavailable");
+    }
+    if ([gApplicationControllerClass instancesRespondToSelector:@selector(applicationsRemoved:)]) {
+        CHHook1(SBApplicationController, applicationsRemoved);
+    } else {
+        HBLogWarn(@"Skipping SBApplicationController applicationsRemoved: hook because the method is unavailable");
+    }
+    if ([gApplicationControllerClass instancesRespondToSelector:@selector(applicationsReplaced:)]) {
+        CHHook1(SBApplicationController, applicationsReplaced);
+    } else {
+        HBLogWarn(@"Skipping SBApplicationController applicationsReplaced: hook because the method is unavailable");
+    }
+    if ([gApplicationControllerClass instancesRespondToSelector:@selector(applicationsUpdated:)]) {
+        CHHook1(SBApplicationController, applicationsUpdated);
+    } else {
+        HBLogWarn(@"Skipping SBApplicationController applicationsUpdated: hook because the method is unavailable");
+    }
+}
+
 static void LATInstallHooks(void) {
     static dispatch_once_t sOnceToken;
     dispatch_once(&sOnceToken, ^{
@@ -355,6 +433,7 @@ static void LATInstallHooks(void) {
 
         CHHook1(UIViewController, viewWillAppear);
         CHHook1(UIViewController, viewDidDisappear);
+        LATInstallApplicationControllerHooks();
         Class moduleCollectionViewControllerClass = NSClassFromString(@"CCUIModuleCollectionViewController");
         if ([moduleCollectionViewControllerClass instancesRespondToSelector:@selector(viewDidLoad)] &&
             [moduleCollectionViewControllerClass instancesRespondToSelector:@selector(viewWillAppear:)]) {

@@ -31,16 +31,7 @@ static NSTimeInterval const LATApplicationRefreshDebounceDelay = 1.0;
 // Refresh scheduling state
 @property(nonatomic, assign) NSUInteger refreshGeneration;
 
-- (void)launchServicesApplicationsDidChange;
-
 @end
-
-static void LATLaunchServicesApplicationsChangedCallback(__unused CFNotificationCenterRef center, void *observer,
-                                                         __unused CFStringRef name, __unused const void *object,
-                                                         __unused CFDictionaryRef userInfo) {
-    LATApplicationListenerProvider *provider = (__bridge LATApplicationListenerProvider *)observer;
-    [provider launchServicesApplicationsDidChange];
-}
 
 @implementation LATApplicationListenerProvider
 
@@ -60,19 +51,15 @@ static void LATLaunchServicesApplicationsChangedCallback(__unused CFNotification
     return self;
 }
 
-- (void)dealloc {
-    CFNotificationCenterRemoveObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self,
-                                       CFSTR("com.apple.LaunchServices.ApplicationsChanged"), NULL);
-}
-
 #pragma mark - Public API
 
 - (void)start {
-    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self,
-                                    LATLaunchServicesApplicationsChangedCallback,
-                                    CFSTR("com.apple.LaunchServices.ApplicationsChanged"), NULL,
-                                    CFNotificationSuspensionBehaviorDeliverImmediately);
     [self refreshApplications];
+}
+
+- (void)noteApplicationsMayHaveChangedWithReason:(NSString *)reason {
+    HBLogDebug(@"Application catalog changed: %@", reason.length > 0 ? reason : @"unknown");
+    [self scheduleRefreshApplicationsAfterDelay:LATApplicationRefreshDebounceDelay];
 }
 
 - (void)refreshApplications {
@@ -148,13 +135,6 @@ static void LATLaunchServicesApplicationsChangedCallback(__unused CFNotification
 
 + (NSArray<LATApplicationDescriptor *> *)visibleApplicationDescriptors {
     return [[[LATApplicationCatalog alloc] init] visibleApplicationDescriptors];
-}
-
-#pragma mark - Application Catalog Notifications
-
-- (void)launchServicesApplicationsDidChange {
-    HBLogDebug(@"LaunchServices applications changed");
-    [self scheduleRefreshApplicationsAfterDelay:LATApplicationRefreshDebounceDelay];
 }
 
 @end
