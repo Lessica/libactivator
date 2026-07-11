@@ -20,6 +20,7 @@ NSString *const LAActivatorAssignmentsChangedNotification = @"LAActivatorAssignm
 NSString *const LAActivatorEventModeChangedNotification = @"LAActivatorEventModeChangedNotification";
 NSString *const LAActivatorAuthorizationChangedNotification = @"LAActivatorAuthorizationChangedNotification";
 NSString *const LAActivatorListenerRegistryChangedNotification = @"LAActivatorListenerRegistryChangedNotification";
+NSString *const LAActivatorEventRegistryChangedNotification = @"LAActivatorEventRegistryChangedNotification";
 
 NSString *const LAEventNameMenuPressSingle = @"libactivator.menu.press.single";
 NSString *const LAEventNameMenuPressDouble = @"libactivator.menu.press.double";

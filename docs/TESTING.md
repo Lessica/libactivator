@@ -41,7 +41,8 @@ scripts/run-tests.sh
 | Persistence / assignment / profile / blacklist | `run` | 隔离测试 plist、in-memory 先更新、coalesced flush、compat bridge 的可重复行为 | 用户真实配置文件、安装迁移副作用 |
 | Resources / metadata | `run` | bundled catalog 数量、required-capabilities、small-icons、selector/url/urls metadata、obsolete/excluded 项 | 把 metadata presence 当作 runtime behavior implemented |
 | Built-in listeners/actions | `run` | allowlist、metadata gate、runtime registration、unsupported name 不消费事件、无副作用的 dispatch 语义 | 打开 URL、启动 App、发送 HID、弹系统 UI、修改 ringer/audio/call 状态 |
-| Event Source registry/provider | `run` | source identifier/catalog、确定性启动、幂等、invalidate、同 event 多 producer、dynamic add/remove/reload、assignment-aware interest、owner-safe definition 与 configuration codec | 真实 HID/手势/外设信号、把 metadata presence 当作 producer |
+| Event Definition registry/provider | `run` | provider identifier/catalog、property-list generic create/config/remove、generation、atomic diff/rollback、delegate reentrancy/postflight owner replacement、foreign/pre-owned/replacement ownership、committed notification visibility、持久化、metadata-only definition | Settings UI、真实系统调度和外设信号 |
+| Event Source registry | `run` | source identifier/producer catalog、确定性启动、幂等、invalidate、同 event 多 producer、producer reload、assignment-aware interest | definition ownership、真实 HID/手势/外设信号、把 metadata presence 当作 producer |
 | Runtime snapshot input | `run-runtime-input` | mode/display/screen-on snapshot 对 Public API、通知、dispatch gate、unlock-to-send callback 的影响 | tweak-side hook/source/reducer 细节、真实设备手势或锁屏流程 |
 | Real device runtime | `run-device-runtime` | 真实 SpringBoard hook、锁屏/解锁、前台 App、dynamic application listener 的真实外层行为 | 通过 `la_note*` 或 acquisition 注入入口制造状态 |
 | Manual checklist / probes | 手工记录或 probe 脚本 | power/headset/media route、URL/HID/system UI 等需要硬件或人工确认的效果 | 作为自动化 pass/fail 结果替代 stable/device-runtime |
@@ -62,7 +63,7 @@ scripts/run-tests.sh
 - built-in action stable suite 只覆盖代码 allowlist、metadata/selector gate、runtime registration、obsolete/unsupported name 不注册，以及不产生设备副作用的纯 dispatch 语义。
 - 新增或重做 built-in listener/action 的 handled 语义必须先有旧实现依据或明确的现代差异准则；stable tests 可以覆盖无副作用 handled 断言，但不能为了证明真实动作效果而给 production path 增加 fake。
 - 新增 Event Source 必须在 stable 中覆盖 registry 接线、source 自声明 catalog、start/invalidate 和 interest 失效；同一 event 的多 producer 是合法关系，重复 source identifier 才应拒绝。
-- Dynamic provider tests 必须覆盖 added/removed/unchanged diff、pre-existing same-owner definition 不被 registry 接管、stale owner 不得注销 replacement definition、bundled producer name 与 dynamic definition 子集分离、configuration 只接受 property-list-safe payload，以及 metadata-only event 不被误判为 runtime producer。
+- Dynamic provider tests 必须覆盖 duplicate identifier、single-registry attachment、property-list catalog/create/config/remove、generation、added/removed/unchanged atomic diff、mapping failure rollback、delegate reentrancy、delegate-side owner replacement postflight、retained foreign-owned inactive declaration、pre-existing same-owner definition 不被 registry 接管、foreign/replacement owner reconciliation、notification observer 只能看到 committed state 和已推进 generation、provider teardown 不影响 source lifecycle、磁盘恢复，以及 metadata-only definition 不被误判为 runtime producer。
 - 会打开 URL、启动 App、投递 HID、显示系统 UI、修改 ringer/audio 状态的行为不进入 stable fake path；应通过 Frida probe、`run-device-runtime` 或手工真机清单验证。
 - 需要打开 App、回主屏幕、锁屏、解锁、App Switcher、强杀 App 的测试默认不进 stable，先放 `run-device-runtime` 或手工观察。
 - 为测试而新增 production 入口必须先证明必要性，并用 `LIBACTIVATOR_TEST_SUPPORT` 宏隔离。普通构建不能包含 testing IPC、testing path 或测试自动化接口。

@@ -9,7 +9,6 @@
 #import "LATEventSource.h"
 
 @class LAActivator;
-@protocol LAEventDataSource;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -24,8 +23,6 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithActivator:(LAActivator *)activator NS_DESIGNATED_INITIALIZER;
 
 - (BOOL)registerEventSource:(id<LATEventSource>)eventSource;
-- (BOOL)registerEventSource:(id<LATEventSource>)eventSource
-       definitionDataSource:(nullable id<LAEventDataSource>)definitionDataSource;
 - (BOOL)unregisterEventSource:(id<LATEventSource>)eventSource;
 - (BOOL)reloadEventNamesForEventSource:(id<LATEventSource>)eventSource;
 

@@ -8,21 +8,17 @@
 
 #import <Activator/Activator.h>
 
-@class LATEventSourceRegistry;
-@class LATNetworkEventSource;
+#import "LATEventDefinitionProvider.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATNetworkEventDataSource : NSObject <LAEventDataSource>
+@interface LATNetworkEventDataSource : NSObject <LAEventDataSource, LATEventDefinitionProvider>
 
 @property(nonatomic, copy, readonly) NSSet<NSString *> *configuredEventNames;
+@property(nonatomic, weak, nullable) LATEventDefinitionRegistry *eventDefinitionRegistry;
 
 - (instancetype)init NS_UNAVAILABLE;
-- (instancetype)initWithActivator:(LAActivator *)activator
-                      eventSource:(LATNetworkEventSource *)eventSource NS_DESIGNATED_INITIALIZER;
-
-- (void)attachEventSourceRegistry:(LATEventSourceRegistry *)eventSourceRegistry;
-- (nullable NSString *)addEventWithBaseName:(NSString *)baseEventName networkName:(NSString *)networkName;
+- (instancetype)initWithActivator:(LAActivator *)activator NS_DESIGNATED_INITIALIZER;
 
 @end
 

@@ -50,6 +50,8 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.event-source-registry.listener",
         @"libactivator.test.event-source-registry.network-specific",
         @"libactivator.test.event-source-registry.network-base",
+        @"libactivator.test.event-definition-registry.network-specific",
+        @"libactivator.test.event-definition-registry.network-base",
         @"libactivator.test.url.missing",
         @"libactivator.test.url.invalid",
     ];
@@ -75,6 +77,15 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
         @"libactivator.test.event-source-registry.foreign",
         @"libactivator.test.event-source-registry.preowned",
         @"libactivator.network.joined-wifi.libactivator-test-registry",
+        @"libactivator.test.event-definition-registry.a",
+        @"libactivator.test.event-definition-registry.b",
+        @"libactivator.test.event-definition-registry.c",
+        @"libactivator.test.event-definition-registry.d",
+        @"libactivator.test.event-definition-registry.e",
+        @"libactivator.test.event-definition-registry.preowned",
+        @"libactivator.test.event-definition-registry.unregister-reentrant",
+        @"libactivator.test.event-definition-registry.inactive-a",
+        @"libactivator.test.event-definition-registry.inactive-b",
     ];
 }
 

@@ -31,7 +31,7 @@
 | --- | ---: | --- | --- |
 | `is-unprotected` | 12 | `partial` | Metadata/API 已暴露，但旧版 API protection prompt 与 unprotected 豁免体系尚未实现。 |
 | `supports-unlocking-device` | 8 | `partial` | 当前只有 callback-only unlock-to-send compatibility，不实现 passcode submit 或完整主动解锁流程；仍需确认 1.9.13 是否是“默认允许、key=0 排除”的语义。 |
-| `settings-view-controller-*` | 44 / 20 | `partial` | core descriptor、property-list get/save IPC 与本进程 configuration controller factory 已实现；实际 Settings host 导航、表单和 emitter 创建 UI 仍待实现。 |
+| `settings-view-controller-*` | 44 / 20 | `partial` | Existing-event core descriptor、property-list get/save IPC 与本进程 configuration controller factory 已实现；dynamic provider registry/generation/generic create 已在 SpringBoard 内部实现，但跨进程 provider catalog/create bridge、实际 Settings host 导航和 creation UI 仍待实现。 |
 
 ### Listeners keys
 

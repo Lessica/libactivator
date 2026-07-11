@@ -62,10 +62,6 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
     return [eventNames copy];
 }
 
-- (NSSet<NSString *> *)definitionEventNames {
-    return self.configuredEventNames;
-}
-
 - (LATEventSourceInterestPolicy)interestPolicy {
     return LATEventSourceInterestPolicyAlways;
 }

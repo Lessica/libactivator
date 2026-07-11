@@ -19,6 +19,7 @@
 #import "LATCameraActionListener.h"
 #import "LATComposeActionListener.h"
 #import "LATEdgeGestureEventSource.h"
+#import "LATEventDefinitionRegistry.h"
 #import "LATEventSourceRegistry.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
@@ -39,7 +40,7 @@
 
 #import <HBLog.h>
 
-@interface LATBuiltInRegistry ()
+@interface LATBuiltInRegistry () <LATEventDefinitionRegistryDelegate>
 
 // Dependencies
 @property(nonatomic, weak) LAActivator *activator;
@@ -53,6 +54,7 @@
 @property(nonatomic, strong, readwrite) LATRuntimeStateSource *runtimeStateSource;
 @property(nonatomic, strong, readwrite) LATButtonEventSource *buttonEventSource;
 @property(nonatomic, strong, readwrite) LATEdgeGestureEventSource *edgeGestureEventSource;
+@property(nonatomic, strong, readwrite) LATEventDefinitionRegistry *eventDefinitionRegistry;
 @property(nonatomic, strong, readwrite) LATEventSourceRegistry *eventSourceRegistry;
 @property(nonatomic, strong, readwrite, nullable) LATFingerprintSensorEventSource *fingerprintSensorEventSource;
 @property(nonatomic, strong, readwrite, nullable) LATForceTouchEventSource *forceTouchEventSource;
@@ -83,12 +85,13 @@
 
         _runtimeStateSource = [[LATRuntimeStateSource alloc] initWithRuntimeContext:runtimeContext];
         _eventSourceRegistry = [[LATEventSourceRegistry alloc] initWithActivator:activator];
+        _eventDefinitionRegistry = [[LATEventDefinitionRegistry alloc] initWithActivator:activator];
+        _eventDefinitionRegistry.delegate = self;
         _lockStateEventSource = [[LATLockStateEventSource alloc] initWithRuntimeStateSource:_runtimeStateSource];
         _powerStateEventSource = [[LATPowerStateEventSource alloc] init];
         _mediaEventSource = [[LATMediaEventSource alloc] init];
         _networkEventSource = [[LATNetworkEventSource alloc] init];
-        _networkEventDataSource = [[LATNetworkEventDataSource alloc] initWithActivator:activator
-                                                                           eventSource:_networkEventSource];
+        _networkEventDataSource = [[LATNetworkEventDataSource alloc] initWithActivator:activator];
         _buttonEventSource = [[LATButtonEventSource alloc] init];
         if ([self fingerprintSensorEventSourceShouldBeRegisteredWithActivator:activator]) {
             _fingerprintSensorEventSource = [[LATFingerprintSensorEventSource alloc] init];
@@ -119,19 +122,38 @@
             _edgeGestureEventSource,
         ]];
         for (id<LATEventSource> eventSource in eventSources) {
-            BOOL registered = eventSource == _networkEventSource
-                                  ? [_eventSourceRegistry registerEventSource:eventSource
-                                                         definitionDataSource:_networkEventDataSource]
-                                  : [_eventSourceRegistry registerEventSource:eventSource];
-            if (!registered) {
+            if (![_eventSourceRegistry registerEventSource:eventSource]) {
                 HBLogWarn(@"Unable to register built-in event source %@", eventSource.eventSourceIdentifier);
             }
         }
-        [_networkEventDataSource attachEventSourceRegistry:_eventSourceRegistry];
+        if (![_eventDefinitionRegistry registerProvider:_networkEventDataSource]) {
+            HBLogWarn(@"Unable to register built-in Network event definition provider");
+        }
 
         [self registerBuiltInListenersWithActivator:activator];
     }
     return self;
+}
+
+- (BOOL)eventDefinitionRegistry:(__unused LATEventDefinitionRegistry *)registry
+                applyEventNames:(NSSet<NSString *> *)eventNames
+             previousEventNames:(__unused NSSet<NSString *> *)previousEventNames
+                    forProvider:(id<LATEventDefinitionProvider>)provider {
+    if (provider != self.networkEventDataSource) {
+        HBLogWarn(@"No acquisition mapping is configured for dynamic definition provider %@",
+                  provider.eventDefinitionProviderIdentifier);
+        return NO;
+    }
+
+    NSSet<NSString *> *previousConfiguredEventNames = self.networkEventSource.configuredEventNames;
+    [self.networkEventSource updateConfiguredEventNames:eventNames];
+    if ([self.eventSourceRegistry reloadEventNamesForEventSource:self.networkEventSource]) {
+        return YES;
+    }
+
+    [self.networkEventSource updateConfiguredEventNames:previousConfiguredEventNames];
+    [self.eventSourceRegistry reloadEventNamesForEventSource:self.networkEventSource];
+    return NO;
 }
 
 - (void)startEventSources {

@@ -41,6 +41,9 @@
 @property(nonatomic, strong) LAIPCServer *ipcServer;
 @property(nonatomic, strong) LALegacyBridge *legacyPreferenceBridge;
 @property(nonatomic, strong) LADefaultEventDataSource *defaultEventDataSource;
+@property(nonatomic, assign) NSUInteger eventRegistryMutationDepth;
+@property(nonatomic, assign) BOOL eventRegistryOwnerChangePending;
+@property(nonatomic, assign) BOOL availableEventsChangePending;
 
 // Client (non-SpringBoard)
 @property(nonatomic, strong) LAIPCClient *ipcClient;
@@ -307,6 +310,48 @@ LAActivator *LASharedActivator;
     }
     [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:self];
     notify_post(darwinName.UTF8String);
+}
+
+- (void)la_noteEventRegistryOwnerChanged:(BOOL)ownerChanged availableEventsChanged:(BOOL)availableEventsChanged {
+    if (self.eventRegistryMutationDepth > 0) {
+        self.eventRegistryOwnerChangePending |= ownerChanged;
+        self.availableEventsChangePending |= availableEventsChanged;
+        return;
+    }
+    if (ownerChanged) {
+        [NSNotificationCenter.defaultCenter postNotificationName:LAActivatorEventRegistryChangedNotification
+                                                          object:self];
+    }
+    if (availableEventsChanged) {
+        [self la_postSystemNotificationName:LAActivatorAvailableEventsChangedNotification];
+    }
+}
+
+- (void)la_beginEventRegistryMutation {
+    if (!self.runningInsideSpringBoard) {
+        return;
+    }
+    self.eventRegistryMutationDepth += 1;
+}
+
+- (void)la_endEventRegistryMutation {
+    if (!self.runningInsideSpringBoard) {
+        return;
+    }
+    NSAssert(self.eventRegistryMutationDepth > 0, @"Unbalanced event registry mutation");
+    if (self.eventRegistryMutationDepth == 0) {
+        return;
+    }
+    self.eventRegistryMutationDepth -= 1;
+    if (self.eventRegistryMutationDepth > 0) {
+        return;
+    }
+
+    BOOL ownerChanged = self.eventRegistryOwnerChangePending;
+    BOOL availableEventsChanged = self.availableEventsChangePending;
+    self.eventRegistryOwnerChangePending = NO;
+    self.availableEventsChangePending = NO;
+    [self la_noteEventRegistryOwnerChanged:ownerChanged availableEventsChanged:availableEventsChanged];
 }
 
 #pragma mark - Event Delivery
@@ -1215,9 +1260,11 @@ LAActivator *LASharedActivator;
         [self la_rejectSpringBoardOnlySelector:_cmd];
         return;
     }
-    if ([self.backend registerEventDataSource:dataSource forEventName:eventName]) {
-        [self la_postSystemNotificationName:LAActivatorAvailableEventsChangedNotification];
-    }
+    id<LAEventDataSource> previousDataSource = [self.backend eventDataSourceForEventName:eventName];
+    BOOL added = [self.backend registerEventDataSource:dataSource forEventName:eventName];
+    BOOL ownerChanged = dataSource && eventName.length > 0 && previousDataSource != dataSource &&
+                        [self.backend eventDataSourceForEventName:eventName] == dataSource;
+    [self la_noteEventRegistryOwnerChanged:ownerChanged availableEventsChanged:added];
 }
 
 - (BOOL)la_registerEventDataSourceIfAbsent:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName {
@@ -1227,7 +1274,7 @@ LAActivator *LASharedActivator;
     }
     BOOL added = [self.backend registerEventDataSourceIfAbsent:dataSource forEventName:eventName];
     if (added) {
-        [self la_postSystemNotificationName:LAActivatorAvailableEventsChangedNotification];
+        [self la_noteEventRegistryOwnerChanged:YES availableEventsChanged:YES];
     }
     return added;
 }
@@ -1238,7 +1285,7 @@ LAActivator *LASharedActivator;
         return;
     }
     if ([self.backend unregisterEventDataSourceWithEventName:eventName]) {
-        [self la_postSystemNotificationName:LAActivatorAvailableEventsChangedNotification];
+        [self la_noteEventRegistryOwnerChanged:YES availableEventsChanged:YES];
     }
 }
 
@@ -1250,7 +1297,7 @@ LAActivator *LASharedActivator;
     }
     BOOL removed = [self.backend unregisterEventDataSourceWithEventName:eventName ifOwnedByDataSource:dataSource];
     if (removed) {
-        [self la_postSystemNotificationName:LAActivatorAvailableEventsChangedNotification];
+        [self la_noteEventRegistryOwnerChanged:YES availableEventsChanged:YES];
     }
     return removed;
 }

@@ -26,10 +26,6 @@
 @property(nonatomic, strong) NSMapTable<id<LATEventSource>, NSSet<NSString *> *> *eventNamesByEventSource;
 @property(nonatomic, strong) NSMapTable<id<LATEventSource>, NSSet<NSString *> *> *interestEventNamesByEventSource;
 @property(nonatomic, strong) NSMapTable<id<LATEventSource>, NSSet<NSString *> *> *interestedEventNamesByEventSource;
-@property(nonatomic, strong) NSMapTable<id<LATEventSource>, id<LAEventDataSource>> *definitionDataSourcesByEventSource;
-@property(nonatomic, strong) NSMapTable<id<LATEventSource>, NSSet<NSString *> *> *definitionEventNamesByEventSource;
-@property(nonatomic, strong)
-    NSMapTable<id<LAEventDataSource>, NSMutableSet<NSString *> *> *ownedDefinitionNamesByDataSource;
 @property(nonatomic, strong) NSHashTable<id<LATEventSource>> *startedEventSources;
 @property(nonatomic, strong) NSHashTable<id<LATEventSource>> *invalidatedEventSources;
 
@@ -67,15 +63,6 @@
         _interestedEventNamesByEventSource = [[NSMapTable alloc] initWithKeyOptions:sourceKeyOptions
                                                                        valueOptions:NSPointerFunctionsStrongMemory
                                                                            capacity:0];
-        _definitionDataSourcesByEventSource = [[NSMapTable alloc] initWithKeyOptions:sourceKeyOptions
-                                                                        valueOptions:NSPointerFunctionsStrongMemory
-                                                                            capacity:0];
-        _definitionEventNamesByEventSource = [[NSMapTable alloc] initWithKeyOptions:sourceKeyOptions
-                                                                       valueOptions:NSPointerFunctionsStrongMemory
-                                                                           capacity:0];
-        _ownedDefinitionNamesByDataSource = [[NSMapTable alloc] initWithKeyOptions:sourceKeyOptions
-                                                                      valueOptions:NSPointerFunctionsStrongMemory
-                                                                          capacity:0];
         _startedEventSources = [[NSHashTable alloc] initWithOptions:sourceKeyOptions capacity:0];
         _invalidatedEventSources = [[NSHashTable alloc]
             initWithOptions:NSPointerFunctionsWeakMemory | NSPointerFunctionsObjectPointerPersonality
@@ -143,14 +130,6 @@
         }
     }
 
-    NSMutableArray<id<LAEventDataSource>> *ownedDefinitionDataSources = [[NSMutableArray alloc] init];
-    NSMutableArray<NSSet<NSString *> *> *ownedDefinitionNames = [[NSMutableArray alloc] init];
-    for (id<LAEventDataSource> definitionDataSource in self.ownedDefinitionNamesByDataSource.keyEnumerator) {
-        [ownedDefinitionDataSources addObject:definitionDataSource];
-        [ownedDefinitionNames
-            addObject:[[self.ownedDefinitionNamesByDataSource objectForKey:definitionDataSource] copy]];
-    }
-
     [self.orderedEventSources removeAllObjects];
     [self.eventSourcesByIdentifier removeAllObjects];
     [self.eventSourcesByEventName removeAllObjects];
@@ -158,8 +137,6 @@
     [self.eventNamesByEventSource removeAllObjects];
     [self.interestEventNamesByEventSource removeAllObjects];
     [self.interestedEventNamesByEventSource removeAllObjects];
-    [self.definitionDataSourcesByEventSource removeAllObjects];
-    [self.definitionEventNamesByEventSource removeAllObjects];
     [self.startedEventSources removeAllObjects];
     [self.invalidatedEventSources removeAllObjects];
 
@@ -170,24 +147,11 @@
         [eventSource invalidate];
         [self detachRegistryFromEventSource:eventSource];
     }
-    [ownedDefinitionDataSources enumerateObjectsUsingBlock:^(id<LAEventDataSource> definitionDataSource,
-                                                             NSUInteger index, __unused BOOL *stop) {
-        for (NSString *eventName in ownedDefinitionNames[index]) {
-            [self.activator la_unregisterEventDataSourceWithEventName:eventName
-                                                  ifOwnedByDataSource:definitionDataSource];
-        }
-    }];
-    [self.ownedDefinitionNamesByDataSource removeAllObjects];
 }
 
 #pragma mark - Registration
 
 - (BOOL)registerEventSource:(id<LATEventSource>)eventSource {
-    return [self registerEventSource:eventSource definitionDataSource:nil];
-}
-
-- (BOOL)registerEventSource:(id<LATEventSource>)eventSource
-       definitionDataSource:(id<LAEventDataSource>)definitionDataSource {
     LAAssertMainQueue();
     if (self.invalidated || !eventSource || [self.invalidatedEventSources containsObject:eventSource]) {
         return NO;
@@ -213,10 +177,6 @@
                       NSStringFromClass(eventSource.class), registeredIdentifier, identifier);
             return NO;
         }
-        if ([self.definitionDataSourcesByEventSource objectForKey:eventSource] != definitionDataSource) {
-            HBLogWarn(@"Event source %@ cannot change its definition data source", identifier);
-            return NO;
-        }
         return [self reloadEventNamesForEventSource:eventSource];
     }
 
@@ -235,30 +195,12 @@
     }
     NSSet<NSString *> *interestEventNamesSnapshot =
         [self normalizedInterestEventNamesForEventSource:eventSource fallbackEventNames:eventNamesSnapshot];
-    NSSet<NSString *> *definitionEventNamesSnapshot =
-        [self normalizedDefinitionEventNamesForEventSource:eventSource
-                                        fallbackEventNames:eventNamesSnapshot
-                                                dataSource:definitionDataSource];
-    if (![definitionEventNamesSnapshot isSubsetOfSet:eventNamesSnapshot]) {
-        HBLogWarn(@"Skipping event source %@ because its dynamic definitions are outside its producer catalog",
-                  identifier);
-        return NO;
-    }
-    NSArray<NSString *> *newlyRegisteredDefinitionNames =
-        [self registerMissingDefinitionsForEventNames:definitionEventNamesSnapshot dataSource:definitionDataSource];
-    if (definitionDataSource && !newlyRegisteredDefinitionNames) {
-        return NO;
-    }
     self.eventSourcesByIdentifier[identifierSnapshot] = eventSource;
     [self.orderedEventSources addObject:eventSource];
     [self.identifiersByEventSource setObject:identifierSnapshot forKey:eventSource];
     [self.eventNamesByEventSource setObject:eventNamesSnapshot forKey:eventSource];
     [self.interestEventNamesByEventSource setObject:interestEventNamesSnapshot forKey:eventSource];
     [self.interestedEventNamesByEventSource setObject:[NSSet set] forKey:eventSource];
-    if (definitionDataSource) {
-        [self.definitionDataSourcesByEventSource setObject:definitionDataSource forKey:eventSource];
-        [self.definitionEventNamesByEventSource setObject:definitionEventNamesSnapshot forKey:eventSource];
-    }
     [self attachRegistryToEventSource:eventSource];
     [self rebuildEventSourcesByEventName];
 
@@ -283,17 +225,12 @@
     }
 
     BOOL wasInterested = [self.interestedEventNamesByEventSource objectForKey:eventSource].count > 0;
-    id<LAEventDataSource> definitionDataSource = [self.definitionDataSourcesByEventSource objectForKey:eventSource];
-    NSSet<NSString *> *previousDefinitionEventNames =
-        [self.definitionEventNamesByEventSource objectForKey:eventSource] ?: [NSSet set];
     [self.eventSourcesByIdentifier removeObjectForKey:identifier];
     [self.orderedEventSources removeObjectIdenticalTo:eventSource];
     [self.identifiersByEventSource removeObjectForKey:eventSource];
     [self.eventNamesByEventSource removeObjectForKey:eventSource];
     [self.interestEventNamesByEventSource removeObjectForKey:eventSource];
     [self.interestedEventNamesByEventSource removeObjectForKey:eventSource];
-    [self.definitionDataSourcesByEventSource removeObjectForKey:eventSource];
-    [self.definitionEventNamesByEventSource removeObjectForKey:eventSource];
     [self.startedEventSources removeObject:eventSource];
     [self.invalidatedEventSources addObject:eventSource];
     [self rebuildEventSourcesByEventName];
@@ -303,7 +240,6 @@
     }
     [eventSource invalidate];
     [self detachRegistryFromEventSource:eventSource];
-    [self unregisterUnreferencedDefinitionsForEventNames:previousDefinitionEventNames dataSource:definitionDataSource];
     return YES;
 }
 
@@ -322,39 +258,15 @@
     NSSet<NSString *> *interestEventNamesSnapshot =
         [self normalizedInterestEventNamesForEventSource:eventSource fallbackEventNames:eventNamesSnapshot];
     NSSet<NSString *> *previousEventNames = [self.eventNamesByEventSource objectForKey:eventSource];
-    id<LAEventDataSource> definitionDataSource = [self.definitionDataSourcesByEventSource objectForKey:eventSource];
-    NSSet<NSString *> *previousDefinitionEventNames =
-        [self.definitionEventNamesByEventSource objectForKey:eventSource] ?: [NSSet set];
-    NSSet<NSString *> *definitionEventNamesSnapshot =
-        [self normalizedDefinitionEventNamesForEventSource:eventSource
-                                        fallbackEventNames:eventNamesSnapshot
-                                                dataSource:definitionDataSource];
-    if (![definitionEventNamesSnapshot isSubsetOfSet:eventNamesSnapshot]) {
-        HBLogWarn(@"Keeping the previous event names for %@ because its dynamic definitions are outside its producer "
-                   "catalog",
-                  [self.identifiersByEventSource objectForKey:eventSource]);
-        return NO;
-    }
-    NSArray<NSString *> *newlyRegisteredDefinitionNames =
-        [self registerMissingDefinitionsForEventNames:definitionEventNamesSnapshot dataSource:definitionDataSource];
-    if (definitionDataSource && !newlyRegisteredDefinitionNames) {
-        return NO;
-    }
     if (![previousEventNames isEqualToSet:eventNamesSnapshot]) {
         [self.eventNamesByEventSource setObject:eventNamesSnapshot forKey:eventSource];
         [self rebuildEventSourcesByEventName];
     }
     [self.interestEventNamesByEventSource setObject:interestEventNamesSnapshot forKey:eventSource];
-    if (definitionDataSource) {
-        [self.definitionEventNamesByEventSource setObject:definitionEventNamesSnapshot forKey:eventSource];
-    }
 
     if (self.started) {
         [self updateInterestForEventSource:eventSource resettingRecognition:NO];
     }
-    NSMutableSet<NSString *> *removedEventNames = [previousDefinitionEventNames mutableCopy];
-    [removedEventNames minusSet:definitionEventNamesSnapshot];
-    [self unregisterUnreferencedDefinitionsForEventNames:removedEventNames dataSource:definitionDataSource];
     return YES;
 }
 
@@ -474,81 +386,6 @@
     return [interestedEventNames copy];
 }
 
-#pragma mark - Dynamic Definitions
-
-- (nullable NSArray<NSString *> *)registerMissingDefinitionsForEventNames:(NSSet<NSString *> *)eventNames
-                                                               dataSource:(nullable id<LAEventDataSource>)dataSource {
-    if (!dataSource) {
-        return @[];
-    }
-
-    LAActivator *activator = self.activator;
-    if (!activator) {
-        return nil;
-    }
-    NSArray<NSString *> *orderedEventNames = [eventNames.allObjects sortedArrayUsingSelector:@selector(compare:)];
-    for (NSString *eventName in orderedEventNames) {
-        id<LAEventDataSource> registeredDataSource = [activator eventDataSourceForEventName:eventName];
-        if (registeredDataSource && registeredDataSource != dataSource) {
-            HBLogWarn(@"Unable to register dynamic definition %@ because it is owned by %@", eventName,
-                      NSStringFromClass(registeredDataSource.class));
-            return nil;
-        }
-    }
-
-    NSMutableArray<NSString *> *newlyRegisteredEventNames = [[NSMutableArray alloc] init];
-    for (NSString *eventName in orderedEventNames) {
-        if ([activator eventDataSourceForEventName:eventName] == dataSource) {
-            continue;
-        }
-        if (![activator la_registerEventDataSourceIfAbsent:dataSource forEventName:eventName]) {
-            for (NSString *registeredEventName in newlyRegisteredEventNames) {
-                [activator la_unregisterEventDataSourceWithEventName:registeredEventName
-                                                 ifOwnedByDataSource:dataSource];
-            }
-            return nil;
-        }
-        [newlyRegisteredEventNames addObject:eventName];
-    }
-    if (newlyRegisteredEventNames.count > 0) {
-        NSMutableSet<NSString *> *ownedEventNames = [self.ownedDefinitionNamesByDataSource objectForKey:dataSource];
-        if (!ownedEventNames) {
-            ownedEventNames = [[NSMutableSet alloc] init];
-            [self.ownedDefinitionNamesByDataSource setObject:ownedEventNames forKey:dataSource];
-        }
-        [ownedEventNames addObjectsFromArray:newlyRegisteredEventNames];
-    }
-    return [newlyRegisteredEventNames copy];
-}
-
-- (void)unregisterUnreferencedDefinitionsForEventNames:(NSSet<NSString *> *)eventNames
-                                            dataSource:(nullable id<LAEventDataSource>)dataSource {
-    if (!dataSource || eventNames.count == 0) {
-        return;
-    }
-    NSMutableSet<NSString *> *ownedEventNames = [self.ownedDefinitionNamesByDataSource objectForKey:dataSource];
-    for (NSString *eventName in eventNames) {
-        if (![ownedEventNames containsObject:eventName]) {
-            continue;
-        }
-        BOOL stillReferenced = NO;
-        for (id<LATEventSource> eventSource in self.orderedEventSources) {
-            if ([self.definitionDataSourcesByEventSource objectForKey:eventSource] == dataSource &&
-                [[self.definitionEventNamesByEventSource objectForKey:eventSource] containsObject:eventName]) {
-                stillReferenced = YES;
-                break;
-            }
-        }
-        if (!stillReferenced) {
-            [self.activator la_unregisterEventDataSourceWithEventName:eventName ifOwnedByDataSource:dataSource];
-            [ownedEventNames removeObject:eventName];
-        }
-    }
-    if (ownedEventNames.count == 0) {
-        [self.ownedDefinitionNamesByDataSource removeObjectForKey:dataSource];
-    }
-}
-
 - (void)notifyEventSource:(id<LATEventSource>)eventSource interested:(BOOL)interested {
     if ([eventSource respondsToSelector:@selector(eventSourceInterestDidChange:)]) {
         [eventSource eventSourceInterestDidChange:interested];
@@ -609,18 +446,6 @@
         return eventNames;
     }
     return [self normalizedEventNames:eventSource.interestEventNames];
-}
-
-- (NSSet<NSString *> *)normalizedDefinitionEventNamesForEventSource:(id<LATEventSource>)eventSource
-                                                 fallbackEventNames:(NSSet<NSString *> *)eventNames
-                                                         dataSource:(nullable id<LAEventDataSource>)dataSource {
-    if (!dataSource) {
-        return [NSSet set];
-    }
-    if (![eventSource respondsToSelector:@selector(definitionEventNames)]) {
-        return eventNames;
-    }
-    return [self normalizedEventNames:eventSource.definitionEventNames];
 }
 
 - (void)rebuildEventSourcesByEventName {

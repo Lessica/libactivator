@@ -13,6 +13,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *const LAActivatorListenerRegistryChangedNotification;
+extern NSString *const LAActivatorEventRegistryChangedNotification;
 
 @interface LAActivator (Private)
 
@@ -42,6 +43,8 @@ extern NSString *const LAActivatorListenerRegistryChangedNotification;
 
 - (void)registerListener:(id<LAListener>)listener forName:(NSString *)name ignoreHasSeen:(BOOL)ignoreHasSeen;
 - (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
+- (void)la_beginEventRegistryMutation;
+- (void)la_endEventRegistryMutation;
 - (BOOL)la_registerEventDataSourceIfAbsent:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName;
 - (BOOL)la_unregisterEventDataSourceWithEventName:(NSString *)eventName
                               ifOwnedByDataSource:(id<LAEventDataSource>)dataSource;

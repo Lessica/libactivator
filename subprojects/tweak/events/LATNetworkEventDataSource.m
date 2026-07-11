@@ -10,55 +10,70 @@
 
 #import "LAActivator+Private.h"
 #import "LAQueueAssertions.h"
-#import "LATEventSourceRegistry.h"
-#import "LATNetworkEventSource.h"
+#import "LATEventDefinitionRegistry.h"
 
 #import <HBLog.h>
 
 static NSString *const LATNetworkStatusEventsPreferenceKey = @"LANetworkStatusEvents";
+static NSString *const LATNetworkCreationNetworkNameKey = @"NetworkName";
 
 @interface LATNetworkEventDataSource ()
 
 @property(nonatomic, weak) LAActivator *activator;
-@property(nonatomic, weak) LATNetworkEventSource *eventSource;
-@property(nonatomic, weak) LATEventSourceRegistry *eventSourceRegistry;
 @property(nonatomic, copy, readwrite) NSSet<NSString *> *configuredEventNames;
 
 @end
 
 @implementation LATNetworkEventDataSource
 
-- (instancetype)initWithActivator:(LAActivator *)activator eventSource:(LATNetworkEventSource *)eventSource {
+- (instancetype)initWithActivator:(LAActivator *)activator {
     LAAssertMainQueue();
     NSParameterAssert(activator);
-    NSParameterAssert(eventSource);
 
     self = [super init];
     if (self) {
         _activator = activator;
-        _eventSource = eventSource;
         _configuredEventNames = [self
             normalizedConfiguredEventNames:[activator _getObjectForPreference:LATNetworkStatusEventsPreferenceKey]];
-        [eventSource updateConfiguredEventNames:_configuredEventNames];
     }
     return self;
 }
 
-- (void)attachEventSourceRegistry:(LATEventSourceRegistry *)eventSourceRegistry {
-    LAAssertMainQueue();
-    NSParameterAssert(eventSourceRegistry);
-    NSAssert(!self.eventSourceRegistry || self.eventSourceRegistry == eventSourceRegistry,
-             @"Network event data source cannot change registries");
-    self.eventSourceRegistry = eventSourceRegistry;
+- (NSString *)eventDefinitionProviderIdentifier {
+    return @"network";
 }
 
-- (NSString *)addEventWithBaseName:(NSString *)baseEventName networkName:(NSString *)networkName {
+- (NSSet<NSString *> *)eventDefinitionNames {
+    return self.configuredEventNames;
+}
+
+- (id<LAEventDataSource>)eventDataSource {
+    return self;
+}
+
+- (NSArray<NSDictionary<NSString *, id> *> *)eventCreationTemplates {
+    NSMutableArray<NSDictionary<NSString *, id> *> *templates = [[NSMutableArray alloc] init];
+    for (NSString *baseEventName in @[ LAEventNameNetworkJoinedWiFi, LAEventNameNetworkLeftWiFi ]) {
+        [templates addObject:@{
+            @"Identifier" : baseEventName,
+            @"Title" : [self.activator localizedTitleForEventName:baseEventName] ?: baseEventName,
+            @"Description" : [self.activator localizedDescriptionForEventName:baseEventName] ?: @"",
+        }];
+    }
+    return [templates copy];
+}
+
+- (NSString *)createEventWithTemplateIdentifier:(NSString *)templateIdentifier configuration:(id)configuration {
     LAAssertMainQueue();
-    if (![self isSupportedBaseEventName:baseEventName] || networkName.length == 0) {
+    NSDictionary *configurationDictionary = [configuration isKindOfClass:NSDictionary.class] ? configuration : nil;
+    NSString *networkName = [configurationDictionary[LATNetworkCreationNetworkNameKey] isKindOfClass:NSString.class]
+                                ? configurationDictionary[LATNetworkCreationNetworkNameKey]
+                                : nil;
+    if (![self isSupportedBaseEventName:templateIdentifier] || networkName.length == 0) {
         return nil;
     }
 
-    NSString *eventName = [baseEventName stringByAppendingFormat:@".%@", networkName];
+    NSString *eventName = [templateIdentifier stringByAppendingFormat:@".%@", networkName];
     if ([self.configuredEventNames containsObject:eventName]) {
         return eventName;
     }
@@ -101,7 +116,8 @@ static NSString *const LATNetworkStatusEventsPreferenceKey = @"LANetworkStatusEv
 }
 
 - (BOOL)eventWithNameSupportsRemoval:(NSString *)eventName {
-    return [self.configuredEventNames containsObject:eventName];
+    return [self.configuredEventNames containsObject:eventName] &&
+           [self.eventDefinitionRegistry providerForEventName:eventName] == self;
 }
 
 - (void)removeEventWithName:(NSString *)eventName {
@@ -126,11 +142,8 @@ static NSString *const LATNetworkStatusEventsPreferenceKey = @"LANetworkStatusEv
 
     NSSet<NSString *> *previousEventNames = self.configuredEventNames;
     self.configuredEventNames = normalizedEventNames;
-    [self.eventSource updateConfiguredEventNames:normalizedEventNames];
-    if (![self.eventSourceRegistry reloadEventNamesForEventSource:self.eventSource]) {
+    if (![self.eventDefinitionRegistry reloadEventNamesForProvider:self]) {
         self.configuredEventNames = previousEventNames;
-        [self.eventSource updateConfiguredEventNames:previousEventNames];
-        [self.eventSourceRegistry reloadEventNamesForEventSource:self.eventSource];
         HBLogError(@"Unable to apply configured network event definitions");
         return NO;
     }

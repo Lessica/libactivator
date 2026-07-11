@@ -13,6 +13,7 @@
 @class CSCoverSheetViewController;
 @class LATButtonEventSource;
 @class LATEdgeGestureEventSource;
+@class LATEventDefinitionRegistry;
 @class LATEventSourceRegistry;
 @class LATFingerprintSensorEventSource;
 @class LATForceTouchEventSource;
@@ -38,6 +39,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong, readonly) LATRuntimeStateSource *runtimeStateSource;
 @property(nonatomic, strong, readonly) LATButtonEventSource *buttonEventSource;
 @property(nonatomic, strong, readonly) LATEdgeGestureEventSource *edgeGestureEventSource;
+@property(nonatomic, strong, readonly) LATEventDefinitionRegistry *eventDefinitionRegistry;
 @property(nonatomic, strong, readonly) LATEventSourceRegistry *eventSourceRegistry;
 @property(nonatomic, strong, readonly, nullable) LATFingerprintSensorEventSource *fingerprintSensorEventSource;
 @property(nonatomic, strong, readonly, nullable) LATForceTouchEventSource *forceTouchEventSource;

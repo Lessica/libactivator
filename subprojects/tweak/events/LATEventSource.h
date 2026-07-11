@@ -32,7 +32,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property(nonatomic, weak, nullable) LATEventSourceRegistry *eventSourceRegistry;
 @property(nonatomic, copy, readonly) NSSet<NSString *> *interestEventNames;
-@property(nonatomic, copy, readonly) NSSet<NSString *> *definitionEventNames;
 - (void)eventSourceInterestDidChange:(BOOL)interested;
 - (void)eventSourceInterestedEventNamesDidChange:(NSSet<NSString *> *)interestedEventNames;
 

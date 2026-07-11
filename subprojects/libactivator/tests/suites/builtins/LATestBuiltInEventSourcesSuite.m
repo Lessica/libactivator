@@ -64,15 +64,14 @@
               reason:@"LATNetworkEventDataSource class was not loaded in SpringBoard"];
     if (networkEventSourceClass) {
         LATNetworkEventSource *networkSource = [[networkEventSourceClass alloc] init];
-        NSString *configuredNetworkEventName =
-            [LAEventNameNetworkJoinedWiFi stringByAppendingString:@".libactivator-test-network"];
+        NSString *configuredNetworkEventName = [LAEventNameNetworkJoinedWiFi
+            stringByAppendingFormat:@".libactivator-test-%@", NSUUID.UUID.UUIDString.lowercaseString];
         [networkSource updateConfiguredEventNames:[NSSet setWithObject:configuredNetworkEventName]];
-        [recorder
-              expect:[networkSource.eventNames containsObject:LAEventNameNetworkJoinedWiFi] &&
-                     [networkSource.eventNames containsObject:configuredNetworkEventName] &&
-                     [networkSource.definitionEventNames isEqualToSet:[NSSet setWithObject:configuredNetworkEventName]]
-            caseName:@"network-event-source-separates-configured-definitions"
-              reason:@"Network source did not distinguish bundled base events from configured exact definitions"];
+        [recorder expect:[networkSource.eventNames containsObject:LAEventNameNetworkJoinedWiFi] &&
+                         [networkSource.eventNames containsObject:configuredNetworkEventName] &&
+                         ![activator hasEventWithName:configuredNetworkEventName]
+                caseName:@"network-event-source-only-updates-producer-mapping"
+                  reason:@"Network source producer mapping unexpectedly created an event definition"];
     }
     [recorder expect:NSClassFromString(@"LATButtonEventSource") != Nil
             caseName:@"button-event-source-loaded"
