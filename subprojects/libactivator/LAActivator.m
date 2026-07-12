@@ -172,7 +172,11 @@ LAActivator *LASharedActivator;
         [self.ipcClient sendMessageName:LAIPCMessageSetPreferenceValue userInfo:userInfo];
         return;
     }
-    [self.legacyPreferenceBridge setObject:value forPreferenceKey:preference];
+    LALegacyPreferenceMutation mutation =
+        [self.legacyPreferenceBridge mutationBySettingObject:value forPreferenceKey:preference];
+    if (mutation == LALegacyPreferenceMutationAssignments) {
+        [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
+    }
 }
 
 #pragma mark - Runtime State

@@ -54,34 +54,38 @@ static NSString *const LALegacyHasSeenPrefix = @"LAHasSeenListener-";
     return [self.backend objectForLegacyPreferenceKey:key];
 }
 
-- (BOOL)setObject:(id)object forPreferenceKey:(NSString *)key {
+- (LALegacyPreferenceMutation)mutationBySettingObject:(id)object forPreferenceKey:(NSString *)key {
     if (key.length == 0) {
-        return NO;
+        return LALegacyPreferenceMutationNone;
     }
 
     NSDictionary *assignment = [self assignmentComponentsForKey:key];
     if (assignment) {
         NSString *listenerName = [object isKindOfClass:NSString.class] && [object length] > 0 ? object : nil;
-        return [self.backend assignEventName:assignment[@"EventName"]
-                                        mode:assignment[@"EventMode"]
-                             toListenerNames:listenerName ? @[ listenerName ] : @[]];
+        BOOL changed = [self.backend assignEventName:assignment[@"EventName"]
+                                                mode:assignment[@"EventMode"]
+                                     toListenerNames:listenerName ? @[ listenerName ] : @[]];
+        return changed ? LALegacyPreferenceMutationAssignments : LALegacyPreferenceMutationNone;
     }
 
     if ([key hasPrefix:LALegacyBlacklistPrefix]) {
         NSString *displayIdentifier = [key substringFromIndex:LALegacyBlacklistPrefix.length];
-        return [self.backend setApplicationWithDisplayIdentifier:displayIdentifier
-                                                   isBlacklisted:[self isTruthyObject:object]];
+        BOOL changed = [self.backend setApplicationWithDisplayIdentifier:displayIdentifier
+                                                            isBlacklisted:[self isTruthyObject:object]];
+        return changed ? LALegacyPreferenceMutationValue : LALegacyPreferenceMutationNone;
     }
 
     if ([key hasPrefix:LALegacyHasSeenPrefix]) {
         NSString *listenerName = [key substringFromIndex:LALegacyHasSeenPrefix.length];
-        return [self.backend setListenerName:listenerName seen:[self isTruthyObject:object]];
+        BOOL changed = [self.backend setListenerName:listenerName seen:[self isTruthyObject:object]];
+        return changed ? LALegacyPreferenceMutationValue : LALegacyPreferenceMutationNone;
     }
 
     if (object && ![LAIPCCodec isPropertyListValue:object]) {
-        return NO;
+        return LALegacyPreferenceMutationNone;
     }
-    return [self.backend setObject:object forLegacyPreferenceKey:key];
+    BOOL changed = [self.backend setObject:object forLegacyPreferenceKey:key];
+    return changed ? LALegacyPreferenceMutationValue : LALegacyPreferenceMutationNone;
 }
 
 - (NSDictionary *)assignmentComponentsForKey:(NSString *)key {

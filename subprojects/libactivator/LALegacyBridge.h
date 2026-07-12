@@ -12,6 +12,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef NS_ENUM(NSUInteger, LALegacyPreferenceMutation) {
+    LALegacyPreferenceMutationNone,
+    LALegacyPreferenceMutationValue,
+    LALegacyPreferenceMutationAssignments,
+};
+
 __attribute__((visibility("hidden")))
 @interface LALegacyBridge : NSObject
 
@@ -22,7 +28,7 @@ __attribute__((visibility("hidden")))
 #pragma mark - Preference Bridge
 
 - (nullable id)objectForPreferenceKey:(NSString *)key;
-- (BOOL)setObject:(nullable id)object forPreferenceKey:(NSString *)key;
+- (LALegacyPreferenceMutation)mutationBySettingObject:(nullable id)object forPreferenceKey:(NSString *)key;
 
 @end
 

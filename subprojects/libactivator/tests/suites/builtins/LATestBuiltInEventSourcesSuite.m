@@ -2007,6 +2007,20 @@
 
     CGRect bounds = CGRectMake(0.0, 0.0, 400.0, 800.0);
 
+    LATSpringBoardIconGestureEventSource *deferredAttachmentSource = [[sourceClass alloc] init];
+    UIScrollView *existingIconScrollView = [[UIScrollView alloc] initWithFrame:bounds];
+    existingIconScrollView.minimumZoomScale = 1.0;
+    [deferredAttachmentSource noteIconScrollViewDidInitialize:existingIconScrollView];
+    BOOL capturedBeforeStart = [deferredAttachmentSource la_testingKnownIconScrollViewCount] == 1 &&
+                               ![deferredAttachmentSource la_testingIsInstalledInIconScrollView:existingIconScrollView];
+    [deferredAttachmentSource start];
+    [recorder expect:capturedBeforeStart &&
+                     [deferredAttachmentSource la_testingIsInstalledInIconScrollView:existingIconScrollView] &&
+                     existingIconScrollView.minimumZoomScale == 0.95
+            caseName:@"springboard-icon-gesture-attaches-to-existing-scroll-view"
+              reason:@"SpringBoard icon source did not retain and activate an icon scroll view created before interest"];
+    [deferredAttachmentSource invalidate];
+
     LATSpringBoardIconGestureEventSource *notStartedSource = [[sourceClass alloc] init];
     [activator la_resetDispatchCounts];
     NSString *notStartedEventName = [notStartedSource la_testingHandlePinchScale:0.94

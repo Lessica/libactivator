@@ -32,6 +32,7 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
 
 @property(nonatomic, assign, getter=isStarted) BOOL started;
 @property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
+@property(nonatomic, strong) NSHashTable<UIScrollView *> *knownIconScrollViews;
 @property(nonatomic, strong) NSHashTable<UIPinchGestureRecognizer *> *installedRecognizers;
 @property(nonatomic, strong) NSMapTable<UIScrollView *, NSNumber *> *minimumZoomScalesByScrollView;
 @property(nonatomic, strong) NSMapTable<id, LATSpringBoardIconPinchSession *> *sessionsByRecognizer;
@@ -64,6 +65,7 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
 - (instancetype)init {
     self = [super init];
     if (self) {
+        _knownIconScrollViews = [NSHashTable weakObjectsHashTable];
         _installedRecognizers = [NSHashTable weakObjectsHashTable];
         _minimumZoomScalesByScrollView = [NSMapTable weakToStrongObjectsMapTable];
         _sessionsByRecognizer = [NSMapTable weakToStrongObjectsMapTable];
@@ -81,7 +83,7 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
     }
     self.started = YES;
     if ([self shouldProcessEvents]) {
-        [self installInExistingIconScrollViews];
+        [self installInKnownIconScrollViews];
     }
 }
 
@@ -94,6 +96,7 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
     self.invalidated = YES;
     self.started = NO;
     [self removeRecognizerTargetsAndRestoreScrollViews];
+    [self.knownIconScrollViews removeAllObjects];
 }
 
 - (void)eventSourceInterestDidChange:(BOOL)interested {
@@ -103,7 +106,7 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
     }
 
     if (interested && self.started) {
-        [self installInExistingIconScrollViews];
+        [self installInKnownIconScrollViews];
     } else if (!interested) {
         [self removeRecognizerTargetsAndRestoreScrollViews];
     }
@@ -118,7 +121,12 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
 
 - (void)noteIconScrollViewDidInitialize:(UIScrollView *)scrollView {
     LAAssertMainQueue();
-    if (!self.started || !scrollView || ![self shouldProcessEvents]) {
+    if (!scrollView || self.isInvalidated) {
+        return;
+    }
+
+    [self.knownIconScrollViews addObject:scrollView];
+    if (!self.started || ![self shouldProcessEvents]) {
         return;
     }
 
@@ -147,35 +155,11 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
     [self.installedRecognizers addObject:recognizer];
 }
 
-- (void)installInExistingIconScrollViews {
+- (void)installInKnownIconScrollViews {
     LAAssertMainQueue();
 
-    Class iconScrollViewClass = NSClassFromString(@"SBIconScrollView");
-    if (!iconScrollViewClass) {
-        return;
-    }
-
-    UIApplication *application = UIApplication.sharedApplication;
-    for (UIScene *scene in application.connectedScenes) {
-        if (![scene isKindOfClass:UIWindowScene.class]) {
-            continue;
-        }
-
-        UIWindowScene *windowScene = (UIWindowScene *)scene;
-        for (UIWindow *window in windowScene.windows) {
-            [self installInIconScrollViewDescendantsOfView:window iconScrollViewClass:iconScrollViewClass];
-        }
-    }
-}
-
-- (void)installInIconScrollViewDescendantsOfView:(UIView *)view iconScrollViewClass:(Class)iconScrollViewClass {
-    LAAssertMainQueue();
-    if ([view isKindOfClass:iconScrollViewClass] && [view isKindOfClass:UIScrollView.class]) {
-        [self noteIconScrollViewDidInitialize:(UIScrollView *)view];
-    }
-
-    for (UIView *subview in view.subviews) {
-        [self installInIconScrollViewDescendantsOfView:subview iconScrollViewClass:iconScrollViewClass];
+    for (UIScrollView *scrollView in self.knownIconScrollViews.allObjects) {
+        [self noteIconScrollViewDidInitialize:scrollView];
     }
 }
 
@@ -288,6 +272,14 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
 
 - (BOOL)la_testingHasRecognitionState {
     return [self.sessionsByRecognizer objectForKey:self.testingRecognizerKey] != nil;
+}
+
+- (NSUInteger)la_testingKnownIconScrollViewCount {
+    return self.knownIconScrollViews.count;
+}
+
+- (BOOL)la_testingIsInstalledInIconScrollView:(UIScrollView *)scrollView {
+    return [self.installedRecognizers containsObject:scrollView.pinchGestureRecognizer];
 }
 #endif
 

@@ -8,6 +8,7 @@
 
 #import "LATestEventSourceRegistrySuite.h"
 
+#import "LAActivator+Private.h"
 #import "LARuntimeContext.h"
 #import "LATEventSourceRegistry.h"
 #import "LATestEnvironment.h"
@@ -95,6 +96,17 @@
     [recorder expect:alwaysSource.startCount == 1 && assignedSource.startCount == 1
             caseName:@"registry-start-is-idempotent"
               reason:@"Repeated registry startup restarted Event Sources"];
+
+    NSString *legacyAssignmentKey =
+        [NSString stringWithFormat:@"LAEventListener(%@)-%@", LAEventModeSpringBoard, sharedEventName];
+    [activator _setObject:listenerName forPreference:legacyAssignmentKey];
+    [recorder expect:[registry isInterestedInEventSource:assignedSource] && assignedSource.isInterested
+            caseName:@"registry-interest-follows-legacy-assignment-write"
+              reason:@"Legacy assignment preference write did not update Event Source interest immediately"];
+    [activator _setObject:nil forPreference:legacyAssignmentKey];
+    [recorder expect:![registry isInterestedInEventSource:assignedSource] && !assignedSource.isInterested
+            caseName:@"registry-interest-follows-legacy-assignment-removal"
+              reason:@"Legacy assignment preference removal did not update Event Source interest immediately"];
 
     [activator assignEvent:[LAEvent eventWithName:sharedEventName mode:LAEventModeSpringBoard]
         toListenerWithName:listenerName];

@@ -75,6 +75,7 @@
 - v2 运行时偏好路径固定为 `jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")`；`LIBACTIVATOR_TEST_SUPPORT=1` 测试构建使用隔离路径，不读取或写入用户真实配置。
 - 非 SpringBoard 客户端不得写运行时持久化文件。无效或不可读 plist 当作不存在；不删除、不重命名、不备份、不立即覆盖。
 - 配置变更先更新 SpringBoard in-memory state，磁盘写入可以在 main run loop 合并 flush；Public API 或 IPC 应返回最新内存状态。
+- 所有 assignment mutation 入口，包括 Public API、IPC 和 `_setObject:forPreference:` legacy compatibility bridge，都必须在 SpringBoard authoritative state 实际改变后同步发布同一条进程内 assignment change notification；不得依赖后续 mode/profile/UI lifecycle 变化补做 Event Source interest 刷新。
 - 持久化文件写入后使用旧式兼容权限 `0666`，并设置 `NSFileProtectionNone`。
 - 资源基线来自 1.9.13：event metadata 使用 `Library/Activator/Events/bundled.plist`，listener/action metadata 使用 `Library/Activator/Listeners/bundled.plist`，目录式 `Info.plist` lookup 只作为第三方扩展兼容路径。
 - runtime lookup 必须先走 `jbroot(...)` 后的路径；对历史 metadata 中的绝对路径，可先查 `jbroot(path)`，不存在时再尝试原路径。
@@ -84,6 +85,7 @@
 ## Runtime 规则
 
 - runtime state 采用事件驱动缓存模型，不在热路径反复同步主线程查询 UI/SpringBoard 状态。
+- 禁止为了发现或补找私有 UI owner 扫描 SpringBoard 的 window/view hierarchy，也禁止递归遍历全局 view tree 作为 lifecycle hook 漏接后的兜底。应在明确的 owner、初始化或生命周期 hook 中采集所需实例，并使用弱引用维护最小实例清单。
 - Public `LAEventDataSource` 只表示 event definition/metadata/configuration owner；tweak-side `LATEventSource` 才表示 runtime acquisition producer。一个 event name 只能有一个 definition owner，但可以有多个 acquisition producer。
 - Event Source registry 由 SpringBoard main queue 持有并显式有序注册 sources；禁止通过 runtime class scan 或 source 自注册隐藏 composition。`LATRuntimeStateSource` 不发送 `LAEvent`，不得注册成 Event Source。
 - 高成本 source 的 assignment-aware interest 默认从真实 producer catalog 推导；composite acquisition 可以用 `interestEventNames` 声明额外依赖，但这些 name 不进入 producer index。不得在独立 enum/switch 中维护第二份 gate 清单，也不得提前声明尚未实现的 event。

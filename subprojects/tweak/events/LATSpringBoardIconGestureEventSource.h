@@ -20,7 +20,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 // Main-queue confined. This source reuses SBIconScrollView's existing pinch
 // recognizer and dispatches SpringBoard icon pinch/spread events without adding
-// a competing recognizer or consuming the original SpringBoard gesture handling.
+// a competing recognizer, consuming the original SpringBoard gesture handling,
+// or scanning the SpringBoard view tree.
 
 // Lifecycle
 - (void)start;
@@ -34,6 +35,8 @@ NS_ASSUME_NONNULL_BEGIN
                                             state:(UIGestureRecognizerState)state
                                            bounds:(CGRect)bounds;
 - (BOOL)la_testingHasRecognitionState;
+- (NSUInteger)la_testingKnownIconScrollViewCount;
+- (BOOL)la_testingIsInstalledInIconScrollView:(UIScrollView *)scrollView;
 #endif
 
 @end
