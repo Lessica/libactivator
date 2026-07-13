@@ -8,7 +8,13 @@
 
 #import "LATestPersistenceSuite.h"
 
+#import "LAPersistence.h"
+#import "LAServerBackend.h"
+#import "LATestCountingPersistence.h"
 #import "LATestEnvironment.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
 
 @implementation LATestPersistenceSuite
 

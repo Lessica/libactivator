@@ -1,18 +1,19 @@
 //
-//  LATestBuiltInEventSourcesSuite.h
+//  LATestBuiltInDynamicApplicationListenersSuite.h
 //  libactivator
 //
 //  Created by Lessica on 6/11/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LATestRecorder.h"
+#import <Foundation/Foundation.h>
 
-#import <Activator/Activator.h>
+@class LAActivator;
+@class LATestRecorder;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATestBuiltInEventSourcesSuite : NSObject
+@interface LATestBuiltInDynamicApplicationListenersSuite : NSObject
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 @end
 

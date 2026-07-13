@@ -9,26 +9,18 @@
 #import "LAActivatorTestSupport.h"
 
 #import "LAActivator+Private.h"
+#import "LAActivatorTestRegistry.h"
 #import "LAIPC.h"
 #import "LARuntimeContext.h"
-#import "LATestBuiltInActionRegistrySuite.h"
-#import "LATestBuiltInCameraActionsSuite.h"
-#import "LATestBuiltInComposeActionsSuite.h"
-#import "LATestBuiltInDynamicApplicationListenersSuite.h"
-#import "LATestBuiltInEventSourcesSuite.h"
-#import "LATestBuiltInHardwareActionsSuite.h"
-#import "LATestBuiltInSystemActionsSuite.h"
-#import "LATestBuiltInTelephonyActionsSuite.h"
-#import "LATestBuiltInURLActionsSuite.h"
 #import "LATestDispatchSuite.h"
 #import "LATestEnvironment.h"
-#import "LATestEventDefinitionRegistrySuite.h"
-#import "LATestEventSourceRegistrySuite.h"
+#import "LATestEventDataSource.h"
 #import "LATestEventSuite.h"
 #import "LATestIPCCodecSuite.h"
+#import "LATestListener.h"
 #import "LATestPersistenceSuite.h"
+#import "LATestRecorder.h"
 #import "LATestResourceSuite.h"
-#import "LATestRuntimeDeviceSuite.h"
 #import "LATestRuntimeInputSuite.h"
 #import "LATestSpringBoardCoreSuite.h"
 
@@ -50,10 +42,10 @@
     NSString *command =
         [userInfo[LAIPCKeyTestingCommand] isKindOfClass:NSString.class] ? userInfo[LAIPCKeyTestingCommand] : nil;
     if ([command isEqualToString:LAIPCTestingCommandPing]) {
-        return [self okReplyWithValue:@"ready"];
+        return [LAActivatorTestRegistry hasRegisteredGroups] ? [self okReplyWithValue:@"ready"] : [self failureReply];
     }
     if ([command isEqualToString:LAIPCTestingCommandCleanup]) {
-        [LATestEnvironment cleanActivator:activator];
+        [self cleanTestStateWithActivator:activator];
         [LATestEnvironment removeTestPlist];
         return [self okReplyWithValue:@"clean"];
     }
@@ -125,9 +117,14 @@
     return @{LAIPCKeyOK : @NO};
 }
 
++ (void)cleanTestStateWithActivator:(LAActivator *)activator {
+    [LAActivatorTestRegistry cleanupRegisteredGroupsWithActivator:activator];
+    [LATestEnvironment cleanActivator:activator];
+}
+
 + (NSDictionary *)runStableTestsWithActivator:(LAActivator *)activator {
     LATestRecorder *recorder = [[LATestRecorder alloc] init];
-    [LATestEnvironment cleanActivator:activator];
+    [self cleanTestStateWithActivator:activator];
     [LATestEnvironment removeTestPlist];
     [LATestEventSuite runWithRecorder:recorder];
     [LATestPersistenceSuite runWithRecorder:recorder];
@@ -135,18 +132,8 @@
     [LATestResourceSuite runWithRecorder:recorder];
     [LATestSpringBoardCoreSuite runWithRecorder:recorder activator:activator];
     [LATestDispatchSuite runWithRecorder:recorder activator:activator];
-    [LATestBuiltInActionRegistrySuite runWithRecorder:recorder activator:activator];
-    [LATestBuiltInURLActionsSuite runWithRecorder:recorder activator:activator];
-    [LATestBuiltInHardwareActionsSuite runWithRecorder:recorder activator:activator];
-    [LATestBuiltInSystemActionsSuite runWithRecorder:recorder activator:activator];
-    [LATestBuiltInCameraActionsSuite runWithRecorder:recorder activator:activator];
-    [LATestBuiltInComposeActionsSuite runWithRecorder:recorder activator:activator];
-    [LATestBuiltInTelephonyActionsSuite runWithRecorder:recorder activator:activator];
-    [LATestBuiltInDynamicApplicationListenersSuite runWithRecorder:recorder activator:activator];
-    [LATestEventDefinitionRegistrySuite runWithRecorder:recorder activator:activator];
-    [LATestEventSourceRegistrySuite runWithRecorder:recorder activator:activator];
-    [LATestBuiltInEventSourcesSuite runWithRecorder:recorder activator:activator];
-    [LATestEnvironment cleanActivator:activator];
+    [LAActivatorTestRegistry runRegisteredStableTestsWithRecorder:recorder activator:activator];
+    [self cleanTestStateWithActivator:activator];
     return [recorder resultDictionary];
 }
 
@@ -162,9 +149,9 @@
 
 + (NSDictionary *)runDeviceRuntimeTestsWithActivator:(LAActivator *)activator {
     LATestRecorder *recorder = [[LATestRecorder alloc] init];
-    [LATestEnvironment cleanActivator:activator];
-    [LATestRuntimeDeviceSuite runWithRecorder:recorder activator:activator];
-    [LATestEnvironment cleanActivator:activator];
+    [self cleanTestStateWithActivator:activator];
+    [LAActivatorTestRegistry runRegisteredDeviceRuntimeTestsWithRecorder:recorder activator:activator];
+    [self cleanTestStateWithActivator:activator];
     return [recorder resultDictionary];
 }
 

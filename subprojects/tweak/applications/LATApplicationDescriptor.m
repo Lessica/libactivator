@@ -215,22 +215,12 @@
 }
 
 + (NSString *)displayNameForApplicationProxy:(LSApplicationProxy *)proxy fallbackIdentifier:(NSString *)identifier {
-    NSString *cachedDisplayName = nil;
-    @try {
-        NSString *value = [proxy valueForKey:@"_localizedName"];
-        if ([value isKindOfClass:NSString.class]) {
-            cachedDisplayName = value;
-        }
-    } @catch (__unused NSException *exception) {
-        cachedDisplayName = nil;
-    }
-    if (cachedDisplayName.length > 0) {
-        return cachedDisplayName;
-    }
-
     NSString *localizedName = nil;
-    if ([proxy respondsToSelector:@selector(localizedName)] && [proxy.localizedName isKindOfClass:NSString.class]) {
-        localizedName = proxy.localizedName;
+    if ([proxy respondsToSelector:@selector(localizedName)]) {
+        NSString *value = proxy.localizedName;
+        if ([value isKindOfClass:NSString.class]) {
+            localizedName = value;
+        }
     }
     if (localizedName.length == 0) {
         localizedName = identifier;

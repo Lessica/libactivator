@@ -8,21 +8,19 @@
 
 #import "LATestBuiltInSystemActionsSuite.h"
 
-#import "LATestEnvironment.h"
+#import "LATSystemActionListener.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
+
+@interface LATSystemActionListener (LATestMetadata)
++ (nullable NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
+@end
 
 @implementation LATestBuiltInSystemActionsSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInSystemActions"];
-
-    Class<LATestSelectorBackedBuiltInListener> systemActionClass =
-        (Class<LATestSelectorBackedBuiltInListener>)NSClassFromString(@"LATSystemActionListener");
-    [recorder expect:systemActionClass != Nil
-            caseName:@"system-action-class-available"
-              reason:@"LATSystemActionListener class was not loaded in SpringBoard"];
-    if (!systemActionClass) {
-        return;
-    }
 
     NSDictionary<NSString *, NSString *> *expectedSelectors = @{
         @"libactivator.audio.show-volume-bar" : @"showVolumeBar",
@@ -66,7 +64,7 @@
         @"libactivator.system.voice-control" : @"voiceControl",
         @"libactivator.system.wallet" : @"openWallet",
     };
-    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[systemActionClass supportedListenerNames]];
+    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[LATSystemActionListener supportedListenerNames]];
 
     [recorder expect:supportedNames.count == expectedSelectors.count
             caseName:@"system-action-allowlist-count"
@@ -77,7 +75,7 @@
         [recorder expect:[supportedNames containsObject:listenerName] && [activator hasListenerWithName:listenerName]
                 caseName:[NSString stringWithFormat:@"system-action-registered-%@", listenerName]
                   reason:@"System action allowlist or runtime registration is missing an expected listener name"];
-        [recorder expect:[[systemActionClass expectedSelectorForListenerName:listenerName]
+        [recorder expect:[[LATSystemActionListener expectedSelectorForListenerName:listenerName]
                              isEqualToString:expectedSelector] &&
                          [selector isEqualToString:expectedSelector]
                 caseName:[NSString stringWithFormat:@"system-action-selector-%@", listenerName]
@@ -121,7 +119,7 @@
               reason:@"Legacy event name was registered as a system listener"];
 
     id<LAListener> systemAction = [activator listenerForName:@"libactivator.audio.show-volume-bar"];
-    [recorder expect:[systemAction isKindOfClass:(Class)systemActionClass]
+    [recorder expect:[systemAction isKindOfClass:LATSystemActionListener.class]
             caseName:@"system-action-production-instance-available"
               reason:@"The registered system action listener does not use LATSystemActionListener"];
     LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.system"

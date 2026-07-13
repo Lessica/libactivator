@@ -15,6 +15,9 @@
 #import "LATEventSourceRegistry.h"
 #import "LATRuntimeStateSource.h"
 #import "system/LATSystemCenterController.h"
+#if LIBACTIVATOR_TEST_SUPPORT
+#import "LATweakTestSupport.h"
+#endif
 
 #import <CaptainHook/CaptainHook.h>
 #import <HBLog.h>
@@ -527,7 +530,13 @@ static void LATInstallHooks(void) {
 }
 
 __attribute__((constructor)) static void LATweakInitialize(void) {
-    gBuiltInRegistry = [[LATBuiltInRegistry alloc] initWithActivator:[LAActivator sharedInstance]];
+    LAActivator *activator = [LAActivator sharedInstance];
+    gBuiltInRegistry = [[LATBuiltInRegistry alloc] initWithActivator:activator];
+#if LIBACTIVATOR_TEST_SUPPORT
+    if (![LATweakTestSupport registerTests]) {
+        HBLogError(@"Unable to register tweak-owned test suites");
+    }
+#endif
     gHIDEventSources = (NSArray<id<LATEventSourceHIDIngress>> *)[gBuiltInRegistry
         eventSourcesConformingToProtocol:@protocol(LATEventSourceHIDIngress)];
     gIconScrollViewEventSources = (NSArray<id<LATEventSourceIconScrollViewIngress>> *)[gBuiltInRegistry

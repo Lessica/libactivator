@@ -6,8 +6,8 @@ include $(THEOS)/makefiles/common.mk
 TOOL_NAME := libactivator-tests
 
 libactivator-tests_FILES += main.m
-libactivator-tests_FILES += LATestRunner.m
-libactivator-tests_FILES += LATestRunnerRecorder.m
+libactivator-tests_FILES += runner/LATestRunner.m
+libactivator-tests_FILES += runner/LATestRunnerRecorder.m
 libactivator-tests_FILES += runner/LATestClientFacadeSuite.m
 libactivator-tests_FILES += runner/LATestRunnerResultPrinter.m
 libactivator-tests_FILES += runner/LATestRuntimeStatePrinter.m

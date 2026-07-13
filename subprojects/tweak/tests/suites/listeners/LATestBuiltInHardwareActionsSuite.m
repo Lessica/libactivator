@@ -8,21 +8,19 @@
 
 #import "LATestBuiltInHardwareActionsSuite.h"
 
-#import "LATestEnvironment.h"
+#import "LATHardwareActionListener.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
+
+@interface LATHardwareActionListener (LATestMetadata)
++ (nullable NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
+@end
 
 @implementation LATestBuiltInHardwareActionsSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInHardwareActions"];
-
-    Class<LATestSelectorBackedBuiltInListener> hardwareActionClass =
-        (Class<LATestSelectorBackedBuiltInListener>)NSClassFromString(@"LATHardwareActionListener");
-    [recorder expect:hardwareActionClass != Nil
-            caseName:@"hardware-action-class-available"
-              reason:@"LATHardwareActionListener class was not loaded in SpringBoard"];
-    if (!hardwareActionClass) {
-        return;
-    }
 
     NSDictionary<NSString *, NSString *> *expectedSelectors = @{
         @"libactivator.ipod.toggle-playback" : @"togglePlayback",
@@ -42,7 +40,7 @@
         @"libactivator.system.spotlight" : @"spotlight",
         @"libactivator.system.vibrate" : @"vibrate",
     };
-    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[hardwareActionClass supportedListenerNames]];
+    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[LATHardwareActionListener supportedListenerNames]];
 
     [recorder expect:supportedNames.count == expectedSelectors.count
             caseName:@"hardware-action-allowlist-count"
@@ -53,7 +51,7 @@
         [recorder expect:[supportedNames containsObject:listenerName] && [activator hasListenerWithName:listenerName]
                 caseName:[NSString stringWithFormat:@"hardware-action-registered-%@", listenerName]
                   reason:@"Hardware action allowlist or runtime registration is missing an expected listener name"];
-        [recorder expect:[[hardwareActionClass expectedSelectorForListenerName:listenerName]
+        [recorder expect:[[LATHardwareActionListener expectedSelectorForListenerName:listenerName]
                              isEqualToString:expectedSelector] &&
                          [selector isEqualToString:expectedSelector]
                 caseName:[NSString stringWithFormat:@"hardware-action-selector-%@", listenerName]
@@ -61,7 +59,7 @@
     }
 
     id<LAListener> hardwareAction = [activator listenerForName:@"libactivator.ipod.toggle-playback"];
-    [recorder expect:[hardwareAction isKindOfClass:(Class)hardwareActionClass]
+    [recorder expect:[hardwareAction isKindOfClass:LATHardwareActionListener.class]
             caseName:@"hardware-action-production-instance-available"
               reason:@"The registered hardware action listener does not use LATHardwareActionListener"];
     LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.hardware"

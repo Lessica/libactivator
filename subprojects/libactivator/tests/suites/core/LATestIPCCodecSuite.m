@@ -10,7 +10,9 @@
 
 #import "LAIPC.h"
 #import "LAIPCCodec.h"
-#import "LATestEnvironment.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
 
 @implementation LATestIPCCodecSuite
 

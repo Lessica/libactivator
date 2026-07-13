@@ -10,6 +10,11 @@
 
 #import "LARuntimeContext.h"
 #import "LATestEnvironment.h"
+#import "LATestEventDataSource.h"
+#import "LATestListener.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
 
 @implementation LATestRuntimeInputSuite
 

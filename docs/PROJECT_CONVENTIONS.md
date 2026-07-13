@@ -39,6 +39,9 @@
 - 不在 Makefile 中定义或兜底 `$THEOS`；调用方负责提供环境。
 - 不覆盖 Theos 内部路径变量或缓存变量，例如 `THEOS_LIBRARY_PATH`、`THEOS_PACKAGE_DIR`、`CLANG_MODULE_CACHE_PATH`。
 - target 文件放在各自 subproject 内，根 Makefile 只负责串联 subproject。
+- 测试源码必须归属并编译进其被测 production 组件：libactivator core tests 位于 `subprojects/libactivator/tests`，tweak tests 位于 `subprojects/tweak/tests`，设备 runner 位于 `tests/runner`。SpringBoard 只是执行进程，不是把所有测试塞进 `libactivator.dylib` 的所有权依据；跨 image 编排只允许测试宏隔离的显式 typed registration，不得用影子协议或项目自有 class 的字符串反射制造反向依赖。
+- testing `ActivatorTweak` 会引用 testing `libactivator` 中的私有测试符号；从干净根目录构建测试包前必须先执行 `gmake -C subprojects/libactivator clean stage LIBACTIVATOR_TEST_SUPPORT=1`。production 构建同理在新增或改变 libactivator 导出符号后先单独 stage 对应 library，不能假设根 aggregate build 会在 dependent target 链接前更新 Theos 已 stage library。
+- 条件加入测试源码的 target 必须为 testing build 使用独立 object directory，不能让 production 与 `LIBACTIVATOR_TEST_SUPPORT=1` 共享同一组 object 和最终 binary 路径；普通构建完成后应以符号检查确认没有 `LATest` / `LATweakTest` 类型泄漏。
 - 不使用 Logos。tweak 代码使用 Objective-C / Objective-C++ 和 CaptainHook，源文件不要使用 `.x` 或 `.xm`。
 - `ActivatorTweak.m` 只作为 tweak 主入口；新增 tweak-local 类型使用 `LAT` 或 `LATweak` 前缀。
 - 独立 App 使用 `LAApp` 前缀；Settings UI 使用 `LAS` 或 `LASettings`；Settings preference panel 使用 `LAP` 或 `LAPreferences`。
@@ -48,6 +51,7 @@
 
 - 头文件使用 Xcode 默认风格 copyright，并补齐 `NS_ASSUME_NONNULL_BEGIN/END`。
 - 新代码默认使用 ARC。除非 Theos/runtime 边界确实需要，否则不要写手动内存管理。
+- 项目代码不使用 Objective-C exception handling：禁止引入 `@try`、`@catch`、`@finally`、`@throw` 或主动 `NSException`。可恢复失败应通过返回值、nullable 结果、显式状态和英文日志表达；私有 API 兼容性应通过 typed declaration、capability probing 与输入校验处理，不能用 exception 吞掉未知 selector、KVC 或契约错误。
 - 私有接口必须先声明再调用；禁止直接调用 `objc_msgSend`。
 - ObjC SPI 应声明原始私有类型、category 或 class extension 后直接调用，不要用本地 `@protocol LAT...` / `id<LAT...>` 伪装私有类型能力集合。
 - 如果某个私有 SPI 值已经可以合理断定原始类型，就必须用该原始类型表达；只有 property-list、metadata、notification token、弱探测得到的 class object 或确实无法静态断定类型的动态边界，才保留 `id`。

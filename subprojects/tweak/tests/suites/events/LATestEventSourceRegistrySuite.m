@@ -15,6 +15,7 @@
 #import "LATestEventDataSource.h"
 #import "LATestEventSource.h"
 #import "LATestListener.h"
+#import "LATestRecorder.h"
 
 #import <Activator/Activator.h>
 
@@ -22,14 +23,6 @@
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"EventSourceRegistry"];
-
-    Class registryClass = NSClassFromString(@"LATEventSourceRegistry");
-    [recorder expect:registryClass != Nil
-            caseName:@"registry-class-available"
-              reason:@"LATEventSourceRegistry was not loaded in SpringBoard"];
-    if (!registryClass) {
-        return;
-    }
 
     NSString *sharedEventName = @"libactivator.test.event-source-registry.shared";
     NSString *secondaryEventName = @"libactivator.test.event-source-registry.secondary";
@@ -50,7 +43,7 @@
                   displayIdentifier:nil
                            screenOn:YES];
 
-    LATEventSourceRegistry *registry = [[registryClass alloc] initWithActivator:activator];
+    LATEventSourceRegistry *registry = [[LATEventSourceRegistry alloc] initWithActivator:activator];
     LATestEventSource *alwaysSource =
         [[LATestEventSource alloc] initWithIdentifier:@"testing.always"
                                            eventNames:[NSSet setWithObjects:sharedEventName, secondaryEventName, nil]

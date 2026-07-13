@@ -8,8 +8,22 @@
 
 #import "LATestDispatchSuite.h"
 
+#import "LAActivator+Private.h"
 #import "LARuntimeContext.h"
 #import "LATestEnvironment.h"
+#import "LATestEventDataSource.h"
+#import "LATestListener.h"
+#import "LATestRecorder.h"
+#import "LATestSimpleAbortListener.h"
+
+#import <Activator/Activator.h>
+
+@interface LARuntimeContext (LATestDispatch)
+
+@property(nonatomic, copy, nullable, readonly) BOOL (^touchActiveProvider)(void);
+@property(nonatomic, copy, nullable, readonly) void (^touchesEndedPerformer)(dispatch_block_t block);
+
+@end
 
 @implementation LATestDispatchSuite
 
@@ -122,8 +136,18 @@
     listenerB.otherHandledCount = 0;
     listenerA.lastReceivedEventMode = LAEventModeSpringBoard;
     LAEvent *deferredEvent = [LAEvent eventWithName:eventName];
-    [LATestEnvironment sendSyntheticTouchWithTouching:YES];
-    [LATestEnvironment waitForSyntheticTouchDelivery];
+    LARuntimeContext *runtimeContext = [LATestEnvironment runtimeContextForActivator:activator];
+    BOOL (^previousTouchActiveProvider)(void) = [runtimeContext.touchActiveProvider copy];
+    void (^previousTouchesEndedPerformer)(dispatch_block_t block) = [runtimeContext.touchesEndedPerformer copy];
+    __block BOOL touchActive = YES;
+    __block dispatch_block_t pendingTouchesEndedBlock = nil;
+    [runtimeContext
+        setTouchActivityProvider:^BOOL {
+            return touchActive;
+        }
+        touchesEndedPerformer:^(dispatch_block_t block) {
+            pendingTouchesEndedBlock = [block copy];
+        }];
     [activator sendEvent:deferredEvent toListenersWithNames:@[ listenerAName, listenerBName ]];
     [recorder expect:deferredEvent.handled && listenerA.receiveCount == 0
             caseName:@"deferred-no-touch-enqueue"
@@ -135,8 +159,12 @@
             caseName:@"deferred-no-touch-notifies-next-listener"
               reason:@"Deferred no-touch dispatch did not notify the next listener"];
     listenerA.compatibleModes = @[];
-    [LATestEnvironment sendSyntheticTouchWithTouching:NO];
-    [LATestEnvironment waitForSyntheticTouchDelivery];
+    touchActive = NO;
+    dispatch_block_t touchesEndedBlock = pendingTouchesEndedBlock;
+    pendingTouchesEndedBlock = nil;
+    if (touchesEndedBlock) {
+        dispatch_async(dispatch_get_main_queue(), touchesEndedBlock);
+    }
     [LATestEnvironment waitForMainQueue];
     [recorder expect:listenerA.receiveCount == 1 && listenerB.receiveCount == 1
             caseName:@"deferred-no-touch-drain"
@@ -147,6 +175,8 @@
     [recorder expect:listenerA.lastReceivedEventMode == nil
             caseName:@"nil-mode-deferred-dispatch"
               reason:@"Deferred dispatch rewrote nil event mode"];
+    [runtimeContext setTouchActivityProvider:previousTouchActiveProvider
+                       touchesEndedPerformer:previousTouchesEndedPerformer];
 
     listenerA.compatibleModes = @[ LAEventModeSpringBoard, LAEventModeApplication, LAEventModeLockScreen ];
     listenerA.requiresNoTouchEvents = NO;

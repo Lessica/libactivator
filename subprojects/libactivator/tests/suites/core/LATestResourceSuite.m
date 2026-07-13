@@ -8,7 +8,11 @@
 
 #import "LATestResourceSuite.h"
 
+#import "LAResourceManager.h"
 #import "LATestEnvironment.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
 
 extern CFTypeRef MGCopyAnswer(CFStringRef key);
 

@@ -9,37 +9,24 @@
 #import "LATestBuiltInDynamicApplicationListenersSuite.h"
 
 #import "LARuntimeContext.h"
+#import "LATApplicationActionListener.h"
+#import "LATApplicationDescriptor.h"
+#import "LATApplicationLauncher.h"
+#import "LATApplicationListenerProvider.h"
 #import "LATestEnvironment.h"
-#import "LATestTestingProtocols.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
 
 @implementation LATestBuiltInDynamicApplicationListenersSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInDynamicApplicationListeners"];
 
-    Class<LATestDynamicApplicationProvider> providerClass =
-        (Class<LATestDynamicApplicationProvider>)NSClassFromString(@"LATApplicationListenerProvider");
-    Class<LATestDynamicApplicationDescriptorFactory> descriptorClass =
-        (Class<LATestDynamicApplicationDescriptorFactory>)NSClassFromString(@"LATApplicationDescriptor");
-    Class<LATestDynamicApplicationActionListener> listenerClass =
-        (Class<LATestDynamicApplicationActionListener>)NSClassFromString(@"LATApplicationActionListener");
-
-    [recorder expect:providerClass != Nil
-            caseName:@"dynamic-application-provider-class-available"
-              reason:@"LATApplicationListenerProvider class was not loaded in SpringBoard"];
-    [recorder expect:descriptorClass != Nil
-            caseName:@"dynamic-application-descriptor-class-available"
-              reason:@"LATApplicationDescriptor class was not loaded in SpringBoard"];
-    [recorder expect:listenerClass != Nil
-            caseName:@"dynamic-application-listener-class-available"
-              reason:@"LATApplicationActionListener class was not loaded in SpringBoard"];
-    if (!providerClass || !descriptorClass || !listenerClass) {
-        return;
-    }
-
-    NSArray<id<LATestDynamicApplicationDescriptor>> *visibleDescriptors = [providerClass visibleApplicationDescriptors];
-    id<LATestDynamicApplicationDescriptor> representativeDescriptor = nil;
-    for (id<LATestDynamicApplicationDescriptor> descriptor in visibleDescriptors) {
+    NSArray<LATApplicationDescriptor *> *visibleDescriptors =
+        [LATApplicationListenerProvider visibleApplicationDescriptors];
+    LATApplicationDescriptor *representativeDescriptor = nil;
+    for (LATApplicationDescriptor *descriptor in visibleDescriptors) {
         if ([descriptor isVisibleApplication] && ([descriptor isSystemApplication] || [descriptor isUserApplication])) {
             representativeDescriptor = descriptor;
             break;
@@ -81,81 +68,76 @@
                   reason:@"Dynamic application listener group was not localized from the application descriptor"];
     }
 
-    [self runDescriptorModelTestsWithRecorder:recorder descriptorClass:descriptorClass];
-    [self runHandledSemanticsTestsWithRecorder:recorder
-                                     activator:activator
-                               descriptorClass:descriptorClass
-                                 listenerClass:listenerClass];
+    [self runDescriptorModelTestsWithRecorder:recorder];
+    [self runHandledSemanticsTestsWithRecorder:recorder activator:activator];
 }
 
-+ (void)runDescriptorModelTestsWithRecorder:(LATestRecorder *)recorder
-                            descriptorClass:(Class<LATestDynamicApplicationDescriptorFactory>)descriptorClass {
-    id<LATestDynamicApplicationDescriptor> systemDescriptor =
-        [descriptorClass descriptorWithIdentifier:@"com.example.system"
-                                      displayName:@"System Example"
-                                  applicationType:@"System"
-                                          appTags:@[]
-                                    recordAppTags:@[]
-                                    bundleAppTags:@[]
-                                 launchProhibited:NO];
++ (void)runDescriptorModelTestsWithRecorder:(LATestRecorder *)recorder {
+    LATApplicationDescriptor *systemDescriptor =
+        [LATApplicationDescriptor descriptorWithIdentifier:@"com.example.system"
+                                               displayName:@"System Example"
+                                           applicationType:@"System"
+                                                   appTags:@[]
+                                             recordAppTags:@[]
+                                             bundleAppTags:@[]
+                                          launchProhibited:NO];
     [recorder expect:[systemDescriptor isVisibleApplication] && [systemDescriptor isSystemApplication] &&
                      [[systemDescriptor applicationGroup] isEqualToString:@"System Applications"]
             caseName:@"dynamic-application-system-classification"
               reason:@"System application descriptor classification failed"];
 
-    id<LATestDynamicApplicationDescriptor> userDescriptor =
-        [descriptorClass descriptorWithIdentifier:@"com.example.user"
-                                      displayName:@"User Example"
-                                  applicationType:@"User"
-                                          appTags:@[]
-                                    recordAppTags:@[]
-                                    bundleAppTags:@[]
-                                 launchProhibited:NO];
+    LATApplicationDescriptor *userDescriptor = [LATApplicationDescriptor descriptorWithIdentifier:@"com.example.user"
+                                                                                      displayName:@"User Example"
+                                                                                  applicationType:@"User"
+                                                                                          appTags:@[]
+                                                                                    recordAppTags:@[]
+                                                                                    bundleAppTags:@[]
+                                                                                 launchProhibited:NO];
     [recorder expect:[userDescriptor isVisibleApplication] && [userDescriptor isUserApplication] &&
                      [[userDescriptor applicationGroup] isEqualToString:@"User Applications"]
             caseName:@"dynamic-application-user-classification"
               reason:@"User application descriptor classification failed"];
 
-    id<LATestDynamicApplicationDescriptor> appTagHiddenDescriptor =
-        [descriptorClass descriptorWithIdentifier:@"com.example.hidden.app-tags"
-                                      displayName:@"Hidden"
-                                  applicationType:@"User"
-                                          appTags:@[ @"hidden" ]
-                                    recordAppTags:@[]
-                                    bundleAppTags:@[]
-                                 launchProhibited:NO];
-    id<LATestDynamicApplicationDescriptor> recordTagHiddenDescriptor =
-        [descriptorClass descriptorWithIdentifier:@"com.example.hidden.record-tags"
-                                      displayName:@"Hidden"
-                                  applicationType:@"User"
-                                          appTags:@[]
-                                    recordAppTags:@[ @" hidden " ]
-                                    bundleAppTags:@[]
-                                 launchProhibited:NO];
-    id<LATestDynamicApplicationDescriptor> bundleTagHiddenDescriptor =
-        [descriptorClass descriptorWithIdentifier:@"com.example.hidden.bundle-tags"
-                                      displayName:@"Hidden"
-                                  applicationType:@"User"
-                                          appTags:@[]
-                                    recordAppTags:@[]
-                                    bundleAppTags:@[ @"hidden" ]
-                                 launchProhibited:NO];
-    id<LATestDynamicApplicationDescriptor> launchProhibitedDescriptor =
-        [descriptorClass descriptorWithIdentifier:@"com.example.hidden.launch-prohibited"
-                                      displayName:@"Hidden"
-                                  applicationType:@"User"
-                                          appTags:@[]
-                                    recordAppTags:@[]
-                                    bundleAppTags:@[]
-                                 launchProhibited:YES];
-    id<LATestDynamicApplicationDescriptor> webClipDescriptor =
-        [descriptorClass descriptorWithIdentifier:@"com.apple.webapp.example"
-                                      displayName:@"Web Clip"
-                                  applicationType:@"User"
-                                          appTags:@[]
-                                    recordAppTags:@[]
-                                    bundleAppTags:@[]
-                                 launchProhibited:NO];
+    LATApplicationDescriptor *appTagHiddenDescriptor =
+        [LATApplicationDescriptor descriptorWithIdentifier:@"com.example.hidden.app-tags"
+                                               displayName:@"Hidden"
+                                           applicationType:@"User"
+                                                   appTags:@[ @"hidden" ]
+                                             recordAppTags:@[]
+                                             bundleAppTags:@[]
+                                          launchProhibited:NO];
+    LATApplicationDescriptor *recordTagHiddenDescriptor =
+        [LATApplicationDescriptor descriptorWithIdentifier:@"com.example.hidden.record-tags"
+                                               displayName:@"Hidden"
+                                           applicationType:@"User"
+                                                   appTags:@[]
+                                             recordAppTags:@[ @" hidden " ]
+                                             bundleAppTags:@[]
+                                          launchProhibited:NO];
+    LATApplicationDescriptor *bundleTagHiddenDescriptor =
+        [LATApplicationDescriptor descriptorWithIdentifier:@"com.example.hidden.bundle-tags"
+                                               displayName:@"Hidden"
+                                           applicationType:@"User"
+                                                   appTags:@[]
+                                             recordAppTags:@[]
+                                             bundleAppTags:@[ @"hidden" ]
+                                          launchProhibited:NO];
+    LATApplicationDescriptor *launchProhibitedDescriptor =
+        [LATApplicationDescriptor descriptorWithIdentifier:@"com.example.hidden.launch-prohibited"
+                                               displayName:@"Hidden"
+                                           applicationType:@"User"
+                                                   appTags:@[]
+                                             recordAppTags:@[]
+                                             bundleAppTags:@[]
+                                          launchProhibited:YES];
+    LATApplicationDescriptor *webClipDescriptor =
+        [LATApplicationDescriptor descriptorWithIdentifier:@"com.apple.webapp.example"
+                                               displayName:@"Web Clip"
+                                           applicationType:@"User"
+                                                   appTags:@[]
+                                             recordAppTags:@[]
+                                             bundleAppTags:@[]
+                                          launchProhibited:NO];
 
     [recorder
           expect:![appTagHiddenDescriptor isVisibleApplication] && ![recordTagHiddenDescriptor isVisibleApplication] &&
@@ -167,30 +149,28 @@
               reason:@"WebClip descriptor was not filtered"];
 }
 
-+ (void)runHandledSemanticsTestsWithRecorder:(LATestRecorder *)recorder
-                                   activator:(LAActivator *)activator
-                             descriptorClass:(Class<LATestDynamicApplicationDescriptorFactory>)descriptorClass
-                               listenerClass:(Class<LATestDynamicApplicationActionListener>)listenerClass {
-    id<LATestDynamicApplicationDescriptor> currentDescriptor =
-        [descriptorClass descriptorWithIdentifier:@"com.example.current"
-                                      displayName:@"Current"
-                                  applicationType:@"User"
-                                          appTags:@[]
-                                    recordAppTags:@[]
-                                    bundleAppTags:@[]
-                                 launchProhibited:NO];
-    id<LATestDynamicApplicationDescriptor> targetDescriptor =
-        [descriptorClass descriptorWithIdentifier:@"com.example.target"
-                                      displayName:@"Target"
-                                  applicationType:@"User"
-                                          appTags:@[]
-                                    recordAppTags:@[]
-                                    bundleAppTags:@[]
-                                 launchProhibited:NO];
++ (void)runHandledSemanticsTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    LATApplicationDescriptor *currentDescriptor =
+        [LATApplicationDescriptor descriptorWithIdentifier:@"com.example.current"
+                                               displayName:@"Current"
+                                           applicationType:@"User"
+                                                   appTags:@[]
+                                             recordAppTags:@[]
+                                             bundleAppTags:@[]
+                                          launchProhibited:NO];
+    LATApplicationDescriptor *targetDescriptor =
+        [LATApplicationDescriptor descriptorWithIdentifier:@"com.example.target"
+                                               displayName:@"Target"
+                                           applicationType:@"User"
+                                                   appTags:@[]
+                                             recordAppTags:@[]
+                                             bundleAppTags:@[]
+                                          launchProhibited:NO];
 
-    id<LATestDynamicApplicationActionListener> listener = [[(Class)listenerClass alloc] initWithLauncher:nil
-                                                                                      runtimeStateSource:nil
-                                                                             springBoardInstanceProvider:nil];
+    LATApplicationActionListener *listener =
+        [[LATApplicationActionListener alloc] initWithLauncher:[[LATApplicationLauncher alloc] init]
+                                            runtimeStateSource:nil
+                                   springBoardInstanceProvider:nil];
     [listener setApplicationDescriptors:@{
         currentDescriptor.identifier : currentDescriptor,
         targetDescriptor.identifier : targetDescriptor,

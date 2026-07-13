@@ -8,21 +8,21 @@
 
 #import "LATestBuiltInURLActionsSuite.h"
 
-#import "LATestEnvironment.h"
+#import "LATURLActionListener.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
+
+@interface LATURLActionListener (LATestResolution)
+- (nullable NSURL *)URLForListenerName:(NSString *)listenerName activator:(nullable LAActivator *)activator;
+- (nullable NSString *)urlStringForListenerName:(NSString *)listenerName activator:(nullable LAActivator *)activator;
+- (nullable NSString *)urlStringInURLsValue:(id)value;
+@end
 
 @implementation LATestBuiltInURLActionsSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInURLActions"];
-
-    Class<LATestURLActionListener> urlActionClass =
-        (Class<LATestURLActionListener>)NSClassFromString(@"LATURLActionListener");
-    [recorder expect:urlActionClass != Nil
-            caseName:@"url-action-class-available"
-              reason:@"LATURLActionListener class was not loaded in SpringBoard"];
-    if (!urlActionClass) {
-        return;
-    }
 
     NSSet<NSString *> *hardcodedPhoneURLNames = [NSSet setWithArray:@[
         @"libactivator.phone.favorites",
@@ -31,7 +31,7 @@
         @"libactivator.phone.keypad",
         @"libactivator.phone.voicemail",
     ]];
-    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[urlActionClass supportedListenerNames]];
+    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[LATURLActionListener supportedListenerNames]];
     [recorder expect:supportedNames.count == 55
             caseName:@"url-action-allowlist-count"
               reason:@"URL action allowlist did not match the expected count"];
@@ -96,15 +96,19 @@
                      [activator hasListenerWithName:@"libactivator.phone.recents"]
             caseName:@"url-action-phone-tab-registered"
               reason:@"Phone tab URL action was not registered by LATURLActionListener"];
-    [recorder expect:[urlActionClass listenerNameHasRequiredMetadata:@"libactivator.phone.recents" activator:activator]
+    [recorder expect:[LATURLActionListener listenerNameHasRequiredMetadata:@"libactivator.phone.recents"
+                                                                 activator:activator]
             caseName:@"url-action-hardcoded-phone-selector-metadata"
               reason:@"Hardcoded Phone URL action selector metadata did not match the expected selector"];
 
-    id<LATestURLActionListener> urlAction =
-        (id<LATestURLActionListener>)[activator listenerForName:@"libactivator.clock.timer"];
-    [recorder expect:[urlAction isKindOfClass:(Class)urlActionClass]
+    id<LAListener> registeredListener = [activator listenerForName:@"libactivator.clock.timer"];
+    [recorder expect:[registeredListener isKindOfClass:LATURLActionListener.class]
             caseName:@"url-action-production-instance-available"
               reason:@"The registered URL action listener does not use LATURLActionListener"];
+    if (![registeredListener isKindOfClass:LATURLActionListener.class]) {
+        return;
+    }
+    LATURLActionListener *urlAction = (LATURLActionListener *)registeredListener;
     NSString *phoneURL = [urlAction urlStringForListenerName:@"libactivator.phone.recents" activator:activator];
     [recorder expect:[phoneURL isEqualToString:@"mobilephone-recents:"]
             caseName:@"url-action-hardcoded-phone-url"

@@ -8,7 +8,15 @@
 
 #import "LATestSpringBoardCoreSuite.h"
 
+#import "LAActivator+Private.h"
+#import "LAIPC.h"
+#import "LAServerBackend.h"
 #import "LATestEnvironment.h"
+#import "LATestEventDataSource.h"
+#import "LATestListener.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
 
 @implementation LATestSpringBoardCoreSuite
 
@@ -414,23 +422,27 @@
               reason:@"Reverse assignment exposed an unavailable event"];
     [activator registerEventDataSource:dataSource forEventName:eventName];
 
-    [activator setCurrentProfileName:@"Testing"];
-    [recorder expect:[[activator availableProfileNames] containsObject:@"Testing"]
+    LAServerBackend *profileBackend = [[LAServerBackend alloc] initWithPersistence:nil];
+    [profileBackend assignEvent:springboardEvent toListenersWithNames:@[ listenerAName ]];
+    [profileBackend setCurrentProfileNameIfChanged:@"Testing"];
+    [recorder expect:[[profileBackend availableProfileNames] containsObject:@"Testing"]
             caseName:@"profile-create"
               reason:@"Profile was not created"];
-    [recorder expect:[activator assignedListenerNamesForEvent:springboardEvent].count == 0
+    [recorder expect:[profileBackend assignedListenerNamesForEvent:springboardEvent].count == 0
             caseName:@"profile-isolation"
               reason:@"Assignments leaked across profiles"];
-    [activator setCurrentProfileName:@"Default"];
 
-    [activator setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:YES];
-    [recorder expect:[activator applicationWithDisplayIdentifierIsBlacklisted:@"com.apple.Preferences"]
+    NSString *blacklistDisplayIdentifier = @"com.apple.Preferences";
+    BOOL wasBlacklisted = [activator applicationWithDisplayIdentifierIsBlacklisted:blacklistDisplayIdentifier];
+    [activator setApplicationWithDisplayIdentifier:blacklistDisplayIdentifier isBlacklisted:YES];
+    [recorder expect:[activator applicationWithDisplayIdentifierIsBlacklisted:blacklistDisplayIdentifier]
             caseName:@"blacklist-set"
               reason:@"Blacklist set failed"];
-    [activator setApplicationWithDisplayIdentifier:@"com.apple.Preferences" isBlacklisted:NO];
-    [recorder expect:![activator applicationWithDisplayIdentifierIsBlacklisted:@"com.apple.Preferences"]
+    [activator setApplicationWithDisplayIdentifier:blacklistDisplayIdentifier isBlacklisted:NO];
+    [recorder expect:![activator applicationWithDisplayIdentifierIsBlacklisted:blacklistDisplayIdentifier]
             caseName:@"blacklist-clear"
               reason:@"Blacklist clear failed"];
+    [activator setApplicationWithDisplayIdentifier:blacklistDisplayIdentifier isBlacklisted:wasBlacklisted];
 }
 
 @end

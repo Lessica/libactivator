@@ -63,6 +63,9 @@ if [ -n "$expected_architecture" ]; then
     fi
 fi
 
+echo "[tests] Staging test-enabled libactivator before building dependent targets"
+gmake -C subprojects/libactivator clean stage LIBACTIVATOR_TEST_SUPPORT=1
+
 # shellcheck disable=SC1010
 gmake clean do LIBACTIVATOR_TEST_SUPPORT=1
 

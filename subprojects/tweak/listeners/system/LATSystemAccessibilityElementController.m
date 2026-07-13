@@ -252,18 +252,12 @@ static NSTimeInterval const LATAccessibilityElementRetryDelay = 0.25;
 }
 
 - (BOOL)performAction:(LATSystemAccessibilityElementAction)action listenerName:(NSString *)listenerName {
-    @try {
-        NSArray<AXElement *> *elements = [self currentVisibleAccessibilityElementsForListenerName:listenerName];
-        if (elements.count == 0) {
-            HBLogDebug(@"No current accessibility elements for system action %@", listenerName ?: @"");
-            return NO;
-        }
-        return action(elements);
-    } @catch (NSException *exception) {
-        HBLogError(@"Failed to inspect accessibility elements for system action %@: %@", listenerName ?: @"",
-                   exception);
+    NSArray<AXElement *> *elements = [self currentVisibleAccessibilityElementsForListenerName:listenerName];
+    if (elements.count == 0) {
+        HBLogDebug(@"No current accessibility elements for system action %@", listenerName ?: @"");
         return NO;
     }
+    return action(elements);
 }
 
 #pragma mark - Element Matching

@@ -8,27 +8,25 @@
 
 #import "LATestBuiltInTelephonyActionsSuite.h"
 
-#import "LATestEnvironment.h"
+#import "LATTelephonyActionListener.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
+
+@interface LATTelephonyActionListener (LATestMetadata)
++ (nullable NSString *)expectedSelectorForListenerName:(NSString *)listenerName;
+@end
 
 @implementation LATestBuiltInTelephonyActionsSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInTelephonyActions"];
 
-    Class<LATestTelephonyActionListener> telephonyActionClass =
-        (Class<LATestTelephonyActionListener>)NSClassFromString(@"LATTelephonyActionListener");
-    [recorder expect:telephonyActionClass != Nil
-            caseName:@"telephony-action-class-available"
-              reason:@"LATTelephonyActionListener class was not loaded in SpringBoard"];
-    if (!telephonyActionClass) {
-        return;
-    }
-
     NSDictionary<NSString *, NSString *> *expectedSelectors = @{
         @"libactivator.phone.answer-call" : @"answerCall",
         @"libactivator.phone.disconnect-call" : @"disconnectCall",
     };
-    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[telephonyActionClass supportedListenerNames]];
+    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[LATTelephonyActionListener supportedListenerNames]];
 
     [recorder expect:supportedNames.count == expectedSelectors.count
             caseName:@"telephony-action-allowlist-count"
@@ -39,7 +37,7 @@
         [recorder expect:[supportedNames containsObject:listenerName] && [activator hasListenerWithName:listenerName]
                 caseName:[NSString stringWithFormat:@"telephony-action-registered-%@", listenerName]
                   reason:@"Telephony action allowlist or runtime registration is missing an expected listener name"];
-        [recorder expect:[[telephonyActionClass expectedSelectorForListenerName:listenerName]
+        [recorder expect:[[LATTelephonyActionListener expectedSelectorForListenerName:listenerName]
                              isEqualToString:expectedSelector] &&
                          [selector isEqualToString:expectedSelector]
                 caseName:[NSString stringWithFormat:@"telephony-action-selector-%@", listenerName]
@@ -54,16 +52,19 @@
     [recorder expect:![activator hasListenerWithName:@"libactivator.phone"]
             caseName:@"phone-group-name-not-registered"
               reason:@"Phone group name was registered as an action listener"];
-    [recorder expect:![[NSSet setWithArray:[telephonyActionClass supportedListenerNames]]
+    [recorder expect:![[NSSet setWithArray:[LATTelephonyActionListener supportedListenerNames]]
                          containsObject:@"libactivator.phone.recents"]
             caseName:@"phone-url-action-not-owned-by-telephony-listener"
               reason:@"Phone tab URL action remained in LATTelephonyActionListener"];
 
-    id<LATestTelephonyActionListener> telephonyAction =
-        (id<LATestTelephonyActionListener>)[activator listenerForName:@"libactivator.phone.answer-call"];
-    [recorder expect:[telephonyAction isKindOfClass:(Class)telephonyActionClass]
+    id<LAListener> registeredListener = [activator listenerForName:@"libactivator.phone.answer-call"];
+    [recorder expect:[registeredListener isKindOfClass:LATTelephonyActionListener.class]
             caseName:@"telephony-action-production-instance-available"
               reason:@"The registered telephony action listener does not use LATTelephonyActionListener"];
+    if (![registeredListener isKindOfClass:LATTelephonyActionListener.class]) {
+        return;
+    }
+    LATTelephonyActionListener *telephonyAction = (LATTelephonyActionListener *)registeredListener;
     for (NSString *listenerName in expectedSelectors) {
         [recorder expect:[telephonyAction shouldHandleListenerName:listenerName activator:activator]
                 caseName:[NSString stringWithFormat:@"telephony-action-valid-metadata-handled-%@", listenerName]

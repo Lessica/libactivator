@@ -18,7 +18,7 @@ roothide 设备默认入口：
 scripts/run-tests.sh
 ```
 
-`scripts/run-tests.sh` 的职责是构建并安装 `LIBACTIVATOR_TEST_SUPPORT=1` testing package，然后通过 SSH 运行设备上的 `/usr/libexec/libactivator/libactivator-tests run`。脚本应报告 SpringBoard pid 前后变化，pid 变化即视为 SpringBoard 重启。
+`scripts/run-tests.sh` 先执行 `gmake -C subprojects/libactivator clean stage LIBACTIVATOR_TEST_SUPPORT=1`，再构建并安装 `LIBACTIVATOR_TEST_SUPPORT=1` testing package，最后通过 SSH 运行设备上的 `/usr/libexec/libactivator/libactivator-tests run`。必须先 stage 测试版 `libactivator`，因为 tweak 测试代码会链接该 image 中仅测试构建存在的 recorder、fake 和注册接口；直接从干净根目录构建会让 dependent target 先链接到 Theos 中旧的 production library。libactivator 与 tweak 的 testing artifacts 使用独立 `obj-testing` 目录，不能与 production object 混用。脚本应报告 SpringBoard pid 前后变化，pid 变化即视为 SpringBoard 重启。
 
 ## 测试分层
 
@@ -26,9 +26,23 @@ scripts/run-tests.sh
 - SpringBoard-owned tests 通过隐藏 testing IPC 在 SpringBoard 内执行断言，适合验证 SpringBoard authoritative backend、真实 listener object、event data source、built-in listener/action、dispatch callback、persistence 写入、runtime context、SpringBoard SPI、主队列设备动作和真实 hook。
 - watcher 只负责观察 runtime state，不执行断言，不产生 pass/fail 结果。watcher 输出只能帮助人工判断，不能作为自动化测试通过依据。
 
+## 测试所有权与执行位置
+
+测试源码的 owner、测试代码的 build image 与断言最终执行的进程是三个不同概念。目录和编译归属按 production 组件划分，执行位置再由 IPC 编排；不能因为某项断言在 SpringBoard 中运行，就把所有 suite 都编进 `libactivator.dylib`。
+
+| 测试目录 | Build image | 负责内容 |
+| --- | --- | --- |
+| `tests/runner` | `libactivator-tests` | 命令编排、testing IPC client、普通进程 facade、结果打印与退出码 |
+| `subprojects/libactivator/tests` | testing `libactivator.dylib` | core model、backend、persistence、resource、IPC codec、dispatch 与 runtime snapshot input |
+| `subprojects/tweak/tests` | testing `ActivatorTweak.dylib` | built-in Listener、dynamic application listener、Event Source、definition/source registry、真实 hook 与设备自动化 |
+
+SpringBoard 内仍只有一个 testing IPC server 和一个结果流。`LAActivatorTestSupport` 先运行 libactivator-owned suites，再通过仅测试构建存在的 concrete `LAActivatorTestRegistry` 和 typed blocks 调用 tweak-owned suites；具体 registry class 同时提供跨 image 的链接期版本检查。`LATweakTestSupport` 必须在正常 `LATweakInitialize` 完成 built-in composition 后显式注册，不得使用 `+load`、额外 constructor、runtime class discovery 或字符串查找 test coordinator。
+
+测试代码可以沿 production 依赖方向复用下层 testing support，例如 tweak suites 使用 libactivator 的 recorder 或 core fake；反向依赖禁止。`subprojects/libactivator/Makefile` 不得包含 `../tweak` include path，也不得编译 tweak-owned suite。项目自有 concrete class 在所属测试 image 内必须通过真实 header、真实 protocol 和直接 class reference 使用，不得再声明复制方法表的 `LATest...Contract` / `LATest...Catalog` 影子协议，也不得用 `NSClassFromString` 绕过 target ownership。只有目标系统上确实可能不存在的 Apple 私有 class 才允许弱 runtime 探测。
+
 ## Suite 定义
 
-- `run` 是默认稳定套件，允许包含 runner-owned tests 和 SpringBoard-owned tests，但必须稳定、可重复、不能污染用户配置或 SpringBoard runtime state。它覆盖 `ClientFacade`、`LAEvent`、`Persistence`、`SpringBoardCore`、`Dispatch`、`Resources`、`BuiltInActions` 等核心能力。
+- `run` 是默认稳定套件，允许包含 runner-owned tests 和 SpringBoard-owned tests，但必须稳定、可重复、不能污染用户配置或 SpringBoard runtime state。它覆盖 `ClientFacade`、`LAEvent`、`Persistence`、`SpringBoardCore`、`Dispatch`、`Resources`、built-in Listener composition、Event Source composition/acquisition 与 gesture recognizer 等核心能力。
 - `run-runtime-input` 只测试 libactivator core 从 SpringBoard-side `LAActivator` 持有的 hidden `LARuntimeContext` 接收 runtime snapshot 后的 Public API 和 dispatch 条件效果。它不测试 tweak-side `LATRuntimeStateSource` 的内部 source set、reducer、touch drain 或 screen wake 细节。
 - `run-device-runtime` 只测试真实 SpringBoard hook 和真实设备状态，严禁调用任何 `la_note*` 注入入口。它不属于默认提交门槛，失败说明设备自动化流程、当前设备状态或 hook 场景需要单独调查。
 - `watch-runtime-state` 只做实时观察，不属于测试。
@@ -58,6 +72,10 @@ scripts/run-tests.sh
 
 ## 新增测试放置规则
 
+- 新测试首先按被测 production 组件确定物理目录和 build image，再按是否需要权威 backend、真实对象或设备状态确定执行进程；“SpringBoard-owned”不是把 tweak 测试放入 `subprojects/libactivator/tests` 的理由。
+- 每个 suite 必须显式导入其 production 类型、recorder 和 fake。`LATestEnvironment` / `LATweakTestEnvironment` 只提供环境准备、清理和同步能力，不得成为隐式导入所有 test/production 类型的 umbrella header。
+- Fake 实现真实 production protocol 时属于合理测试替身；复制 concrete class 私有方法集合、仅为了跨 image 消息发送而存在的测试协议不属于 contract，应改为直接使用真实类型。确实需要测试 implementation-private selector 时，优先验证可观察行为；仍有必要时只能在测试实现文件内为真实 concrete class 声明窄 testing category。
+- 测试可以直接清理自身命名空间下的 event、listener 与 assignment；临时修改既有 production event 的 assignment、当前 profile、blacklist 或 legacy preference 时，必须先保存原值，并在测试步骤结束后的统一出口显式精确恢复。修改 production 状态后不得提前返回，也不得依赖 Objective-C exception handling 保证清理；通用 cleanup 不得用强制切回 `Default`、清空 production assignment 或覆盖 blacklist 的方式兜底。
 - 纯模型、序列化、assignment、profile、blacklist、resource manager、cache、IPC codec 这类不依赖 SpringBoard UI 的测试优先放入 stable。
 - 需要真实 listener object、data source、dispatch 回调、built-in action 对象、touch drain 的测试，如果行为由 SpringBoard runtime owner 承载，应放入 SpringBoard-owned stable suite，并优先验证外层 dispatch 行为。
 - built-in action stable suite 只覆盖代码 allowlist、metadata/selector gate、runtime registration、obsolete/unsupported name 不注册，以及不产生设备副作用的纯 dispatch 语义。
@@ -81,5 +99,5 @@ power connected/disconnected、headset connected/disconnected、media route / no
 ## API 与静态检查
 
 - `scripts/check-public-api.sh` 负责 1.9.13 Public API 的 compile/link/runtime metadata 检查。它不是设备 runtime 测试，但 Public API 或导出符号有变化时必须运行。
-- 静态检查应覆盖：无 Logos、无 direct XPC、无 `CFMessagePort`、无不必要 `libSandy`、无 `ROOT_PATH` 宏族、无用户 App 注入 filter、无直接 `objc_msgSend`、新增代码/注释/日志无中文；`subprojects/tweak/events` 的 concrete sources 无 `LASharedActivator`；Event Source 路径无 runtime class enumeration、module/loader/factory 残留和 `+load` / constructor 自注册；concrete source import 与中央 class 清单只出现在 `LATBuiltInRegistry`，其构造循环没有逐类型 initializer 或 capability 分支；static built-in listener 路径没有 factory configuration dictionary、`MissingMetadataReason`、逐类型 initializer 分支、完整 `LATBuiltInRegistry` 依赖或绕过中央 class 清单的单独注册。
+- 静态检查应覆盖：无 Logos、无 Objective-C exception handling、无 direct XPC、无 `CFMessagePort`、无不必要 `libSandy`、无 `ROOT_PATH` 宏族、无用户 App 注入 filter、无直接 `objc_msgSend`、新增代码/注释/日志无中文；`subprojects/tweak/events` 的 concrete sources 无 `LASharedActivator`；Event Source 路径无 runtime class enumeration、module/loader/factory 残留和 `+load` / constructor 自注册；concrete source import 与中央 class 清单只出现在 `LATBuiltInRegistry`，其构造循环没有逐类型 initializer 或 capability 分支；static built-in listener 路径没有 factory configuration dictionary、`MissingMetadataReason`、逐类型 initializer 分支、完整 `LATBuiltInRegistry` 依赖或绕过中央 class 清单的单独注册；`subprojects/libactivator/Makefile` 无 tweak include/source，tweak-owned suite 只由 testing `ActivatorTweak` 编译，测试目录无项目自有 class 的 `NSClassFromString` 和复制 concrete 方法表的影子协议。
 - 文档-only 改动通常运行 `git diff --check` 即可；代码、资源、脚本改动应按影响范围运行匹配的测试。

@@ -8,7 +8,9 @@
 
 #import "LATestEventSuite.h"
 
-#import "LATestEnvironment.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
 
 @implementation LATestEventSuite
 

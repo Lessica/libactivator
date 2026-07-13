@@ -8,26 +8,20 @@
 
 #import "LATestBuiltInCameraActionsSuite.h"
 
-#import "LATestEnvironment.h"
+#import "LATCameraActionListener.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
 
 @implementation LATestBuiltInCameraActionsSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInCameraActions"];
 
-    Class<LATestCameraActionListener> cameraActionClass =
-        (Class<LATestCameraActionListener>)NSClassFromString(@"LATCameraActionListener");
-    [recorder expect:cameraActionClass != Nil
-            caseName:@"camera-action-class-available"
-              reason:@"LATCameraActionListener class was not loaded in SpringBoard"];
-    if (!cameraActionClass) {
-        return;
-    }
-
     NSDictionary<NSString *, NSString *> *expectedSelectors = @{
         @"libactivator.camera.invoke-shutter" : @"cameraShutterWithActivator:event:",
     };
-    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[cameraActionClass supportedListenerNames]];
+    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[LATCameraActionListener supportedListenerNames]];
 
     [recorder expect:supportedNames.count == expectedSelectors.count
             caseName:@"camera-action-allowlist-count"
@@ -38,18 +32,21 @@
         [recorder expect:[supportedNames containsObject:listenerName] && [activator hasListenerWithName:listenerName]
                 caseName:[NSString stringWithFormat:@"camera-action-registered-%@", listenerName]
                   reason:@"Camera action allowlist or runtime registration is missing an expected listener name"];
-        [recorder expect:[[cameraActionClass expectedSelectorForListenerName:listenerName]
+        [recorder expect:[[LATCameraActionListener expectedSelectorForListenerName:listenerName]
                              isEqualToString:expectedSelector] &&
                          [selector isEqualToString:expectedSelector]
                 caseName:[NSString stringWithFormat:@"camera-action-selector-%@", listenerName]
                   reason:@"Camera action selector mapping did not match bundled metadata"];
     }
 
-    id<LATestCameraActionListener> cameraAction =
-        (id<LATestCameraActionListener>)[activator listenerForName:@"libactivator.camera.invoke-shutter"];
-    [recorder expect:[cameraAction isKindOfClass:(Class)cameraActionClass]
+    id<LAListener> registeredListener = [activator listenerForName:@"libactivator.camera.invoke-shutter"];
+    [recorder expect:[registeredListener isKindOfClass:LATCameraActionListener.class]
             caseName:@"camera-action-production-instance-available"
               reason:@"The registered camera action listener does not use LATCameraActionListener"];
+    if (![registeredListener isKindOfClass:LATCameraActionListener.class]) {
+        return;
+    }
+    LATCameraActionListener *cameraAction = (LATCameraActionListener *)registeredListener;
     [recorder expect:[cameraAction listenerNameMatchesRequiredMetadata:@"libactivator.camera.invoke-shutter"
                                                              activator:activator]
             caseName:@"camera-action-valid-metadata-gated"

@@ -1,8 +1,8 @@
 //
-//  LATestBuiltInActionRegistrySuite.h
+//  LATestEventSourceAcquisitionSuite.h
 //  libactivator
 //
-//  Created by Lessica on 6/10/26.
+//  Created by Lessica on 7/14/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
@@ -13,7 +13,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATestBuiltInActionRegistrySuite : NSObject
+@interface LATestEventSourceAcquisitionSuite : NSObject
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator;
 @end
 

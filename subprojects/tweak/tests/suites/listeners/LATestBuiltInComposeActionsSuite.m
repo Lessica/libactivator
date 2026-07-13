@@ -8,28 +8,22 @@
 
 #import "LATestBuiltInComposeActionsSuite.h"
 
-#import "LATestEnvironment.h"
+#import "LATComposeActionListener.h"
+#import "LATestRecorder.h"
+
+#import <Activator/Activator.h>
 
 @implementation LATestBuiltInComposeActionsSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInComposeActions"];
 
-    Class<LATestComposeActionListener> composeActionClass =
-        (Class<LATestComposeActionListener>)NSClassFromString(@"LATComposeActionListener");
-    [recorder expect:composeActionClass != Nil
-            caseName:@"compose-action-class-available"
-              reason:@"LATComposeActionListener class was not loaded in SpringBoard"];
-    if (!composeActionClass) {
-        return;
-    }
-
     NSDictionary<NSString *, NSString *> *expectedSelectors = @{
         @"libactivator.mail.compose-message" : @"composeMail",
         @"libactivator.sms.compose-message" : @"composeText",
         @"libactivator.notes.compose-note" : @"composeNote",
     };
-    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[composeActionClass supportedListenerNames]];
+    NSSet<NSString *> *supportedNames = [NSSet setWithArray:[LATComposeActionListener supportedListenerNames]];
 
     [recorder expect:supportedNames.count == expectedSelectors.count
             caseName:@"compose-action-allowlist-count"
@@ -40,18 +34,21 @@
         [recorder expect:[supportedNames containsObject:listenerName] && [activator hasListenerWithName:listenerName]
                 caseName:[NSString stringWithFormat:@"compose-action-registered-%@", listenerName]
                   reason:@"Compose action allowlist or runtime registration is missing an expected listener name"];
-        [recorder expect:[[composeActionClass expectedSelectorForListenerName:listenerName]
+        [recorder expect:[[LATComposeActionListener expectedSelectorForListenerName:listenerName]
                              isEqualToString:expectedSelector] &&
                          [selector isEqualToString:expectedSelector]
                 caseName:[NSString stringWithFormat:@"compose-action-selector-%@", listenerName]
                   reason:@"Compose action selector mapping did not match bundled metadata"];
     }
 
-    id<LATestComposeActionListener> composeAction =
-        (id<LATestComposeActionListener>)[activator listenerForName:@"libactivator.mail.compose-message"];
-    [recorder expect:[composeAction isKindOfClass:(Class)composeActionClass]
+    id<LAListener> registeredListener = [activator listenerForName:@"libactivator.mail.compose-message"];
+    [recorder expect:[registeredListener isKindOfClass:LATComposeActionListener.class]
             caseName:@"compose-action-production-instance-available"
               reason:@"The registered compose action listener does not use LATComposeActionListener"];
+    if (![registeredListener isKindOfClass:LATComposeActionListener.class]) {
+        return;
+    }
+    LATComposeActionListener *composeAction = (LATComposeActionListener *)registeredListener;
     for (NSString *listenerName in expectedSelectors) {
         [recorder expect:[composeAction shouldHandleListenerName:listenerName activator:activator]
                 caseName:[NSString stringWithFormat:@"compose-action-valid-metadata-handled-%@", listenerName]

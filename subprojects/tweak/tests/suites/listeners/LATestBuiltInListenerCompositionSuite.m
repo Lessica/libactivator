@@ -1,29 +1,27 @@
 //
-//  LATestBuiltInActionRegistrySuite.m
+//  LATestBuiltInListenerCompositionSuite.m
 //  libactivator
 //
 //  Created by Lessica on 6/10/26.
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
-#import "LATestBuiltInActionRegistrySuite.h"
+#import "LATestBuiltInListenerCompositionSuite.h"
 
-#import "LATestEnvironment.h"
+#import "LATBuiltInListenerRegistrant.h"
+#import "LATBuiltInRegistry.h"
+#import "LATCameraActionListener.h"
+#import "LATComposeActionListener.h"
+#import "LATHardwareActionListener.h"
+#import "LATNothingListener.h"
+#import "LATSpringBoardInstanceProviding.h"
+#import "LATSystemActionListener.h"
+#import "LATTelephonyActionListener.h"
+#import "LATURLActionListener.h"
+#import "LATestEventDataSource.h"
+#import "LATestRecorder.h"
 
-@protocol LATestBuiltInListenerCatalog <NSObject>
-
-+ (NSArray<Class> *)builtInListenerClasses;
-
-@end
-
-@protocol LATestBuiltInListenerContract <LAListener>
-
-- (nullable instancetype)initWithBuiltInListenerContext:(id)context;
-
-+ (NSArray<NSString *> *)supportedListenerNames;
-+ (BOOL)listenerNameHasRequiredMetadata:(NSString *)listenerName activator:(LAActivator *)activator;
-
-@end
+#import <Activator/Activator.h>
 
 @interface LATestMissingListenerMetadataActivator : NSObject
 @end
@@ -36,10 +34,10 @@
 
 @end
 
-@implementation LATestBuiltInActionRegistrySuite
+@implementation LATestBuiltInListenerCompositionSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
-    [recorder beginSuite:@"BuiltInActionRegistry"];
+    [recorder beginSuite:@"BuiltInListenerComposition"];
 
     NSString *eventName = @"libactivator.test.built-in.nothing";
     NSString *nothingName = @"libactivator.system.nothing";
@@ -55,43 +53,41 @@
     NSString *metadataOnlyName = @"libactivator.watch.haptic.tap";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
 
-    NSArray<NSString *> *expectedListenerClassNames = @[
-        @"LATNothingListener",
-        @"LATURLActionListener",
-        @"LATHardwareActionListener",
-        @"LATSystemActionListener",
-        @"LATComposeActionListener",
-        @"LATCameraActionListener",
-        @"LATTelephonyActionListener",
+    NSArray<Class> *expectedListenerClasses = @[
+        LATNothingListener.class,
+        LATURLActionListener.class,
+        LATHardwareActionListener.class,
+        LATSystemActionListener.class,
+        LATComposeActionListener.class,
+        LATCameraActionListener.class,
+        LATTelephonyActionListener.class,
     ];
-    Class registryClass = NSClassFromString(@"LATBuiltInRegistry");
-    Class listenerContextClass = NSClassFromString(@"LATBuiltInListenerContext");
-    NSArray<Class> *listenerClasses = [(Class<LATestBuiltInListenerCatalog>)registryClass builtInListenerClasses];
-    Protocol *registrantProtocol = NSProtocolFromString(@"LATBuiltInListenerRegistrant");
-    Protocol *instanceProviderProtocol = NSProtocolFromString(@"LATSpringBoardInstanceProviding");
-    NSMutableArray<NSString *> *listenerClassNames = [[NSMutableArray alloc] init];
+    NSArray<Class> *listenerClasses = [LATBuiltInRegistry builtInListenerClasses];
     NSMutableSet<NSString *> *listenerNames = [[NSMutableSet alloc] init];
     BOOL usesUniformInitializer =
-        registryClass != Nil && listenerContextClass != Nil && registrantProtocol != nil &&
-        instanceProviderProtocol != nil && [(id)registryClass conformsToProtocol:instanceProviderProtocol] &&
-        [listenerContextClass instancesRespondToSelector:@selector(runtimeStateSource)] &&
-        [listenerContextClass instancesRespondToSelector:@selector(springBoardInstanceProvider)] &&
-        [listenerContextClass instancesRespondToSelector:@selector(eventSourceConformingToProtocol:)] &&
-        ![listenerContextClass instancesRespondToSelector:NSSelectorFromString(@"registry")] &&
-        listenerClasses.count == expectedListenerClassNames.count;
+        [(id)LATBuiltInRegistry.class conformsToProtocol:@protocol(LATSpringBoardInstanceProviding)] &&
+        [LATBuiltInListenerContext instancesRespondToSelector:@selector(runtimeStateSource)] &&
+        [LATBuiltInListenerContext instancesRespondToSelector:@selector(springBoardInstanceProvider)] &&
+        [LATBuiltInListenerContext instancesRespondToSelector:@selector(eventSourceConformingToProtocol:)] &&
+        ![LATBuiltInListenerContext instancesRespondToSelector:NSSelectorFromString(@"registry")] &&
+        listenerClasses.count == expectedListenerClasses.count;
     BOOL ownsUniqueListenerNames = YES;
     BOOL metadataGatesAcceptBundledNames = YES;
     BOOL metadataGatesRejectMissingMetadata = YES;
     BOOL metadataGatesRejectUnknownNames = YES;
     LAActivator *missingMetadataActivator = (LAActivator *)[[LATestMissingListenerMetadataActivator alloc] init];
     for (Class rawListenerClass in listenerClasses) {
-        Class<LATestBuiltInListenerContract> listenerClass = (Class<LATestBuiltInListenerContract>)rawListenerClass;
-        [listenerClassNames addObject:NSStringFromClass(rawListenerClass)];
-        NSArray<NSString *> *supportedListenerNames = [listenerClass supportedListenerNames];
+        BOOL conformsToRegistrant = [(id)rawListenerClass conformsToProtocol:@protocol(LATBuiltInListenerRegistrant)];
         usesUniformInitializer =
-            usesUniformInitializer && [(id)rawListenerClass conformsToProtocol:registrantProtocol] &&
-            [rawListenerClass instancesRespondToSelector:@selector(initWithBuiltInListenerContext:)] &&
-            supportedListenerNames.count > 0;
+            usesUniformInitializer && conformsToRegistrant &&
+            [rawListenerClass instancesRespondToSelector:@selector(initWithBuiltInListenerContext:)];
+        if (!conformsToRegistrant) {
+            continue;
+        }
+
+        Class<LATBuiltInListenerRegistrant> listenerClass = (Class<LATBuiltInListenerRegistrant>)rawListenerClass;
+        NSArray<NSString *> *supportedListenerNames = [listenerClass supportedListenerNames];
+        usesUniformInitializer = usesUniformInitializer && supportedListenerNames.count > 0;
         metadataGatesRejectUnknownNames = metadataGatesRejectUnknownNames &&
                                           ![listenerClass listenerNameHasRequiredMetadata:@"libactivator.test.unknown"
                                                                                 activator:activator];
@@ -110,8 +106,8 @@
                 ![listenerClass listenerNameHasRequiredMetadata:listenerName activator:missingMetadataActivator];
         }
     }
-    [recorder expect:usesUniformInitializer && [listenerClassNames isEqualToArray:expectedListenerClassNames] &&
-                     [NSSet setWithArray:listenerClassNames].count == listenerClassNames.count
+    [recorder expect:usesUniformInitializer && [listenerClasses isEqualToArray:expectedListenerClasses] &&
+                     [NSSet setWithArray:listenerClasses].count == listenerClasses.count
             caseName:@"built-in-listener-class-list-is-complete-and-uniform"
               reason:@"The built-in listener class list changed order, contains duplicates, or bypasses the uniform "
                      @"initializer"];

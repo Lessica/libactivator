@@ -1,6 +1,10 @@
 TARGET := iphone:clang:16.5:15.0
 ARCHS := arm64 arm64e
 
+ifeq ($(LIBACTIVATOR_TEST_SUPPORT),1)
+THEOS_OBJ_DIR_NAME := obj-testing
+endif
+
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME := ActivatorTweak
@@ -31,7 +35,23 @@ ActivatorTweak_CFLAGS += -Ilisteners
 ActivatorTweak_CFLAGS += -Iprivate
 
 ifeq ($(LIBACTIVATOR_TEST_SUPPORT),1)
+ActivatorTweak_FILES += tests/LATweakTestSupport.m
+ActivatorTweak_FILES += tests/support/LATestEventSourceFixture.m
+ActivatorTweak_FILES += tests/support/LATweakTestEnvironment.m
+ActivatorTweak_FILES += $(wildcard tests/fakes/*.m)
+ActivatorTweak_FILES += $(wildcard tests/suites/events/*.m)
+ActivatorTweak_FILES += $(wildcard tests/suites/listeners/*.m)
+ActivatorTweak_FILES += $(wildcard tests/suites/runtime/*.m)
 ActivatorTweak_CFLAGS += -DLIBACTIVATOR_TEST_SUPPORT=1
+ActivatorTweak_CFLAGS += -Itests
+ActivatorTweak_CFLAGS += -Itests/support
+ActivatorTweak_CFLAGS += -Itests/fakes
+ActivatorTweak_CFLAGS += -Itests/suites/events
+ActivatorTweak_CFLAGS += -Itests/suites/listeners
+ActivatorTweak_CFLAGS += -Itests/suites/runtime
+ActivatorTweak_CFLAGS += -I../libactivator/tests
+ActivatorTweak_CFLAGS += -I../libactivator/tests/support
+ActivatorTweak_CFLAGS += -I../libactivator/tests/fakes
 endif
 ActivatorTweak_CFLAGS += -Iruntime
 ActivatorTweak_CFLAGS += -I../../include

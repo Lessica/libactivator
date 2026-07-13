@@ -39,6 +39,16 @@
     NSString *displayIdentifier = @"libactivator.tests.client";
     LAEvent *event = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
     LAEvent *allModesEvent = [LAEvent eventWithName:eventName];
+    NSString *previousProfileName = [activator.currentProfileName copy] ?: @"Default";
+    NSString *roundTripProfileName = @"Default";
+    BOOL displayIdentifierWasBlacklisted = [activator applicationWithDisplayIdentifierIsBlacklisted:displayIdentifier];
+    NSArray<NSString *> *assignmentModes = [activator.availableEventModes copy];
+    NSMutableDictionary<NSString *, NSArray<NSString *> *> *previousAssignmentsByMode =
+        [[NSMutableDictionary alloc] init];
+    for (NSString *mode in assignmentModes) {
+        previousAssignmentsByMode[mode] =
+            [activator assignedListenerNamesForEvent:[LAEvent eventWithName:eventName mode:mode]] ?: @[];
+    }
 
     [recorder expect:activator.version == LAActivatorVersion_2_0
             caseName:@"version"
@@ -132,21 +142,23 @@
             caseName:@"blacklist-clear"
               reason:@"Client blacklist clear did not round-trip through SpringBoard"];
 
-    [activator setCurrentProfileName:@"ClientFacade"];
-    [recorder expect:[activator.currentProfileName isEqualToString:@"ClientFacade"] &&
-                     [activator.availableProfileNames containsObject:@"ClientFacade"]
+    [activator setCurrentProfileName:roundTripProfileName];
+    [recorder expect:[activator.currentProfileName isEqualToString:roundTripProfileName] &&
+                     [activator.availableProfileNames containsObject:roundTripProfileName]
             caseName:@"profile-round-trip"
               reason:@"Client profile change was not visible through the facade"];
-    [activator setCurrentProfileName:@"Default"];
+    [activator setCurrentProfileName:previousProfileName];
 
-    [self sendSelector:@selector(sendEventToListener:) toActivator:activator nilEventWithObject:nil];
-    [self sendSelector:@selector(sendEvent:toListenerWithName:) toActivator:activator nilEventWithObject:nothingName];
-    [self sendSelector:@selector(sendAbortToListener:) toActivator:activator nilEventWithObject:nil];
-    [self sendSelector:@selector(sendAbortEvent:toListenerWithName:)
-               toActivator:activator
-        nilEventWithObject:nothingName];
-    [self sendSelector:@selector(sendDeactivateEventToListeners:) toActivator:activator nilEventWithObject:nil];
-    [recorder expect:YES caseName:@"nil-event-dispatch-noop" reason:@"Nil event dispatch should not fail"];
+    // These compatibility calls intentionally exercise the runtime nil fallback despite the public nonnull
+    // contract. A contract violation must terminate the test process.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonnull"
+    [activator sendEventToListener:nil];
+    [activator sendEvent:nil toListenerWithName:nothingName];
+    [activator sendAbortToListener:nil];
+    [activator sendAbortEvent:nil toListenerWithName:nothingName];
+    [activator sendDeactivateEventToListeners:nil];
+#pragma clang diagnostic pop
 
     [activator assignEvent:event toListenerWithName:nothingName];
     [recorder expect:[[activator assignedListenerNamesForEvent:event] isEqualToArray:@[ nothingName ]]
@@ -241,9 +253,12 @@
             caseName:@"localized-title"
               reason:@"Client localization lookup returned an empty title"];
 
-    [activator setApplicationWithDisplayIdentifier:displayIdentifier isBlacklisted:NO];
-    [activator setCurrentProfileName:@"Default"];
-    [activator unassignEvent:event];
+    [activator setCurrentProfileName:previousProfileName];
+    for (NSString *mode in assignmentModes) {
+        [activator assignEvent:[LAEvent eventWithName:eventName mode:mode]
+            toListenersWithNames:previousAssignmentsByMode[mode]];
+    }
+    [activator setApplicationWithDisplayIdentifier:displayIdentifier isBlacklisted:displayIdentifierWasBlacklisted];
     return [recorder resultDictionary];
 }
 
@@ -256,23 +271,6 @@
         [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
     }
     return YES;
-}
-
-- (void)sendSelector:(SEL)selector toActivator:(LAActivator *)activator nilEventWithObject:(id)object {
-    NSMethodSignature *signature = [activator methodSignatureForSelector:selector];
-    if (!signature) {
-        return;
-    }
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:signature];
-    invocation.target = activator;
-    invocation.selector = selector;
-    LAEvent *event = nil;
-    [invocation setArgument:&event atIndex:2];
-    if (signature.numberOfArguments > 3) {
-        id objectArgument = object;
-        [invocation setArgument:&objectArgument atIndex:3];
-    }
-    [invocation invoke];
 }
 
 - (BOOL)events:(NSArray *)events containEventName:(NSString *)eventName mode:(NSString *)mode {

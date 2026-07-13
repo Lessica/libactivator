@@ -19,8 +19,10 @@
 #import "LATestEventDataSource.h"
 #import "LATestEventDefinitionProvider.h"
 #import "LATestListener.h"
+#import "LATestRecorder.h"
 
 #import <Activator/Activator.h>
+#import <roothide.h>
 
 @interface LATNetworkEventSource (LATestEventDefinitionRegistry)
 - (void)la_testingSendWiFiEventWithBaseName:(NSString *)baseEventName networkName:(NSString *)networkName;
@@ -94,32 +96,38 @@
 
 @implementation LATestEventDefinitionRegistrySuite
 
-+ (LATNetworkEventSource *)networkEventSourceWithClass:(Class)sourceClass activator:(LAActivator *)activator {
-    Class dispatcherClass = NSClassFromString(@"LATEventDispatcher");
++ (id)persistedLegacyPreferenceValueForKey:(NSString *)key {
+    NSString *path = jbroot(@"/var/mobile/Library/Preferences/libactivator-tests.plist");
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    if (data.length == 0) {
+        return nil;
+    }
+
+    id propertyList = [NSPropertyListSerialization propertyListWithData:data
+                                                                options:NSPropertyListImmutable
+                                                                 format:nil
+                                                                  error:nil];
+    NSDictionary *dictionary = [propertyList isKindOfClass:NSDictionary.class] ? propertyList : nil;
+    NSDictionary *legacyPreferences =
+        [dictionary[@"LegacyPreferences"] isKindOfClass:NSDictionary.class] ? dictionary[@"LegacyPreferences"] : nil;
+    return legacyPreferences[key];
+}
+
++ (LATNetworkEventSource *)networkEventSourceWithActivator:(LAActivator *)activator {
     id<LATEventDispatching, LATEventModeProviding, LATEventAssignmentQuerying, LATEventDefinitionQuerying>
-        eventDispatcher = [[dispatcherClass alloc] initWithActivator:activator];
-    return [[sourceClass alloc] initWithEventDispatcher:eventDispatcher
-                                           modeProvider:eventDispatcher
-                                     definitionQuerying:eventDispatcher];
+        eventDispatcher = [[LATEventDispatcher alloc] initWithActivator:activator];
+    return [[LATNetworkEventSource alloc] initWithEventDispatcher:eventDispatcher
+                                                     modeProvider:eventDispatcher
+                                               definitionQuerying:eventDispatcher];
 }
 
 + (LATEventSourceDefinitionBinding *)definitionBindingWithProvider:(id<LATEventDefinitionProvider>)provider
                                                             source:(LATNetworkEventSource *)source {
-    Class bindingClass = NSClassFromString(@"LATEventSourceDefinitionBinding");
-    return [[bindingClass alloc] initWithProvider:provider eventSource:source];
+    return [[LATEventSourceDefinitionBinding alloc] initWithProvider:provider eventSource:source];
 }
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"EventDefinitionRegistry"];
-
-    Class definitionRegistryClass = NSClassFromString(@"LATEventDefinitionRegistry");
-    Class sourceRegistryClass = NSClassFromString(@"LATEventSourceRegistry");
-    [recorder expect:definitionRegistryClass != Nil && sourceRegistryClass != Nil
-            caseName:@"definition-registry-classes-available"
-              reason:@"Dynamic definition registry classes were not loaded in SpringBoard"];
-    if (!definitionRegistryClass || !sourceRegistryClass) {
-        return;
-    }
 
     NSString *eventNameA = @"libactivator.test.event-definition-registry.a";
     NSString *eventNameB = @"libactivator.test.event-definition-registry.b";
@@ -131,7 +139,7 @@
         [activator unregisterEventDataSourceWithEventName:eventName];
     }
 
-    LATEventDefinitionRegistry *registry = [[definitionRegistryClass alloc] initWithActivator:activator];
+    LATEventDefinitionRegistry *registry = [[LATEventDefinitionRegistry alloc] initWithActivator:activator];
     LATestEventDefinitionRegistryDelegate *delegate =
         [[LATestEventDefinitionRegistryDelegate alloc] initWithActivator:activator];
     registry.delegate = delegate;
@@ -145,7 +153,7 @@
             caseName:@"definition-registry-registers-provider-catalog"
               reason:@"Definition registry did not publish the provider's initial catalog"];
 
-    LATEventDefinitionRegistry *secondRegistry = [[definitionRegistryClass alloc] initWithActivator:activator];
+    LATEventDefinitionRegistry *secondRegistry = [[LATEventDefinitionRegistry alloc] initWithActivator:activator];
     LATestEventDefinitionRegistryDelegate *secondDelegate =
         [[LATestEventDefinitionRegistryDelegate alloc] initWithActivator:activator];
     secondRegistry.delegate = secondDelegate;
@@ -154,7 +162,7 @@
               reason:@"One dynamic definition provider was attached to two registries"];
     [secondRegistry invalidate];
 
-    LATEventSourceRegistry *sourceRegistry = [[sourceRegistryClass alloc] initWithActivator:activator];
+    LATEventSourceRegistry *sourceRegistry = [[LATEventSourceRegistry alloc] initWithActivator:activator];
     [recorder expect:[sourceRegistry eventSourcesForEventName:eventNameA].count == 0
             caseName:@"definition-registry-allows-metadata-only-definition"
               reason:@"A dynamic definition was incorrectly treated as an acquisition producer"];
@@ -317,7 +325,7 @@
 
     NSString *reentrantEventName = @"libactivator.test.event-definition-registry.unregister-reentrant";
     [activator unregisterEventDataSourceWithEventName:reentrantEventName];
-    LATEventDefinitionRegistry *reentrantRegistry = [[definitionRegistryClass alloc] initWithActivator:activator];
+    LATEventDefinitionRegistry *reentrantRegistry = [[LATEventDefinitionRegistry alloc] initWithActivator:activator];
     LATestEventDefinitionRegistryDelegate *reentrantDelegate =
         [[LATestEventDefinitionRegistryDelegate alloc] initWithActivator:activator];
     reentrantRegistry.delegate = reentrantDelegate;
@@ -356,7 +364,7 @@
     NSString *inactiveEventNameB = @"libactivator.test.event-definition-registry.inactive-b";
     [activator unregisterEventDataSourceWithEventName:inactiveEventNameA];
     [activator unregisterEventDataSourceWithEventName:inactiveEventNameB];
-    LATEventDefinitionRegistry *inactiveRegistry = [[definitionRegistryClass alloc] initWithActivator:activator];
+    LATEventDefinitionRegistry *inactiveRegistry = [[LATEventDefinitionRegistry alloc] initWithActivator:activator];
     LATestEventDefinitionRegistryDelegate *inactiveDelegate =
         [[LATestEventDefinitionRegistryDelegate alloc] initWithActivator:activator];
     inactiveRegistry.delegate = inactiveDelegate;
@@ -436,37 +444,34 @@
             caseName:@"definition-registry-invalidation-is-terminal"
               reason:@"Definition registry accepted a provider after terminal invalidation"];
 
-    [self runNetworkProviderIntegrationWithRecorder:recorder
-                                          activator:activator
-                            definitionRegistryClass:definitionRegistryClass
-                                sourceRegistryClass:sourceRegistryClass];
+    [self runNetworkProviderIntegrationWithRecorder:recorder activator:activator];
 }
 
-+ (void)runNetworkProviderIntegrationWithRecorder:(LATestRecorder *)recorder
-                                        activator:(LAActivator *)activator
-                          definitionRegistryClass:(Class)definitionRegistryClass
-                              sourceRegistryClass:(Class)sourceRegistryClass {
-    Class sourceClass = NSClassFromString(@"LATNetworkEventSource");
-    Class providerClass = NSClassFromString(@"LATNetworkEventDataSource");
-    if (!sourceClass || !providerClass) {
-        [recorder skip:@"network-definition-provider" reason:@"Network definition provider classes were not loaded"];
-        return;
-    }
-
++ (void)runNetworkProviderIntegrationWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     static NSString *const networkPreferenceKey = @"LANetworkStatusEvents";
     NSString *networkName = [NSString stringWithFormat:@"libactivator-test-%@", NSUUID.UUID.UUIDString.lowercaseString];
     NSString *configuredEventName = [LAEventNameNetworkJoinedWiFi stringByAppendingFormat:@".%@", networkName];
-    id previousPreference = [activator _getObjectForPreference:networkPreferenceKey];
-    [activator _setObject:@[] forPreference:networkPreferenceKey];
+    id previousPreference = [[activator _getObjectForPreference:networkPreferenceKey] copy];
+    NSString *previousProfileName = [activator.currentProfileName copy] ?: @"Default";
+    NSString *specificListenerName = @"libactivator.test.event-definition-registry.network-specific";
+    NSString *baseListenerName = @"libactivator.test.event-definition-registry.network-base";
+    LAEvent *baseEvent = [LAEvent eventWithName:LAEventNameNetworkJoinedWiFi mode:LAEventModeSpringBoard];
+    [activator setCurrentProfileName:@"Default"];
+    NSArray<NSString *> *previousBaseAssignments = [[activator assignedListenerNamesForEvent:baseEvent] copy];
+    [activator setCurrentProfileName:previousProfileName];
 
-    __block LATNetworkEventSource *source = [self networkEventSourceWithClass:sourceClass activator:activator];
-    __block LATEventSourceRegistry *sourceRegistry = [[sourceRegistryClass alloc] initWithActivator:activator];
-    __block LATNetworkEventDataSource *provider = [[providerClass alloc] initWithActivator:activator];
+    __block LATNetworkEventSource *source = [self networkEventSourceWithActivator:activator];
+    __block LATEventSourceRegistry *sourceRegistry = nil;
+    __block LATNetworkEventDataSource *provider = [[LATNetworkEventDataSource alloc] initWithActivator:activator];
     __block LATEventSourceDefinitionBinding *binding = [self definitionBindingWithProvider:provider source:source];
-    LATEventDefinitionRegistry *definitionRegistry = [[definitionRegistryClass alloc] initWithActivator:activator];
-    LATestEventDefinitionRegistryDelegate *delegate =
-        [[LATestEventDefinitionRegistryDelegate alloc] initWithActivator:activator];
+    LATEventDefinitionRegistry *definitionRegistry = nil;
+    LATestEventDefinitionRegistryDelegate *delegate = nil;
     __block BOOL mappingRemovedBeforeDefinition = NO;
+
+    [activator _setObject:@[] forPreference:networkPreferenceKey];
+    sourceRegistry = [[LATEventSourceRegistry alloc] initWithActivator:activator];
+    definitionRegistry = [[LATEventDefinitionRegistry alloc] initWithActivator:activator];
+    delegate = [[LATestEventDefinitionRegistryDelegate alloc] initWithActivator:activator];
     delegate.applyHandler = ^BOOL(id<LATEventDefinitionProvider> appliedProvider, NSSet<NSString *> *eventNames,
                                   __unused NSSet<NSString *> *previousEventNames) {
         if (appliedProvider != provider) {
@@ -493,125 +498,112 @@
                      [sourceRegistry eventSourcesForEventName:LAEventNameNetworkJoinedWiFi].count == 1
             caseName:@"network-provider-composes-definition-and-base-acquisition-separately"
               reason:@"Network provider registration did not preserve the independent base acquisition source"];
-    if (!sourceRegistered || !providerRegistered) {
+    if (sourceRegistered && providerRegistered) {
+
+        NSUInteger generationBeforeCreate = definitionRegistry.generation;
+        NSString *addedEventName = [definitionRegistry createEventWithProviderIdentifier:@"network"
+                                                                      templateIdentifier:LAEventNameNetworkJoinedWiFi
+                                                                           configuration:@{@"NetworkName" : networkName}
+                                                                      expectedGeneration:generationBeforeCreate];
+        NSArray *persistedEventNames = [activator _getObjectForPreference:networkPreferenceKey];
+        [recorder expect:[addedEventName isEqualToString:configuredEventName] &&
+                         [provider.configuredEventNames containsObject:configuredEventName] &&
+                         [source.configuredEventNames containsObject:configuredEventName] &&
+                         [definitionRegistry providerForEventName:configuredEventName] == provider &&
+                         [sourceRegistry eventSourcesForEventName:configuredEventName].firstObject == source &&
+                         [activator eventDataSourceForEventName:configuredEventName] == provider &&
+                         [persistedEventNames containsObject:configuredEventName]
+                caseName:@"network-provider-generic-create-publishes-four-state-planes"
+                  reason:@"Network creation did not align provider, definition, source mapping, and persistence"];
+
+        [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.1];
+        NSArray *persistedEventNamesOnDisk = [self persistedLegacyPreferenceValueForKey:networkPreferenceKey];
+        [recorder expect:[persistedEventNamesOnDisk containsObject:configuredEventName]
+                caseName:@"network-provider-persists-exact-event-to-disk"
+                  reason:@"Network provider exact definition did not survive a backend reload"];
+
+        NSString *localizedTitle = [activator localizedTitleForEventName:configuredEventName];
+        BOOL exactCompatible = [activator eventWithName:configuredEventName
+                                   isCompatibleWithMode:LAEventModeSpringBoard];
+        BOOL baseCompatible = [activator eventWithName:LAEventNameNetworkJoinedWiFi
+                                  isCompatibleWithMode:LAEventModeSpringBoard];
+        [recorder expect:[activator eventWithNameSupportsRemoval:configuredEventName] &&
+                         [localizedTitle containsString:networkName] && exactCompatible == baseCompatible
+                caseName:@"network-provider-exposes-exact-event-metadata"
+                  reason:@"Network provider did not expose removal, localization, or compatibility metadata"];
+
         [definitionRegistry invalidate];
         [sourceRegistry invalidate];
-        [activator _setObject:previousPreference forPreference:networkPreferenceKey];
+
+        source = [self networkEventSourceWithActivator:activator];
+        sourceRegistry = [[LATEventSourceRegistry alloc] initWithActivator:activator];
+        provider = [[LATNetworkEventDataSource alloc] initWithActivator:activator];
+        binding = [self definitionBindingWithProvider:provider source:source];
+        definitionRegistry = [[LATEventDefinitionRegistry alloc] initWithActivator:activator];
+        delegate = [[LATestEventDefinitionRegistryDelegate alloc] initWithActivator:activator];
+        delegate.applyHandler = ^BOOL(id<LATEventDefinitionProvider> appliedProvider, NSSet<NSString *> *eventNames,
+                                      __unused NSSet<NSString *> *previousEventNames) {
+            if (appliedProvider != provider) {
+                return NO;
+            }
+            BOOL removingConfiguredEvent = ![eventNames containsObject:configuredEventName] &&
+                                           [source.configuredEventNames containsObject:configuredEventName];
+            if (![binding applyEventNames:eventNames
+                       previousEventNames:previousEventNames
+                      eventSourceRegistry:sourceRegistry]) {
+                return NO;
+            }
+            if (removingConfiguredEvent) {
+                mappingRemovedBeforeDefinition =
+                    [sourceRegistry eventSourcesForEventName:configuredEventName].count == 0 &&
+                    [activator hasEventWithName:configuredEventName];
+            }
+            return YES;
+        };
+        definitionRegistry.delegate = delegate;
+        BOOL restoredSourceRegistered = [sourceRegistry registerEventSource:source];
+        BOOL restoredProviderRegistered = [definitionRegistry registerProvider:provider];
+        [recorder expect:restoredSourceRegistered && restoredProviderRegistered &&
+                         [provider.configuredEventNames containsObject:configuredEventName] &&
+                         [source.configuredEventNames containsObject:configuredEventName] &&
+                         [definitionRegistry providerForEventName:configuredEventName] == provider &&
+                         [sourceRegistry eventSourcesForEventName:configuredEventName].firstObject == source
+                caseName:@"network-provider-restores-definition-and-acquisition-mapping"
+                  reason:@"A fresh composition did not restore persisted Network definition and producer state"];
+        mappingRemovedBeforeDefinition = NO;
+
+        LATestListener *specificListener = [[LATestListener alloc] init];
+        LATestListener *baseListener = [[LATestListener alloc] init];
+        specificListener.handlesReceivedEvents = YES;
+        [activator registerListener:specificListener forName:specificListenerName];
+        [activator registerListener:baseListener forName:baseListenerName];
+        [activator setCurrentProfileName:@"Default"];
+        LAEvent *specificEvent = [LAEvent eventWithName:configuredEventName mode:LAEventModeSpringBoard];
+        [activator assignEvent:baseEvent toListenerWithName:baseListenerName];
+        [activator assignEvent:specificEvent toListenerWithName:specificListenerName];
+
+        [source la_testingSendWiFiEventWithBaseName:LAEventNameNetworkJoinedWiFi networkName:networkName];
+        BOOL handledSpecificSuppressedBase = specificListener.receiveCount == 1 && baseListener.receiveCount == 0;
+        specificListener.handlesReceivedEvents = NO;
+        [source la_testingSendWiFiEventWithBaseName:LAEventNameNetworkJoinedWiFi networkName:networkName];
+        [recorder expect:handledSpecificSuppressedBase && specificListener.receiveCount == 2 &&
+                         baseListener.receiveCount == 1
+                caseName:@"network-source-specific-event-handled-fallback"
+                  reason:@"Network source did not suppress or fall back to the base event according to handled state"];
+        [activator setCurrentProfileName:@"Testing"];
+        [activator assignEvent:specificEvent toListenerWithName:specificListenerName];
+        [activator setCurrentProfileName:@"Default"];
+        BOOL removed = [definitionRegistry removeEventWithName:configuredEventName
+                                            expectedGeneration:definitionRegistry.generation];
+        BOOL defaultProfileAssignmentRemoved = [activator assignedListenerNamesForEvent:specificEvent].count == 0;
+        [activator setCurrentProfileName:@"Testing"];
+        BOOL testingProfileAssignmentRemoved = [activator assignedListenerNamesForEvent:specificEvent].count == 0;
+        NSArray *persistedEventNamesAfterRemoval = [activator _getObjectForPreference:networkPreferenceKey];
         [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.1];
-        return;
-    }
-
-    NSUInteger generationBeforeCreate = definitionRegistry.generation;
-    NSString *addedEventName = [definitionRegistry createEventWithProviderIdentifier:@"network"
-                                                                  templateIdentifier:LAEventNameNetworkJoinedWiFi
-                                                                       configuration:@{@"NetworkName" : networkName}
-                                                                  expectedGeneration:generationBeforeCreate];
-    NSArray *persistedEventNames = [activator _getObjectForPreference:networkPreferenceKey];
-    [recorder expect:[addedEventName isEqualToString:configuredEventName] &&
-                     [provider.configuredEventNames containsObject:configuredEventName] &&
-                     [source.configuredEventNames containsObject:configuredEventName] &&
-                     [definitionRegistry providerForEventName:configuredEventName] == provider &&
-                     [sourceRegistry eventSourcesForEventName:configuredEventName].firstObject == source &&
-                     [activator eventDataSourceForEventName:configuredEventName] == provider &&
-                     [persistedEventNames containsObject:configuredEventName]
-            caseName:@"network-provider-generic-create-publishes-four-state-planes"
-              reason:@"Network creation did not align provider, definition, source mapping, and persistence"];
-
-    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.1];
-    LAServerBackend *reloadedBackend = [[LAServerBackend alloc] initWithPersistence:[LAPersistence testingPersistence]];
-    NSArray *persistedEventNamesOnDisk = [reloadedBackend objectForLegacyPreferenceKey:networkPreferenceKey];
-    [recorder expect:[persistedEventNamesOnDisk containsObject:configuredEventName]
-            caseName:@"network-provider-persists-exact-event-to-disk"
-              reason:@"Network provider exact definition did not survive a backend reload"];
-
-    NSString *localizedTitle = [activator localizedTitleForEventName:configuredEventName];
-    BOOL exactCompatible = [activator eventWithName:configuredEventName isCompatibleWithMode:LAEventModeSpringBoard];
-    BOOL baseCompatible = [activator eventWithName:LAEventNameNetworkJoinedWiFi
-                              isCompatibleWithMode:LAEventModeSpringBoard];
-    [recorder expect:[activator eventWithNameSupportsRemoval:configuredEventName] &&
-                     [localizedTitle containsString:networkName] && exactCompatible == baseCompatible
-            caseName:@"network-provider-exposes-exact-event-metadata"
-              reason:@"Network provider did not expose removal, localization, or compatibility metadata"];
-
-    [definitionRegistry invalidate];
-    [sourceRegistry invalidate];
-
-    source = [self networkEventSourceWithClass:sourceClass activator:activator];
-    sourceRegistry = [[sourceRegistryClass alloc] initWithActivator:activator];
-    provider = [[providerClass alloc] initWithActivator:activator];
-    binding = [self definitionBindingWithProvider:provider source:source];
-    definitionRegistry = [[definitionRegistryClass alloc] initWithActivator:activator];
-    delegate = [[LATestEventDefinitionRegistryDelegate alloc] initWithActivator:activator];
-    delegate.applyHandler = ^BOOL(id<LATEventDefinitionProvider> appliedProvider, NSSet<NSString *> *eventNames,
-                                  __unused NSSet<NSString *> *previousEventNames) {
-        if (appliedProvider != provider) {
-            return NO;
-        }
-        BOOL removingConfiguredEvent = ![eventNames containsObject:configuredEventName] &&
-                                       [source.configuredEventNames containsObject:configuredEventName];
-        if (![binding applyEventNames:eventNames
-                   previousEventNames:previousEventNames
-                  eventSourceRegistry:sourceRegistry]) {
-            return NO;
-        }
-        if (removingConfiguredEvent) {
-            mappingRemovedBeforeDefinition = [sourceRegistry eventSourcesForEventName:configuredEventName].count == 0 &&
-                                             [activator hasEventWithName:configuredEventName];
-        }
-        return YES;
-    };
-    definitionRegistry.delegate = delegate;
-    BOOL restoredSourceRegistered = [sourceRegistry registerEventSource:source];
-    BOOL restoredProviderRegistered = [definitionRegistry registerProvider:provider];
-    [recorder expect:restoredSourceRegistered && restoredProviderRegistered &&
-                     [provider.configuredEventNames containsObject:configuredEventName] &&
-                     [source.configuredEventNames containsObject:configuredEventName] &&
-                     [definitionRegistry providerForEventName:configuredEventName] == provider &&
-                     [sourceRegistry eventSourcesForEventName:configuredEventName].firstObject == source
-            caseName:@"network-provider-restores-definition-and-acquisition-mapping"
-              reason:@"A fresh composition did not restore persisted Network definition and producer state"];
-    mappingRemovedBeforeDefinition = NO;
-
-    NSString *specificListenerName = @"libactivator.test.event-definition-registry.network-specific";
-    NSString *baseListenerName = @"libactivator.test.event-definition-registry.network-base";
-    LATestListener *specificListener = [[LATestListener alloc] init];
-    LATestListener *baseListener = [[LATestListener alloc] init];
-    specificListener.handlesReceivedEvents = YES;
-    [activator registerListener:specificListener forName:specificListenerName];
-    [activator registerListener:baseListener forName:baseListenerName];
-    NSString *previousProfileName = activator.currentProfileName;
-    [activator setCurrentProfileName:@"Default"];
-    LAEvent *baseEvent = [LAEvent eventWithName:LAEventNameNetworkJoinedWiFi mode:LAEventModeSpringBoard];
-    LAEvent *specificEvent = [LAEvent eventWithName:configuredEventName mode:LAEventModeSpringBoard];
-    NSArray<NSString *> *previousBaseAssignments = [activator assignedListenerNamesForEvent:baseEvent];
-    [activator assignEvent:baseEvent toListenerWithName:baseListenerName];
-    [activator assignEvent:specificEvent toListenerWithName:specificListenerName];
-
-    [source la_testingSendWiFiEventWithBaseName:LAEventNameNetworkJoinedWiFi networkName:networkName];
-    BOOL handledSpecificSuppressedBase = specificListener.receiveCount == 1 && baseListener.receiveCount == 0;
-    specificListener.handlesReceivedEvents = NO;
-    [source la_testingSendWiFiEventWithBaseName:LAEventNameNetworkJoinedWiFi networkName:networkName];
-    [recorder
-          expect:handledSpecificSuppressedBase && specificListener.receiveCount == 2 && baseListener.receiveCount == 1
-        caseName:@"network-source-specific-event-handled-fallback"
-          reason:@"Network source did not suppress or fall back to the base event according to handled state"];
-    [activator assignEvent:baseEvent toListenersWithNames:previousBaseAssignments];
-
-    [activator setCurrentProfileName:@"Testing"];
-    [activator assignEvent:specificEvent toListenerWithName:specificListenerName];
-    [activator setCurrentProfileName:@"Default"];
-    BOOL removed = [definitionRegistry removeEventWithName:configuredEventName
-                                        expectedGeneration:definitionRegistry.generation];
-    BOOL defaultProfileAssignmentRemoved = [activator assignedListenerNamesForEvent:specificEvent].count == 0;
-    [activator setCurrentProfileName:@"Testing"];
-    BOOL testingProfileAssignmentRemoved = [activator assignedListenerNamesForEvent:specificEvent].count == 0;
-    NSArray *persistedEventNamesAfterRemoval = [activator _getObjectForPreference:networkPreferenceKey];
-    [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.1];
-    LAServerBackend *reloadedBackendAfterRemoval =
-        [[LAServerBackend alloc] initWithPersistence:[LAPersistence testingPersistence]];
-    NSArray *persistedEventNamesOnDiskAfterRemoval =
-        [reloadedBackendAfterRemoval objectForLegacyPreferenceKey:networkPreferenceKey];
-    [recorder expect:removed && mappingRemovedBeforeDefinition && defaultProfileAssignmentRemoved &&
+        NSArray *persistedEventNamesOnDiskAfterRemoval =
+            [self persistedLegacyPreferenceValueForKey:networkPreferenceKey];
+        [recorder
+              expect:removed && mappingRemovedBeforeDefinition && defaultProfileAssignmentRemoved &&
                      testingProfileAssignmentRemoved &&
                      ![provider.configuredEventNames containsObject:configuredEventName] &&
                      ![source.configuredEventNames containsObject:configuredEventName] &&
@@ -622,17 +614,18 @@
                      [sourceRegistry eventSourcesForEventName:LAEventNameNetworkJoinedWiFi].firstObject == source
             caseName:@"network-provider-removes-mapping-before-definition-and-preserves-base-source"
               reason:@"Network removal left definition, assignment, exact mapping, or base acquisition inconsistent"];
-
+    }
+    [definitionRegistry invalidate];
+    [sourceRegistry invalidate];
+    [activator la_unassignEventNameFromAllProfilesAndNotifyIfChanged:configuredEventName];
+    [activator setCurrentProfileName:@"Default"];
+    [activator assignEvent:baseEvent toListenersWithNames:previousBaseAssignments];
     [activator setCurrentProfileName:previousProfileName];
     [activator unregisterListenerWithName:specificListenerName];
     [activator unregisterListenerWithName:baseListenerName];
-    [definitionRegistry invalidate];
-    [sourceRegistry invalidate];
     [activator _setObject:previousPreference forPreference:networkPreferenceKey];
     [LATestEnvironment waitAllowingMainRunLoopForTimeInterval:0.1];
-    LAServerBackend *reloadedBackendAfterRestore =
-        [[LAServerBackend alloc] initWithPersistence:[LAPersistence testingPersistence]];
-    id restoredPreference = [reloadedBackendAfterRestore objectForLegacyPreferenceKey:networkPreferenceKey];
+    id restoredPreference = [self persistedLegacyPreferenceValueForKey:networkPreferenceKey];
     [recorder expect:(previousPreference == nil && restoredPreference == nil) ||
                      [restoredPreference isEqual:previousPreference]
             caseName:@"network-provider-restores-original-preference"
