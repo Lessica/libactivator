@@ -9,7 +9,6 @@
 #import "LATButtonEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 
 static NSTimeInterval const LATButtonEventSourceHoldDelay = 0.45;
 static NSTimeInterval const LATButtonEventSourceMenuLongHoldDelay = 2.5;
@@ -61,35 +60,15 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 
 @end
 
-@interface LATButtonEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATButtonEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.button";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 700;
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    LATButtonEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                 modeProvider:context.eventDispatcher
-                                                           assignmentQuerying:context.eventDispatcher];
-    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
-                                                definitionProviders:@[]
-                                                 definitionBindings:@[]
-                                                   exportedServices:@{}];
-}
-
-@end
-
 @implementation LATButtonEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    return [self initWithEventDispatcher:context.eventDispatcher
+                            modeProvider:context.eventDispatcher
+                      assignmentQuerying:context.eventDispatcher];
+}
 
 - (instancetype)initWithEventDispatcher:(id<LATEventDispatching>)eventDispatcher
                            modeProvider:(id<LATEventModeProviding>)modeProvider

@@ -10,6 +10,12 @@
 
 @implementation LATestEventSource
 
+- (instancetype)initWithEventSourceContext:(__unused LATEventSourceContext *)context {
+    return [self initWithIdentifier:@"testing.context-source"
+                         eventNames:[NSSet set]
+                     interestPolicy:LATEventSourceInterestPolicyAlways];
+}
+
 - (instancetype)initWithIdentifier:(NSString *)identifier
                         eventNames:(NSSet<NSString *> *)eventNames
                     interestPolicy:(LATEventSourceInterestPolicy)interestPolicy {

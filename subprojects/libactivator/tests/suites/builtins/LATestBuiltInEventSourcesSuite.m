@@ -24,6 +24,22 @@
 #import "LATestEnvironment.h"
 #import "LATestTouchEvent.h"
 
+@protocol LATestBuiltInEventSourceCatalog <NSObject>
+
++ (NSArray<Class> *)builtInEventSourceClasses;
+
+@end
+
+@interface LATestEventSourceRuntimeLockStateUpdater : NSObject <LATRuntimeLockStateUpdating>
+@end
+
+@implementation LATestEventSourceRuntimeLockStateUpdater
+
+- (void)noteUILocked:(__unused BOOL)uiLocked {
+}
+
+@end
+
 @implementation LATestBuiltInEventSourcesSuite
 
 + (id<LATEventDispatching, LATEventModeProviding, LATEventAssignmentQuerying, LATEventDefinitionQuerying>)
@@ -41,21 +57,15 @@
     fingerprintCoordinator:(id<LATFingerprintGestureCoordinating>)fingerprintCoordinator {
     id<LATEventDispatching, LATEventModeProviding, LATEventAssignmentQuerying, LATEventDefinitionQuerying>
         eventDispatcher = [self eventDispatcherWithActivator:activator];
-    NSString *className = NSStringFromClass(sourceClass);
-    id<LATEventSource> eventSource = nil;
-    if ([className isEqualToString:@"LATNetworkEventSource"]) {
-        eventSource = [[sourceClass alloc] initWithEventDispatcher:eventDispatcher
-                                                      modeProvider:eventDispatcher
-                                                definitionQuerying:eventDispatcher];
-    } else if ([className isEqualToString:@"LATEdgeGestureEventSource"]) {
-        eventSource = [[sourceClass alloc] initWithEventDispatcher:eventDispatcher
-                                                      modeProvider:eventDispatcher
-                                            fingerprintCoordinator:fingerprintCoordinator];
-    } else if ([className isEqualToString:@"LATSpringBoardIconGestureEventSource"]) {
-        eventSource = [[sourceClass alloc] initWithEventDispatcher:eventDispatcher];
-    } else {
-        eventSource = [[sourceClass alloc] initWithEventDispatcher:eventDispatcher modeProvider:eventDispatcher];
-    }
+    NSArray<id<LATEventSource>> *previousEventSources =
+        fingerprintCoordinator ? @[ (id<LATEventSource>)fingerprintCoordinator ] : @[];
+    Class contextClass = NSClassFromString(@"LATEventSourceContext");
+    LATEventSourceContext *context =
+        [[contextClass alloc] initWithActivator:activator
+                                eventDispatcher:eventDispatcher
+                        runtimeLockStateUpdater:[[LATestEventSourceRuntimeLockStateUpdater alloc] init]
+                           previousEventSources:previousEventSources];
+    id<LATEventSource> eventSource = [[sourceClass alloc] initWithEventSourceContext:context];
 
     if (eventSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode) {
         NSSet<NSString *> *interestEventNames = eventSource.eventNames;
@@ -74,6 +84,37 @@
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"BuiltInEventSources"];
+
+    NSArray<NSString *> *expectedEventSourceClassNames = @[
+        @"LATFingerprintSensorEventSource",
+        @"LATLockStateEventSource",
+        @"LATPowerStateEventSource",
+        @"LATMediaEventSource",
+        @"LATMotionEventSource",
+        @"LATNetworkEventSource",
+        @"LATButtonEventSource",
+        @"LATForceTouchEventSource",
+        @"LATMultiTouchEventSource",
+        @"LATSpringBoardIconGestureEventSource",
+        @"LATStatusBarEventSource",
+        @"LATEdgeGestureEventSource",
+    ];
+    Class registryClass = NSClassFromString(@"LATBuiltInRegistry");
+    NSArray<Class> *eventSourceClasses =
+        [(Class<LATestBuiltInEventSourceCatalog>)registryClass builtInEventSourceClasses];
+    NSMutableArray<NSString *> *eventSourceClassNames = [[NSMutableArray alloc] init];
+    BOOL usesUniformInitializer = eventSourceClasses.count == expectedEventSourceClassNames.count;
+    for (Class eventSourceClass in eventSourceClasses) {
+        [eventSourceClassNames addObject:NSStringFromClass(eventSourceClass)];
+        usesUniformInitializer = usesUniformInitializer &&
+                                 [(id)eventSourceClass conformsToProtocol:@protocol(LATEventSource)] &&
+                                 [eventSourceClass instancesRespondToSelector:@selector(initWithEventSourceContext:)];
+    }
+    [recorder expect:usesUniformInitializer && [eventSourceClassNames isEqualToArray:expectedEventSourceClassNames] &&
+                     [NSSet setWithArray:eventSourceClassNames].count == eventSourceClassNames.count
+            caseName:@"built-in-event-source-class-list-is-explicit-and-complete"
+              reason:@"The built-in Event Source class list changed order, contains duplicates, or bypasses the "
+                     @"uniform initializer"];
 
     NSString *nowPlayingInfoChangedEventName = LAEventNameNowPlayingInfoChanged;
     NSString *nowPlayingPlayingEventName = LAEventNameNowPlayingPlaying;
@@ -112,6 +153,17 @@
               reason:@"LATNetworkEventDataSource class was not loaded in SpringBoard"];
     if (networkEventSourceClass) {
         LATNetworkEventSource *networkSource = [self eventSourceWithClass:networkEventSourceClass activator:activator];
+        Class contextClass = NSClassFromString(@"LATEventSourceContext");
+        LATEventSourceContext *context =
+            [[contextClass alloc] initWithActivator:activator
+                                    eventDispatcher:[self eventDispatcherWithActivator:activator]
+                            runtimeLockStateUpdater:[[LATestEventSourceRuntimeLockStateUpdater alloc] init]
+                               previousEventSources:@[]];
+        id provider = [networkSource eventDefinitionProviderForContext:context];
+        [recorder expect:[provider isKindOfClass:NSClassFromString(@"LATNetworkEventDataSource")]
+                caseName:@"network-event-source-provides-definition-provider"
+                  reason:@"Network source did not provide its dynamic definition provider through the uniform hook"];
+
         NSString *configuredNetworkEventName = [LAEventNameNetworkJoinedWiFi
             stringByAppendingFormat:@".libactivator-test-%@", NSUUID.UUID.UUIDString.lowercaseString];
         [networkSource updateConfiguredEventNames:[NSSet setWithObject:configuredNetworkEventName]];

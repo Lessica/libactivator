@@ -9,7 +9,6 @@
 #import "LATMotionEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 
 #import <Activator/Activator.h>
 
@@ -23,34 +22,13 @@
 
 @end
 
-@interface LATMotionEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATMotionEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.motion";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 500;
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    LATMotionEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                 modeProvider:context.eventDispatcher];
-    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
-                                                definitionProviders:@[]
-                                                 definitionBindings:@[]
-                                                   exportedServices:@{}];
-}
-
-@end
-
 @implementation LATMotionEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    return [self initWithEventDispatcher:context.eventDispatcher modeProvider:context.eventDispatcher];
+}
 
 - (NSString *)eventSourceIdentifier {
     return @"motion";

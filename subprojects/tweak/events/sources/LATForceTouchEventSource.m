@@ -9,7 +9,6 @@
 #import "LATForceTouchEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 
 #import <Activator/Activator.h>
 #import <HBLog.h>
@@ -40,35 +39,6 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 
 @end
 
-@interface LATForceTouchEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATForceTouchEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.force-touch";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 800;
-}
-
-+ (BOOL)isSupportedWithContext:(LATEventSourceModuleContext *)context {
-    return [context.eventDispatcher hasEventDefinitionWithName:LAEventNameForceTouchScreenBottom];
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    LATForceTouchEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                     modeProvider:context.eventDispatcher];
-    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
-                                                definitionProviders:@[]
-                                                 definitionBindings:@[]
-                                                   exportedServices:@{}];
-}
-
-@end
-
 @implementation LATForceTouchSession
 @end
 
@@ -93,6 +63,13 @@ typedef NS_ENUM(NSInteger, LATForceTouchPhase) {
 @implementation LATForceTouchEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    if (![context.eventDispatcher hasEventDefinitionWithName:LAEventNameForceTouchScreenBottom]) {
+        return nil;
+    }
+    return [self initWithEventDispatcher:context.eventDispatcher modeProvider:context.eventDispatcher];
+}
 
 - (NSString *)eventSourceIdentifier {
     return @"force-touch";

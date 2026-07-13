@@ -9,7 +9,6 @@
 #import "LATLockStateEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 
 #import <HBLog.h>
 #import <notify.h>
@@ -17,39 +16,6 @@
 @interface SBLockScreenManager : NSObject
 + (instancetype)sharedInstance;
 - (BOOL)isUILocked;
-@end
-
-@interface LATLockStateEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATLockStateEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.lock-state";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 200;
-}
-
-+ (NSArray<NSString *> *)eventSourceModuleOrderingDependencies {
-    return @[ @"built-in.fingerprint-sensor" ];
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    id<LATFingerprintGestureCoordinating> fingerprintCoordinator =
-        [context serviceForProtocol:@protocol(LATFingerprintGestureCoordinating)];
-    LATLockStateEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                    modeProvider:context.eventDispatcher
-                                                                lockStateUpdater:context.runtimeLockStateUpdater
-                                                          fingerprintCoordinator:fingerprintCoordinator];
-    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
-                                                definitionProviders:@[]
-                                                 definitionBindings:@[]
-                                                   exportedServices:@{}];
-}
-
 @end
 
 @interface LATLockStateEventSource ()
@@ -74,6 +40,15 @@
 @implementation LATLockStateEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    id<LATFingerprintGestureCoordinating> fingerprintCoordinator =
+        [context eventSourceConformingToProtocol:@protocol(LATFingerprintGestureCoordinating)];
+    return [self initWithEventDispatcher:context.eventDispatcher
+                            modeProvider:context.eventDispatcher
+                        lockStateUpdater:context.runtimeLockStateUpdater
+                  fingerprintCoordinator:fingerprintCoordinator];
+}
 
 - (NSString *)eventSourceIdentifier {
     return @"lock-state";

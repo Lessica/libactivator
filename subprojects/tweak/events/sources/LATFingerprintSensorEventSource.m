@@ -9,7 +9,6 @@
 #import "LATFingerprintSensorEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 
 #import <HBLog.h>
 
@@ -48,39 +47,16 @@ static NSTimeInterval const LATFingerprintSensorEventSourcePostUnlockIgnoreDelay
 
 @end
 
-@interface LATFingerprintSensorEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATFingerprintSensorEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.fingerprint-sensor";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 100;
-}
-
-+ (BOOL)isSupportedWithContext:(LATEventSourceModuleContext *)context {
-    return [context.eventDispatcher hasEventDefinitionWithName:LAEventNameFingerprintSensorPressSingle];
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    LATFingerprintSensorEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                            modeProvider:context.eventDispatcher];
-    return [[LATEventSourceModuleResult alloc]
-        initWithEventSources:@[ eventSource ]
-         definitionProviders:@[]
-          definitionBindings:@[]
-            exportedServices:@{LATEventSourceServiceKey(@protocol(LATFingerprintGestureCoordinating)) : eventSource}];
-}
-
-@end
-
 @implementation LATFingerprintSensorEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    if (![context.eventDispatcher hasEventDefinitionWithName:LAEventNameFingerprintSensorPressSingle]) {
+        return nil;
+    }
+    return [self initWithEventDispatcher:context.eventDispatcher modeProvider:context.eventDispatcher];
+}
 
 - (instancetype)initWithEventDispatcher:(id<LATEventDispatching>)eventDispatcher
                            modeProvider:(id<LATEventModeProviding>)modeProvider {

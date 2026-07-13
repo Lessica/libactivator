@@ -58,7 +58,6 @@ libactivator_FILES += tests/suites/builtins/LATestBuiltInDynamicApplicationListe
 libactivator_FILES += tests/suites/builtins/LATestBuiltInEventSourcesSuite.m
 libactivator_FILES += tests/suites/builtins/LATestEventDefinitionRegistrySuite.m
 libactivator_FILES += tests/suites/builtins/LATestEventSourceRegistrySuite.m
-libactivator_FILES += tests/suites/builtins/LATestEventSourceModuleLoaderSuite.m
 libactivator_FILES += tests/suites/runtime/LATestRuntimeInputSuite.m
 libactivator_FILES += tests/suites/runtime/LATestRuntimeDeviceSuite.m
 libactivator_CFLAGS += -DLIBACTIVATOR_TEST_SUPPORT=1

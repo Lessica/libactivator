@@ -28,7 +28,7 @@
 | listener/action metadata | `layout/Library/Activator/Listeners/bundled.plist`、glyph 资源和 `LAResourceManager` | 只提供展示、兼容规则、图标和 selector/url metadata；不能替代 listener object。 |
 | static built-in actions | `ActivatorTweak.dylib` 中的 built-in listener registry | 由 SpringBoard 注册真实 `LAListener` object。 |
 | dynamic event definitions | `ActivatorTweak.dylib` 中的 `LATEventDefinitionRegistry` 与 family providers | 显式管理 provider catalog、concrete event ownership、generation、property-list-safe generic create/config/remove 和持久化；Network 是首个接入 family。 |
-| event acquisition | `ActivatorTweak.dylib` 中的 Event Source module loader、`LATEventSourceRegistry` 与 SpringBoard acquisition adapters | Loader 只从明确的 libactivator-owned image 发现采用私有 module protocol 的 factory；module result 声明 sources、窄协议依赖、typed hook ingress 与可选 definition binding，registry 只管理 source lifecycle、producer index、多 producer 和 assignment-aware interest。 |
+| event acquisition | `ActivatorTweak.dylib` 中的中央 Event Source class 清单、`LATEventSourceRegistry` 与 SpringBoard acquisition adapters | `LATBuiltInRegistry` 按唯一有序清单用统一 context initializer 构造 source，并通用处理可选 provider/binding；registry 只管理 source lifecycle、producer index、多 producer 和 assignment-aware interest。 |
 | dynamic application listeners | 独立 application listener family provider | 动态读取 SpringBoard app model，处理 app launch/action listener、glyph、显示名和特殊系统 App 行为。 |
 | menu listeners | Settings UI + runtime menu provider | 菜单内容来自用户配置，需等 Settings UI 菜单编辑能力落地后实现。 |
 | CLI | `subprojects/cli` 的 `/usr/bin/activator` | 生产兼容工具，使用 Public API 和生产 IPC，不依赖 testing IPC，也不是 test runner。 |
@@ -94,9 +94,9 @@ CLI 是 production compatibility tool，不是测试入口。
 ## 验收要求
 
 - 新增 dynamic listener family 必须有独立 provider / registry path，不把动态 App listener 塞进 static built-in action listener。
-- 新增 event source family 必须有独立的 module identity 与 acquisition adapter，不把采集 hook 混入现有 action listener；一对一 family 默认由 source class 的私有 class-side category 实现 module factory，不创建只做转发的平行 factory class。Source 通过窄协议取得 dispatch/runtime 能力，不读取 `LASharedActivator`。
-- 新 family 的 hook 必须面向 module result 暴露的 typed ingress protocol；不得为接线在 `LATBuiltInRegistry` 增加具体 source import、property、initializer 分支或 capability 特判。
-- Module 必须声明稳定 identifier、priority、依赖与 capability；需要 dynamic definition/acquisition 同步时由 module result 声明 binding，并保留 definition registry 的完整原子事务与回滚保证。
+- 新增 event source family 必须有独立 acquisition adapter，不把采集 hook 混入现有 action listener；source 在主实现中采用 `LATEventSource`、实现统一 nullable `initWithEventSourceContext:`，从 context 提取窄协议依赖，不读取 `LASharedActivator`，也不增加平行 factory/module 类型。
+- 新 family 的 concrete class 必须加入 `LATBuiltInRegistry +builtInEventSourceClasses` 的正确位置；这是唯一允许集中 import/list concrete source 的位置。Registry 的通用构造循环不得增加逐类型 property、initializer 分支或 capability 特判；hook 按 source 采用的 typed ingress protocol 接线。
+- 中央清单顺序表达构造顺序和可选前置 source 依赖，initializer 返回 `nil` 表达 capability 不满足。需要 dynamic definition/acquisition 同步时由 source 的 optional provider hook 和 registry-owned binding 接线，并保留 definition registry 的完整原子事务与回滚保证。
 - 每个新 family 至少拆出一个 stable suite；测试重点是 registration、metadata lookup、`hasSeen`、mode/blacklist/dispatch 语义和 metadata-only 不注册。
 - `event.handled` 表示 listener 消费事件或 adapter 提交事件，不表示系统最终状态变化完成；真实系统状态变化进入设备手工 checklist。
 - listener/action handled 语义必须先有旧实现依据或明确的现代差异准则，避免测试只覆盖当前实现而没有 1.9.13 对齐结论。

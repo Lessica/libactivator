@@ -19,6 +19,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface LATBuiltInRegistry : NSObject
 
++ (NSArray<Class> *)builtInEventSourceClasses;
+
 // Captured SpringBoard-owned instances
 @property(nonatomic, weak, nullable) CSCoverSheetViewController *coverSheetViewControllerInstance;
 @property(nonatomic, weak, nullable) SBRingerControl *ringerControlInstance;
@@ -34,7 +36,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)startEventSources;
 - (NSArray<id> *)eventSourcesConformingToProtocol:(Protocol *)protocol;
-- (nullable id)eventSourceServiceForProtocol:(Protocol *)protocol;
 - (void)noteApplicationCatalogMayHaveChangedWithReason:(NSString *)reason;
 - (BOOL)legacyHomeButtonTouchStreamHookShouldBeInstalled;
 

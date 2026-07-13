@@ -15,23 +15,34 @@
 #import "LATApplicationLauncher.h"
 #import "LATApplicationListenerProvider.h"
 #import "LATBuiltInListenerRegistrant.h"
+#import "LATButtonEventSource.h"
 #import "LATCameraActionListener.h"
 #import "LATComposeActionListener.h"
+#import "LATEdgeGestureEventSource.h"
 #import "LATEventDefinitionRegistry.h"
 #import "LATEventDispatcher.h"
-#import "LATEventSourceModule.h"
-#import "LATEventSourceModuleLoader.h"
+#import "LATEventSourceDefinitionBinding.h"
 #import "LATEventSourceRegistry.h"
+#import "LATFingerprintSensorEventSource.h"
+#import "LATForceTouchEventSource.h"
 #import "LATHardwareActionListener.h"
+#import "LATLockStateEventSource.h"
+#import "LATMediaEventSource.h"
+#import "LATMotionEventSource.h"
+#import "LATMultiTouchEventSource.h"
+#import "LATNetworkEventSource.h"
 #import "LATNothingListener.h"
+#import "LATPowerStateEventSource.h"
 #import "LATRuntimeStateSource.h"
+#import "LATSpringBoardIconGestureEventSource.h"
+#import "LATStatusBarEventSource.h"
 #import "LATSystemActionListener.h"
 #import "LATTelephonyActionListener.h"
 #import "LATURLActionListener.h"
 
 #import <HBLog.h>
 
-@interface LATBuiltInRegistry ()
+@interface LATBuiltInRegistry () <LATEventDefinitionRegistryDelegate>
 
 // Dependencies
 @property(nonatomic, weak) LAActivator *activator;
@@ -46,12 +57,29 @@
 @property(nonatomic, strong, readwrite) LATEventDefinitionRegistry *eventDefinitionRegistry;
 @property(nonatomic, strong, readwrite) LATEventSourceRegistry *eventSourceRegistry;
 @property(nonatomic, strong) LATEventDispatcher *eventDispatcher;
-@property(nonatomic, strong) LATEventSourceModuleContext *eventSourceModuleContext;
-@property(nonatomic, strong) LATEventSourceModuleLoader *eventSourceModuleLoader;
+@property(nonatomic, strong)
+    NSMapTable<id<LATEventDefinitionProvider>, LATEventSourceDefinitionBinding *> *bindingsByProvider;
 
 @end
 
 @implementation LATBuiltInRegistry
+
++ (NSArray<Class> *)builtInEventSourceClasses {
+    return @[
+        LATFingerprintSensorEventSource.class,
+        LATLockStateEventSource.class,
+        LATPowerStateEventSource.class,
+        LATMediaEventSource.class,
+        LATMotionEventSource.class,
+        LATNetworkEventSource.class,
+        LATButtonEventSource.class,
+        LATForceTouchEventSource.class,
+        LATMultiTouchEventSource.class,
+        LATSpringBoardIconGestureEventSource.class,
+        LATStatusBarEventSource.class,
+        LATEdgeGestureEventSource.class,
+    ];
+}
 
 - (instancetype)initWithActivator:(LAActivator *)activator {
     NSParameterAssert(activator);
@@ -69,19 +97,109 @@
         _eventSourceRegistry = [[LATEventSourceRegistry alloc] initWithActivator:activator];
         _eventDefinitionRegistry = [[LATEventDefinitionRegistry alloc] initWithActivator:activator];
         _eventDispatcher = [[LATEventDispatcher alloc] initWithActivator:activator];
-        _eventSourceModuleContext = [[LATEventSourceModuleContext alloc] initWithActivator:activator
-                                                                           eventDispatcher:_eventDispatcher
-                                                                   runtimeLockStateUpdater:_runtimeStateSource];
-        _eventSourceModuleLoader = [[LATEventSourceModuleLoader alloc] initWithContext:_eventSourceModuleContext
-                                                                   eventSourceRegistry:_eventSourceRegistry
-                                                               eventDefinitionRegistry:_eventDefinitionRegistry];
-        if (![_eventSourceModuleLoader loadModules]) {
-            HBLogError(@"Unable to load built-in Event Source modules");
+        _bindingsByProvider = [[NSMapTable alloc]
+            initWithKeyOptions:NSPointerFunctionsStrongMemory | NSPointerFunctionsObjectPointerPersonality
+                  valueOptions:NSPointerFunctionsStrongMemory
+                      capacity:0];
+        if (![self registerBuiltInEventSourcesWithActivator:activator]) {
+            HBLogError(@"Unable to register built-in Event Sources");
         }
 
         [self registerBuiltInListenersWithActivator:activator];
     }
     return self;
+}
+
+- (BOOL)registerBuiltInEventSourcesWithActivator:(LAActivator *)activator {
+    NSMutableArray<id<LATEventSource>> *registeredEventSources = [[NSMutableArray alloc] init];
+    NSMutableArray<id<LATEventDefinitionProvider>> *registeredProviders = [[NSMutableArray alloc] init];
+
+    for (Class<LATEventSource> eventSourceClass in self.class.builtInEventSourceClasses) {
+        LATEventSourceContext *context = [[LATEventSourceContext alloc] initWithActivator:activator
+                                                                          eventDispatcher:self.eventDispatcher
+                                                                  runtimeLockStateUpdater:self.runtimeStateSource
+                                                                     previousEventSources:registeredEventSources];
+        id<LATEventSource> eventSource = [[(Class)eventSourceClass alloc] initWithEventSourceContext:context];
+        if (!eventSource) {
+            continue;
+        }
+        if (![self.eventSourceRegistry registerEventSource:eventSource]) {
+            HBLogError(@"Unable to register Event Source class %@", NSStringFromClass(eventSourceClass));
+            [eventSource invalidate];
+            [self rollbackEventSources:registeredEventSources definitionProviders:registeredProviders];
+            return NO;
+        }
+        [registeredEventSources addObject:eventSource];
+
+        if (![eventSource respondsToSelector:@selector(eventDefinitionProviderForContext:)]) {
+            continue;
+        }
+        id<LATEventDefinitionProvider> provider = [eventSource eventDefinitionProviderForContext:context];
+        if (!provider || ![eventSource conformsToProtocol:@protocol(LATEventSourceDefinitionConsumer)]) {
+            HBLogError(@"Event Source %@ returned an invalid definition provider", eventSource.eventSourceIdentifier);
+            [self rollbackEventSources:registeredEventSources definitionProviders:registeredProviders];
+            return NO;
+        }
+
+        LATEventSourceDefinitionBinding *binding = [[LATEventSourceDefinitionBinding alloc]
+            initWithProvider:provider
+                 eventSource:(id<LATEventSourceDefinitionConsumer>)eventSource];
+        [self.bindingsByProvider setObject:binding forKey:provider];
+        if (!self.eventDefinitionRegistry.delegate) {
+            self.eventDefinitionRegistry.delegate = self;
+        }
+        if (self.eventDefinitionRegistry.delegate != self ||
+            ![self.eventDefinitionRegistry registerProvider:provider]) {
+            HBLogError(@"Unable to register Event Source definition provider %@",
+                       provider.eventDefinitionProviderIdentifier);
+            [self rollbackEventSources:registeredEventSources definitionProviders:registeredProviders];
+            return NO;
+        }
+        [registeredProviders addObject:provider];
+    }
+    return YES;
+}
+
+- (void)rollbackEventSources:(NSArray<id<LATEventSource>> *)eventSources
+         definitionProviders:(NSArray<id<LATEventDefinitionProvider>> *)definitionProviders {
+    BOOL providerRollbackFailed = NO;
+    for (id<LATEventDefinitionProvider> provider in definitionProviders.reverseObjectEnumerator) {
+        if (![self.eventDefinitionRegistry unregisterProvider:provider]) {
+            providerRollbackFailed = YES;
+        }
+    }
+    if (providerRollbackFailed) {
+        HBLogError(@"Unable to roll back all Event Source definition providers");
+        [self.eventDefinitionRegistry invalidate];
+    }
+    if (self.eventDefinitionRegistry.providers.count == 0 && self.eventDefinitionRegistry.delegate == self) {
+        self.eventDefinitionRegistry.delegate = nil;
+    }
+
+    BOOL sourceRollbackFailed = NO;
+    for (id<LATEventSource> eventSource in eventSources.reverseObjectEnumerator) {
+        if (![self.eventSourceRegistry unregisterEventSource:eventSource]) {
+            sourceRollbackFailed = YES;
+        }
+    }
+    if (sourceRollbackFailed) {
+        HBLogError(@"Unable to roll back all Event Sources");
+        [self.eventSourceRegistry invalidate];
+    }
+    [self.bindingsByProvider removeAllObjects];
+}
+
+- (BOOL)eventDefinitionRegistry:(__unused LATEventDefinitionRegistry *)registry
+                applyEventNames:(NSSet<NSString *> *)eventNames
+             previousEventNames:(NSSet<NSString *> *)previousEventNames
+                    forProvider:(id<LATEventDefinitionProvider>)provider {
+    LATEventSourceDefinitionBinding *binding = [self.bindingsByProvider objectForKey:provider];
+    if (!binding) {
+        return YES;
+    }
+    return [binding applyEventNames:eventNames
+                 previousEventNames:previousEventNames
+                eventSourceRegistry:self.eventSourceRegistry];
 }
 
 - (void)startEventSources {
@@ -90,11 +208,16 @@
 }
 
 - (NSArray<id> *)eventSourcesConformingToProtocol:(Protocol *)protocol {
-    return [self.eventSourceModuleLoader eventSourcesConformingToProtocol:protocol];
-}
-
-- (id)eventSourceServiceForProtocol:(Protocol *)protocol {
-    return [self.eventSourceModuleLoader serviceForProtocol:protocol];
+    if (!protocol) {
+        return @[];
+    }
+    NSMutableArray<id> *matchingEventSources = [[NSMutableArray alloc] init];
+    for (id<LATEventSource> eventSource in self.eventSourceRegistry.eventSources) {
+        if ([eventSource conformsToProtocol:protocol]) {
+            [matchingEventSources addObject:eventSource];
+        }
+    }
+    return [matchingEventSources copy];
 }
 
 - (void)noteApplicationCatalogMayHaveChangedWithReason:(NSString *)reason {
@@ -140,7 +263,8 @@
     }
     if (registrantClass == LATHardwareActionListener.class) {
         id<LATNowPlayingProviding> nowPlayingProvider =
-            [self eventSourceServiceForProtocol:@protocol(LATNowPlayingProviding)];
+            (id<LATNowPlayingProviding>)[self eventSourcesConformingToProtocol:@protocol(LATNowPlayingProviding)]
+                .firstObject;
         return [[LATHardwareActionListener alloc] initWithNowPlayingProvider:nowPlayingProvider];
     }
     if (registrantClass == LATCameraActionListener.class) {

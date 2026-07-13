@@ -9,7 +9,6 @@
 #import "LATMultiTouchEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 #import "LATMultiTouchGestureRecognizer.h"
 
 #import <Activator/Activator.h>
@@ -27,34 +26,13 @@
 
 @end
 
-@interface LATMultiTouchEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATMultiTouchEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.multi-touch";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 900;
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    LATMultiTouchEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                     modeProvider:context.eventDispatcher];
-    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
-                                                definitionProviders:@[]
-                                                 definitionBindings:@[]
-                                                   exportedServices:@{}];
-}
-
-@end
-
 @implementation LATMultiTouchEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    return [self initWithEventDispatcher:context.eventDispatcher modeProvider:context.eventDispatcher];
+}
 
 - (NSString *)eventSourceIdentifier {
     return @"multi-touch";

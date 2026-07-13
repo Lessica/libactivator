@@ -10,7 +10,6 @@
 
 #import "LAQueueAssertions.h"
 #import "LATEdgeGestureClassifier.h"
-#import "LATEventSourceModule.h"
 
 #import <HBLog.h>
 
@@ -29,41 +28,17 @@
 
 @end
 
-@interface LATEdgeGestureEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATEdgeGestureEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.edge-gesture";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 1200;
-}
-
-+ (NSArray<NSString *> *)eventSourceModuleOrderingDependencies {
-    return @[ @"built-in.fingerprint-sensor" ];
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    id<LATFingerprintGestureCoordinating> fingerprintCoordinator =
-        [context serviceForProtocol:@protocol(LATFingerprintGestureCoordinating)];
-    LATEdgeGestureEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                      modeProvider:context.eventDispatcher
-                                                            fingerprintCoordinator:fingerprintCoordinator];
-    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
-                                                definitionProviders:@[]
-                                                 definitionBindings:@[]
-                                                   exportedServices:@{}];
-}
-
-@end
-
 @implementation LATEdgeGestureEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    id<LATFingerprintGestureCoordinating> fingerprintCoordinator =
+        [context eventSourceConformingToProtocol:@protocol(LATFingerprintGestureCoordinating)];
+    return [self initWithEventDispatcher:context.eventDispatcher
+                            modeProvider:context.eventDispatcher
+                  fingerprintCoordinator:fingerprintCoordinator];
+}
 
 - (NSString *)eventSourceIdentifier {
     return @"edge-gesture";

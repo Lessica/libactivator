@@ -9,7 +9,6 @@
 #import "LATMediaEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 #import "MediaRemote+Private.h"
 
 #import <HBLog.h>
@@ -33,32 +32,6 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 @interface AVSystemController : NSObject
 + (instancetype)sharedAVSystemController;
 - (id)attributeForKey:(AVSystemControllerKey)attributeKey;
-@end
-
-@interface LATMediaEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATMediaEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.media";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 400;
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    LATMediaEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                modeProvider:context.eventDispatcher];
-    return [[LATEventSourceModuleResult alloc]
-        initWithEventSources:@[ eventSource ]
-         definitionProviders:@[]
-          definitionBindings:@[]
-            exportedServices:@{LATEventSourceServiceKey(@protocol(LATNowPlayingProviding)) : eventSource}];
-}
-
 @end
 
 @interface LATMediaEventSource ()
@@ -101,6 +74,10 @@ extern CFStringRef SBSCopyDisplayIdentifierForProcessID(pid_t PID) __attribute__
 @implementation LATMediaEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    return [self initWithEventDispatcher:context.eventDispatcher modeProvider:context.eventDispatcher];
+}
 
 - (NSString *)eventSourceIdentifier {
     return @"media";

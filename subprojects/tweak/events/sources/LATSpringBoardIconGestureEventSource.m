@@ -9,7 +9,6 @@
 #import "LATSpringBoardIconGestureEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 
 #import <Activator/Activator.h>
 #import <HBLog.h>
@@ -21,30 +20,6 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
 
 @property(nonatomic, assign, getter=isActive) BOOL active;
 @property(nonatomic, assign) BOOL hasSentEvent;
-
-@end
-
-@interface LATSpringBoardIconGestureEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATSpringBoardIconGestureEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.springboard-icon-gesture";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 1000;
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    LATSpringBoardIconGestureEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher];
-    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
-                                                definitionProviders:@[]
-                                                 definitionBindings:@[]
-                                                   exportedServices:@{}];
-}
 
 @end
 
@@ -71,6 +46,10 @@ static CGFloat const LATSpringBoardIconGestureSpreadThreshold = 1.05;
 @implementation LATSpringBoardIconGestureEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    return [self initWithEventDispatcher:context.eventDispatcher];
+}
 
 - (NSString *)eventSourceIdentifier {
     return @"springboard-icon-gesture";

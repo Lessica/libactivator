@@ -9,7 +9,6 @@
 #import "LATNetworkEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 #import "LATNetworkEventDataSource.h"
 
 #import <HBLog.h>
@@ -22,36 +21,6 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 @interface SBWiFiManager : NSObject
 + (instancetype)sharedInstance;
 - (NSString *)currentNetworkName;
-@end
-
-@interface LATNetworkEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATNetworkEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.network";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 600;
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    LATNetworkEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                  modeProvider:context.eventDispatcher
-                                                            definitionQuerying:context.eventDispatcher];
-    LATNetworkEventDataSource *definitionProvider =
-        [[LATNetworkEventDataSource alloc] initWithActivator:context.activator];
-    LATEventSourceDefinitionBinding *binding =
-        [[LATEventSourceDefinitionBinding alloc] initWithProvider:definitionProvider eventSource:eventSource];
-    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
-                                                definitionProviders:@[ definitionProvider ]
-                                                 definitionBindings:@[ binding ]
-                                                   exportedServices:@{}];
-}
-
 @end
 
 @interface LATNetworkEventSource ()
@@ -84,6 +53,16 @@ static NSTimeInterval const LATNetworkStateRefreshDelay = 0.1;
 @implementation LATNetworkEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    return [self initWithEventDispatcher:context.eventDispatcher
+                            modeProvider:context.eventDispatcher
+                      definitionQuerying:context.eventDispatcher];
+}
+
+- (id<LATEventDefinitionProvider>)eventDefinitionProviderForContext:(LATEventSourceContext *)context {
+    return [[LATNetworkEventDataSource alloc] initWithActivator:context.activator];
+}
 
 - (NSString *)eventSourceIdentifier {
     return @"network";

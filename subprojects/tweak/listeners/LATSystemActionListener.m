@@ -73,7 +73,8 @@
     if (self) {
         _registry = registry;
         id<LATNowPlayingProviding> nowPlayingProvider =
-            [_registry eventSourceServiceForProtocol:@protocol(LATNowPlayingProviding)];
+            (id<LATNowPlayingProviding>)[_registry eventSourcesConformingToProtocol:@protocol(LATNowPlayingProviding)]
+                .firstObject;
         _volumeHUDPresenter = [[LATSystemVolumeHUDPresenter alloc] initWithRegistry:_registry];
         _nowPlayingApplicationLauncher =
             [[LATSystemNowPlayingApplicationLauncher alloc] initWithApplicationLauncher:launcher

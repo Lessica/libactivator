@@ -9,7 +9,6 @@
 #import "LATStatusBarEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 
 static NSTimeInterval const LATStatusBarEventSourceHoldDelay = 0.5;
 static NSTimeInterval const LATStatusBarEventSourceTapDelay = 0.33;
@@ -39,31 +38,6 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 
 @end
 
-@interface LATStatusBarEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATStatusBarEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.status-bar";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 1100;
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    LATStatusBarEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                    modeProvider:context.eventDispatcher];
-    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
-                                                definitionProviders:@[]
-                                                 definitionBindings:@[]
-                                                   exportedServices:@{}];
-}
-
-@end
-
 @implementation LATStatusBarTouchSession
 @end
 
@@ -86,6 +60,10 @@ static CGFloat const LATStatusBarEventSourceVerticalSwipeThreshold = 10.0;
 @implementation LATStatusBarEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    return [self initWithEventDispatcher:context.eventDispatcher modeProvider:context.eventDispatcher];
+}
 
 - (NSString *)eventSourceIdentifier {
     return @"status-bar";

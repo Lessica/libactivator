@@ -9,7 +9,6 @@
 #import "LATPowerStateEventSource.h"
 
 #import "LAQueueAssertions.h"
-#import "LATEventSourceModule.h"
 
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
@@ -34,34 +33,13 @@
 
 @end
 
-@interface LATPowerStateEventSource (ModuleFactory) <LATEventSourceModule>
-@end
-
-@implementation LATPowerStateEventSource (ModuleFactory)
-
-+ (NSString *)eventSourceModuleIdentifier {
-    return @"built-in.power-state";
-}
-
-+ (NSInteger)eventSourceModulePriority {
-    return 300;
-}
-
-+ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
-                                          error:(__unused NSError **)error {
-    LATPowerStateEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
-                                                                     modeProvider:context.eventDispatcher];
-    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
-                                                definitionProviders:@[]
-                                                 definitionBindings:@[]
-                                                   exportedServices:@{}];
-}
-
-@end
-
 @implementation LATPowerStateEventSource
 
 #pragma mark - LATEventSource
+
+- (instancetype)initWithEventSourceContext:(LATEventSourceContext *)context {
+    return [self initWithEventDispatcher:context.eventDispatcher modeProvider:context.eventDispatcher];
+}
 
 - (NSString *)eventSourceIdentifier {
     return @"power-state";
