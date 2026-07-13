@@ -8,14 +8,18 @@
 
 #import <Foundation/Foundation.h>
 
-@class LATBuiltInRegistry;
+#import "LATSpringBoardInstanceProviding.h"
+
+@class LATRuntimeStateSource;
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATLockScreenCameraLauncher : NSObject
 
 - (instancetype)init NS_UNAVAILABLE;
-- (instancetype)initWithRegistry:(nullable LATBuiltInRegistry *)registry NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithRuntimeStateSource:(nullable LATRuntimeStateSource *)runtimeStateSource
+               springBoardInstanceProvider:(nullable id<LATSpringBoardInstanceProviding>)springBoardInstanceProvider
+    NS_DESIGNATED_INITIALIZER;
 
 - (BOOL)enqueueOpenLockScreenCamera;
 - (BOOL)enqueueOpenLockScreenCameraWithCompletion:(nullable dispatch_block_t)completion;

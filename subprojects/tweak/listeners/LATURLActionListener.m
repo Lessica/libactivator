@@ -18,6 +18,10 @@
 
 @implementation LATURLActionListener
 
+- (instancetype)initWithBuiltInListenerContext:(__unused LATBuiltInListenerContext *)context {
+    return [self init];
+}
+
 + (NSArray<NSString *> *)supportedListenerNames {
     NSMutableArray<NSString *> *listenerNames = [@[
         @"libactivator.clock.alarm",

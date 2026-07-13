@@ -8,6 +8,8 @@
 
 #import <Activator/Activator.h>
 
+#import "LATSpringBoardInstanceProviding.h"
+
 @class SBRingerControl;
 @class SBVolumeControl;
 @class CSCoverSheetViewController;
@@ -17,9 +19,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATBuiltInRegistry : NSObject
+@interface LATBuiltInRegistry : NSObject <LATSpringBoardInstanceProviding>
 
 + (NSArray<Class> *)builtInEventSourceClasses;
++ (NSArray<Class> *)builtInListenerClasses;
 
 // Captured SpringBoard-owned instances
 @property(nonatomic, weak, nullable) CSCoverSheetViewController *coverSheetViewControllerInstance;

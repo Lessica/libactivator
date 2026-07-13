@@ -19,6 +19,10 @@
 
 @implementation LATComposeActionListener
 
+- (instancetype)initWithBuiltInListenerContext:(__unused LATBuiltInListenerContext *)context {
+    return [self init];
+}
+
 - (instancetype)init {
     self = [super init];
     if (self) {

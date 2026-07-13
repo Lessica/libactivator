@@ -81,6 +81,18 @@
     ];
 }
 
++ (NSArray<Class> *)builtInListenerClasses {
+    return @[
+        LATNothingListener.class,
+        LATURLActionListener.class,
+        LATHardwareActionListener.class,
+        LATSystemActionListener.class,
+        LATComposeActionListener.class,
+        LATCameraActionListener.class,
+        LATTelephonyActionListener.class,
+    ];
+}
+
 - (instancetype)initWithActivator:(LAActivator *)activator {
     NSParameterAssert(activator);
 
@@ -228,91 +240,43 @@
     return [self.activator la_hasRealHomeButton];
 }
 
-- (NSArray<NSDictionary<NSString *, id> *> *)builtInListenerFactoryConfigurations {
-    return @[
-        @{
-            @"RegistrantClass" : LATURLActionListener.class,
-            @"MissingMetadataReason" : @"URL metadata is missing",
-        },
-        @{
-            @"RegistrantClass" : LATHardwareActionListener.class,
-            @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
-        },
-        @{
-            @"RegistrantClass" : LATSystemActionListener.class,
-            @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
-        },
-        @{
-            @"RegistrantClass" : LATComposeActionListener.class,
-            @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
-        },
-        @{
-            @"RegistrantClass" : LATCameraActionListener.class,
-            @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
-        },
-        @{
-            @"RegistrantClass" : LATTelephonyActionListener.class,
-            @"MissingMetadataReason" : @"selector metadata is missing or mismatched",
-        },
-    ];
-}
-
-- (id<LAListener>)createListenerForRegistrantClass:(Class<LATBuiltInListenerRegistrant>)registrantClass {
-    if (registrantClass == LATSystemActionListener.class) {
-        return [[LATSystemActionListener alloc] initWithLauncher:self.applicationLauncher registry:self];
-    }
-    if (registrantClass == LATHardwareActionListener.class) {
-        id<LATNowPlayingProviding> nowPlayingProvider =
-            (id<LATNowPlayingProviding>)[self eventSourcesConformingToProtocol:@protocol(LATNowPlayingProviding)]
-                .firstObject;
-        return [[LATHardwareActionListener alloc] initWithNowPlayingProvider:nowPlayingProvider];
-    }
-    if (registrantClass == LATCameraActionListener.class) {
-        return [[LATCameraActionListener alloc] initWithLauncher:self.applicationLauncher registry:self];
-    }
-    return [[(Class)registrantClass alloc] init];
-}
-
-- (void)registerListener:(id<LAListener>)listener
-          registrantClass:(Class<LATBuiltInListenerRegistrant>)registrantClass
-                activator:(LAActivator *)activator
-    missingMetadataReason:(NSString *)missingMetadataReason {
-    for (NSString *listenerName in [registrantClass supportedListenerNames]) {
-        if ([registrantClass listenerNameHasRequiredMetadata:listenerName activator:activator]) {
-            [activator registerListener:listener forName:listenerName];
-        } else {
-            HBLogWarn(@"Skipping %@ %@ because %@", NSStringFromClass(registrantClass), listenerName,
-                      missingMetadataReason);
-        }
-    }
-}
-
 - (void)registerBuiltInListenersWithActivator:(LAActivator *)activator {
-    LATNothingListener *nothingListener = [[LATNothingListener alloc] init];
-    [self.registeredListeners addObject:nothingListener];
-    [activator registerListener:nothingListener forName:@"libactivator.system.nothing"];
+    LATBuiltInListenerContext *context =
+        [[LATBuiltInListenerContext alloc] initWithApplicationLauncher:self.applicationLauncher
+                                                    runtimeStateSource:self.runtimeStateSource
+                                           springBoardInstanceProvider:self
+                                                          eventSources:self.eventSourceRegistry.eventSources];
 
-    for (NSDictionary<NSString *, id> *configuration in [self builtInListenerFactoryConfigurations]) {
-        Class<LATBuiltInListenerRegistrant> registrantClass = configuration[@"RegistrantClass"];
-        NSString *missingMetadataReason = configuration[@"MissingMetadataReason"];
-        if (!registrantClass || missingMetadataReason.length == 0) {
+    for (Class<LATBuiltInListenerRegistrant> listenerClass in self.class.builtInListenerClasses) {
+        NSMutableArray<NSString *> *listenerNames = [[NSMutableArray alloc] init];
+        for (NSString *listenerName in [listenerClass supportedListenerNames]) {
+            if ([listenerClass listenerNameHasRequiredMetadata:listenerName activator:activator]) {
+                [listenerNames addObject:listenerName];
+            } else {
+                HBLogWarn(@"Skipping %@ %@ because required metadata is missing or mismatched",
+                          NSStringFromClass(listenerClass), listenerName);
+            }
+        }
+        if (listenerNames.count == 0) {
             continue;
         }
 
-        id<LAListener> listener = [self createListenerForRegistrantClass:registrantClass];
+        id<LATBuiltInListenerRegistrant> listener =
+            [[(Class)listenerClass alloc] initWithBuiltInListenerContext:context];
         if (!listener) {
+            HBLogError(@"Unable to create built-in listener class %@", NSStringFromClass(listenerClass));
             continue;
         }
-
         [self.registeredListeners addObject:listener];
-        [self registerListener:listener
-                  registrantClass:registrantClass
-                        activator:activator
-            missingMetadataReason:missingMetadataReason];
+        for (NSString *listenerName in listenerNames) {
+            [activator registerListener:listener forName:listenerName];
+        }
     }
 
     LATApplicationActionListener *applicationListener =
-        [[LATApplicationActionListener alloc] initWithLauncher:self.applicationLauncher registry:self];
+        [[LATApplicationActionListener alloc] initWithLauncher:self.applicationLauncher
+                                            runtimeStateSource:self.runtimeStateSource
+                                   springBoardInstanceProvider:self];
     [self.registeredListeners addObject:applicationListener];
 
     LATApplicationCatalog *applicationCatalog = [[LATApplicationCatalog alloc] init];

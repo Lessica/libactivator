@@ -59,7 +59,11 @@
             caseName:@"phone-url-action-not-owned-by-telephony-listener"
               reason:@"Phone tab URL action remained in LATTelephonyActionListener"];
 
-    id<LATestTelephonyActionListener> telephonyAction = [[(Class)telephonyActionClass alloc] init];
+    id<LATestTelephonyActionListener> telephonyAction =
+        (id<LATestTelephonyActionListener>)[activator listenerForName:@"libactivator.phone.answer-call"];
+    [recorder expect:[telephonyAction isKindOfClass:(Class)telephonyActionClass]
+            caseName:@"telephony-action-production-instance-available"
+              reason:@"The registered telephony action listener does not use LATTelephonyActionListener"];
     for (NSString *listenerName in expectedSelectors) {
         [recorder expect:[telephonyAction shouldHandleListenerName:listenerName activator:activator]
                 caseName:[NSString stringWithFormat:@"telephony-action-valid-metadata-handled-%@", listenerName]

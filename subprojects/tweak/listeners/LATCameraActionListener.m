@@ -9,7 +9,6 @@
 #import "LATCameraActionListener.h"
 
 #import "LATApplicationLauncher.h"
-#import "LATBuiltInRegistry.h"
 #import "LATHIDEventSender.h"
 #import "LATLockScreenCameraLauncher.h"
 #import "LATRuntimeStateSource.h"
@@ -43,7 +42,7 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
 @property(nonatomic, strong) LATApplicationLauncher *launcher;
 @property(nonatomic, strong) LATLockScreenCameraLauncher *lockScreenCameraLauncher;
 @property(nonatomic, strong) LATHIDEventSender *hidEventSender;
-@property(nonatomic, weak, nullable) LATBuiltInRegistry *registry;
+@property(nonatomic, weak, nullable) LATRuntimeStateSource *runtimeStateSource;
 
 // Pending shutter state
 @property(nonatomic, assign) BOOL pendingShutter;
@@ -60,14 +59,25 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
 
 #pragma mark - Lifecycle
 
-- (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher registry:(LATBuiltInRegistry *)registry {
+- (instancetype)initWithBuiltInListenerContext:(LATBuiltInListenerContext *)context {
+    return [self initWithLauncher:context.applicationLauncher
+                 runtimeStateSource:context.runtimeStateSource
+        springBoardInstanceProvider:context.springBoardInstanceProvider];
+}
+
+- (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher
+              runtimeStateSource:(LATRuntimeStateSource *)runtimeStateSource
+     springBoardInstanceProvider:(id<LATSpringBoardInstanceProviding>)springBoardInstanceProvider {
     NSParameterAssert(launcher);
+    NSParameterAssert(runtimeStateSource);
 
     self = [super init];
     if (self) {
         _launcher = launcher;
-        _registry = registry;
-        _lockScreenCameraLauncher = [[LATLockScreenCameraLauncher alloc] initWithRegistry:registry];
+        _runtimeStateSource = runtimeStateSource;
+        _lockScreenCameraLauncher =
+            [[LATLockScreenCameraLauncher alloc] initWithRuntimeStateSource:runtimeStateSource
+                                                springBoardInstanceProvider:springBoardInstanceProvider];
         _hidEventSender = [[LATHIDEventSender alloc] init];
         [self startObservingCameraReadyNotification];
         [self startObservingVolumeRegistrationNotification];
@@ -161,7 +171,7 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
         return NO;
     }
 
-    LATRuntimeStateSource *runtimeStateSource = self.registry.runtimeStateSource;
+    LATRuntimeStateSource *runtimeStateSource = self.runtimeStateSource;
     [runtimeStateSource refreshForegroundDisplayIdentifier];
 
     if ([runtimeStateSource.displayIdentifierForCurrentApplication isEqualToString:LATCameraApplicationIdentifier]) {
@@ -181,7 +191,7 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
         return YES;
     }
 
-    return self.registry.runtimeStateSource.isUILocked;
+    return self.runtimeStateSource.isUILocked;
 }
 
 - (void)completePendingShutterIfNeeded {
@@ -194,7 +204,7 @@ static const NSTimeInterval LATLockScreenCameraReadyDelay = 0.6;
         return;
     }
 
-    LATRuntimeStateSource *runtimeStateSource = self.registry.runtimeStateSource;
+    LATRuntimeStateSource *runtimeStateSource = self.runtimeStateSource;
     [runtimeStateSource refreshForegroundDisplayIdentifier];
 
     if ([runtimeStateSource.displayIdentifierForCurrentApplication isEqualToString:LATCameraApplicationIdentifier]) {

@@ -12,7 +12,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATURLActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
+@interface LATURLActionListener : NSObject <LATBuiltInListenerRegistrant>
 @end
 
 NS_ASSUME_NONNULL_END

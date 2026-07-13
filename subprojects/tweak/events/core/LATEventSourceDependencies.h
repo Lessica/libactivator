@@ -11,8 +11,6 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef void (^LATNowPlayingApplicationDisplayIdentifierCompletion)(NSString *_Nullable displayIdentifier);
-
 @protocol LATEventDispatching <NSObject>
 - (void)dispatchEvent:(LAEvent *)event;
 - (void)abortEvent:(LAEvent *)event;
@@ -39,12 +37,6 @@ typedef void (^LATNowPlayingApplicationDisplayIdentifierCompletion)(NSString *_N
 @protocol LATFingerprintGestureCoordinating <NSObject>
 - (void)noteDeviceUnlockedAtTimestamp:(NSTimeInterval)timestamp;
 - (BOOL)consumePendingSinglePressForSlideInAtTimestamp:(NSTimeInterval)timestamp;
-@end
-
-@protocol LATNowPlayingProviding <NSObject>
-- (BOOL)requestNowPlayingApplicationDisplayIdentifierWithCompletion:
-    (LATNowPlayingApplicationDisplayIdentifierCompletion)completion;
-- (BOOL)getKnownNowPlayingApplicationPlaying:(BOOL *)isPlaying;
 @end
 
 NS_ASSUME_NONNULL_END

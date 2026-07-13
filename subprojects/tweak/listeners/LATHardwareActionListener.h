@@ -9,11 +9,11 @@
 #import <Activator/Activator.h>
 
 #import "LATBuiltInListenerRegistrant.h"
-#import "LATEventSourceDependencies.h"
+#import "LATNowPlayingProviding.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATHardwareActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
+@interface LATHardwareActionListener : NSObject <LATBuiltInListenerRegistrant>
 - (instancetype)initWithNowPlayingProvider:(nullable id<LATNowPlayingProviding>)nowPlayingProvider;
 @end
 

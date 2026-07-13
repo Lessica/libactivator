@@ -120,7 +120,10 @@
             caseName:@"system-ringer-event-name-not-registered-as-listener"
               reason:@"Legacy event name was registered as a system listener"];
 
-    id<LAListener> systemAction = [[(Class)systemActionClass alloc] init];
+    id<LAListener> systemAction = [activator listenerForName:@"libactivator.audio.show-volume-bar"];
+    [recorder expect:[systemAction isKindOfClass:(Class)systemActionClass]
+            caseName:@"system-action-production-instance-available"
+              reason:@"The registered system action listener does not use LATSystemActionListener"];
     LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.system"
                                                   mode:LAEventModeSpringBoard];
     [systemAction activator:activator

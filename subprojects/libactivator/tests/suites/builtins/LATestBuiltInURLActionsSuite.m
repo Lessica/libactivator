@@ -100,7 +100,11 @@
             caseName:@"url-action-hardcoded-phone-selector-metadata"
               reason:@"Hardcoded Phone URL action selector metadata did not match the expected selector"];
 
-    id<LATestURLActionListener> urlAction = [[(Class)urlActionClass alloc] init];
+    id<LATestURLActionListener> urlAction =
+        (id<LATestURLActionListener>)[activator listenerForName:@"libactivator.clock.timer"];
+    [recorder expect:[urlAction isKindOfClass:(Class)urlActionClass]
+            caseName:@"url-action-production-instance-available"
+              reason:@"The registered URL action listener does not use LATURLActionListener"];
     NSString *phoneURL = [urlAction urlStringForListenerName:@"libactivator.phone.recents" activator:activator];
     [recorder expect:[phoneURL isEqualToString:@"mobilephone-recents:"]
             caseName:@"url-action-hardcoded-phone-url"

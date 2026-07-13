@@ -9,17 +9,22 @@
 #import <Activator/Activator.h>
 
 #import "LATBuiltInListenerRegistrant.h"
+#import "LATNowPlayingProviding.h"
+#import "LATSpringBoardInstanceProviding.h"
 
 @class LATApplicationLauncher;
-@class LATBuiltInRegistry;
+@class LATRuntimeStateSource;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATSystemActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
+@interface LATSystemActionListener : NSObject <LATBuiltInListenerRegistrant>
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher
-                        registry:(nullable LATBuiltInRegistry *)registry NS_DESIGNATED_INITIALIZER;
+              runtimeStateSource:(LATRuntimeStateSource *)runtimeStateSource
+              nowPlayingProvider:(nullable id<LATNowPlayingProviding>)nowPlayingProvider
+     springBoardInstanceProvider:(nullable id<LATSpringBoardInstanceProviding>)springBoardInstanceProvider
+    NS_DESIGNATED_INITIALIZER;
 
 @end
 

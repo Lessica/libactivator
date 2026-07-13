@@ -36,6 +36,12 @@
 
 @implementation LATHardwareActionListener
 
+- (instancetype)initWithBuiltInListenerContext:(LATBuiltInListenerContext *)context {
+    id<LATNowPlayingProviding> nowPlayingProvider =
+        [context eventSourceConformingToProtocol:@protocol(LATNowPlayingProviding)];
+    return [self initWithNowPlayingProvider:nowPlayingProvider];
+}
+
 - (instancetype)init {
     return [self initWithNowPlayingProvider:nil];
 }

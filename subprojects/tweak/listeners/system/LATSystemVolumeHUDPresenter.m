@@ -8,8 +8,6 @@
 
 #import "system/LATSystemVolumeHUDPresenter.h"
 
-#import "LATBuiltInRegistry.h"
-
 #import <HBLog.h>
 
 @interface SBVolumeControl : NSObject
@@ -18,15 +16,15 @@
 @end
 
 @interface LATSystemVolumeHUDPresenter ()
-@property(nonatomic, weak) LATBuiltInRegistry *registry;
+@property(nonatomic, weak) id<LATSpringBoardInstanceProviding> springBoardInstanceProvider;
 @end
 
 @implementation LATSystemVolumeHUDPresenter
 
-- (instancetype)initWithRegistry:(LATBuiltInRegistry *)registry {
+- (instancetype)initWithSpringBoardInstanceProvider:(id<LATSpringBoardInstanceProviding>)springBoardInstanceProvider {
     self = [super init];
     if (self) {
-        _registry = registry;
+        _springBoardInstanceProvider = springBoardInstanceProvider;
     }
     return self;
 }
@@ -40,7 +38,7 @@
         return presented;
     }
 
-    SBVolumeControl *volumeControl = self.registry.volumeControlInstance;
+    SBVolumeControl *volumeControl = self.springBoardInstanceProvider.volumeControlInstance;
     if (!volumeControl) {
         HBLogError(@"Unable to present volume HUD for system action %@ because SBVolumeControl was not captured",
                    listenerName ?: @"");

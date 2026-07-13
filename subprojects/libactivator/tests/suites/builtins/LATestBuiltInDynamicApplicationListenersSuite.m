@@ -189,7 +189,8 @@
                                  launchProhibited:NO];
 
     id<LATestDynamicApplicationActionListener> listener = [[(Class)listenerClass alloc] initWithLauncher:nil
-                                                                                                registry:nil];
+                                                                                      runtimeStateSource:nil
+                                                                             springBoardInstanceProvider:nil];
     [listener setApplicationDescriptors:@{
         currentDescriptor.identifier : currentDescriptor,
         targetDescriptor.identifier : targetDescriptor,

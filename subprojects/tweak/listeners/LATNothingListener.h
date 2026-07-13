@@ -8,9 +8,11 @@
 
 #import <Activator/Activator.h>
 
+#import "LATBuiltInListenerRegistrant.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATNothingListener : NSObject <LAListener>
+@interface LATNothingListener : NSObject <LATBuiltInListenerRegistrant>
 @end
 
 NS_ASSUME_NONNULL_END

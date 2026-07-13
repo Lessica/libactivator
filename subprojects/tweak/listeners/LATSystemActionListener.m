@@ -9,8 +9,7 @@
 #import "LATSystemActionListener.h"
 
 #import "LATApplicationLauncher.h"
-#import "LATBuiltInRegistry.h"
-#import "LATEventSourceDependencies.h"
+#import "LATRuntimeStateSource.h"
 
 #import "system/LATSystemActionCommand.h"
 #import "system/LATSystemAssistantController.h"
@@ -39,9 +38,6 @@
 
 @interface LATSystemActionListener ()
 
-// Dependencies
-@property(nonatomic, weak, nullable) LATBuiltInRegistry *registry;
-
 // Action executors
 @property(nonatomic, strong) LATSystemHomeScreenController *homeScreenController;
 @property(nonatomic, strong) LATSystemLockScreenController *lockScreenController;
@@ -68,24 +64,36 @@
 
 @implementation LATSystemActionListener
 
-- (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher registry:(LATBuiltInRegistry *)registry {
+- (instancetype)initWithBuiltInListenerContext:(LATBuiltInListenerContext *)context {
+    id<LATNowPlayingProviding> nowPlayingProvider =
+        [context eventSourceConformingToProtocol:@protocol(LATNowPlayingProviding)];
+    return [self initWithLauncher:context.applicationLauncher
+                 runtimeStateSource:context.runtimeStateSource
+                 nowPlayingProvider:nowPlayingProvider
+        springBoardInstanceProvider:context.springBoardInstanceProvider];
+}
+
+- (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher
+              runtimeStateSource:(LATRuntimeStateSource *)runtimeStateSource
+              nowPlayingProvider:(id<LATNowPlayingProviding>)nowPlayingProvider
+     springBoardInstanceProvider:(id<LATSpringBoardInstanceProviding>)springBoardInstanceProvider {
+    NSParameterAssert(launcher);
+    NSParameterAssert(runtimeStateSource);
+
     self = [super init];
     if (self) {
-        _registry = registry;
-        id<LATNowPlayingProviding> nowPlayingProvider =
-            (id<LATNowPlayingProviding>)[_registry eventSourcesConformingToProtocol:@protocol(LATNowPlayingProviding)]
-                .firstObject;
-        _volumeHUDPresenter = [[LATSystemVolumeHUDPresenter alloc] initWithRegistry:_registry];
+        _volumeHUDPresenter =
+            [[LATSystemVolumeHUDPresenter alloc] initWithSpringBoardInstanceProvider:springBoardInstanceProvider];
         _nowPlayingApplicationLauncher =
             [[LATSystemNowPlayingApplicationLauncher alloc] initWithApplicationLauncher:launcher
                                                                      nowPlayingProvider:nowPlayingProvider];
         _ringerStateResetter = [[LATSystemRingerStateResetter alloc] init];
-        _ringerMuteController = [[LATSystemRingerMuteController alloc] initWithRegistry:_registry];
+        _ringerMuteController =
+            [[LATSystemRingerMuteController alloc] initWithSpringBoardInstanceProvider:springBoardInstanceProvider];
         _homeScreenController = [[LATSystemHomeScreenController alloc] init];
-        _lockScreenController =
-            [[LATSystemLockScreenController alloc] initWithRuntimeStateSource:_registry.runtimeStateSource];
+        _lockScreenController = [[LATSystemLockScreenController alloc] initWithRuntimeStateSource:runtimeStateSource];
         _assistantController = [[LATSystemAssistantController alloc] init];
-        _centerController = [[LATSystemCenterController alloc] initWithRuntimeStateSource:_registry.runtimeStateSource];
+        _centerController = [[LATSystemCenterController alloc] initWithRuntimeStateSource:runtimeStateSource];
         _dictationController = [[LATSystemDictationController alloc] init];
         _hapticFeedbackController = [[LATSystemHapticFeedbackController alloc] init];
         _localBackController = [[LATSystemLocalBackController alloc] init];
@@ -94,12 +102,11 @@
         _powerMenuController = [[LATSystemPowerMenuController alloc] init];
         _previousApplicationController =
             [[LATSystemPreviousApplicationController alloc] initWithApplicationLauncher:launcher
-                                                                     runtimeStateSource:_registry.runtimeStateSource];
+                                                                     runtimeStateSource:runtimeStateSource];
         _reachabilityController = [[LATSystemReachabilityController alloc] init];
         _screenshotController = [[LATSystemScreenshotController alloc] init];
-        _switcherController =
-            [[LATSystemSwitcherController alloc] initWithNowPlayingProvider:nowPlayingProvider
-                                                         runtimeStateSource:_registry.runtimeStateSource];
+        _switcherController = [[LATSystemSwitcherController alloc] initWithNowPlayingProvider:nowPlayingProvider
+                                                                           runtimeStateSource:runtimeStateSource];
         _voiceControlController = [[LATSystemVoiceControlController alloc] init];
         _walletController = [[LATSystemWalletController alloc] init];
     }

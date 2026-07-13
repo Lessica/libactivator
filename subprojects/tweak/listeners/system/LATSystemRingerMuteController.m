@@ -8,7 +8,6 @@
 
 #import "system/LATSystemRingerMuteController.h"
 
-#import "LATBuiltInRegistry.h"
 #import "system/LATSystemActionCommand.h"
 
 #import <HBLog.h>
@@ -26,15 +25,15 @@
 @end
 
 @interface LATSystemRingerMuteController ()
-@property(nonatomic, weak) LATBuiltInRegistry *registry;
+@property(nonatomic, weak) id<LATSpringBoardInstanceProviding> springBoardInstanceProvider;
 @end
 
 @implementation LATSystemRingerMuteController
 
-- (instancetype)initWithRegistry:(LATBuiltInRegistry *)registry {
+- (instancetype)initWithSpringBoardInstanceProvider:(id<LATSpringBoardInstanceProviding>)springBoardInstanceProvider {
     self = [super init];
     if (self) {
-        _registry = registry;
+        _springBoardInstanceProvider = springBoardInstanceProvider;
     }
     return self;
 }
@@ -52,7 +51,7 @@
         return YES;
     }
 
-    SBRingerControl *ringerControl = self.registry.ringerControlInstance;
+    SBRingerControl *ringerControl = self.springBoardInstanceProvider.ringerControlInstance;
     if (!ringerControl) {
         HBLogError(@"Unable to apply ringer system action %@ because SBRingerControl was not captured",
                    command.listenerName ?: @"");

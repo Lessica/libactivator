@@ -47,7 +47,11 @@
                   reason:@"Compose action selector mapping did not match bundled metadata"];
     }
 
-    id<LATestComposeActionListener> composeAction = [[(Class)composeActionClass alloc] init];
+    id<LATestComposeActionListener> composeAction =
+        (id<LATestComposeActionListener>)[activator listenerForName:@"libactivator.mail.compose-message"];
+    [recorder expect:[composeAction isKindOfClass:(Class)composeActionClass]
+            caseName:@"compose-action-production-instance-available"
+              reason:@"The registered compose action listener does not use LATComposeActionListener"];
     for (NSString *listenerName in expectedSelectors) {
         [recorder expect:[composeAction shouldHandleListenerName:listenerName activator:activator]
                 caseName:[NSString stringWithFormat:@"compose-action-valid-metadata-handled-%@", listenerName]

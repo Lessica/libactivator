@@ -73,7 +73,9 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 @protocol LATestDynamicApplicationActionListener <LAListener>
-- (instancetype)initWithLauncher:(nullable id)launcher registry:(nullable id)registry;
+- (instancetype)initWithLauncher:(nullable id)launcher
+              runtimeStateSource:(nullable id)runtimeStateSource
+     springBoardInstanceProvider:(nullable id)springBoardInstanceProvider;
 - (void)setApplicationDescriptors:
     (NSDictionary<NSString *, id<LATestDynamicApplicationDescriptor>> *)descriptorsByIdentifier;
 - (BOOL)shouldHandleApplicationDescriptor:(nullable id<LATestDynamicApplicationDescriptor>)descriptor

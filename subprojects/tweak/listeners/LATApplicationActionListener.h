@@ -8,9 +8,11 @@
 
 #import <Activator/Activator.h>
 
+#import "LATSpringBoardInstanceProviding.h"
+
 @class LATApplicationDescriptor;
 @class LATApplicationLauncher;
-@class LATBuiltInRegistry;
+@class LATRuntimeStateSource;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -18,7 +20,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher
-                        registry:(nullable LATBuiltInRegistry *)registry NS_DESIGNATED_INITIALIZER;
+              runtimeStateSource:(nullable LATRuntimeStateSource *)runtimeStateSource
+     springBoardInstanceProvider:(nullable id<LATSpringBoardInstanceProviding>)springBoardInstanceProvider
+    NS_DESIGNATED_INITIALIZER;
 
 - (void)setApplicationDescriptors:(NSDictionary<NSString *, LATApplicationDescriptor *> *)descriptorsByIdentifier;
 - (nullable LATApplicationDescriptor *)applicationDescriptorForIdentifier:(NSString *)identifier;

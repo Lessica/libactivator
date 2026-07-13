@@ -45,7 +45,11 @@
                   reason:@"Camera action selector mapping did not match bundled metadata"];
     }
 
-    id<LATestCameraActionListener> cameraAction = [[(Class)cameraActionClass alloc] init];
+    id<LATestCameraActionListener> cameraAction =
+        (id<LATestCameraActionListener>)[activator listenerForName:@"libactivator.camera.invoke-shutter"];
+    [recorder expect:[cameraAction isKindOfClass:(Class)cameraActionClass]
+            caseName:@"camera-action-production-instance-available"
+              reason:@"The registered camera action listener does not use LATCameraActionListener"];
     [recorder expect:[cameraAction listenerNameMatchesRequiredMetadata:@"libactivator.camera.invoke-shutter"
                                                              activator:activator]
             caseName:@"camera-action-valid-metadata-gated"

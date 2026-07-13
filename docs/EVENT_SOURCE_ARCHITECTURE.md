@@ -74,7 +74,7 @@ Hook glue 与 listener 通过 `LATBuiltInRegistry -eventSourcesConformingToProto
 
 需要同 family dynamic definition provider 的 source 可以实现 optional `eventDefinitionProviderForContext:`。中央循环仍不认识 Network 等具体 family：它只检查统一 hook，注册 provider，并在 source 同时采用 `LATEventSourceDefinitionConsumer` 时建立 `LATEventSourceDefinitionBinding`。Definition registry 不认识具体 source，provider 也不持有 source；binding 继续在既有 definition mutation 事务内应用，并保留预检、重入保护、postflight 复核和完整回滚语义。
 
-代码目录按职责组织：`events/core` 保存统一构造协议、dispatch 与 registry 基础设施；`events/definitions` 保存 dynamic definition provider、registry、binding 和具体 provider；`events/sources` 保存 acquisition adapters；`events/recognizers` 保存可复用识别器与分类器。目录不按 source 数量镜像出额外的 modules 层。
+代码目录按职责组织：`events/core` 保存统一构造协议、只服务 acquisition 的依赖 port、dispatch 与 registry 基础设施；`events/definitions` 保存 dynamic definition provider、registry、binding 和具体 provider；`events/sources` 保存 acquisition adapters；`events/recognizers` 保存可复用识别器与分类器。Event Source 与 Listener 共同使用的能力协议按领域放在 `runtime`，例如由 Media source 实现、由 Listener 消费的 `LATNowPlayingProviding`；目录不按 source 数量镜像出额外的 modules 层，也不增加泛化的 shared/common 层。
 
 启动顺序固定为：初始化 `LAActivator` 和 bundled definitions；创建共享 registries、dispatch adapter 与 runtime state；按中央清单顺序统一构造并注册 sources/providers/bindings；安装 CaptainHook；SpringBoard 完成启动后启动 runtime state 和 source registry；最后开放 IPC server。Definition provider 没有 acquisition `start`。内置 class 清单在本次进程生命周期内不变化，而 provider definition/configuration 与 source producer catalog 可以在运行期原子变化。
 

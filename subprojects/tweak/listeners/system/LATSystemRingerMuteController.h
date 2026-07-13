@@ -8,7 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
-@class LATBuiltInRegistry;
+#import "LATSpringBoardInstanceProviding.h"
+
 @class LATSystemActionCommand;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -16,7 +17,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface LATSystemRingerMuteController : NSObject
 
 - (instancetype)init NS_UNAVAILABLE;
-- (instancetype)initWithRegistry:(nullable LATBuiltInRegistry *)registry NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithSpringBoardInstanceProvider:
+    (nullable id<LATSpringBoardInstanceProviding>)springBoardInstanceProvider NS_DESIGNATED_INITIALIZER;
 
 - (BOOL)applyCommand:(LATSystemActionCommand *)command;
 

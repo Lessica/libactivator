@@ -11,7 +11,6 @@
 #import "LAQueueAssertions.h"
 #import "LATApplicationDescriptor.h"
 #import "LATApplicationLauncher.h"
-#import "LATBuiltInRegistry.h"
 #import "LATLockScreenCameraLauncher.h"
 #import "LATRuntimeStateSource.h"
 
@@ -22,7 +21,7 @@
 // Dependencies
 @property(nonatomic, strong) LATApplicationLauncher *launcher;
 @property(nonatomic, strong) LATLockScreenCameraLauncher *lockScreenCameraLauncher;
-@property(nonatomic, weak, nullable) LATBuiltInRegistry *registry;
+@property(nonatomic, weak, nullable) LATRuntimeStateSource *runtimeStateSource;
 
 @property(nonatomic, copy) NSDictionary<NSString *, LATApplicationDescriptor *> *descriptorsByIdentifier;
 
@@ -30,12 +29,16 @@
 
 @implementation LATApplicationActionListener
 
-- (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher registry:(LATBuiltInRegistry *)registry {
+- (instancetype)initWithLauncher:(LATApplicationLauncher *)launcher
+              runtimeStateSource:(LATRuntimeStateSource *)runtimeStateSource
+     springBoardInstanceProvider:(id<LATSpringBoardInstanceProviding>)springBoardInstanceProvider {
     self = [super init];
     if (self) {
         _launcher = launcher;
-        _registry = registry;
-        _lockScreenCameraLauncher = [[LATLockScreenCameraLauncher alloc] initWithRegistry:_registry];
+        _runtimeStateSource = runtimeStateSource;
+        _lockScreenCameraLauncher =
+            [[LATLockScreenCameraLauncher alloc] initWithRuntimeStateSource:runtimeStateSource
+                                                springBoardInstanceProvider:springBoardInstanceProvider];
         _descriptorsByIdentifier = @{};
     }
     return self;
@@ -114,11 +117,11 @@
         return YES;
     }
 
-    return self.registry.runtimeStateSource.isUILocked;
+    return self.runtimeStateSource.isUILocked;
 }
 
 - (NSString *)currentApplicationIdentifierWithActivator:(LAActivator *)activator {
-    LATRuntimeStateSource *runtimeStateSource = self.registry.runtimeStateSource;
+    LATRuntimeStateSource *runtimeStateSource = self.runtimeStateSource;
     if (runtimeStateSource) {
         [runtimeStateSource refreshForegroundDisplayIdentifier];
         return [runtimeStateSource displayIdentifierForCurrentApplication];

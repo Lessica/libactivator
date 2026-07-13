@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import "LATEventSourceDependencies.h"
+#import "LATNowPlayingProviding.h"
 
 @class LATApplicationLauncher;
 

@@ -26,7 +26,7 @@
 | --- | --- | --- |
 | event metadata | `layout/Library/Activator/Events/bundled.plist` 和 `LAResourceManager` | 只提供标题、分组、兼容模式、capability 等静态信息；不能替代 event source。 |
 | listener/action metadata | `layout/Library/Activator/Listeners/bundled.plist`、glyph 资源和 `LAResourceManager` | 只提供展示、兼容规则、图标和 selector/url metadata；不能替代 listener object。 |
-| static built-in actions | `ActivatorTweak.dylib` 中的 built-in listener registry | 由 SpringBoard 注册真实 `LAListener` object。 |
+| static built-in actions | `ActivatorTweak.dylib` 中的中央 listener class 清单与 built-in listener registry | `LATBuiltInRegistry` 按唯一有序清单先执行类侧 metadata gate，再通过统一 context initializer 构造并注册真实 `LAListener` object；诊断字符串不参与注册策略。 |
 | dynamic event definitions | `ActivatorTweak.dylib` 中的 `LATEventDefinitionRegistry` 与 family providers | 显式管理 provider catalog、concrete event ownership、generation、property-list-safe generic create/config/remove 和持久化；Network 是首个接入 family。 |
 | event acquisition | `ActivatorTweak.dylib` 中的中央 Event Source class 清单、`LATEventSourceRegistry` 与 SpringBoard acquisition adapters | `LATBuiltInRegistry` 按唯一有序清单用统一 context initializer 构造 source，并通用处理可选 provider/binding；registry 只管理 source lifecycle、producer index、多 producer 和 assignment-aware interest。 |
 | dynamic application listeners | 独立 application listener family provider | 动态读取 SpringBoard app model，处理 app launch/action listener、glyph、显示名和特殊系统 App 行为。 |
@@ -94,6 +94,7 @@ CLI 是 production compatibility tool，不是测试入口。
 ## 验收要求
 
 - 新增 dynamic listener family 必须有独立 provider / registry path，不把动态 App listener 塞进 static built-in action listener。
+- 新增 static built-in listener family 必须采用 `LATBuiltInListenerRegistrant`，加入 `LATBuiltInRegistry +builtInListenerClasses` 的正确位置，并通过统一 nullable `initWithBuiltInListenerContext:` 构造。Initializer 必须从 context 提取实际依赖并转发 designated initializer，不保存 context 或取得完整 registry；动态 SpringBoard owner 只能通过弱 `LATSpringBoardInstanceProviding` 查询。Registry 不得增加逐类型 initializer 分支、factory configuration dictionary 或独立注册特例；每个 supported name 必须有 bundled metadata 正向 gate、缺失 metadata 负向 gate 和唯一 owner 测试。
 - 新增 event source family 必须有独立 acquisition adapter，不把采集 hook 混入现有 action listener；source 在主实现中采用 `LATEventSource`、实现统一 nullable `initWithEventSourceContext:`，从 context 提取窄协议依赖，不读取 `LASharedActivator`，也不增加平行 factory/module 类型。
 - 新 family 的 concrete class 必须加入 `LATBuiltInRegistry +builtInEventSourceClasses` 的正确位置；这是唯一允许集中 import/list concrete source 的位置。Registry 的通用构造循环不得增加逐类型 property、initializer 分支或 capability 特判；hook 按 source 采用的 typed ingress protocol 接线。
 - 中央清单顺序表达构造顺序和可选前置 source 依赖，initializer 返回 `nil` 表达 capability 不满足。需要 dynamic definition/acquisition 同步时由 source 的 optional provider hook 和 registry-owned binding 接线，并保留 definition registry 的完整原子事务与回滚保证。

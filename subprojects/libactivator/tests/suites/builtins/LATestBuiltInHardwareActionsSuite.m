@@ -60,7 +60,10 @@
                   reason:@"Hardware action selector mapping did not match bundled metadata"];
     }
 
-    id<LAListener> hardwareAction = [[(Class)hardwareActionClass alloc] init];
+    id<LAListener> hardwareAction = [activator listenerForName:@"libactivator.ipod.toggle-playback"];
+    [recorder expect:[hardwareAction isKindOfClass:(Class)hardwareActionClass]
+            caseName:@"hardware-action-production-instance-available"
+              reason:@"The registered hardware action listener does not use LATHardwareActionListener"];
     LAEvent *unsupportedEvent = [LAEvent eventWithName:@"libactivator.test.built-in.hardware"
                                                   mode:LAEventModeSpringBoard];
     [hardwareAction activator:activator

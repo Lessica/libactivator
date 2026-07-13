@@ -8,7 +8,6 @@
 
 #import "LATLockScreenCameraLauncher.h"
 
-#import "LATBuiltInRegistry.h"
 #import "LATRuntimeStateSource.h"
 
 #import <HBLog.h>
@@ -22,15 +21,18 @@
 @end
 
 @interface LATLockScreenCameraLauncher ()
-@property(nonatomic, weak) LATBuiltInRegistry *registry;
+@property(nonatomic, weak, nullable) LATRuntimeStateSource *runtimeStateSource;
+@property(nonatomic, weak, nullable) id<LATSpringBoardInstanceProviding> springBoardInstanceProvider;
 @end
 
 @implementation LATLockScreenCameraLauncher
 
-- (instancetype)initWithRegistry:(LATBuiltInRegistry *)registry {
+- (instancetype)initWithRuntimeStateSource:(LATRuntimeStateSource *)runtimeStateSource
+               springBoardInstanceProvider:(id<LATSpringBoardInstanceProviding>)springBoardInstanceProvider {
     self = [super init];
     if (self) {
-        _registry = registry;
+        _runtimeStateSource = runtimeStateSource;
+        _springBoardInstanceProvider = springBoardInstanceProvider;
     }
     return self;
 }
@@ -40,7 +42,8 @@
 }
 
 - (BOOL)enqueueOpenLockScreenCameraWithCompletion:(dispatch_block_t)completion {
-    CSCoverSheetViewController *coverSheetViewController = self.registry.coverSheetViewControllerInstance;
+    CSCoverSheetViewController *coverSheetViewController =
+        self.springBoardInstanceProvider.coverSheetViewControllerInstance;
     if (!coverSheetViewController) {
         HBLogWarn(@"Unable to open lock screen camera because CoverSheet controller is unavailable");
         return NO;
@@ -53,7 +56,7 @@
     }
 
     __weak CSCoverSheetViewController *weakCoverSheetViewController = coverSheetViewController;
-    LATRuntimeStateSource *runtimeStateSource = self.registry.runtimeStateSource;
+    LATRuntimeStateSource *runtimeStateSource = self.runtimeStateSource;
     BOOL screenIsOn = runtimeStateSource ? runtimeStateSource.screenIsOn : YES;
     dispatch_async(dispatch_get_main_queue(), ^{
         CSCoverSheetViewController *strongCoverSheetViewController = weakCoverSheetViewController;
@@ -81,7 +84,8 @@
 }
 
 - (BOOL)isLockScreenCameraVisible {
-    CSCoverSheetViewController *coverSheetViewController = self.registry.coverSheetViewControllerInstance;
+    CSCoverSheetViewController *coverSheetViewController =
+        self.springBoardInstanceProvider.coverSheetViewControllerInstance;
     if (!coverSheetViewController) {
         return NO;
     }
