@@ -10,6 +10,8 @@
 
 #import "LAActivator+Private.h"
 #import "LATEventDefinitionRegistry.h"
+#import "LATEventDispatcher.h"
+#import "LATEventSourceDefinitionBinding.h"
 #import "LATEventSourceRegistry.h"
 #import "LATNetworkEventDataSource.h"
 #import "LATNetworkEventSource.h"
@@ -91,6 +93,21 @@
 @end
 
 @implementation LATestEventDefinitionRegistrySuite
+
++ (LATNetworkEventSource *)networkEventSourceWithClass:(Class)sourceClass activator:(LAActivator *)activator {
+    Class dispatcherClass = NSClassFromString(@"LATEventDispatcher");
+    id<LATEventDispatching, LATEventModeProviding, LATEventAssignmentQuerying, LATEventDefinitionQuerying>
+        eventDispatcher = [[dispatcherClass alloc] initWithActivator:activator];
+    return [[sourceClass alloc] initWithEventDispatcher:eventDispatcher
+                                           modeProvider:eventDispatcher
+                                     definitionQuerying:eventDispatcher];
+}
+
++ (LATEventSourceDefinitionBinding *)definitionBindingWithProvider:(id<LATEventDefinitionProvider>)provider
+                                                            source:(LATNetworkEventSource *)source {
+    Class bindingClass = NSClassFromString(@"LATEventSourceDefinitionBinding");
+    return [[bindingClass alloc] initWithProvider:provider eventSource:source];
+}
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"EventDefinitionRegistry"];
@@ -442,9 +459,10 @@
     id previousPreference = [activator _getObjectForPreference:networkPreferenceKey];
     [activator _setObject:@[] forPreference:networkPreferenceKey];
 
-    __block LATNetworkEventSource *source = [[sourceClass alloc] init];
+    __block LATNetworkEventSource *source = [self networkEventSourceWithClass:sourceClass activator:activator];
     __block LATEventSourceRegistry *sourceRegistry = [[sourceRegistryClass alloc] initWithActivator:activator];
     __block LATNetworkEventDataSource *provider = [[providerClass alloc] initWithActivator:activator];
+    __block LATEventSourceDefinitionBinding *binding = [self definitionBindingWithProvider:provider source:source];
     LATEventDefinitionRegistry *definitionRegistry = [[definitionRegistryClass alloc] initWithActivator:activator];
     LATestEventDefinitionRegistryDelegate *delegate =
         [[LATestEventDefinitionRegistryDelegate alloc] initWithActivator:activator];
@@ -454,15 +472,14 @@
         if (appliedProvider != provider) {
             return NO;
         }
-        NSSet<NSString *> *previousConfiguredEventNames = source.configuredEventNames;
-        [source updateConfiguredEventNames:eventNames];
-        if (![sourceRegistry reloadEventNamesForEventSource:source]) {
-            [source updateConfiguredEventNames:previousConfiguredEventNames];
-            [sourceRegistry reloadEventNamesForEventSource:source];
+        BOOL removingConfiguredEvent = ![eventNames containsObject:configuredEventName] &&
+                                       [source.configuredEventNames containsObject:configuredEventName];
+        if (![binding applyEventNames:eventNames
+                   previousEventNames:previousEventNames
+                  eventSourceRegistry:sourceRegistry]) {
             return NO;
         }
-        if (![eventNames containsObject:configuredEventName] &&
-            [previousConfiguredEventNames containsObject:configuredEventName]) {
+        if (removingConfiguredEvent) {
             mappingRemovedBeforeDefinition = [sourceRegistry eventSourcesForEventName:configuredEventName].count == 0 &&
                                              [activator hasEventWithName:configuredEventName];
         }
@@ -519,9 +536,10 @@
     [definitionRegistry invalidate];
     [sourceRegistry invalidate];
 
-    source = [[sourceClass alloc] init];
+    source = [self networkEventSourceWithClass:sourceClass activator:activator];
     sourceRegistry = [[sourceRegistryClass alloc] initWithActivator:activator];
     provider = [[providerClass alloc] initWithActivator:activator];
+    binding = [self definitionBindingWithProvider:provider source:source];
     definitionRegistry = [[definitionRegistryClass alloc] initWithActivator:activator];
     delegate = [[LATestEventDefinitionRegistryDelegate alloc] initWithActivator:activator];
     delegate.applyHandler = ^BOOL(id<LATEventDefinitionProvider> appliedProvider, NSSet<NSString *> *eventNames,
@@ -529,15 +547,14 @@
         if (appliedProvider != provider) {
             return NO;
         }
-        NSSet<NSString *> *previousConfiguredEventNames = source.configuredEventNames;
-        [source updateConfiguredEventNames:eventNames];
-        if (![sourceRegistry reloadEventNamesForEventSource:source]) {
-            [source updateConfiguredEventNames:previousConfiguredEventNames];
-            [sourceRegistry reloadEventNamesForEventSource:source];
+        BOOL removingConfiguredEvent = ![eventNames containsObject:configuredEventName] &&
+                                       [source.configuredEventNames containsObject:configuredEventName];
+        if (![binding applyEventNames:eventNames
+                   previousEventNames:previousEventNames
+                  eventSourceRegistry:sourceRegistry]) {
             return NO;
         }
-        if (![eventNames containsObject:configuredEventName] &&
-            [previousConfiguredEventNames containsObject:configuredEventName]) {
+        if (removingConfiguredEvent) {
             mappingRemovedBeforeDefinition = [sourceRegistry eventSourcesForEventName:configuredEventName].count == 0 &&
                                              [activator hasEventWithName:configuredEventName];
         }

@@ -54,8 +54,7 @@
                   reason:@"Compose action did not consume a listener name with matching selector metadata"];
     }
 
-    [recorder expect:![composeAction shouldHandleListenerName:@"libactivator.mail.compose-message"
-                                                    activator:nil]
+    [recorder expect:![composeAction shouldHandleListenerName:@"libactivator.mail.compose-message" activator:nil]
             caseName:@"compose-action-missing-metadata-unhandled"
               reason:@"Compose action consumed a listener name without matching selector metadata"];
 

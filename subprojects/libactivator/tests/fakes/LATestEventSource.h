@@ -15,7 +15,6 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, copy) NSString *eventSourceIdentifier;
 @property(nonatomic, copy) NSSet<NSString *> *eventNames;
 @property(nonatomic, assign) LATEventSourceInterestPolicy interestPolicy;
-@property(nonatomic, weak, nullable) LATEventSourceRegistry *eventSourceRegistry;
 @property(nonatomic, assign) NSUInteger startCount;
 @property(nonatomic, assign) NSUInteger invalidateCount;
 @property(nonatomic, assign) NSUInteger interestChangeCount;

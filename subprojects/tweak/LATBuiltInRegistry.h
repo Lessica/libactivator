@@ -11,20 +11,9 @@
 @class SBRingerControl;
 @class SBVolumeControl;
 @class CSCoverSheetViewController;
-@class LATButtonEventSource;
-@class LATEdgeGestureEventSource;
 @class LATEventDefinitionRegistry;
 @class LATEventSourceRegistry;
-@class LATFingerprintSensorEventSource;
-@class LATForceTouchEventSource;
-@class LATLockStateEventSource;
-@class LATMediaEventSource;
-@class LATMultiTouchEventSource;
-@class LATNetworkEventSource;
-@class LATPowerStateEventSource;
 @class LATRuntimeStateSource;
-@class LATSpringBoardIconGestureEventSource;
-@class LATStatusBarEventSource;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -37,24 +26,15 @@ NS_ASSUME_NONNULL_BEGIN
 
 // Event sources
 @property(nonatomic, strong, readonly) LATRuntimeStateSource *runtimeStateSource;
-@property(nonatomic, strong, readonly) LATButtonEventSource *buttonEventSource;
-@property(nonatomic, strong, readonly) LATEdgeGestureEventSource *edgeGestureEventSource;
 @property(nonatomic, strong, readonly) LATEventDefinitionRegistry *eventDefinitionRegistry;
 @property(nonatomic, strong, readonly) LATEventSourceRegistry *eventSourceRegistry;
-@property(nonatomic, strong, readonly, nullable) LATFingerprintSensorEventSource *fingerprintSensorEventSource;
-@property(nonatomic, strong, readonly, nullable) LATForceTouchEventSource *forceTouchEventSource;
-@property(nonatomic, strong, readonly) LATLockStateEventSource *lockStateEventSource;
-@property(nonatomic, strong, readonly) LATMediaEventSource *mediaEventSource;
-@property(nonatomic, strong, readonly) LATMultiTouchEventSource *multiTouchEventSource;
-@property(nonatomic, strong, readonly) LATNetworkEventSource *networkEventSource;
-@property(nonatomic, strong, readonly) LATPowerStateEventSource *powerStateEventSource;
-@property(nonatomic, strong, readonly) LATSpringBoardIconGestureEventSource *springBoardIconGestureEventSource;
-@property(nonatomic, strong, readonly) LATStatusBarEventSource *statusBarEventSource;
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithActivator:(LAActivator *)activator NS_DESIGNATED_INITIALIZER;
 
 - (void)startEventSources;
+- (NSArray<id> *)eventSourcesConformingToProtocol:(Protocol *)protocol;
+- (nullable id)eventSourceServiceForProtocol:(Protocol *)protocol;
 - (void)noteApplicationCatalogMayHaveChangedWithReason:(NSString *)reason;
 - (BOOL)legacyHomeButtonTouchStreamHookShouldBeInstalled;
 

@@ -9,12 +9,14 @@
 #import <Activator/Activator.h>
 #import <Foundation/Foundation.h>
 
+#import "LATEventSourceDependencies.h"
+
 @class UIEvent;
 @class LARuntimeContext;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface LATRuntimeStateSource : NSObject
+@interface LATRuntimeStateSource : NSObject <LATRuntimeLockStateUpdating>
 
 #pragma mark - Lifecycle
 

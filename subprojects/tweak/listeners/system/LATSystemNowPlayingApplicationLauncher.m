@@ -9,30 +9,29 @@
 #import "system/LATSystemNowPlayingApplicationLauncher.h"
 
 #import "LATApplicationLauncher.h"
-#import "LATMediaEventSource.h"
 
 #import <HBLog.h>
 
 @interface LATSystemNowPlayingApplicationLauncher ()
 @property(nonatomic, strong) LATApplicationLauncher *applicationLauncher;
-@property(nonatomic, weak) LATMediaEventSource *mediaEventSource;
+@property(nonatomic, weak, nullable) id<LATNowPlayingProviding> nowPlayingProvider;
 @end
 
 @implementation LATSystemNowPlayingApplicationLauncher
 
 - (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher
-                           mediaEventSource:(LATMediaEventSource *)mediaEventSource {
+                         nowPlayingProvider:(id<LATNowPlayingProviding>)nowPlayingProvider {
     self = [super init];
     if (self) {
         _applicationLauncher = applicationLauncher;
-        _mediaEventSource = mediaEventSource;
+        _nowPlayingProvider = nowPlayingProvider;
     }
     return self;
 }
 
 - (BOOL)launchNowPlayingApplicationForListenerName:(NSString *)listenerName {
-    LATMediaEventSource *mediaEventSource = self.mediaEventSource;
-    if (!mediaEventSource) {
+    id<LATNowPlayingProviding> nowPlayingProvider = self.nowPlayingProvider;
+    if (!nowPlayingProvider) {
         HBLogError(@"Unable to launch now-playing application for system action %@ because the media event "
                    @"source is unavailable",
                    listenerName ?: @"");
@@ -40,7 +39,7 @@
     }
 
     NSString *listenerNameToLaunch = [listenerName copy] ?: @"";
-    return [mediaEventSource requestNowPlayingApplicationDisplayIdentifierWithCompletion:^(NSString *identifier) {
+    return [nowPlayingProvider requestNowPlayingApplicationDisplayIdentifierWithCompletion:^(NSString *identifier) {
         if (identifier.length == 0) {
             HBLogWarn(@"MediaRemote returned no now-playing application identity for system action %@",
                       listenerNameToLaunch ?: @"");

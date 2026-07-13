@@ -8,8 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
+#import "LATEventSourceDependencies.h"
+
 @class LATApplicationLauncher;
-@class LATMediaEventSource;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -17,7 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithApplicationLauncher:(LATApplicationLauncher *)applicationLauncher
-                           mediaEventSource:(LATMediaEventSource *_Nullable)mediaEventSource NS_DESIGNATED_INITIALIZER;
+                         nowPlayingProvider:(nullable id<LATNowPlayingProviding>)nowPlayingProvider
+    NS_DESIGNATED_INITIALIZER;
 
 - (BOOL)launchNowPlayingApplicationForListenerName:(NSString *)listenerName;
 

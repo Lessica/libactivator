@@ -1,14 +1,15 @@
 .cache
 .venv
 .venv-*
-__pycache__/
 .claude
 .codex
 .theos
-packages
-compile_commands.json
-references
+crashes/
 logs/
+packages/
+references/
+__pycache__/
+compile_commands.json
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,objective-c,swift,xcode
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,objective-c,swift,xcode

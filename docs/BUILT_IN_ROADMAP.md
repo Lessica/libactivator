@@ -15,7 +15,7 @@
 | 主线 | 状态 | 下一步 |
 | --- | --- | --- |
 | Staged 但未注册的 listener/action | 剩 `watch.haptic.tap` 一项 blocked | 需要确认 Watch haptic 能力与设备差异。 |
-| 未实现 event family | 1.9.13 event 中仍有 22 个未实现 | 按 icon flick、lock screen clock、headset button、motion、HUD tap、gesture bar、scheduled、car/watch/clamshell 分组推进。 |
+| 未实现 event family | 1.9.13 event 中仍有 21 个未实现 | 按 icon flick、lock screen clock、headset button、HUD tap、gesture bar、scheduled、car/watch/clamshell 分组推进。 |
 | Settings UI 与 menu | 尚未进入 runtime 主线 | 实现 `libactivatorsettings.dylib`、assignments/profile/blacklist UI、menu editor 和 menu listener runtime provider。 |
 | Handled-default interception | 尚未设计 | 单独设计物理按键和 status bar scroll-to-top 等默认行为拦截，不并入现有 event source gate。 |
 | 新增 listener/action 准入 | 持续规则 | 新增或重做 built-in listener/action 时，先落旧实现依据、现代差异和 handled 准则，再补对应测试或真机清单。 |
@@ -28,7 +28,7 @@
 | listener/action metadata | `layout/Library/Activator/Listeners/bundled.plist`、glyph 资源和 `LAResourceManager` | 只提供展示、兼容规则、图标和 selector/url metadata；不能替代 listener object。 |
 | static built-in actions | `ActivatorTweak.dylib` 中的 built-in listener registry | 由 SpringBoard 注册真实 `LAListener` object。 |
 | dynamic event definitions | `ActivatorTweak.dylib` 中的 `LATEventDefinitionRegistry` 与 family providers | 显式管理 provider catalog、concrete event ownership、generation、property-list-safe generic create/config/remove 和持久化；Network 是首个接入 family。 |
-| event acquisition | `ActivatorTweak.dylib` 中的 `LATEventSourceRegistry` 与 SpringBoard acquisition adapters | 只管理 source lifecycle、producer index、多 producer 和 assignment-aware interest；从硬件按钮、触摸手势、SpringBoard 状态、通知或系统服务采集事件，再调用 dispatch engine。 |
+| event acquisition | `ActivatorTweak.dylib` 中的 Event Source module loader、`LATEventSourceRegistry` 与 SpringBoard acquisition adapters | Loader 只从明确的 libactivator-owned image 发现采用私有 module protocol 的 factory；module result 声明 sources、窄协议依赖、typed hook ingress 与可选 definition binding，registry 只管理 source lifecycle、producer index、多 producer 和 assignment-aware interest。 |
 | dynamic application listeners | 独立 application listener family provider | 动态读取 SpringBoard app model，处理 app launch/action listener、glyph、显示名和特殊系统 App 行为。 |
 | menu listeners | Settings UI + runtime menu provider | 菜单内容来自用户配置，需等 Settings UI 菜单编辑能力落地后实现。 |
 | CLI | `subprojects/cli` 的 `/usr/bin/activator` | 生产兼容工具，使用 Public API 和生产 IPC，不依赖 testing IPC，也不是 test runner。 |
@@ -50,11 +50,10 @@
 1. Icon flick gesture family：`icon.flick.*` 共 4 个 event。`springboard.pinch` / `springboard.spread` 已通过复用 `SBIconScrollView.pinchGestureRecognizer` 实现；下一步继续针对 `SBIconView` 接入四向 flick。
 2. Lock screen clock gesture family：clock double tap、tap hold、swipe left/right/down 共 5 个 event。与 CoverSheet、通知中心、相机入口、passcode 状态强相关，需要单独 probe。
 3. Headset button：press single、hold short 共 2 个 event。已实现 headset connected/disconnected，但线控按钮需要确认现代音频 route、HID 或 MediaRemote 信号来源。
-4. Motion shake：确认是否能在 SpringBoard 进程内可靠接入，不为该事件注入用户 App。
-5. Volume HUD tap：依赖音量 HUD 触摸，应作为独立 HUD/UI hook，而不是 HID 按键热路径。
-6. Gesture bar double tap：与 home indicator / gesture bar 设备能力和 iOS 版本强相关，需要按设备 probe。
-7. Scheduled sunrise/sunset：需要定位旧实现语义和现代定位/日出日落调度来源。
-8. Car / watch / smart cover：依赖外设、设备能力或私有服务，先保留 metadata，不用 metadata presence 推断可用性。
+4. Volume HUD tap：依赖音量 HUD 触摸，应作为独立 HUD/UI hook，而不是 HID 按键热路径。
+5. Gesture bar double tap：与 home indicator / gesture bar 设备能力和 iOS 版本强相关，需要按设备 probe。
+6. Scheduled sunrise/sunset：需要定位旧实现语义和现代定位/日出日落调度来源。
+7. Car / watch / smart cover：依赖外设、设备能力或私有服务，先保留 metadata，不用 metadata presence 推断可用性。
 
 ## Handled-default Interception Backlog
 
@@ -95,7 +94,9 @@ CLI 是 production compatibility tool，不是测试入口。
 ## 验收要求
 
 - 新增 dynamic listener family 必须有独立 provider / registry path，不把动态 App listener 塞进 static built-in action listener。
-- 新增 event source family 必须有独立 acquisition adapter，不把采集 hook 混入现有 action listener。
+- 新增 event source family 必须有独立的 module identity 与 acquisition adapter，不把采集 hook 混入现有 action listener；一对一 family 默认由 source class 的私有 class-side category 实现 module factory，不创建只做转发的平行 factory class。Source 通过窄协议取得 dispatch/runtime 能力，不读取 `LASharedActivator`。
+- 新 family 的 hook 必须面向 module result 暴露的 typed ingress protocol；不得为接线在 `LATBuiltInRegistry` 增加具体 source import、property、initializer 分支或 capability 特判。
+- Module 必须声明稳定 identifier、priority、依赖与 capability；需要 dynamic definition/acquisition 同步时由 module result 声明 binding，并保留 definition registry 的完整原子事务与回滚保证。
 - 每个新 family 至少拆出一个 stable suite；测试重点是 registration、metadata lookup、`hasSeen`、mode/blacklist/dispatch 语义和 metadata-only 不注册。
 - `event.handled` 表示 listener 消费事件或 adapter 提交事件，不表示系统最终状态变化完成；真实系统状态变化进入设备手工 checklist。
 - listener/action handled 语义必须先有旧实现依据或明确的现代差异准则，避免测试只覆盖当前实现而没有 1.9.13 对齐结论。

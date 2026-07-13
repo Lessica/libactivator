@@ -10,16 +10,10 @@
 
 #import "LAActivator+Private.h"
 #import "LATBuiltInRegistry.h"
-#import "LATButtonEventSource.h"
-#import "LATEdgeGestureEventSource.h"
+#import "LATEventSource.h"
+#import "LATEventSourceIngress.h"
 #import "LATEventSourceRegistry.h"
-#import "LATFingerprintSensorEventSource.h"
-#import "LATForceTouchEventSource.h"
-#import "LATMultiTouchEventSource.h"
-#import "LATNetworkEventSource.h"
 #import "LATRuntimeStateSource.h"
-#import "LATSpringBoardIconGestureEventSource.h"
-#import "LATStatusBarEventSource.h"
 #import "system/LATSystemCenterController.h"
 
 #import <CaptainHook/CaptainHook.h>
@@ -27,6 +21,7 @@
 #import <UIKit/UIKit.h>
 
 CHDeclareClass(SpringBoard);
+CHDeclareClass(UIApplication);
 CHDeclareClass(SBApplicationController);
 CHDeclareClass(CCUIModuleCollectionViewController);
 CHDeclareClass(UIViewController);
@@ -51,6 +46,12 @@ typedef NS_ENUM(unsigned char, LATSystemGestureDispatchMode) {
 };
 
 static LATBuiltInRegistry *gBuiltInRegistry = nil;
+static NSArray<id<LATEventSourceHIDIngress>> *gHIDEventSources = nil;
+static NSArray<id<LATEventSourceIconScrollViewIngress>> *gIconScrollViewEventSources = nil;
+static NSArray<id<LATEventSourceMotionIngress>> *gMotionEventSources = nil;
+static NSArray<id<LATEventSourceNetworkStateIngress>> *gNetworkStateEventSources = nil;
+static NSArray<id<LATEventSourceStatusBarTouchIngress>> *gStatusBarTouchEventSources = nil;
+static NSArray<id<LATEventSourceSystemGestureWindowIngress>> *gSystemGestureWindowEventSources = nil;
 
 static Class gApplicationControllerClass = nil;
 static Class gCoverSheetViewControllerClass = nil;
@@ -75,8 +76,9 @@ static Class gIconScrollViewClass = nil;
 @end
 
 static void LATNoteHIDEvent(IOHIDEventRef event) {
-    [gBuiltInRegistry.buttonEventSource noteHIDEvent:event];
-    [gBuiltInRegistry.fingerprintSensorEventSource noteHIDEvent:event];
+    for (id<LATEventSourceHIDIngress> eventSource in gHIDEventSources) {
+        [eventSource noteHIDEvent:event];
+    }
 }
 
 static void LATNoteApplicationCatalogMayHaveChanged(NSString *reason) {
@@ -275,7 +277,9 @@ CHOptimizedMethod1(self, void, SBHIconManager, rootFolderControllerViewDidDisapp
 
 CHOptimizedMethod1(self, id, SBIconScrollView, initWithFrame, CGRect, frame) {
     SBIconScrollView *scrollView = CHSuper1(SBIconScrollView, initWithFrame, frame);
-    [gBuiltInRegistry.springBoardIconGestureEventSource noteIconScrollViewDidInitialize:(UIScrollView *)scrollView];
+    for (id<LATEventSourceIconScrollViewIngress> eventSource in gIconScrollViewEventSources) {
+        [eventSource noteIconScrollViewDidInitialize:(UIScrollView *)scrollView];
+    }
     return scrollView;
 }
 
@@ -283,20 +287,24 @@ CHOptimizedMethod1(self, id, SBIconScrollView, initWithFrame, CGRect, frame) {
 
 CHOptimizedMethod0(self, void, SBWiFiManager, _updateCurrentNetwork) {
     CHSuper0(SBWiFiManager, _updateCurrentNetwork);
-    [gBuiltInRegistry.networkEventSource noteNetworkStateMayHaveChangedWithReason:@"wifi-update-current-network"];
+    for (id<LATEventSourceNetworkStateIngress> eventSource in gNetworkStateEventSources) {
+        [eventSource noteNetworkStateMayHaveChangedWithReason:@"wifi-update-current-network"];
+    }
 }
 
 CHOptimizedMethod0(self, void, SBWiFiManager, _linkDidChange) {
     CHSuper0(SBWiFiManager, _linkDidChange);
-    [gBuiltInRegistry.networkEventSource noteNetworkStateMayHaveChangedWithReason:@"wifi-link-did-change"];
+    for (id<LATEventSourceNetworkStateIngress> eventSource in gNetworkStateEventSources) {
+        [eventSource noteNetworkStateMayHaveChangedWithReason:@"wifi-link-did-change"];
+    }
 }
 
 #pragma mark - _UISystemGestureWindow
 
 CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, event) {
-    [gBuiltInRegistry.edgeGestureEventSource noteSystemGestureWindow:(UIWindow *)self event:event];
-    [gBuiltInRegistry.forceTouchEventSource noteSystemGestureWindow:(UIWindow *)self event:event];
-    [gBuiltInRegistry.multiTouchEventSource noteSystemGestureWindow:(UIWindow *)self event:event];
+    for (id<LATEventSourceSystemGestureWindowIngress> eventSource in gSystemGestureWindowEventSources) {
+        [eventSource noteSystemGestureWindow:(UIWindow *)self event:event];
+    }
     CHSuper1(_UISystemGestureWindow, sendEvent, event);
     [gBuiltInRegistry.runtimeStateSource noteSystemTouchEvent:event];
 }
@@ -306,10 +314,13 @@ CHOptimizedMethod1(self, void, _UISystemGestureWindow, sendEvent, UIEvent *, eve
 CHOptimizedMethod0(self, unsigned char, __UISystemGestureManager, _dispatchModeForExternalGestureCompletion) {
     unsigned char dispatchMode = CHSuper0(__UISystemGestureManager, _dispatchModeForExternalGestureCompletion);
     LATEventSourceRegistry *eventSourceRegistry = gBuiltInRegistry.eventSourceRegistry;
-    BOOL shouldKeepSending = [eventSourceRegistry isInterestedInEventSource:gBuiltInRegistry.edgeGestureEventSource] ||
-                             (gBuiltInRegistry.forceTouchEventSource &&
-                              [eventSourceRegistry isInterestedInEventSource:gBuiltInRegistry.forceTouchEventSource]) ||
-                             [eventSourceRegistry isInterestedInEventSource:gBuiltInRegistry.multiTouchEventSource];
+    BOOL shouldKeepSending = NO;
+    for (id<LATEventSourceSystemGestureWindowIngress> eventSource in gSystemGestureWindowEventSources) {
+        if ([eventSourceRegistry isInterestedInEventSource:(id<LATEventSource>)eventSource]) {
+            shouldKeepSending = YES;
+            break;
+        }
+    }
     if (dispatchMode == LATSystemGestureDispatchModeIgnore && shouldKeepSending) {
         return LATSystemGestureDispatchModeContinueSending;
     }
@@ -319,23 +330,40 @@ CHOptimizedMethod0(self, unsigned char, __UISystemGestureManager, _dispatchModeF
 #pragma mark - UIStatusBar_Modern
 
 CHOptimizedMethod2(self, void, UIStatusBar_Modern, touchesBegan, NSSet *, touches, withEvent, UIEvent *, event) {
-    [gBuiltInRegistry.statusBarEventSource noteStatusBarView:(UIView *)self touchesBegan:touches withEvent:event];
+    for (id<LATEventSourceStatusBarTouchIngress> eventSource in gStatusBarTouchEventSources) {
+        [eventSource noteStatusBarView:(UIView *)self touchesBegan:touches withEvent:event];
+    }
     CHSuper2(UIStatusBar_Modern, touchesBegan, touches, withEvent, event);
 }
 
 CHOptimizedMethod2(self, void, UIStatusBar_Modern, touchesMoved, NSSet *, touches, withEvent, UIEvent *, event) {
-    [gBuiltInRegistry.statusBarEventSource noteStatusBarView:(UIView *)self touchesMoved:touches withEvent:event];
+    for (id<LATEventSourceStatusBarTouchIngress> eventSource in gStatusBarTouchEventSources) {
+        [eventSource noteStatusBarView:(UIView *)self touchesMoved:touches withEvent:event];
+    }
     CHSuper2(UIStatusBar_Modern, touchesMoved, touches, withEvent, event);
 }
 
 CHOptimizedMethod2(self, void, UIStatusBar_Modern, touchesEnded, NSSet *, touches, withEvent, UIEvent *, event) {
-    [gBuiltInRegistry.statusBarEventSource noteStatusBarView:(UIView *)self touchesEnded:touches withEvent:event];
+    for (id<LATEventSourceStatusBarTouchIngress> eventSource in gStatusBarTouchEventSources) {
+        [eventSource noteStatusBarView:(UIView *)self touchesEnded:touches withEvent:event];
+    }
     CHSuper2(UIStatusBar_Modern, touchesEnded, touches, withEvent, event);
 }
 
 CHOptimizedMethod2(self, void, UIStatusBar_Modern, touchesCancelled, NSSet *, touches, withEvent, UIEvent *, event) {
-    [gBuiltInRegistry.statusBarEventSource noteStatusBarView:(UIView *)self touchesCancelled:touches withEvent:event];
+    for (id<LATEventSourceStatusBarTouchIngress> eventSource in gStatusBarTouchEventSources) {
+        [eventSource noteStatusBarView:(UIView *)self touchesCancelled:touches withEvent:event];
+    }
     CHSuper2(UIStatusBar_Modern, touchesCancelled, touches, withEvent, event);
+}
+
+#pragma mark - UIApplication
+
+CHOptimizedMethod2(self, void, UIApplication, motionEnded, UIEventSubtype, motion, withEvent, UIEvent *, event) {
+    for (id<LATEventSourceMotionIngress> eventSource in gMotionEventSources) {
+        [eventSource noteMotionEnded:motion];
+    }
+    CHSuper2(UIApplication, motionEnded, motion, withEvent, event);
 }
 
 #pragma mark - SpringBoard
@@ -371,6 +399,7 @@ static void LATLoadRuntimeStateClasses(void) {
 
 static void LATLoadSpringBoardClasses(void) {
     CHLoadClass(UIViewController);
+    CHLoadClass(UIApplication);
     CHLoadClass_(&SpringBoard$, NSClassFromString(@"SpringBoard"));
     if (gApplicationControllerClass) {
         CHLoadClass_(&SBApplicationController$, gApplicationControllerClass);
@@ -441,6 +470,7 @@ static void LATInstallHooks(void) {
         } else {
             HBLogWarn(@"Skipping Control Center module collection hooks because required methods are unavailable");
         }
+
         CHHook1(SBCoverSheetPrimarySlidingViewController, _beginTransitionFromAppeared);
         CHHook1(SBCoverSheetPrimarySlidingViewController, _endTransitionToAppeared);
         CHHook2(SBMainSwitcherViewController, layoutStateTransitionCoordinator,
@@ -461,6 +491,12 @@ static void LATInstallHooks(void) {
             CHHook1(SBIconScrollView, initWithFrame);
         } else {
             HBLogWarn(@"Skipping SBIconScrollView hooks because the class is unavailable");
+        }
+
+        if ([UIApplication instancesRespondToSelector:@selector(motionEnded:withEvent:)]) {
+            CHHook2(UIApplication, motionEnded, withEvent);
+        } else {
+            HBLogWarn(@"Skipping UIApplication motion hook because motionEnded:withEvent: is unavailable");
         }
 
         CHHook0(SBWiFiManager, _updateCurrentNetwork);
@@ -492,5 +528,17 @@ static void LATInstallHooks(void) {
 
 __attribute__((constructor)) static void LATweakInitialize(void) {
     gBuiltInRegistry = [[LATBuiltInRegistry alloc] initWithActivator:[LAActivator sharedInstance]];
+    gHIDEventSources = (NSArray<id<LATEventSourceHIDIngress>> *)[gBuiltInRegistry
+        eventSourcesConformingToProtocol:@protocol(LATEventSourceHIDIngress)];
+    gIconScrollViewEventSources = (NSArray<id<LATEventSourceIconScrollViewIngress>> *)[gBuiltInRegistry
+        eventSourcesConformingToProtocol:@protocol(LATEventSourceIconScrollViewIngress)];
+    gMotionEventSources = (NSArray<id<LATEventSourceMotionIngress>> *)[gBuiltInRegistry
+        eventSourcesConformingToProtocol:@protocol(LATEventSourceMotionIngress)];
+    gNetworkStateEventSources = (NSArray<id<LATEventSourceNetworkStateIngress>> *)[gBuiltInRegistry
+        eventSourcesConformingToProtocol:@protocol(LATEventSourceNetworkStateIngress)];
+    gStatusBarTouchEventSources = (NSArray<id<LATEventSourceStatusBarTouchIngress>> *)[gBuiltInRegistry
+        eventSourcesConformingToProtocol:@protocol(LATEventSourceStatusBarTouchIngress)];
+    gSystemGestureWindowEventSources = (NSArray<id<LATEventSourceSystemGestureWindowIngress>> *)[gBuiltInRegistry
+        eventSourcesConformingToProtocol:@protocol(LATEventSourceSystemGestureWindowIngress)];
     LATInstallHooks();
 }

@@ -58,6 +58,7 @@ libactivator_FILES += tests/suites/builtins/LATestBuiltInDynamicApplicationListe
 libactivator_FILES += tests/suites/builtins/LATestBuiltInEventSourcesSuite.m
 libactivator_FILES += tests/suites/builtins/LATestEventDefinitionRegistrySuite.m
 libactivator_FILES += tests/suites/builtins/LATestEventSourceRegistrySuite.m
+libactivator_FILES += tests/suites/builtins/LATestEventSourceModuleLoaderSuite.m
 libactivator_FILES += tests/suites/runtime/LATestRuntimeInputSuite.m
 libactivator_FILES += tests/suites/runtime/LATestRuntimeDeviceSuite.m
 libactivator_CFLAGS += -DLIBACTIVATOR_TEST_SUPPORT=1
@@ -68,7 +69,10 @@ libactivator_CFLAGS += -Itests/fakes
 libactivator_CFLAGS += -Itests/suites/core
 libactivator_CFLAGS += -Itests/suites/builtins
 libactivator_CFLAGS += -Itests/suites/runtime
-libactivator_CFLAGS += -I../tweak/events
+libactivator_CFLAGS += -I../tweak/events/core
+libactivator_CFLAGS += -I../tweak/events/definitions
+libactivator_CFLAGS += -I../tweak/events/recognizers
+libactivator_CFLAGS += -I../tweak/events/sources
 libactivator_CFLAGS += -I../tweak/private
 libactivator_CFLAGS += -I../tweak/runtime
 endif

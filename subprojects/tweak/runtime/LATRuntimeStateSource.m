@@ -22,13 +22,13 @@ static const uint32_t LATRuntimeStateHIDUsagePower = 0x30;
 static NSUInteger const LATRuntimeStateMaximumPendingBlocks = 32;
 static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
 
-@interface UIApplication (RuntimeStateSource)
-- (id)_accessibilityFrontMostApplication;
-@end
-
 @interface SBApplication : NSObject
 - (NSString *)displayIdentifier;
 - (NSString *)bundleIdentifier;
+@end
+
+@interface UIApplication (RuntimeStateSource)
+- (SBApplication *)_accessibilityFrontMostApplication;
 @end
 
 @interface LATRuntimeStateSource ()
@@ -315,7 +315,7 @@ static const NSTimeInterval LATRuntimeStateScreenWakeFallbackDelay = 1.0;
         return;
     }
 
-    SBApplication *frontMostApplication = (SBApplication *)[application _accessibilityFrontMostApplication];
+    SBApplication *frontMostApplication = [application _accessibilityFrontMostApplication];
     NSString *displayIdentifier = nil;
     if ([frontMostApplication respondsToSelector:@selector(displayIdentifier)]) {
         displayIdentifier = [frontMostApplication displayIdentifier];

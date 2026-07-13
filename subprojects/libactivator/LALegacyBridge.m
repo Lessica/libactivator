@@ -71,7 +71,7 @@ static NSString *const LALegacyHasSeenPrefix = @"LAHasSeenListener-";
     if ([key hasPrefix:LALegacyBlacklistPrefix]) {
         NSString *displayIdentifier = [key substringFromIndex:LALegacyBlacklistPrefix.length];
         BOOL changed = [self.backend setApplicationWithDisplayIdentifier:displayIdentifier
-                                                            isBlacklisted:[self isTruthyObject:object]];
+                                                           isBlacklisted:[self isTruthyObject:object]];
         return changed ? LALegacyPreferenceMutationValue : LALegacyPreferenceMutationNone;
     }
 

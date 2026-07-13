@@ -8,7 +8,6 @@
 
 #import "system/LATSystemSwitcherController.h"
 
-#import "LATMediaEventSource.h"
 #import "LATRuntimeStateSource.h"
 
 #import <HBLog.h>
@@ -58,7 +57,7 @@
 @end
 
 @interface LATSystemSwitcherController ()
-@property(nonatomic, weak, nullable) LATMediaEventSource *mediaEventSource;
+@property(nonatomic, weak, nullable) id<LATNowPlayingProviding> nowPlayingProvider;
 @property(nonatomic, weak, nullable) LATRuntimeStateSource *runtimeStateSource;
 @end
 
@@ -66,11 +65,11 @@
 
 #pragma mark - Lifecycle
 
-- (instancetype)initWithMediaEventSource:(LATMediaEventSource *)mediaEventSource
-                      runtimeStateSource:(LATRuntimeStateSource *)runtimeStateSource {
+- (instancetype)initWithNowPlayingProvider:(id<LATNowPlayingProviding>)nowPlayingProvider
+                        runtimeStateSource:(LATRuntimeStateSource *)runtimeStateSource {
     self = [super init];
     if (self) {
-        _mediaEventSource = mediaEventSource;
+        _nowPlayingProvider = nowPlayingProvider;
         _runtimeStateSource = runtimeStateSource;
     }
     return self;
@@ -126,14 +125,14 @@
           skipsNowPlayingApplication:(BOOL)skipsNowPlayingApplication {
     NSString *listenerNameToClear = [listenerName copy] ?: @"";
     if (skipsNowPlayingApplication) {
-        LATMediaEventSource *mediaEventSource = self.mediaEventSource;
-        if (!mediaEventSource) {
+        id<LATNowPlayingProviding> nowPlayingProvider = self.nowPlayingProvider;
+        if (!nowPlayingProvider) {
             HBLogError(@"Unable to clear switcher for system action %@ because the media event source is unavailable",
                        listenerNameToClear ?: @"");
             return NO;
         }
 
-        return [mediaEventSource
+        return [nowPlayingProvider
             requestNowPlayingApplicationDisplayIdentifierWithCompletion:^(NSString *displayIdentifier) {
                 [self prepareClearSwitcherForListenerName:listenerNameToClear
                               nowPlayingDisplayIdentifier:displayIdentifier];

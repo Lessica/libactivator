@@ -113,8 +113,8 @@
 
     BOOL allSupportedNamesResolveURL = YES;
     for (NSString *listenerName in supportedNames) {
-        allSupportedNamesResolveURL =
-            allSupportedNamesResolveURL && [urlAction URLForListenerName:listenerName activator:activator] != nil;
+        allSupportedNamesResolveURL = allSupportedNamesResolveURL && [urlAction URLForListenerName:listenerName
+                                                                                         activator:activator] != nil;
     }
     [recorder expect:allSupportedNamesResolveURL
             caseName:@"url-action-supported-names-resolve-handled-url"

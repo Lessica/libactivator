@@ -347,7 +347,7 @@ static const uint64_t LATestHIDSenderID = 0x8000000817319371;
             return;
         }
 
-        SBApplication *frontMostApplication = (SBApplication *)[application _accessibilityFrontMostApplication];
+        SBApplication *frontMostApplication = [application _accessibilityFrontMostApplication];
         if ([frontMostApplication respondsToSelector:@selector(bundleIdentifier)]) {
             displayIdentifier = [frontMostApplication bundleIdentifier];
         }

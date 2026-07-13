@@ -10,6 +10,7 @@
 
 #import "LATApplicationLauncher.h"
 #import "LATBuiltInRegistry.h"
+#import "LATEventSourceDependencies.h"
 
 #import "system/LATSystemActionCommand.h"
 #import "system/LATSystemAssistantController.h"
@@ -71,10 +72,12 @@
     self = [super init];
     if (self) {
         _registry = registry;
+        id<LATNowPlayingProviding> nowPlayingProvider =
+            [_registry eventSourceServiceForProtocol:@protocol(LATNowPlayingProviding)];
         _volumeHUDPresenter = [[LATSystemVolumeHUDPresenter alloc] initWithRegistry:_registry];
         _nowPlayingApplicationLauncher =
             [[LATSystemNowPlayingApplicationLauncher alloc] initWithApplicationLauncher:launcher
-                                                                       mediaEventSource:_registry.mediaEventSource];
+                                                                     nowPlayingProvider:nowPlayingProvider];
         _ringerStateResetter = [[LATSystemRingerStateResetter alloc] init];
         _ringerMuteController = [[LATSystemRingerMuteController alloc] initWithRegistry:_registry];
         _homeScreenController = [[LATSystemHomeScreenController alloc] init];
@@ -94,8 +97,8 @@
         _reachabilityController = [[LATSystemReachabilityController alloc] init];
         _screenshotController = [[LATSystemScreenshotController alloc] init];
         _switcherController =
-            [[LATSystemSwitcherController alloc] initWithMediaEventSource:_registry.mediaEventSource
-                                                       runtimeStateSource:_registry.runtimeStateSource];
+            [[LATSystemSwitcherController alloc] initWithNowPlayingProvider:nowPlayingProvider
+                                                         runtimeStateSource:_registry.runtimeStateSource];
         _voiceControlController = [[LATSystemVoiceControlController alloc] init];
         _walletController = [[LATSystemWalletController alloc] init];
     }

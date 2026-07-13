@@ -74,7 +74,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol LATestDynamicApplicationActionListener <LAListener>
 - (instancetype)initWithLauncher:(nullable id)launcher registry:(nullable id)registry;
-- (void)setApplicationDescriptors:(NSDictionary<NSString *, id<LATestDynamicApplicationDescriptor>> *)descriptorsByIdentifier;
+- (void)setApplicationDescriptors:
+    (NSDictionary<NSString *, id<LATestDynamicApplicationDescriptor>> *)descriptorsByIdentifier;
 - (BOOL)shouldHandleApplicationDescriptor:(nullable id<LATestDynamicApplicationDescriptor>)descriptor
                                  forEvent:(LAEvent *)event
                                 activator:(LAActivator *)activator;

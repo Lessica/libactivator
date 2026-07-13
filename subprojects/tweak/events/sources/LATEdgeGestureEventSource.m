@@ -1,0 +1,336 @@
+//
+//  LATEdgeGestureEventSource.m
+//  libactivator
+//
+//  Created by Lessica on 6/14/26.
+//  Copyright © 2026 Lessica. All rights reserved.
+//
+
+#import "LATEdgeGestureEventSource.h"
+
+#import "LAQueueAssertions.h"
+#import "LATEdgeGestureClassifier.h"
+#import "LATEventSourceModule.h"
+
+#import <HBLog.h>
+
+@interface LATEdgeGestureEventSource ()
+
+@property(nonatomic, strong) id<LATEventDispatching> eventDispatcher;
+@property(nonatomic, strong) id<LATEventModeProviding> modeProvider;
+@property(nonatomic, weak, nullable) id<LATFingerprintGestureCoordinating> fingerprintCoordinator;
+@property(nonatomic, assign, getter=isStarted) BOOL started;
+@property(nonatomic, assign, getter=isInvalidated) BOOL invalidated;
+@property(nonatomic, assign, getter=isInterested) BOOL interested;
+@property(nonatomic, strong) LATEdgeGestureClassifier *classifier;
+#if DEBUG
+@property(nonatomic, assign) NSTimeInterval lastSideDiagnosticTimestamp;
+#endif
+
+@end
+
+@interface LATEdgeGestureEventSource (ModuleFactory) <LATEventSourceModule>
+@end
+
+@implementation LATEdgeGestureEventSource (ModuleFactory)
+
++ (NSString *)eventSourceModuleIdentifier {
+    return @"built-in.edge-gesture";
+}
+
++ (NSInteger)eventSourceModulePriority {
+    return 1200;
+}
+
++ (NSArray<NSString *> *)eventSourceModuleOrderingDependencies {
+    return @[ @"built-in.fingerprint-sensor" ];
+}
+
++ (LATEventSourceModuleResult *)loadWithContext:(LATEventSourceModuleContext *)context
+                                          error:(__unused NSError **)error {
+    id<LATFingerprintGestureCoordinating> fingerprintCoordinator =
+        [context serviceForProtocol:@protocol(LATFingerprintGestureCoordinating)];
+    LATEdgeGestureEventSource *eventSource = [[self alloc] initWithEventDispatcher:context.eventDispatcher
+                                                                      modeProvider:context.eventDispatcher
+                                                            fingerprintCoordinator:fingerprintCoordinator];
+    return [[LATEventSourceModuleResult alloc] initWithEventSources:@[ eventSource ]
+                                                definitionProviders:@[]
+                                                 definitionBindings:@[]
+                                                   exportedServices:@{}];
+}
+
+@end
+
+@implementation LATEdgeGestureEventSource
+
+#pragma mark - LATEventSource
+
+- (NSString *)eventSourceIdentifier {
+    return @"edge-gesture";
+}
+
+- (NSSet<NSString *> *)eventNames {
+    return [NSSet setWithArray:@[
+        LAEventNameSlideInFromTopLeft,
+        LAEventNameStatusBarSwipeDown,
+        LAEventNameSlideInFromTopRight,
+        LAEventNameSlideInFromBottomLeft,
+        LAEventNameSlideInFromBottom,
+        LAEventNameSlideInFromBottomRight,
+        LAEventNameSlideInFromLeftTop,
+        LAEventNameSlideInFromLeft,
+        LAEventNameSlideInFromLeftBottom,
+        LAEventNameSlideInFromRightTop,
+        LAEventNameSlideInFromRight,
+        LAEventNameSlideInFromRightBottom,
+        LAEventNameTwoFingerSlideInFromTopLeft,
+        LAEventNameTwoFingerSlideInFromTop,
+        LAEventNameTwoFingerSlideInFromTopRight,
+        LAEventNameTwoFingerSlideInFromBottomLeft,
+        LAEventNameTwoFingerSlideInFromBottom,
+        LAEventNameTwoFingerSlideInFromBottomRight,
+        LAEventNameTwoFingerSlideInFromLeftTop,
+        LAEventNameTwoFingerSlideInFromLeft,
+        LAEventNameTwoFingerSlideInFromLeftBottom,
+        LAEventNameTwoFingerSlideInFromRightTop,
+        LAEventNameTwoFingerSlideInFromRight,
+        LAEventNameTwoFingerSlideInFromRightBottom,
+        LAEventScreenBottomSwipeLeft,
+        LAEventScreenBottomSwipeRight,
+        LAEventScreenLeftSwipeDown,
+        LAEventScreenLeftSwipeUp,
+        LAEventScreenRightSwipeDown,
+        LAEventScreenRightSwipeUp,
+        LAEventNameDragOffLeft,
+        LAEventNameDragOffRight,
+        LAEventNameDragOffTop,
+        LAEventNameDragOffBottom,
+    ]];
+}
+
+- (NSSet<NSString *> *)interestEventNames {
+    NSMutableSet<NSString *> *eventNames = [self.eventNames mutableCopy];
+    if (self.fingerprintCoordinator) {
+        [eventNames addObject:LAEventNameFingerprintSensorPressSingleAndSlideIn];
+    }
+    return [eventNames copy];
+}
+
+- (LATEventSourceInterestPolicy)interestPolicy {
+    return LATEventSourceInterestPolicyAssignedInCurrentMode;
+}
+
+- (instancetype)initWithEventDispatcher:(id<LATEventDispatching>)eventDispatcher
+                           modeProvider:(id<LATEventModeProviding>)modeProvider
+                 fingerprintCoordinator:(id<LATFingerprintGestureCoordinating>)fingerprintCoordinator {
+    NSParameterAssert(eventDispatcher);
+    NSParameterAssert(modeProvider);
+
+    self = [super init];
+    if (self) {
+        _eventDispatcher = eventDispatcher;
+        _modeProvider = modeProvider;
+        _fingerprintCoordinator = fingerprintCoordinator;
+        _classifier = [[LATEdgeGestureClassifier alloc] init];
+    }
+    return self;
+}
+
+- (void)start {
+    LAAssertMainQueue();
+    if (self.started || self.isInvalidated) {
+        return;
+    }
+    self.started = YES;
+}
+
+- (void)invalidate {
+    LAAssertMainQueue();
+    if (self.isInvalidated) {
+        return;
+    }
+
+    self.invalidated = YES;
+    self.started = NO;
+    [self.classifier reset];
+}
+
+- (void)eventSourceInterestDidChange:(BOOL)interested {
+    LAAssertMainQueue();
+    self.interested = interested;
+    if (!interested) {
+        [self.classifier reset];
+    }
+}
+
+- (void)eventSourceInterestedEventNamesDidChange:(NSSet<NSString *> *)interestedEventNames {
+    LAAssertMainQueue();
+    self.interested = interestedEventNames.count > 0;
+    [self.classifier reset];
+}
+
+#pragma mark - Touch Entry Points
+
+- (void)noteSystemGestureWindow:(UIWindow *)window event:(UIEvent *)event {
+    LAAssertMainQueue();
+    if (!self.started || !window || !event) {
+        return;
+    }
+
+    if (![self shouldProcessEvents]) {
+        [self.classifier reset];
+        return;
+    }
+
+    NSArray<NSDictionary<NSString *, id> *> *snapshots = [self touchSnapshotsFromEvent:event inWindow:window];
+    if (snapshots.count == 0) {
+        return;
+    }
+
+#if DEBUG
+    [self logSideGestureDiagnosticForTouchSnapshots:snapshots bounds:window.bounds timestamp:event.timestamp];
+#endif
+
+    [self handleTouchSnapshots:snapshots bounds:window.bounds timestamp:event.timestamp];
+}
+
+#pragma mark - Interest
+
+- (BOOL)shouldProcessEvents {
+    LAAssertMainQueue();
+    return self.isInterested;
+}
+
+#pragma mark - Recognition
+
+- (nullable NSString *)handleTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
+                                     bounds:(CGRect)bounds
+                                  timestamp:(NSTimeInterval)timestamp {
+    LAAssertMainQueue();
+    if (!self.started || snapshots.count == 0) {
+        return nil;
+    }
+
+    NSString *eventName = [self.classifier updateWithTouchSnapshots:snapshots bounds:bounds timestamp:timestamp];
+    if (eventName.length > 0) {
+        if ([self shouldRouteEventNameToFingerprintSlideIn:eventName] &&
+            [self.fingerprintCoordinator consumePendingSinglePressForSlideInAtTimestamp:timestamp]) {
+            return LAEventNameFingerprintSensorPressSingleAndSlideIn;
+        }
+        [self sendEventWithName:eventName touchCount:snapshots.count bounds:bounds];
+    }
+    return eventName;
+}
+
+- (BOOL)shouldRouteEventNameToFingerprintSlideIn:(NSString *)eventName {
+    return [eventName isEqualToString:LAEventNameSlideInFromBottom] ||
+           [eventName isEqualToString:LAEventNameSlideInFromBottomLeft] ||
+           [eventName isEqualToString:LAEventNameSlideInFromBottomRight];
+}
+
+#pragma mark - Event Dispatch
+
+- (void)sendEventWithName:(NSString *)eventName touchCount:(NSUInteger)touchCount bounds:(CGRect)bounds {
+    LAAssertMainQueue();
+    if (eventName.length == 0) {
+        return;
+    }
+
+    LAEvent *event = [LAEvent eventWithName:eventName mode:[self currentEventMode]];
+    [self.eventDispatcher dispatchEvent:event];
+    HBLogInfo(@"Classified and dispatched edge gesture event=%@ touchCount=%lu bounds=%@", eventName,
+              (unsigned long)touchCount, NSStringFromCGRect(bounds));
+}
+
+- (NSString *)currentEventMode {
+    LAAssertMainQueue();
+
+    NSString *eventMode = self.modeProvider.currentEventMode;
+    return eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;
+}
+
+#pragma mark - Touch Snapshots
+
+- (NSArray<NSDictionary<NSString *, id> *> *)touchSnapshotsFromEvent:(UIEvent *)event inWindow:(UIWindow *)window {
+    NSMutableArray<NSDictionary<NSString *, id> *> *snapshots = [[NSMutableArray alloc] init];
+    for (UITouch *touch in event.allTouches) {
+        CGPoint location = [touch locationInView:window];
+        [snapshots addObject:@{
+            LATEdgeGestureTouchIdentifierKey : [NSValue valueWithNonretainedObject:touch],
+            LATEdgeGestureTouchPhaseKey : @(touch.phase),
+            LATEdgeGestureTouchLocationKey : [NSValue valueWithCGPoint:location],
+        }];
+    }
+    return snapshots;
+}
+
+#if DEBUG
+#pragma mark - Debug Diagnostics
+
+- (void)logSideGestureDiagnosticForTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
+                                           bounds:(CGRect)bounds
+                                        timestamp:(NSTimeInterval)timestamp {
+    if (CGRectIsEmpty(bounds) || timestamp - self.lastSideDiagnosticTimestamp < 0.03) {
+        return;
+    }
+
+    CGFloat width = CGRectGetWidth(bounds);
+    CGFloat sideDiagnosticBand = MIN(MAX(width * 0.15, 80.0), 140.0);
+    NSUInteger activeTouchCount = 0;
+    CGFloat minX = CGFLOAT_MAX;
+    CGFloat maxX = -CGFLOAT_MAX;
+    CGFloat xTotal = 0.0;
+    CGFloat yTotal = 0.0;
+    NSMutableArray<NSString *> *touchDescriptions = [[NSMutableArray alloc] init];
+
+    for (NSDictionary<NSString *, id> *snapshot in snapshots) {
+        NSNumber *phaseNumber = snapshot[LATEdgeGestureTouchPhaseKey];
+        NSValue *locationValue = snapshot[LATEdgeGestureTouchLocationKey];
+        if (!phaseNumber || !locationValue) {
+            continue;
+        }
+
+        NSInteger phase = phaseNumber.integerValue;
+        CGPoint location = locationValue.CGPointValue;
+        [touchDescriptions
+            addObject:[NSString stringWithFormat:@"phase=%ld location=%@", (long)phase, NSStringFromCGPoint(location)]];
+        if (phase == 3 || phase == 4) {
+            continue;
+        }
+
+        activeTouchCount++;
+        minX = MIN(minX, location.x);
+        maxX = MAX(maxX, location.x);
+        xTotal += location.x;
+        yTotal += location.y;
+    }
+
+    if (activeTouchCount == 0) {
+        return;
+    }
+
+    BOOL nearLeftSide = minX <= sideDiagnosticBand;
+    BOOL nearRightSide = maxX >= width - sideDiagnosticBand;
+    if (!nearLeftSide && !nearRightSide) {
+        return;
+    }
+
+    self.lastSideDiagnosticTimestamp = timestamp;
+    CGPoint centroid = CGPointMake(xTotal / (CGFloat)activeTouchCount, yTotal / (CGFloat)activeTouchCount);
+    HBLogInfo(@"Edge gesture diagnostic activeTouchCount=%lu totalTouchCount=%lu minX=%.1f maxX=%.1f centroid=%@ "
+              @"bounds=%@ touches=[%@]",
+              (unsigned long)activeTouchCount, (unsigned long)snapshots.count, minX, maxX,
+              NSStringFromCGPoint(centroid), NSStringFromCGRect(bounds),
+              [touchDescriptions componentsJoinedByString:@"; "]);
+}
+
+#pragma mark - Testing Hooks
+
+- (nullable NSString *)la_testingNoteTouchSnapshots:(NSArray<NSDictionary<NSString *, id> *> *)snapshots
+                                             bounds:(CGRect)bounds
+                                          timestamp:(NSTimeInterval)timestamp {
+    return [self handleTouchSnapshots:snapshots bounds:bounds timestamp:timestamp];
+}
+#endif
+
+@end

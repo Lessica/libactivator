@@ -10,7 +10,6 @@
 
 #import "IOKitSPI.h"
 #import "LATHIDEventSender.h"
-#import "LATMediaEventSource.h"
 #import "MediaRemote+Private.h"
 #import "hardware/LATHardwareActionCommand.h"
 
@@ -32,20 +31,20 @@
 
 @interface LATHardwareActionListener ()
 @property(nonatomic, strong) LATHIDEventSender *sender;
-@property(nonatomic, weak, nullable) LATMediaEventSource *mediaEventSource;
+@property(nonatomic, weak, nullable) id<LATNowPlayingProviding> nowPlayingProvider;
 @end
 
 @implementation LATHardwareActionListener
 
 - (instancetype)init {
-    return [self initWithMediaEventSource:nil];
+    return [self initWithNowPlayingProvider:nil];
 }
 
-- (instancetype)initWithMediaEventSource:(LATMediaEventSource *)mediaEventSource {
+- (instancetype)initWithNowPlayingProvider:(id<LATNowPlayingProviding>)nowPlayingProvider {
     self = [super init];
     if (self) {
         _sender = [[LATHIDEventSender alloc] init];
-        _mediaEventSource = mediaEventSource;
+        _nowPlayingProvider = nowPlayingProvider;
     }
     return self;
 }
@@ -102,7 +101,7 @@
     MRMediaRemoteCommand mediaCommand = (MRMediaRemoteCommand)command.mediaRemoteCommand;
     if (mediaCommand == MRMediaRemoteCommandPlay || mediaCommand == MRMediaRemoteCommandPause) {
         BOOL isPlaying = NO;
-        if (![self.mediaEventSource getKnownNowPlayingApplicationPlaying:&isPlaying]) {
+        if (![self.nowPlayingProvider getKnownNowPlayingApplicationPlaying:&isPlaying]) {
             HBLogWarn(@"Skipping media action %@ because now-playing playback state is unknown", listenerName ?: @"");
             return NO;
         }
@@ -167,26 +166,21 @@
     static dispatch_once_t sOnceToken;
     dispatch_once(&sOnceToken, ^{
         NSArray<LATHardwareActionCommand *> *commandList = @[
-            [[LATHardwareActionCommand alloc]
-                initWithMediaRemoteListenerName:@"libactivator.ipod.toggle-playback"
-                                   selectorName:@"togglePlayback"
-                             mediaRemoteCommand:MRMediaRemoteCommandTogglePlayPause],
-            [[LATHardwareActionCommand alloc]
-                initWithMediaRemoteListenerName:@"libactivator.ipod.pause-playback"
-                                   selectorName:@"pauseMedia"
-                             mediaRemoteCommand:MRMediaRemoteCommandPause],
-            [[LATHardwareActionCommand alloc]
-                initWithMediaRemoteListenerName:@"libactivator.ipod.resume-playback"
-                                   selectorName:@"playMedia"
-                             mediaRemoteCommand:MRMediaRemoteCommandPlay],
-            [[LATHardwareActionCommand alloc]
-                initWithMediaRemoteListenerName:@"libactivator.ipod.next-track"
-                                   selectorName:@"nextTrack"
-                             mediaRemoteCommand:MRMediaRemoteCommandNextTrack],
-            [[LATHardwareActionCommand alloc]
-                initWithMediaRemoteListenerName:@"libactivator.ipod.previous-track"
-                                   selectorName:@"previousTrack"
-                             mediaRemoteCommand:MRMediaRemoteCommandPreviousTrack],
+            [[LATHardwareActionCommand alloc] initWithMediaRemoteListenerName:@"libactivator.ipod.toggle-playback"
+                                                                 selectorName:@"togglePlayback"
+                                                           mediaRemoteCommand:MRMediaRemoteCommandTogglePlayPause],
+            [[LATHardwareActionCommand alloc] initWithMediaRemoteListenerName:@"libactivator.ipod.pause-playback"
+                                                                 selectorName:@"pauseMedia"
+                                                           mediaRemoteCommand:MRMediaRemoteCommandPause],
+            [[LATHardwareActionCommand alloc] initWithMediaRemoteListenerName:@"libactivator.ipod.resume-playback"
+                                                                 selectorName:@"playMedia"
+                                                           mediaRemoteCommand:MRMediaRemoteCommandPlay],
+            [[LATHardwareActionCommand alloc] initWithMediaRemoteListenerName:@"libactivator.ipod.next-track"
+                                                                 selectorName:@"nextTrack"
+                                                           mediaRemoteCommand:MRMediaRemoteCommandNextTrack],
+            [[LATHardwareActionCommand alloc] initWithMediaRemoteListenerName:@"libactivator.ipod.previous-track"
+                                                                 selectorName:@"previousTrack"
+                                                           mediaRemoteCommand:MRMediaRemoteCommandPreviousTrack],
             [[LATHardwareActionCommand alloc] initWithListenerName:@"libactivator.audio.increase-volume"
                                                       selectorName:@"increaseVolume"
                                                               page:kHIDPage_Consumer

@@ -10,17 +10,17 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-#pragma mark - UIApplication
-
-@interface UIApplication (TestPrivate)
-- (id)_accessibilityFrontMostApplication;
-@end
-
 #pragma mark - SpringBoard App
 
 @interface SBApplication : NSObject
 - (NSString *)bundleIdentifier;
 - (NSString *)displayIdentifier;
+@end
+
+#pragma mark - UIApplication
+
+@interface UIApplication (TestPrivate)
+- (SBApplication *)_accessibilityFrontMostApplication;
 @end
 
 #pragma mark - SpringBoard

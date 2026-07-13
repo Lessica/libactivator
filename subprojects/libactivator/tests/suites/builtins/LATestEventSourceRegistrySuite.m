@@ -195,11 +195,31 @@
 
     LATestEventSource *dynamicSource =
         [[LATestEventSource alloc] initWithIdentifier:@"testing.dynamic"
-                                           eventNames:[NSSet setWithObject:secondaryEventName]
+                                           eventNames:[NSSet set]
                                        interestPolicy:LATEventSourceInterestPolicyAlways];
-    [recorder expect:[registry registerEventSource:dynamicSource] && dynamicSource.startCount == 1
-            caseName:@"registry-starts-dynamic-registration"
-              reason:@"Registry did not start a source registered after startup"];
+    LATestEventSource *invalidCatalogSource =
+        [[LATestEventSource alloc] initWithIdentifier:@"testing.invalid-catalog"
+                                           eventNames:(NSSet<NSString *> *)(id)[NSSet setWithObject:@42]
+                                       interestPolicy:LATEventSourceInterestPolicyAlways];
+    [recorder expect:![registry registerEventSource:invalidCatalogSource]
+            caseName:@"registry-rejects-invalid-producer-catalog-values"
+              reason:@"Registry silently normalized a non-string producer catalog into a dormant source"];
+    [recorder expect:[registry registerEventSource:dynamicSource] && dynamicSource.startCount == 1 &&
+                     ![registry isInterestedInEventSource:dynamicSource]
+            caseName:@"registry-registers-dormant-dynamic-source"
+              reason:@"Registry rejected or activated a source with an empty configured producer catalog"];
+    dynamicSource.eventNames = [NSSet setWithObject:secondaryEventName];
+    [recorder expect:[registry reloadEventNamesForEventSource:dynamicSource] &&
+                     [[registry eventSourcesForEventName:secondaryEventName] containsObject:dynamicSource] &&
+                     [registry isInterestedInEventSource:dynamicSource]
+            caseName:@"registry-activates-configured-dynamic-source"
+              reason:@"Registry did not activate a dormant source after its producer catalog gained an event"];
+    dynamicSource.eventNames = [NSSet set];
+    [recorder expect:[registry reloadEventNamesForEventSource:dynamicSource] &&
+                     ![[registry eventSourcesForEventName:secondaryEventName] containsObject:dynamicSource] &&
+                     ![registry isInterestedInEventSource:dynamicSource]
+            caseName:@"registry-returns-dynamic-source-to-dormant-state"
+              reason:@"Registry did not accept an empty catalog after the final dynamic event was removed"];
     dynamicSource.eventNames = [NSSet setWithObject:sharedEventName];
     [recorder expect:[registry reloadEventNamesForEventSource:dynamicSource] &&
                      ![[registry eventSourcesForEventName:secondaryEventName] containsObject:dynamicSource] &&

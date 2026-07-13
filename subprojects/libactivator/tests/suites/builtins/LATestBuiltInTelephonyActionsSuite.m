@@ -66,8 +66,7 @@
                   reason:@"Telephony action did not consume a listener name with matching selector metadata"];
     }
 
-    [recorder expect:![telephonyAction shouldHandleListenerName:@"libactivator.phone.answer-call"
-                                                      activator:nil]
+    [recorder expect:![telephonyAction shouldHandleListenerName:@"libactivator.phone.answer-call" activator:nil]
             caseName:@"telephony-action-missing-metadata-unhandled"
               reason:@"Telephony action consumed a listener name without matching selector metadata"];
 

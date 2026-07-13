@@ -9,13 +9,12 @@
 #import <Activator/Activator.h>
 
 #import "LATBuiltInListenerRegistrant.h"
-
-@class LATMediaEventSource;
+#import "LATEventSourceDependencies.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATHardwareActionListener : NSObject <LAListener, LATBuiltInListenerRegistrant>
-- (instancetype)initWithMediaEventSource:(nullable LATMediaEventSource *)mediaEventSource;
+- (instancetype)initWithNowPlayingProvider:(nullable id<LATNowPlayingProviding>)nowPlayingProvider;
 @end
 
 NS_ASSUME_NONNULL_END

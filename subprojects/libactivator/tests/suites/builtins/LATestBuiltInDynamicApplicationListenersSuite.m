@@ -205,34 +205,32 @@
     LAEvent *applicationModeEvent = [LAEvent eventWithName:@"libactivator.test.dynamic.application"
                                                       mode:LAEventModeApplication];
     [recorder expect:![listener shouldHandleApplicationDescriptor:currentDescriptor
-                                                        forEvent:applicationModeEvent
-                                                       activator:activator]
+                                                         forEvent:applicationModeEvent
+                                                        activator:activator]
             caseName:@"dynamic-application-current-app-unhandled"
               reason:@"Dynamic application listener consumed an event targeting the current application"];
     [recorder expect:[listener shouldHandleApplicationDescriptor:targetDescriptor
-                                                       forEvent:applicationModeEvent
-                                                      activator:activator]
-            caseName:@"dynamic-application-different-app-handled"
-              reason:@"Dynamic application listener did not consume an event targeting a different application"];
-    [recorder expect:![listener shouldHandleApplicationDescriptor:nil
                                                         forEvent:applicationModeEvent
                                                        activator:activator]
+            caseName:@"dynamic-application-different-app-handled"
+              reason:@"Dynamic application listener did not consume an event targeting a different application"];
+    [recorder expect:![listener shouldHandleApplicationDescriptor:nil forEvent:applicationModeEvent activator:activator]
             caseName:@"dynamic-application-missing-descriptor-unhandled"
               reason:@"Dynamic application listener consumed an event without a descriptor"];
 
     LAEvent *springBoardEvent = [LAEvent eventWithName:@"libactivator.test.dynamic.application"
                                                   mode:LAEventModeSpringBoard];
     [recorder expect:[listener shouldHandleApplicationDescriptor:currentDescriptor
-                                                       forEvent:springBoardEvent
-                                                      activator:activator]
+                                                        forEvent:springBoardEvent
+                                                       activator:activator]
             caseName:@"dynamic-application-springboard-mode-handled"
               reason:@"Dynamic application listener did not consume a SpringBoard-mode application launch"];
 
     LAEvent *lockScreenEvent = [LAEvent eventWithName:@"libactivator.test.dynamic.application"
                                                  mode:LAEventModeLockScreen];
     [recorder expect:[listener shouldHandleApplicationDescriptor:currentDescriptor
-                                                       forEvent:lockScreenEvent
-                                                      activator:activator]
+                                                        forEvent:lockScreenEvent
+                                                       activator:activator]
             caseName:@"dynamic-application-lockscreen-mode-handled"
               reason:@"Dynamic application listener did not consume a lockscreen-mode application launch"];
 

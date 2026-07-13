@@ -33,7 +33,7 @@ typedef NS_ENUM(NSUInteger, LATHardwareActionKind) {
                                usage:(uint32_t)usage;
 - (instancetype)initWithMediaRemoteListenerName:(NSString *)listenerName
                                    selectorName:(NSString *)selectorName
-                           mediaRemoteCommand:(NSInteger)mediaRemoteCommand;
+                             mediaRemoteCommand:(NSInteger)mediaRemoteCommand;
 - (instancetype)initWithScreenshotListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName;
 - (instancetype)initWithVibrateListenerName:(NSString *)listenerName selectorName:(NSString *)selectorName;
 

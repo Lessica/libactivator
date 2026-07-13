@@ -23,6 +23,7 @@
 #import "LATestDispatchSuite.h"
 #import "LATestEnvironment.h"
 #import "LATestEventDefinitionRegistrySuite.h"
+#import "LATestEventSourceModuleLoaderSuite.h"
 #import "LATestEventSourceRegistrySuite.h"
 #import "LATestEventSuite.h"
 #import "LATestIPCCodecSuite.h"
@@ -144,6 +145,7 @@
     [LATestBuiltInTelephonyActionsSuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInDynamicApplicationListenersSuite runWithRecorder:recorder activator:activator];
     [LATestEventDefinitionRegistrySuite runWithRecorder:recorder activator:activator];
+    [LATestEventSourceModuleLoaderSuite runWithRecorder:recorder activator:activator];
     [LATestEventSourceRegistrySuite runWithRecorder:recorder activator:activator];
     [LATestBuiltInEventSourcesSuite runWithRecorder:recorder activator:activator];
     [LATestEnvironment cleanActivator:activator];
