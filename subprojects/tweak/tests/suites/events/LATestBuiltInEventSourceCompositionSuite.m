@@ -22,6 +22,7 @@
 #import "LATPowerStateEventSource.h"
 #import "LATSpringBoardIconGestureEventSource.h"
 #import "LATStatusBarEventSource.h"
+#import "LATVolumeHUDTapEventSource.h"
 #import "LATestEventSourceFixture.h"
 #import "LATestRecorder.h"
 
@@ -40,6 +41,7 @@
         LATMotionEventSource.class,
         LATNetworkEventSource.class,
         LATButtonEventSource.class,
+        LATVolumeHUDTapEventSource.class,
         LATForceTouchEventSource.class,
         LATMultiTouchEventSource.class,
         LATSpringBoardIconGestureEventSource.class,
@@ -397,6 +399,15 @@
                          isCompatibleWithMode:LAEventModeLockScreen]
             caseName:@"volume-toggle-mute-twice-all-modes-compatible"
               reason:@"Volume toggle mute twice event was not compatible with all event modes"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeDisplayTap]
+            caseName:@"volume-hud-tap-event-available"
+              reason:@"Volume HUD tap event metadata was not available"];
+    [recorder
+          expect:[activator eventWithName:LAEventNameVolumeDisplayTap isCompatibleWithMode:LAEventModeSpringBoard] &&
+                 [activator eventWithName:LAEventNameVolumeDisplayTap isCompatibleWithMode:LAEventModeApplication] &&
+                 [activator eventWithName:LAEventNameVolumeDisplayTap isCompatibleWithMode:LAEventModeLockScreen]
+        caseName:@"volume-hud-tap-event-all-modes-compatible"
+          reason:@"Volume HUD tap event was not compatible with all event modes"];
 
     [self runFingerprintSensorAvailabilityTestsWithRecorder:recorder activator:activator];
     [self runForceTouchAvailabilityTestsWithRecorder:recorder activator:activator];
@@ -524,6 +535,8 @@
         [fixture interestedEventSourceOfClass:LATSpringBoardIconGestureEventSource.class previousEventSources:@[]];
     LATStatusBarEventSource *statusBarSource =
         [fixture interestedEventSourceOfClass:LATStatusBarEventSource.class previousEventSources:@[]];
+    LATVolumeHUDTapEventSource *volumeHUDTapSource =
+        [fixture interestedEventSourceOfClass:LATVolumeHUDTapEventSource.class previousEventSources:@[]];
 
     [recorder expect:[edgeSource.eventNames containsObject:LAEventNameStatusBarSwipeDown] &&
                      [statusBarSource.eventNames containsObject:LAEventNameStatusBarSwipeDown]
@@ -560,7 +573,12 @@
                      statusBarSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode
             caseName:@"event-source-catalog-declares-assignment-aware-policy"
               reason:@"A high-cost Event Source did not declare assignment-aware interest"];
+    [recorder expect:[volumeHUDTapSource.eventNames isEqualToSet:[NSSet setWithObject:LAEventNameVolumeDisplayTap]] &&
+                     volumeHUDTapSource.interestPolicy == LATEventSourceInterestPolicyAlways
+            caseName:@"volume-hud-tap-source-declares-always-on-catalog"
+              reason:@"Volume HUD tap source did not match the 1.9.13 always-on recognizer policy"];
 
+    [volumeHUDTapSource invalidate];
     [statusBarSource invalidate];
     [springBoardIconSource invalidate];
     [multiTouchSource invalidate];

@@ -109,4 +109,4 @@ Hook glue 与 listener 通过 `LATBuiltInRegistry -eventSourcesConformingToProto
 - Settings host 尚未接入跨进程 provider catalog/create bridge 和 creation UI；当前 generation-bound catalog/create API 只存在于 SpringBoard 内部 registry。
 - Existing-event descriptor/get/save 已有 IPC，但 Settings controller 长时间存活时仍需把 definition-registry generation 作为 opaque token 带过 IPC 并在保存时校验。
 - Handled-default interception 仍是独立设计任务。
-- 当前未实现的 21 个 1.9.13 event 仍逐 family 评估，不因本次架构拆分改变状态。
+- 当前未实现的 20 个 1.9.13 event 仍逐 family 评估，不因本次架构拆分改变状态。

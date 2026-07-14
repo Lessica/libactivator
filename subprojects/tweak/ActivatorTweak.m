@@ -22,6 +22,7 @@
 #import <CaptainHook/CaptainHook.h>
 #import <HBLog.h>
 #import <UIKit/UIKit.h>
+#import <objc/runtime.h>
 
 CHDeclareClass(SpringBoard);
 CHDeclareClass(UIApplication);
@@ -32,6 +33,7 @@ CHDeclareClass(SBCoverSheetPrimarySlidingViewController);
 CHDeclareClass(SBMainSwitcherViewController);
 CHDeclareClass(SBMainSwitcherControllerCoordinator);
 CHDeclareClass(SBVolumeControl);
+CHDeclareClass(SBElasticVolumeViewController);
 CHDeclareClass(SBHIconManager);
 CHDeclareClass(SBIconScrollView);
 CHDeclareClass(SBWiFiManager);
@@ -55,6 +57,7 @@ static NSArray<id<LATEventSourceMotionIngress>> *gMotionEventSources = nil;
 static NSArray<id<LATEventSourceNetworkStateIngress>> *gNetworkStateEventSources = nil;
 static NSArray<id<LATEventSourceStatusBarTouchIngress>> *gStatusBarTouchEventSources = nil;
 static NSArray<id<LATEventSourceSystemGestureWindowIngress>> *gSystemGestureWindowEventSources = nil;
+static NSArray<id<LATEventSourceVolumeHUDViewIngress>> *gVolumeHUDViewEventSources = nil;
 
 static Class gApplicationControllerClass = nil;
 static Class gCoverSheetViewControllerClass = nil;
@@ -64,6 +67,8 @@ static Class gInCallTransientOverlayViewControllerClass = nil;
 static Class gLockScreenEmergencyCallViewControllerClass = nil;
 static Class gIconControllerClass = nil;
 static Class gIconScrollViewClass = nil;
+static Class gElasticVolumeViewControllerClass = nil;
+static Ivar gElasticVolumeSliderContainerViewIvar = nil;
 
 @interface CCUIModuleCollectionViewController : UIViewController
 - (void)viewDidLoad;
@@ -262,6 +267,22 @@ CHOptimizedMethod4(self, id, SBVolumeControl, initWithHUDController, id, hudCont
     return instance;
 }
 
+#pragma mark - SBElasticVolumeViewController
+
+CHOptimizedMethod0(self, void, SBElasticVolumeViewController, viewDidLoad) {
+    CHSuper0(SBElasticVolumeViewController, viewDidLoad);
+
+    UIView *sliderContainerView = object_getIvar(self, gElasticVolumeSliderContainerViewIvar);
+    if (![sliderContainerView isKindOfClass:UIView.class]) {
+        HBLogWarn(@"Skipping Volume HUD tap attachment because _sliderContainerView is unavailable");
+        return;
+    }
+
+    for (id<LATEventSourceVolumeHUDViewIngress> eventSource in gVolumeHUDViewEventSources) {
+        [eventSource noteVolumeHUDSliderContainerViewDidLoad:sliderContainerView];
+    }
+}
+
 #pragma mark - SBHIconManager
 
 CHOptimizedMethod1(self, void, SBHIconManager, rootFolderControllerViewWillAppear, id, controller) {
@@ -398,6 +419,11 @@ static void LATLoadRuntimeStateClasses(void) {
     gLockScreenEmergencyCallViewControllerClass = NSClassFromString(@"SBLockScreenEmergencyCallViewController");
     gIconControllerClass = NSClassFromString(@"SBIconController");
     gIconScrollViewClass = NSClassFromString(@"SBIconScrollView");
+    gElasticVolumeViewControllerClass = NSClassFromString(@"SBElasticVolumeViewController");
+    if (gElasticVolumeViewControllerClass) {
+        gElasticVolumeSliderContainerViewIvar =
+            class_getInstanceVariable(gElasticVolumeViewControllerClass, "_sliderContainerView");
+    }
 }
 
 static void LATLoadSpringBoardClasses(void) {
@@ -413,6 +439,9 @@ static void LATLoadSpringBoardClasses(void) {
     CHLoadClass_(&SBMainSwitcherViewController$, NSClassFromString(@"SBMainSwitcherViewController"));
     CHLoadClass_(&SBMainSwitcherControllerCoordinator$, NSClassFromString(@"SBMainSwitcherControllerCoordinator"));
     CHLoadClass_(&SBVolumeControl$, NSClassFromString(@"SBVolumeControl"));
+    if (gElasticVolumeViewControllerClass) {
+        CHLoadClass_(&SBElasticVolumeViewController$, gElasticVolumeViewControllerClass);
+    }
     CHLoadClass_(&SBHIconManager$, NSClassFromString(@"SBHIconManager"));
     if (gIconScrollViewClass) {
         CHLoadClass_(&SBIconScrollView$, gIconScrollViewClass);
@@ -465,6 +494,7 @@ static void LATInstallHooks(void) {
         CHHook1(UIViewController, viewWillAppear);
         CHHook1(UIViewController, viewDidDisappear);
         LATInstallApplicationControllerHooks();
+
         Class moduleCollectionViewControllerClass = NSClassFromString(@"CCUIModuleCollectionViewController");
         if ([moduleCollectionViewControllerClass instancesRespondToSelector:@selector(viewDidLoad)] &&
             [moduleCollectionViewControllerClass instancesRespondToSelector:@selector(viewWillAppear:)]) {
@@ -485,6 +515,13 @@ static void LATInstallHooks(void) {
                 transitionDidEndWithTransitionContext);
         CHHook4(SBVolumeControl, initWithHUDController, ringerControl, telephonyManager, conferenceManager);
 
+        if (gElasticVolumeViewControllerClass && gElasticVolumeSliderContainerViewIvar &&
+            [gElasticVolumeViewControllerClass instancesRespondToSelector:@selector(viewDidLoad)]) {
+            CHHook0(SBElasticVolumeViewController, viewDidLoad);
+        } else {
+            HBLogWarn(@"Skipping SBElasticVolumeViewController hook because the class contract is unavailable");
+        }
+
         if (@available(iOS 17, *)) {
             CHHook1(SBHIconManager, rootFolderControllerViewWillAppear);
             CHHook1(SBHIconManager, rootFolderControllerViewDidDisappear);
@@ -496,12 +533,7 @@ static void LATInstallHooks(void) {
             HBLogWarn(@"Skipping SBIconScrollView hooks because the class is unavailable");
         }
 
-        if ([UIApplication instancesRespondToSelector:@selector(motionEnded:withEvent:)]) {
-            CHHook2(UIApplication, motionEnded, withEvent);
-        } else {
-            HBLogWarn(@"Skipping UIApplication motion hook because motionEnded:withEvent: is unavailable");
-        }
-
+        CHHook2(UIApplication, motionEnded, withEvent);
         CHHook0(SBWiFiManager, _updateCurrentNetwork);
         CHHook0(SBWiFiManager, _linkDidChange);
         CHHook1(_UISystemGestureWindow, sendEvent);
@@ -549,5 +581,7 @@ __attribute__((constructor)) static void LATweakInitialize(void) {
         eventSourcesConformingToProtocol:@protocol(LATEventSourceStatusBarTouchIngress)];
     gSystemGestureWindowEventSources = (NSArray<id<LATEventSourceSystemGestureWindowIngress>> *)[gBuiltInRegistry
         eventSourcesConformingToProtocol:@protocol(LATEventSourceSystemGestureWindowIngress)];
+    gVolumeHUDViewEventSources = (NSArray<id<LATEventSourceVolumeHUDViewIngress>> *)[gBuiltInRegistry
+        eventSourcesConformingToProtocol:@protocol(LATEventSourceVolumeHUDViewIngress)];
     LATInstallHooks();
 }

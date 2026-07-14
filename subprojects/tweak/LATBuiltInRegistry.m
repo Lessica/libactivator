@@ -39,6 +39,7 @@
 #import "LATSystemActionListener.h"
 #import "LATTelephonyActionListener.h"
 #import "LATURLActionListener.h"
+#import "LATVolumeHUDTapEventSource.h"
 
 #import <HBLog.h>
 
@@ -73,6 +74,7 @@
         LATMotionEventSource.class,
         LATNetworkEventSource.class,
         LATButtonEventSource.class,
+        LATVolumeHUDTapEventSource.class,
         LATForceTouchEventSource.class,
         LATMultiTouchEventSource.class,
         LATSpringBoardIconGestureEventSource.class,

@@ -41,4 +41,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)noteIconScrollViewDidInitialize:(UIScrollView *)scrollView;
 @end
 
+@protocol LATEventSourceVolumeHUDViewIngress <NSObject>
+- (void)noteVolumeHUDSliderContainerViewDidLoad:(UIView *)sliderContainerView;
+@end
+
 NS_ASSUME_NONNULL_END

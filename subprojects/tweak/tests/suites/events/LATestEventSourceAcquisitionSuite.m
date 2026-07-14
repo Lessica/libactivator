@@ -16,6 +16,7 @@
 #import "LATMultiTouchEventSource.h"
 #import "LATSpringBoardIconGestureEventSource.h"
 #import "LATStatusBarEventSource.h"
+#import "LATVolumeHUDTapEventSource.h"
 #import "LATestEnvironment.h"
 #import "LATestEventSourceFixture.h"
 #import "LATestRecorder.h"
@@ -32,6 +33,7 @@
     [self runStatusBarEventSourceTestsWithRecorder:recorder activator:activator];
     [self runSpringBoardIconGestureEventSourceTestsWithRecorder:recorder activator:activator];
     [self runMotionEventSourceTestsWithRecorder:recorder activator:activator];
+    [self runVolumeHUDTapEventSourceTestsWithRecorder:recorder activator:activator];
     [self runFingerprintSensorEventSourceTestsWithRecorder:recorder activator:activator];
     [self runEdgeGestureEventSourceDispatchTestsWithRecorder:recorder activator:activator];
     [self runForceTouchEventSourceTestsWithRecorder:recorder activator:activator];
@@ -842,6 +844,49 @@
     [recorder expect:!dispatchedAfterInvalidation && [fixture dispatchCountForEventName:LAEventNameMotionShake] == 2
             caseName:@"motion-event-source-invalidation-is-terminal"
               reason:@"Invalidated Motion source continued dispatching shake events"];
+}
+
++ (void)runVolumeHUDTapEventSourceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    LATestEventSourceFixture *fixture = [[LATestEventSourceFixture alloc] initWithActivator:activator];
+    LATVolumeHUDTapEventSource *attachmentSource =
+        [fixture interestedEventSourceOfClass:LATVolumeHUDTapEventSource.class previousEventSources:@[]];
+    UIView *sliderContainerView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, 68.0, 220.0)];
+    [attachmentSource noteVolumeHUDSliderContainerViewDidLoad:sliderContainerView];
+    BOOL capturedBeforeStart = [attachmentSource la_testingKnownSliderContainerViewCount] == 1 &&
+                               ![attachmentSource la_testingIsInstalledInSliderContainerView:sliderContainerView];
+    [attachmentSource start];
+    UITapGestureRecognizer *recognizer = (UITapGestureRecognizer *)sliderContainerView.gestureRecognizers.firstObject;
+    [recorder
+          expect:capturedBeforeStart &&
+                 [attachmentSource la_testingIsInstalledInSliderContainerView:sliderContainerView] &&
+                 sliderContainerView.gestureRecognizers.count == 1 &&
+                 [recognizer isKindOfClass:UITapGestureRecognizer.class] && recognizer.numberOfTapsRequired == 1 &&
+                 !recognizer.cancelsTouchesInView && !recognizer.delaysTouchesBegan && !recognizer.delaysTouchesEnded
+        caseName:@"volume-hud-tap-source-attaches-non-cancelling-recognizer"
+          reason:@"Volume HUD tap source did not attach its always-on recognizer without changing HUD touch delivery"];
+    [attachmentSource invalidate];
+    [recorder expect:sliderContainerView.gestureRecognizers.count == 0 &&
+                     ![attachmentSource la_testingIsInstalledInSliderContainerView:sliderContainerView]
+            caseName:@"volume-hud-tap-source-removes-recognizer-on-invalidate"
+              reason:@"Invalidated Volume HUD tap source left its recognizer attached"];
+
+    LATVolumeHUDTapEventSource *dispatchSource =
+        [fixture interestedEventSourceOfClass:LATVolumeHUDTapEventSource.class previousEventSources:@[]];
+    [activator la_resetDispatchCounts];
+    BOOL dispatchedBeforeStart = [dispatchSource la_testingHandleTapState:UIGestureRecognizerStateEnded];
+    [dispatchSource start];
+    BOOL dispatchedChanged = [dispatchSource la_testingHandleTapState:UIGestureRecognizerStateChanged];
+    BOOL dispatchedEnded = [dispatchSource la_testingHandleTapState:UIGestureRecognizerStateEnded];
+    [recorder expect:!dispatchedBeforeStart && !dispatchedChanged && dispatchedEnded &&
+                     [fixture dispatchCountForEventName:LAEventNameVolumeDisplayTap] == 1
+            caseName:@"volume-hud-tap-source-dispatches-only-ended-taps"
+              reason:@"Volume HUD tap source did not match the 1.9.13 ended-state dispatch contract"];
+    [dispatchSource invalidate];
+    BOOL dispatchedAfterInvalidation = [dispatchSource la_testingHandleTapState:UIGestureRecognizerStateEnded];
+    [recorder
+          expect:!dispatchedAfterInvalidation && [fixture dispatchCountForEventName:LAEventNameVolumeDisplayTap] == 1
+        caseName:@"volume-hud-tap-source-invalidation-is-terminal"
+          reason:@"Invalidated Volume HUD tap source continued dispatching events"];
 }
 
 + (void)runMultiTouchEventSourceDispatchTestsWithRecorder:(LATestRecorder *)recorder
