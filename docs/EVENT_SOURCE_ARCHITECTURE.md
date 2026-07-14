@@ -53,12 +53,13 @@ Network、Application、Mail、Notification、Scheduled、Battery Level data sou
 
 - `LATEventSourceInterestPolicyAlways` 用于低成本或系统状态类 source。
 - `LATEventSourceInterestPolicyAssignedInCurrentMode` 用于高成本手势或触摸 source；interest 由当前 mode 下仍有兼容 listener 的 assignment 决定。
+- `LATEventSourceInterestPolicyAssignedInAnyMode` 用于跨越较长时间边界的调度 source；任一可用 mode 存在 assignment 时保持调度，当前 mode 单独变化不重建 monitor，真正触发时仍按届时的当前 mode 派发。
 - Source 通过统一 `initWithEventSourceContext:` 进入构造；该方法只在主实现中提取实际需要的 event dispatch、abort/deactivate、mode、definition/assignment query 或前置 source typed protocol，再交给自身明确的 designated initializer。Source 不得保存整个 context、读取 `LASharedActivator`，也不得把 context 当作运行期 service locator。
 - Source 只消费 registry/binding 提供的 immutable acquisition mapping，不写 provider preference，不实现 creation protocol。
 - 纯动态 source 可以用空 producer catalog 注册为 dormant source；binding 增加第一个 concrete definition 后由 registry 建立 producer mapping，删除最后一个 definition 后重新回到 dormant，而不是销毁或拒绝 source。
 - 同一个 event name 可以有多个 ordered producers；metadata-only definition 也可以没有 producer。
 - `invalidate` 必须撤销 observer、monitor、timer、recognizer target 或 pending recognition state。已 invalidated 的 source object 不得重新注册。
-- Assignment-aware source 在 mode 或 interested-name snapshot 改变时必须清理在途识别状态。
+- Current-mode assignment-aware source 在 mode 或 interested-name snapshot 改变时必须清理在途识别状态；any-mode source 只在 interested-name snapshot 改变时更新生命周期。
 
 `LATEventSourceRegistry` 只维护 source order、producer/interest snapshots、`eventName -> ordered producers`、start/invalidate 与 assignment-aware interest。Source unregister 和 registry invalidate 永远不得删除 definition。
 
@@ -109,4 +110,4 @@ Hook glue 与 listener 通过 `LATBuiltInRegistry -eventSourcesConformingToProto
 - Settings host 尚未接入跨进程 provider catalog/create bridge 和 creation UI；当前 generation-bound catalog/create API 只存在于 SpringBoard 内部 registry。
 - Existing-event descriptor/get/save 已有 IPC，但 Settings controller 长时间存活时仍需把 definition-registry generation 作为 opaque token 带过 IPC 并在保存时校验。
 - Handled-default interception 仍是独立设计任务。
-- 当前未实现的 19 个 1.9.13 event 仍逐 family 评估，不因本次架构拆分改变状态。
+- 当前尚未完成验收的 15 个 1.9.13 event 仍逐 family 推进，不因本次架构拆分改变状态。

@@ -21,6 +21,7 @@
 #import "LATNetworkEventDataSource.h"
 #import "LATNetworkEventSource.h"
 #import "LATPowerStateEventSource.h"
+#import "LATScheduledEventSource.h"
 #import "LATSpringBoardIconGestureEventSource.h"
 #import "LATStatusBarEventSource.h"
 #import "LATVolumeHUDTapEventSource.h"
@@ -41,6 +42,7 @@
         LATMediaEventSource.class,
         LATMotionEventSource.class,
         LATNetworkEventSource.class,
+        LATScheduledEventSource.class,
         LATButtonEventSource.class,
         LATVolumeHUDTapEventSource.class,
         LATGestureBarEventSource.class,
@@ -153,6 +155,12 @@
     [recorder expect:[[activator availableEventNames] containsObject:LAEventNameHeadsetDisconnected]
             caseName:@"headset-disconnected-event-available"
               reason:@"Headset disconnected event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameHeadsetButtonPressSingle]
+            caseName:@"headset-button-single-press-event-available"
+              reason:@"Headset button single press event metadata was not available"];
+    [recorder expect:[[activator availableEventNames] containsObject:LAEventNameHeadsetButtonHoldShort]
+            caseName:@"headset-button-short-hold-event-available"
+              reason:@"Headset button short hold event metadata was not available"];
     [recorder
           expect:[activator eventWithName:LAEventNameHeadsetConnected isCompatibleWithMode:LAEventModeSpringBoard] &&
                  [activator eventWithName:LAEventNameHeadsetConnected isCompatibleWithMode:LAEventModeApplication] &&
@@ -165,6 +173,22 @@
                  [activator eventWithName:LAEventNameHeadsetDisconnected isCompatibleWithMode:LAEventModeLockScreen]
         caseName:@"headset-disconnected-all-modes-compatible"
           reason:@"Headset disconnected event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameHeadsetButtonPressSingle
+                         isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameHeadsetButtonPressSingle
+                         isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameHeadsetButtonPressSingle
+                         isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"headset-button-single-press-all-modes-compatible"
+              reason:@"Headset button single press event was not compatible with all event modes"];
+    [recorder expect:[activator eventWithName:LAEventNameHeadsetButtonHoldShort
+                         isCompatibleWithMode:LAEventModeSpringBoard] &&
+                     [activator eventWithName:LAEventNameHeadsetButtonHoldShort
+                         isCompatibleWithMode:LAEventModeApplication] &&
+                     [activator eventWithName:LAEventNameHeadsetButtonHoldShort
+                         isCompatibleWithMode:LAEventModeLockScreen]
+            caseName:@"headset-button-short-hold-all-modes-compatible"
+              reason:@"Headset button short hold event was not compatible with all event modes"];
     [recorder expect:[[activator availableEventNames] containsObject:nowPlayingInfoChangedEventName]
             caseName:@"now-playing-info-changed-event-available"
               reason:@"Now playing info changed event metadata was not available"];
@@ -424,6 +448,16 @@
                  [activator eventWithName:LAEventNameVolumeDisplayTap isCompatibleWithMode:LAEventModeLockScreen]
         caseName:@"volume-hud-tap-event-all-modes-compatible"
           reason:@"Volume HUD tap event was not compatible with all event modes"];
+    for (NSString *eventName in @[ LAEventNameScheduledSunrise, LAEventNameScheduledSunset ]) {
+        [recorder expect:[[activator availableEventNames] containsObject:eventName]
+                caseName:[NSString stringWithFormat:@"scheduled-event-available-%@", eventName]
+                  reason:[NSString stringWithFormat:@"%@ metadata was not available", eventName]];
+        [recorder expect:[activator eventWithName:eventName isCompatibleWithMode:LAEventModeSpringBoard] &&
+                         [activator eventWithName:eventName isCompatibleWithMode:LAEventModeApplication] &&
+                         [activator eventWithName:eventName isCompatibleWithMode:LAEventModeLockScreen]
+                caseName:[NSString stringWithFormat:@"scheduled-event-all-modes-compatible-%@", eventName]
+                  reason:[NSString stringWithFormat:@"%@ was not compatible with all event modes", eventName]];
+    }
 
     [self runFingerprintSensorAvailabilityTestsWithRecorder:recorder activator:activator];
     [self runForceTouchAvailabilityTestsWithRecorder:recorder activator:activator];
@@ -555,6 +589,8 @@
         [fixture interestedEventSourceOfClass:LATVolumeHUDTapEventSource.class previousEventSources:@[]];
     LATGestureBarEventSource *gestureBarSource =
         [fixture interestedEventSourceOfClass:LATGestureBarEventSource.class previousEventSources:@[]];
+    LATScheduledEventSource *scheduledSource =
+        [fixture interestedEventSourceOfClass:LATScheduledEventSource.class previousEventSources:@[]];
 
     [recorder expect:[edgeSource.eventNames containsObject:LAEventNameStatusBarSwipeDown] &&
                      [statusBarSource.eventNames containsObject:LAEventNameStatusBarSwipeDown]
@@ -611,7 +647,13 @@
                                             : gestureBarSource == nil
         caseName:@"gesture-bar-source-registration-follows-fake-home-capability"
           reason:@"Gesture bar source registration did not follow the fake-home-button event gate"];
+    [recorder expect:[scheduledSource.eventNames isEqualToSet:[NSSet setWithObjects:LAEventNameScheduledSunrise,
+                                                                                    LAEventNameScheduledSunset, nil]] &&
+                     scheduledSource.interestPolicy == LATEventSourceInterestPolicyAssignedInAnyMode
+            caseName:@"scheduled-source-declares-any-mode-assignment-catalog"
+              reason:@"Scheduled source did not match the legacy any-mode assignment scheduling gate"];
 
+    [scheduledSource invalidate];
     [gestureBarSource invalidate];
     [volumeHUDTapSource invalidate];
     [statusBarSource invalidate];

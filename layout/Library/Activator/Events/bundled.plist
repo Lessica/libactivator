@@ -1002,10 +1002,6 @@
 	</dict>
 	<key>libactivator.scheduled.sunrise</key>
 	<dict>
-		<key>CoreFoundationVersion</key>
-		<array>
-			<string>9999.00</string>
-		</array>
 		<key>description</key>
 		<string>Minute the sun appears on the horizon</string>
 		<key>group</key>
@@ -1015,10 +1011,6 @@
 	</dict>
 	<key>libactivator.scheduled.sunset</key>
 	<dict>
-		<key>CoreFoundationVersion</key>
-		<array>
-			<string>9999.00</string>
-		</array>
 		<key>description</key>
 		<string>Minute the sun disappears below the horizon</string>
 		<key>group</key>

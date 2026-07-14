@@ -13,6 +13,7 @@
 typedef NS_ENUM(NSUInteger, LATEventSourceInterestPolicy) {
     LATEventSourceInterestPolicyAlways,
     LATEventSourceInterestPolicyAssignedInCurrentMode,
+    LATEventSourceInterestPolicyAssignedInAnyMode,
 };
 
 NS_ASSUME_NONNULL_BEGIN

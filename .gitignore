@@ -9,6 +9,7 @@ logs/
 packages/
 references/
 __pycache__/
+__handlers__/
 compile_commands.json
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,objective-c,swift,xcode

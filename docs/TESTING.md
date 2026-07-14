@@ -98,7 +98,9 @@ DEBUG build 的 `activator debug` 提供 assignments 的 `list/get/set/add/remov
 
 `run-device-runtime` 当前可以覆盖真实 home/application/lock/unlock mode、前台 App blacklist、真实 `device locked/unlocked` event dispatch，以及 `com.apple.Preferences` dynamic application listener 的真实启动路径。该入口允许因为自动化不可用而 skip；一旦自动化动作已经执行，目标状态或事件没有到达必须 fail。
 
-power connected/disconnected、headset connected/disconnected、media route / now playing、URL actions、HID-backed actions、system UI actions、ringer/audio/call state actions 暂不进 stable，也不通过 production fake 验证。它们需要硬件、系统 UI 或 SPI 行为确认时，先记录手工真机步骤、Frida probe 证据或后续专门 device-runtime 自动化条件，再决定是否纳入自动化。
+power connected/disconnected、headset connected/disconnected、headset button 的真实 `B/21` 硬件链路、media route / now playing、URL actions、HID-backed actions、system UI actions、ringer/audio/call state actions 暂不进 stable，也不通过 production fake 验证。Stable 可以覆盖 Headset button 的独立状态机、assignment gate 和 invalidate，但真实硬件或 SPI 行为需要先记录手工真机步骤、Frida probe 证据或后续专门 device-runtime 自动化条件，再决定是否纳入自动化。
+
+Scheduled sunrise/sunset 的 stable suite 使用注入 monitor 制造 light→dark 与 dark→light 边界，覆盖按 event 过滤、按触发时当前 mode 派发、重复状态去重、任一 mode assignment interest、interest 丢失/恢复和 terminal invalidate；它不修改真机时间、时区或定位。真实边界手工验收可以暂时关闭“自动设置时区”，在当前分别处于白昼和黑夜的两个城市之间切换，利用 `_UISunScheduleController` 对 `NSSystemTimeZoneDidChangeNotification` 的同步重算触发状态翻转；验收后必须恢复原时区设置。该方法会短暂影响整机时间显示与调度，只用于 owner 明确执行的手工步骤。
 
 ## API 与静态检查
 

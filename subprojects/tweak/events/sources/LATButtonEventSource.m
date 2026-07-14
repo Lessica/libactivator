@@ -11,6 +11,7 @@
 #import "LAQueueAssertions.h"
 
 static NSTimeInterval const LATButtonEventSourceHoldDelay = 0.45;
+static NSTimeInterval const LATButtonEventSourceHeadsetHoldDelay = 0.8;
 static NSTimeInterval const LATButtonEventSourceMenuLongHoldDelay = 2.5;
 static NSTimeInterval const LATButtonEventSourceLockLongHoldDelay = 2.5;
 static NSTimeInterval const LATButtonEventSourceRingerToggleTwiceDelay = 1.0;
@@ -34,6 +35,12 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 @property(nonatomic, assign, getter=isMenuButtonDown) BOOL menuButtonDown;
 @property(nonatomic, assign, getter=isVolumeDownButtonDown) BOOL volumeDownButtonDown;
 @property(nonatomic, assign, getter=isVolumeUpButtonDown) BOOL volumeUpButtonDown;
+@property(nonatomic, assign, getter=isHeadsetButtonDown) BOOL headsetButtonDown;
+
+// Headset button recognition
+@property(nonatomic, assign) NSUInteger headsetHoldGeneration;
+@property(nonatomic, assign) BOOL headsetHoldHandled;
+@property(nonatomic, assign) BOOL headsetHoldRecognitionScheduled;
 
 // Lock button recognition
 @property(nonatomic, assign) NSUInteger lockHoldGeneration;
@@ -92,17 +99,18 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
 
 - (NSSet<NSString *> *)eventNames {
     return [NSSet setWithArray:@[
-        LAEventNameLockHoldLong,      LAEventNameLockHoldShort,
-        LAEventNameLockPressDouble,   LAEventNameLockPressTriple,
-        LAEventNameLockPressWithMenu, LAEventNameMenuHoldLong,
-        LAEventNameMenuHoldShort,     LAEventNameMenuPressDouble,
-        LAEventNameMenuPressSingle,   LAEventNameMenuPressTriple,
-        LAEventNameVolumeBothPress,   LAEventNameVolumeDownHoldShort,
-        LAEventNameVolumeDownPress,   LAEventNameVolumeDownPressWithMenu,
-        LAEventNameVolumeDownUp,      LAEventNameVolumeMuteOff,
-        LAEventNameVolumeMuteOn,      LAEventNameVolumeToggleMuteTwice,
-        LAEventNameVolumeUpDown,      LAEventNameVolumeUpHoldShort,
-        LAEventNameVolumeUpPress,     LAEventNameVolumeUpPressWithMenu,
+        LAEventNameLockHoldLong,           LAEventNameLockHoldShort,
+        LAEventNameLockPressDouble,        LAEventNameLockPressTriple,
+        LAEventNameLockPressWithMenu,      LAEventNameMenuHoldLong,
+        LAEventNameMenuHoldShort,          LAEventNameMenuPressDouble,
+        LAEventNameMenuPressSingle,        LAEventNameMenuPressTriple,
+        LAEventNameHeadsetButtonHoldShort, LAEventNameHeadsetButtonPressSingle,
+        LAEventNameVolumeBothPress,        LAEventNameVolumeDownHoldShort,
+        LAEventNameVolumeDownPress,        LAEventNameVolumeDownPressWithMenu,
+        LAEventNameVolumeDownUp,           LAEventNameVolumeMuteOff,
+        LAEventNameVolumeMuteOn,           LAEventNameVolumeToggleMuteTwice,
+        LAEventNameVolumeUpDown,           LAEventNameVolumeUpHoldShort,
+        LAEventNameVolumeUpPress,          LAEventNameVolumeUpPressWithMenu,
     ]];
 }
 
@@ -131,6 +139,10 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     self.menuButtonDown = NO;
     self.volumeDownButtonDown = NO;
     self.volumeUpButtonDown = NO;
+    self.headsetButtonDown = NO;
+    self.headsetHoldGeneration += 1;
+    self.headsetHoldHandled = NO;
+    self.headsetHoldRecognitionScheduled = NO;
     self.lockHoldGeneration += 1;
     self.lockPressGeneration += 1;
     self.lockPressCount = 0;
@@ -167,8 +179,12 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     CFIndex usagePage = IOHIDEventGetIntegerValue(event, kIOHIDEventFieldKeyboardUsagePage);
     CFIndex usage = IOHIDEventGetIntegerValue(event, kIOHIDEventFieldKeyboardUsage);
     BOOL keyDown = IOHIDEventGetIntegerValue(event, kIOHIDEventFieldKeyboardDown) != 0;
-    if (usagePage == kHIDPage_Telephony && usage == kHIDUsage_Telephony_Mute) {
-        [self handleRingerSwitchIsUnmuted:keyDown];
+    if (usagePage == kHIDPage_Telephony) {
+        if (usage == kHIDUsage_Tfon_Flash) {
+            [self handleHeadsetButtonDown:keyDown];
+        } else if (usage == kHIDUsage_Telephony_Mute) {
+            [self handleRingerSwitchIsUnmuted:keyDown];
+        }
         return;
     }
 
@@ -200,6 +216,81 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     }
 }
 
+#pragma mark - Headset Button Recognition
+
+- (void)handleHeadsetButtonDown:(BOOL)buttonDown {
+    LAAssertMainQueue();
+    if (!self.started) {
+        return;
+    }
+
+    if (buttonDown) {
+        if (self.isHeadsetButtonDown) {
+            return;
+        }
+
+        self.headsetButtonDown = YES;
+        self.headsetHoldHandled = NO;
+        [self scheduleHeadsetHoldRecognitionIfNeeded];
+        return;
+    }
+
+    if (!self.isHeadsetButtonDown) {
+        return;
+    }
+
+    self.headsetButtonDown = NO;
+    [self cancelHeadsetHoldRecognition];
+    if (!self.headsetHoldHandled) {
+        LAEvent *event = [self buttonEventWithName:LAEventNameHeadsetButtonPressSingle];
+        [self.eventDispatcher deactivateEvent:event];
+        if (!event.handled) {
+            [self.eventDispatcher dispatchEvent:event];
+        }
+    }
+    self.headsetHoldHandled = NO;
+}
+
+- (void)scheduleHeadsetHoldRecognitionIfNeeded {
+    LAAssertMainQueue();
+
+    self.headsetHoldGeneration += 1;
+    self.headsetHoldRecognitionScheduled = [self hasAssignedListenerForEventName:LAEventNameHeadsetButtonHoldShort];
+    if (!self.headsetHoldRecognitionScheduled) {
+        return;
+    }
+
+    NSUInteger generation = self.headsetHoldGeneration;
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LATButtonEventSourceHeadsetHoldDelay * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+                       __strong typeof(weakSelf) strongSelf = weakSelf;
+                       [strongSelf sendHeadsetHoldEventIfNeededWithGeneration:generation];
+                   });
+}
+
+- (void)sendHeadsetHoldEventIfNeededWithGeneration:(NSUInteger)generation {
+    LAAssertMainQueue();
+
+    if (!self.started || generation != self.headsetHoldGeneration || !self.headsetHoldRecognitionScheduled ||
+        !self.isHeadsetButtonDown) {
+        return;
+    }
+
+    self.headsetHoldRecognitionScheduled = NO;
+    LAEvent *event = [self sendButtonEventWithName:LAEventNameHeadsetButtonHoldShort];
+    self.headsetHoldHandled = event.handled;
+}
+
+- (void)cancelHeadsetHoldRecognition {
+    LAAssertMainQueue();
+
+    self.headsetHoldGeneration += 1;
+    self.headsetHoldRecognitionScheduled = NO;
+}
+
+#pragma mark - Lock Button Recognition
+
 - (void)handleLockButtonDown:(BOOL)keyDown {
     LAAssertMainQueue();
 
@@ -225,6 +316,8 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     }
     [self resetButtonSequenceConsumedIfNoButtonsAreDown];
 }
+
+#pragma mark - Volume Button Recognition
 
 - (void)handleVolumeUpButtonDown:(BOOL)keyDown {
     LAAssertMainQueue();
@@ -280,6 +373,8 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     [self sendVolumePressOrSequenceWithPressEventName:LAEventNameVolumeDownPress usage:kHIDUsage_Csmr_VolumeDecrement];
 }
 
+#pragma mark - Menu Button Recognition
+
 - (void)handleMenuButtonDown:(BOOL)keyDown {
     LAAssertMainQueue();
 
@@ -306,6 +401,8 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     }
     [self resetButtonSequenceConsumedIfNoButtonsAreDown];
 }
+
+#pragma mark - Button Sequence Recognition
 
 - (void)sendLockMenuPressIfNeeded {
     LAAssertMainQueue();
@@ -811,5 +908,21 @@ static uint64_t const LATButtonEventSourceSyntheticSenderIDMask = 0x800000000000
     NSString *eventMode = self.modeProvider.currentEventMode;
     return eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;
 }
+
+#if DEBUG
+#pragma mark - Testing Hooks
+
+- (void)la_testingNoteHeadsetButtonDown:(BOOL)buttonDown {
+    [self handleHeadsetButtonDown:buttonDown];
+}
+
+- (void)la_testingResolveHeadsetHold {
+    [self sendHeadsetHoldEventIfNeededWithGeneration:self.headsetHoldGeneration];
+}
+
+- (BOOL)la_testingIsHeadsetHoldRecognitionScheduled {
+    return self.headsetHoldRecognitionScheduled;
+}
+#endif
 
 @end

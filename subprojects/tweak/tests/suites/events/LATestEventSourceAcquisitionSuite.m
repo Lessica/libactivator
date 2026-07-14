@@ -9,6 +9,7 @@
 #import "LATestEventSourceAcquisitionSuite.h"
 
 #import "LAActivator+Private.h"
+#import "LATButtonEventSource.h"
 #import "LATEdgeGestureEventSource.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
@@ -25,12 +26,68 @@
 #import <Activator/Activator.h>
 #import <UIKit/UIKit.h>
 
+@interface LATestHeadsetButtonEventRuntime
+    : NSObject <LATEventDispatching, LATEventModeProviding, LATEventAssignmentQuerying>
+
+@property(nonatomic, assign) BOOL holdAssigned;
+@property(nonatomic, assign) BOOL handlesHold;
+@property(nonatomic, assign) NSUInteger deactivateCount;
+
+- (NSUInteger)dispatchCountForEventName:(NSString *)eventName;
+
+@end
+
+@implementation LATestHeadsetButtonEventRuntime {
+    NSMutableDictionary<NSString *, NSNumber *> *_dispatchCounts;
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _dispatchCounts = [NSMutableDictionary dictionary];
+    }
+    return self;
+}
+
+- (void)dispatchEvent:(LAEvent *)event {
+    _dispatchCounts[event.name] = @([_dispatchCounts[event.name] unsignedIntegerValue] + 1);
+    if (self.handlesHold && [event.name isEqualToString:LAEventNameHeadsetButtonHoldShort]) {
+        event.handled = YES;
+    }
+}
+
+- (void)abortEvent:(__unused LAEvent *)event {
+}
+
+- (void)deactivateEvent:(__unused LAEvent *)event {
+    self.deactivateCount += 1;
+}
+
+- (NSString *)currentEventMode {
+    return LAEventModeSpringBoard;
+}
+
+- (NSString *)currentEventModeUnderneathLockScreen {
+    return LAEventModeSpringBoard;
+}
+
+- (BOOL)hasAssignedListenerForEvent:(LAEvent *)event {
+    return self.holdAssigned && [event.name isEqualToString:LAEventNameHeadsetButtonHoldShort];
+}
+
+- (NSUInteger)dispatchCountForEventName:(NSString *)eventName {
+    return [_dispatchCounts[eventName] unsignedIntegerValue];
+}
+
+@end
+
 @implementation LATestEventSourceAcquisitionSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"EventSourceAcquisition"];
 
     [self runInterestCleanupTestsWithRecorder:recorder activator:activator];
+    [self runHeadsetButtonEventSourceTestsWithRecorder:recorder activator:activator];
     [self runStatusBarEventSourceTestsWithRecorder:recorder activator:activator];
     [self runSpringBoardIconGestureEventSourceTestsWithRecorder:recorder activator:activator];
     [self runMotionEventSourceTestsWithRecorder:recorder activator:activator];
@@ -40,6 +97,88 @@
     [self runEdgeGestureEventSourceDispatchTestsWithRecorder:recorder activator:activator];
     [self runForceTouchEventSourceTestsWithRecorder:recorder activator:activator];
     [self runMultiTouchEventSourceDispatchTestsWithRecorder:recorder activator:activator];
+}
+
++ (void)runHeadsetButtonEventSourceTestsWithRecorder:(LATestRecorder *)recorder
+                                           activator:(__unused LAActivator *)activator {
+    LATestHeadsetButtonEventRuntime *notStartedRuntime = [[LATestHeadsetButtonEventRuntime alloc] init];
+    LATButtonEventSource *notStartedSource = [[LATButtonEventSource alloc] initWithEventDispatcher:notStartedRuntime
+                                                                                      modeProvider:notStartedRuntime
+                                                                                assignmentQuerying:notStartedRuntime];
+    [notStartedSource la_testingNoteHeadsetButtonDown:YES];
+    [notStartedSource la_testingNoteHeadsetButtonDown:NO];
+    [recorder expect:[notStartedRuntime dispatchCountForEventName:LAEventNameHeadsetButtonPressSingle] == 0 &&
+                     [notStartedRuntime dispatchCountForEventName:LAEventNameHeadsetButtonHoldShort] == 0
+            caseName:@"headset-button-ignores-events-before-start"
+              reason:@"Headset button source dispatched before it was started"];
+
+    LATestHeadsetButtonEventRuntime *singlePressRuntime = [[LATestHeadsetButtonEventRuntime alloc] init];
+    LATButtonEventSource *singlePressSource = [[LATButtonEventSource alloc] initWithEventDispatcher:singlePressRuntime
+                                                                                       modeProvider:singlePressRuntime
+                                                                                 assignmentQuerying:singlePressRuntime];
+    [singlePressSource start];
+    [singlePressSource la_testingNoteHeadsetButtonDown:YES];
+    BOOL scheduledWithoutAssignment = [singlePressSource la_testingIsHeadsetHoldRecognitionScheduled];
+    [singlePressSource la_testingNoteHeadsetButtonDown:NO];
+    [recorder expect:!scheduledWithoutAssignment && singlePressRuntime.deactivateCount == 1 &&
+                     [singlePressRuntime dispatchCountForEventName:LAEventNameHeadsetButtonPressSingle] == 1 &&
+                     [singlePressRuntime dispatchCountForEventName:LAEventNameHeadsetButtonHoldShort] == 0
+            caseName:@"headset-button-dispatches-single-without-hold-assignment"
+              reason:@"Headset button source scheduled an unassigned hold or failed to dispatch the single press"];
+
+    LATestHeadsetButtonEventRuntime *handledHoldRuntime = [[LATestHeadsetButtonEventRuntime alloc] init];
+    handledHoldRuntime.holdAssigned = YES;
+    handledHoldRuntime.handlesHold = YES;
+    LATButtonEventSource *handledHoldSource = [[LATButtonEventSource alloc] initWithEventDispatcher:handledHoldRuntime
+                                                                                       modeProvider:handledHoldRuntime
+                                                                                 assignmentQuerying:handledHoldRuntime];
+    [handledHoldSource start];
+    [handledHoldSource la_testingNoteHeadsetButtonDown:YES];
+    [handledHoldSource la_testingNoteHeadsetButtonDown:YES];
+    BOOL scheduledWithAssignment = [handledHoldSource la_testingIsHeadsetHoldRecognitionScheduled];
+    [handledHoldSource la_testingResolveHeadsetHold];
+    [handledHoldSource la_testingResolveHeadsetHold];
+    [handledHoldSource la_testingNoteHeadsetButtonDown:NO];
+    [handledHoldSource la_testingNoteHeadsetButtonDown:NO];
+    [recorder
+          expect:scheduledWithAssignment && handledHoldRuntime.deactivateCount == 0 &&
+                 [handledHoldRuntime dispatchCountForEventName:LAEventNameHeadsetButtonHoldShort] == 1 &&
+                 [handledHoldRuntime dispatchCountForEventName:LAEventNameHeadsetButtonPressSingle] == 0
+        caseName:@"headset-button-handled-hold-suppresses-single"
+          reason:@"Headset button source did not deduplicate the hold or leaked a single press after it was handled"];
+
+    LATestHeadsetButtonEventRuntime *unhandledHoldRuntime = [[LATestHeadsetButtonEventRuntime alloc] init];
+    unhandledHoldRuntime.holdAssigned = YES;
+    LATButtonEventSource *unhandledHoldSource =
+        [[LATButtonEventSource alloc] initWithEventDispatcher:unhandledHoldRuntime
+                                                 modeProvider:unhandledHoldRuntime
+                                           assignmentQuerying:unhandledHoldRuntime];
+    [unhandledHoldSource start];
+    [unhandledHoldSource la_testingNoteHeadsetButtonDown:YES];
+    [unhandledHoldSource la_testingResolveHeadsetHold];
+    [unhandledHoldSource la_testingNoteHeadsetButtonDown:NO];
+    [recorder expect:unhandledHoldRuntime.deactivateCount == 1 &&
+                     [unhandledHoldRuntime dispatchCountForEventName:LAEventNameHeadsetButtonHoldShort] == 1 &&
+                     [unhandledHoldRuntime dispatchCountForEventName:LAEventNameHeadsetButtonPressSingle] == 1
+            caseName:@"headset-button-unhandled-hold-falls-back-to-single"
+              reason:@"Headset button source suppressed the single press after an unhandled hold"];
+
+    LATestHeadsetButtonEventRuntime *invalidatedRuntime = [[LATestHeadsetButtonEventRuntime alloc] init];
+    invalidatedRuntime.holdAssigned = YES;
+    LATButtonEventSource *invalidatedSource = [[LATButtonEventSource alloc] initWithEventDispatcher:invalidatedRuntime
+                                                                                       modeProvider:invalidatedRuntime
+                                                                                 assignmentQuerying:invalidatedRuntime];
+    [invalidatedSource start];
+    [invalidatedSource la_testingNoteHeadsetButtonDown:YES];
+    BOOL scheduledBeforeInvalidation = [invalidatedSource la_testingIsHeadsetHoldRecognitionScheduled];
+    [invalidatedSource invalidate];
+    [invalidatedSource la_testingResolveHeadsetHold];
+    [invalidatedSource la_testingNoteHeadsetButtonDown:NO];
+    [recorder expect:scheduledBeforeInvalidation && ![invalidatedSource la_testingIsHeadsetHoldRecognitionScheduled] &&
+                     [invalidatedRuntime dispatchCountForEventName:LAEventNameHeadsetButtonHoldShort] == 0 &&
+                     [invalidatedRuntime dispatchCountForEventName:LAEventNameHeadsetButtonPressSingle] == 0
+            caseName:@"headset-button-invalidation-cancels-pending-hold"
+              reason:@"Headset button source retained or dispatched recognition state after invalidation"];
 }
 
 + (void)runInterestCleanupTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {

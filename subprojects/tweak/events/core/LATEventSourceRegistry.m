@@ -164,7 +164,8 @@
 
     LATEventSourceInterestPolicy interestPolicy = eventSource.interestPolicy;
     if (interestPolicy != LATEventSourceInterestPolicyAlways &&
-        interestPolicy != LATEventSourceInterestPolicyAssignedInCurrentMode) {
+        interestPolicy != LATEventSourceInterestPolicyAssignedInCurrentMode &&
+        interestPolicy != LATEventSourceInterestPolicyAssignedInAnyMode) {
         HBLogWarn(@"Skipping event source %@ because it has an unsupported interest policy", identifier);
         return NO;
     }
@@ -379,16 +380,22 @@
         return [availableEventNames copy];
     }
 
-    NSString *eventMode = activator.currentEventMode;
-    if (eventMode.length == 0) {
-        return [NSSet set];
+    NSArray<NSString *> *eventModes = nil;
+    if (eventSource.interestPolicy == LATEventSourceInterestPolicyAssignedInAnyMode) {
+        eventModes = activator.availableEventModes;
+    } else {
+        NSString *eventMode = activator.currentEventMode;
+        eventModes = eventMode.length > 0 ? @[ eventMode ] : @[];
     }
 
     NSMutableSet<NSString *> *interestedEventNames = [[NSMutableSet alloc] init];
     for (NSString *eventName in availableEventNames) {
-        LAEvent *event = [LAEvent eventWithName:eventName mode:eventMode];
-        if ([activator assignedListenerNamesForEvent:event].count > 0) {
-            [interestedEventNames addObject:eventName];
+        for (NSString *eventMode in eventModes) {
+            LAEvent *event = [LAEvent eventWithName:eventName mode:eventMode];
+            if ([activator assignedListenerNamesForEvent:event].count > 0) {
+                [interestedEventNames addObject:eventName];
+                break;
+            }
         }
     }
     return [interestedEventNames copy];

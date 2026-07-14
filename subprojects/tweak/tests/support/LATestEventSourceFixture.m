@@ -52,7 +52,7 @@
                                                    (NSArray<id<LATEventSource>> *)previousEventSources {
     NSObject<LATEventSource> *eventSource = [[(Class)eventSourceClass alloc]
         initWithEventSourceContext:[self contextWithPreviousEventSources:previousEventSources]];
-    if (eventSource.interestPolicy != LATEventSourceInterestPolicyAssignedInCurrentMode) {
+    if (eventSource.interestPolicy == LATEventSourceInterestPolicyAlways) {
         return eventSource;
     }
 

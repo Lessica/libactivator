@@ -35,6 +35,7 @@
 #import "LATNothingListener.h"
 #import "LATPowerStateEventSource.h"
 #import "LATRuntimeStateSource.h"
+#import "LATScheduledEventSource.h"
 #import "LATSpringBoardIconGestureEventSource.h"
 #import "LATStatusBarEventSource.h"
 #import "LATSystemActionListener.h"
@@ -74,6 +75,7 @@
         LATMediaEventSource.class,
         LATMotionEventSource.class,
         LATNetworkEventSource.class,
+        LATScheduledEventSource.class,
         LATButtonEventSource.class,
         LATVolumeHUDTapEventSource.class,
         LATGestureBarEventSource.class,

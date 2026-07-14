@@ -27,6 +27,12 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)start;
 - (void)noteHIDEvent:(IOHIDEventRef)event;
 
+#if DEBUG
+- (void)la_testingNoteHeadsetButtonDown:(BOOL)buttonDown;
+- (void)la_testingResolveHeadsetHold;
+- (BOOL)la_testingIsHeadsetHoldRecognitionScheduled;
+#endif
+
 @end
 
 NS_ASSUME_NONNULL_END

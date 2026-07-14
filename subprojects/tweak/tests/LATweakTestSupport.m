@@ -25,6 +25,7 @@
 #import "LATestEventSourceRegistrySuite.h"
 #import "LATestGestureRecognizerSuite.h"
 #import "LATestRuntimeDeviceSuite.h"
+#import "LATestScheduledEventSourceSuite.h"
 #import "LATweakTestEnvironment.h"
 
 #import <Activator/Activator.h>
@@ -50,6 +51,7 @@ static NSString *const LATweakTestGroupIdentifier = @"tweak";
             [LATestEventDefinitionRegistrySuite runWithRecorder:recorder activator:registeredActivator];
             [LATestEventSourceRegistrySuite runWithRecorder:recorder activator:registeredActivator];
             [LATestBuiltInEventSourceCompositionSuite runWithRecorder:recorder activator:registeredActivator];
+            [LATestScheduledEventSourceSuite runWithRecorder:recorder];
             [LATestGestureRecognizerSuite runWithRecorder:recorder];
             [LATestEventSourceAcquisitionSuite runWithRecorder:recorder activator:registeredActivator];
         }

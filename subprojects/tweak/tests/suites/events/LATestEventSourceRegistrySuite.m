@@ -26,15 +26,18 @@
 
     NSString *sharedEventName = @"libactivator.test.event-source-registry.shared";
     NSString *secondaryEventName = @"libactivator.test.event-source-registry.secondary";
+    NSString *anyModeEventName = @"libactivator.test.event-source-registry.any-mode";
     NSString *listenerName = @"libactivator.test.event-source-registry.listener";
     LATestEventDataSource *dataSource = [[LATestEventDataSource alloc] init];
     LATestListener *listener = [[LATestListener alloc] init];
     [activator registerEventDataSource:dataSource forEventName:sharedEventName];
     [activator registerEventDataSource:dataSource forEventName:secondaryEventName];
+    [activator registerEventDataSource:dataSource forEventName:anyModeEventName];
     [activator registerListener:listener forName:listenerName];
     for (NSString *mode in activator.availableEventModes) {
         [activator unassignEvent:[LAEvent eventWithName:sharedEventName mode:mode]];
         [activator unassignEvent:[LAEvent eventWithName:secondaryEventName mode:mode]];
+        [activator unassignEvent:[LAEvent eventWithName:anyModeEventName mode:mode]];
     }
 
     LARuntimeContext *runtimeContext = [LATestEnvironment runtimeContextForActivator:activator];
@@ -229,13 +232,47 @@
             caseName:@"registry-invalidate-is-terminal"
               reason:@"Registry accepted a source after terminal invalidation"];
 
+    LATEventSourceRegistry *anyModeRegistry = [[LATEventSourceRegistry alloc] initWithActivator:activator];
+    LATestEventSource *anyModeSource =
+        [[LATestEventSource alloc] initWithIdentifier:@"testing.assigned-any-mode"
+                                           eventNames:[NSSet setWithObject:anyModeEventName]
+                                       interestPolicy:LATEventSourceInterestPolicyAssignedInAnyMode];
+    [anyModeRegistry registerEventSource:anyModeSource];
+    [anyModeRegistry start];
+    [recorder expect:![anyModeRegistry isInterestedInEventSource:anyModeSource]
+            caseName:@"registry-any-mode-interest-starts-empty"
+              reason:@"Any-mode assignment source gained interest without an assignment"];
+
+    [activator assignEvent:[LAEvent eventWithName:anyModeEventName mode:LAEventModeApplication]
+        toListenerWithName:listenerName];
+    [recorder expect:[anyModeRegistry isInterestedInEventSource:anyModeSource] && anyModeSource.isInterested
+            caseName:@"registry-any-mode-interest-finds-background-mode-assignment"
+              reason:@"Any-mode assignment source ignored an assignment outside the current mode"];
+    NSUInteger anyModeInterestChangeCount = anyModeSource.interestedEventNamesChangeCount;
+    [runtimeContext updateEventMode:LAEventModeApplication
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:@"com.apple.Preferences"
+                           screenOn:YES];
+    [recorder expect:[anyModeRegistry isInterestedInEventSource:anyModeSource] &&
+                     anyModeSource.interestedEventNamesChangeCount == anyModeInterestChangeCount
+            caseName:@"registry-any-mode-interest-ignores-current-mode-changes"
+              reason:@"Any-mode assignment source reset unchanged interest after a current mode change"];
+
+    [activator unassignEvent:[LAEvent eventWithName:anyModeEventName mode:LAEventModeApplication]];
+    [recorder expect:![anyModeRegistry isInterestedInEventSource:anyModeSource] && !anyModeSource.isInterested
+            caseName:@"registry-any-mode-interest-follows-assignment-removal"
+              reason:@"Any-mode assignment source retained interest after its final assignment was removed"];
+    [anyModeRegistry invalidate];
+
     for (NSString *mode in activator.availableEventModes) {
         [activator unassignEvent:[LAEvent eventWithName:sharedEventName mode:mode]];
         [activator unassignEvent:[LAEvent eventWithName:secondaryEventName mode:mode]];
+        [activator unassignEvent:[LAEvent eventWithName:anyModeEventName mode:mode]];
     }
     [activator unregisterListenerWithName:listenerName];
     [activator unregisterEventDataSourceWithEventName:sharedEventName];
     [activator unregisterEventDataSourceWithEventName:secondaryEventName];
+    [activator unregisterEventDataSourceWithEventName:anyModeEventName];
     [LATestEnvironment cleanRuntimeInputStateWithActivator:activator];
 }
 

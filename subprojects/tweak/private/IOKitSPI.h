@@ -41,6 +41,7 @@ enum {
 };
 
 enum {
+    kHIDUsage_Tfon_Flash = 0x21,
     kHIDUsage_Telephony_Mute = 0x2E,
 };
 
