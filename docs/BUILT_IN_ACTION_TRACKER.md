@@ -14,7 +14,7 @@
 
 | Catalog | 1.9.13 资源 | 当前 staged | 当前剩余关注点 |
 | --- | ---: | ---: | --- |
-| Events | 121 | 123 | 2 个 2.x additive now-playing 状态事件已加入；1.9.13 event 中仍有 15 个尚未完成验收。 |
+| Events | 121 | 123 | 2 个 2.x additive now-playing 状态事件已加入；1.9.13 event 中仍有 13 个尚未完成验收。 |
 | Static listeners/actions | 117 | 119 | 5 个 obsolete 旧项已移除，7 个 2.x additive name 曾加入；除 `libactivator.watch.haptic.tap` 因设备能力保持 metadata-only 外，当前静态 listener/action 的 handled 语义审计已收口。 |
 
 当前 listener staged 移除项：`libactivator.settings.facebook`、`libactivator.settings.twitter`、`libactivator.twitter.compose-tweet`、`libactivator.facebook.compose-post`、`libactivator.weibo.compose-post`。
@@ -60,13 +60,12 @@
 
 ## Events 未完成交叉比对
 
-1.9.13 event 资源共 121 个。当前尚未完成验收的 1.9.13 event name 共 15 个。
+1.9.13 event 资源共 121 个。当前尚未完成验收的 1.9.13 event name 共 13 个。
 
 | Family | Event names | 当前状态 | 下一步 |
 | --- | --- | --- | --- |
 | Icon flick gestures | `libactivator.icon.flick.up`、`libactivator.icon.flick.down`、`libactivator.icon.flick.left`、`libactivator.icon.flick.right` | `blocked` | 确认并接入现代 `SBIconView` 的四向 flick 手势点位。 |
-| Lock screen clock gestures | `libactivator.lockscreen.clock.double-tap`、`libactivator.lockscreen.clock.tap-hold`、`libactivator.lockscreen.clock.swipe-left`、`libactivator.lockscreen.clock.swipe-right`、`libactivator.lockscreen.clock.swipe-down` | `blocked` | CoverSheet/lock screen clock 视图结构与 passcode/notification/camera 入口强相关，需单独 probe。 |
-| Scheduled | `libactivator.scheduled.sunrise`、`libactivator.scheduled.sunset` | `implemented` | 已接入 `_UISunScheduleController`，按任一 mode 的 assignment interest 管理 monitor，并覆盖可控的日出/日落状态切换测试；下一步完成真实系统边界验收。 |
+| Lock screen clock gestures | `libactivator.lockscreen.clock.double-tap`、`libactivator.lockscreen.clock.tap-hold`、`libactivator.lockscreen.clock.swipe-left`、`libactivator.lockscreen.clock.swipe-right`、`libactivator.lockscreen.clock.swipe-down` | `implemented` | iOS 15 RootHide 与 iOS 16 rootless 均已完成视图结构 probe 和五种手势交互校验；待 owner 完成 assignment 端到端验收。 |
 | Car / watch / smart cover | `libactivator.car.connected`、`libactivator.car.disconnected`、`libactivator.watch.connected`、`libactivator.watch.disconnected`、`libactivator.clamshell.open`、`libactivator.clamshell.close` | `metadata-only` | 依赖外设、设备能力或私有服务；先保留资源，不用 metadata presence 推断可用性。 |
 
 ## 遗留问题

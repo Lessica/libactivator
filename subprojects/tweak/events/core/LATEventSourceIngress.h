@@ -49,4 +49,12 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)noteGestureBarDoubleTapRecognizerDidLoad:(UITapGestureRecognizer *)recognizer;
 @end
 
+@protocol LATEventSourceLockScreenClockViewIngress <NSObject>
+- (void)noteLockScreenClockViewDidLoad:(UIView *)clockView;
+- (void)notePreciseLockScreenClockViewDidLoad:(UIView *)clockView;
+- (nullable UIView *)lockScreenClockHitViewForContainerView:(UIView *)containerView
+                                                       point:(CGPoint)point
+                                                   withEvent:(nullable UIEvent *)event;
+@end
+
 NS_ASSUME_NONNULL_END

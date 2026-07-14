@@ -765,11 +765,6 @@
 	</dict>
 	<key>libactivator.lockscreen.clock.double-tap</key>
 	<dict>
-		<key>CoreFoundationVersion</key>
-		<array>
-			<string>0</string>
-			<string>1575.17</string>
-		</array>
 		<key>compatible-modes</key>
 		<array>
 			<string>lockscreen</string>
@@ -783,11 +778,6 @@
 	</dict>
 	<key>libactivator.lockscreen.clock.swipe-down</key>
 	<dict>
-		<key>CoreFoundationVersion</key>
-		<array>
-			<string>478.61</string>
-			<string>1575.17</string>
-		</array>
 		<key>compatible-modes</key>
 		<array>
 			<string>lockscreen</string>
@@ -801,11 +791,6 @@
 	</dict>
 	<key>libactivator.lockscreen.clock.swipe-left</key>
 	<dict>
-		<key>CoreFoundationVersion</key>
-		<array>
-			<string>478.61</string>
-			<string>1575.17</string>
-		</array>
 		<key>compatible-modes</key>
 		<array>
 			<string>lockscreen</string>
@@ -819,11 +804,6 @@
 	</dict>
 	<key>libactivator.lockscreen.clock.swipe-right</key>
 	<dict>
-		<key>CoreFoundationVersion</key>
-		<array>
-			<string>478.61</string>
-			<string>1575.17</string>
-		</array>
 		<key>compatible-modes</key>
 		<array>
 			<string>lockscreen</string>
@@ -837,11 +817,6 @@
 	</dict>
 	<key>libactivator.lockscreen.clock.tap-hold</key>
 	<dict>
-		<key>CoreFoundationVersion</key>
-		<array>
-			<string>0</string>
-			<string>1575.17</string>
-		</array>
 		<key>compatible-modes</key>
 		<array>
 			<string>lockscreen</string>

@@ -15,6 +15,7 @@
 #import "LATForceTouchEventSource.h"
 #import "LATGestureBarEventSource.h"
 #import "LATLockStateEventSource.h"
+#import "LATLockScreenClockEventSource.h"
 #import "LATMediaEventSource.h"
 #import "LATMotionEventSource.h"
 #import "LATMultiTouchEventSource.h"
@@ -46,6 +47,7 @@
         LATButtonEventSource.class,
         LATVolumeHUDTapEventSource.class,
         LATGestureBarEventSource.class,
+        LATLockScreenClockEventSource.class,
         LATForceTouchEventSource.class,
         LATMultiTouchEventSource.class,
         LATSpringBoardIconGestureEventSource.class,
@@ -458,6 +460,22 @@
                 caseName:[NSString stringWithFormat:@"scheduled-event-all-modes-compatible-%@", eventName]
                   reason:[NSString stringWithFormat:@"%@ was not compatible with all event modes", eventName]];
     }
+    for (NSString *eventName in @[
+             LAEventNameLockScreenClockDoubleTap,
+             LAEventNameLockScreenClockTapHold,
+             LAEventNameLockScreenClockSwipeLeft,
+             LAEventNameLockScreenClockSwipeRight,
+             LAEventNameLockScreenClockSwipeDown,
+         ]) {
+        [recorder expect:[[activator availableEventNames] containsObject:eventName]
+                caseName:[NSString stringWithFormat:@"lock-screen-clock-event-available-%@", eventName]
+                  reason:[NSString stringWithFormat:@"%@ metadata was not available", eventName]];
+        [recorder expect:![activator eventWithName:eventName isCompatibleWithMode:LAEventModeSpringBoard] &&
+                         ![activator eventWithName:eventName isCompatibleWithMode:LAEventModeApplication] &&
+                         [activator eventWithName:eventName isCompatibleWithMode:LAEventModeLockScreen]
+                caseName:[NSString stringWithFormat:@"lock-screen-clock-event-lockscreen-only-%@", eventName]
+                  reason:[NSString stringWithFormat:@"%@ did not remain lock-screen-only", eventName]];
+    }
 
     [self runFingerprintSensorAvailabilityTestsWithRecorder:recorder activator:activator];
     [self runForceTouchAvailabilityTestsWithRecorder:recorder activator:activator];
@@ -589,6 +607,8 @@
         [fixture interestedEventSourceOfClass:LATVolumeHUDTapEventSource.class previousEventSources:@[]];
     LATGestureBarEventSource *gestureBarSource =
         [fixture interestedEventSourceOfClass:LATGestureBarEventSource.class previousEventSources:@[]];
+    LATLockScreenClockEventSource *lockScreenClockSource =
+        [fixture interestedEventSourceOfClass:LATLockScreenClockEventSource.class previousEventSources:@[]];
     LATScheduledEventSource *scheduledSource =
         [fixture interestedEventSourceOfClass:LATScheduledEventSource.class previousEventSources:@[]];
 
@@ -652,8 +672,19 @@
                      scheduledSource.interestPolicy == LATEventSourceInterestPolicyAssignedInAnyMode
             caseName:@"scheduled-source-declares-any-mode-assignment-catalog"
               reason:@"Scheduled source did not match the legacy any-mode assignment scheduling gate"];
+    [recorder
+          expect:[lockScreenClockSource.eventNames
+                     isEqualToSet:[NSSet setWithObjects:LAEventNameLockScreenClockDoubleTap,
+                                                        LAEventNameLockScreenClockTapHold,
+                                                        LAEventNameLockScreenClockSwipeLeft,
+                                                        LAEventNameLockScreenClockSwipeRight,
+                                                        LAEventNameLockScreenClockSwipeDown, nil]] &&
+                 lockScreenClockSource.interestPolicy == LATEventSourceInterestPolicyAlways
+        caseName:@"lock-screen-clock-source-declares-always-on-catalog"
+          reason:@"Lock screen clock source did not match the 1.9.13 always-on recognizer policy"];
 
     [scheduledSource invalidate];
+    [lockScreenClockSource invalidate];
     [gestureBarSource invalidate];
     [volumeHUDTapSource invalidate];
     [statusBarSource invalidate];

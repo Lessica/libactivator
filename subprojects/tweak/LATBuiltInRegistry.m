@@ -28,6 +28,7 @@
 #import "LATGestureBarEventSource.h"
 #import "LATHardwareActionListener.h"
 #import "LATLockStateEventSource.h"
+#import "LATLockScreenClockEventSource.h"
 #import "LATMediaEventSource.h"
 #import "LATMotionEventSource.h"
 #import "LATMultiTouchEventSource.h"
@@ -79,6 +80,7 @@
         LATButtonEventSource.class,
         LATVolumeHUDTapEventSource.class,
         LATGestureBarEventSource.class,
+        LATLockScreenClockEventSource.class,
         LATForceTouchEventSource.class,
         LATMultiTouchEventSource.class,
         LATSpringBoardIconGestureEventSource.class,

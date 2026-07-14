@@ -14,6 +14,7 @@
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
 #import "LATGestureBarEventSource.h"
+#import "LATLockScreenClockEventSource.h"
 #import "LATMotionEventSource.h"
 #import "LATMultiTouchEventSource.h"
 #import "LATSpringBoardIconGestureEventSource.h"
@@ -93,6 +94,7 @@
     [self runMotionEventSourceTestsWithRecorder:recorder activator:activator];
     [self runVolumeHUDTapEventSourceTestsWithRecorder:recorder activator:activator];
     [self runGestureBarEventSourceTestsWithRecorder:recorder activator:activator];
+    [self runLockScreenClockEventSourceTestsWithRecorder:recorder activator:activator];
     [self runFingerprintSensorEventSourceTestsWithRecorder:recorder activator:activator];
     [self runEdgeGestureEventSourceDispatchTestsWithRecorder:recorder activator:activator];
     [self runForceTouchEventSourceTestsWithRecorder:recorder activator:activator];
@@ -1107,6 +1109,138 @@
           expect:!dispatchedAfterInvalidation && [fixture dispatchCountForEventName:LAEventNameGestureBarTapDouble] == 1
         caseName:@"gesture-bar-source-invalidation-is-terminal"
           reason:@"Invalidated gesture bar source continued dispatching events"];
+}
+
++ (void)runLockScreenClockEventSourceTestsWithRecorder:(LATestRecorder *)recorder
+                                              activator:(LAActivator *)activator {
+    LATestEventSourceFixture *fixture = [[LATestEventSourceFixture alloc] initWithActivator:activator];
+    LATLockScreenClockEventSource *attachmentSource =
+        [fixture interestedEventSourceOfClass:LATLockScreenClockEventSource.class previousEventSources:@[]];
+    UIView *rootView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, 414.0, 896.0)];
+    UIView *parentView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, 414.0, 896.0)];
+    UIView *clockView = [[UIView alloc] initWithFrame:CGRectMake(8.0, 95.0, 398.0, 128.5)];
+    rootView.userInteractionEnabled = NO;
+    parentView.userInteractionEnabled = NO;
+    clockView.userInteractionEnabled = NO;
+    [rootView addSubview:parentView];
+    [parentView addSubview:clockView];
+    [attachmentSource noteLockScreenClockViewDidLoad:clockView];
+    [attachmentSource noteLockScreenClockViewDidLoad:clockView];
+    BOOL capturedBeforeStart = [attachmentSource la_testingKnownClockViewCount] == 1 &&
+                               [attachmentSource la_testingInstalledRecognizersInClockView:clockView] == nil &&
+                               !rootView.userInteractionEnabled && !parentView.userInteractionEnabled &&
+                               !clockView.userInteractionEnabled;
+    [attachmentSource start];
+
+    NSArray<UIGestureRecognizer *> *recognizers =
+        [attachmentSource la_testingInstalledRecognizersInClockView:clockView];
+    UITapGestureRecognizer *doubleTapRecognizer = nil;
+    UILongPressGestureRecognizer *longPressRecognizer = nil;
+    NSMutableSet<NSNumber *> *swipeDirections = [[NSMutableSet alloc] init];
+    BOOL allRecognizersUseSourceDelegate = YES;
+    for (UIGestureRecognizer *recognizer in recognizers) {
+        allRecognizersUseSourceDelegate =
+            allRecognizersUseSourceDelegate && recognizer.delegate == (id<UIGestureRecognizerDelegate>)attachmentSource;
+        if ([recognizer isKindOfClass:UITapGestureRecognizer.class]) {
+            doubleTapRecognizer = (UITapGestureRecognizer *)recognizer;
+        } else if ([recognizer isKindOfClass:UILongPressGestureRecognizer.class]) {
+            longPressRecognizer = (UILongPressGestureRecognizer *)recognizer;
+        } else if ([recognizer isKindOfClass:UISwipeGestureRecognizer.class]) {
+            [swipeDirections addObject:@(((UISwipeGestureRecognizer *)recognizer).direction)];
+        }
+    }
+    BOOL allowsSimultaneousRecognition = [(id<UIGestureRecognizerDelegate>)attachmentSource
+                             gestureRecognizer:doubleTapRecognizer
+        shouldRecognizeSimultaneouslyWithGestureRecognizer:longPressRecognizer];
+    [recorder
+          expect:capturedBeforeStart && rootView.userInteractionEnabled && parentView.userInteractionEnabled &&
+                 clockView.userInteractionEnabled &&
+                 recognizers.count == 5 && doubleTapRecognizer.numberOfTapsRequired == 2 &&
+                 longPressRecognizer.minimumPressDuration == 0.5 && allRecognizersUseSourceDelegate &&
+                 allowsSimultaneousRecognition &&
+                 [swipeDirections isEqualToSet:[NSSet setWithObjects:@(UISwipeGestureRecognizerDirectionLeft),
+                                                                     @(UISwipeGestureRecognizerDirectionRight),
+                                                                     @(UISwipeGestureRecognizerDirectionDown), nil]]
+        caseName:@"lock-screen-clock-source-installs-legacy-recognizers"
+          reason:@"Lock screen clock source did not preserve the 1.9.13 recognizer and interaction contract"];
+    UIView *clockHitView = [attachmentSource lockScreenClockHitViewForContainerView:rootView
+                                                                              point:CGPointMake(20.0, 110.0)
+                                                                          withEvent:nil];
+    UIView *outsideHitView = [attachmentSource lockScreenClockHitViewForContainerView:rootView
+                                                                                point:CGPointMake(20.0, 300.0)
+                                                                            withEvent:nil];
+    UIView *unrelatedView = [[UIView alloc] initWithFrame:parentView.bounds];
+    UIView *unrelatedHitView = [attachmentSource lockScreenClockHitViewForContainerView:unrelatedView
+                                                                                  point:CGPointMake(20.0, 110.0)
+                                                                              withEvent:nil];
+    [recorder expect:clockHitView == clockView && outsideHitView == nil && unrelatedHitView == nil
+            caseName:@"lock-screen-clock-source-routes-pass-through-hits"
+              reason:@"Lock screen clock source did not route pass-through hits back into the active clock view"];
+    UIView *preciseClockView = [[UIView alloc] initWithFrame:clockView.frame];
+    [parentView addSubview:preciseClockView];
+    [attachmentSource notePreciseLockScreenClockViewDidLoad:preciseClockView];
+    UIView *lateLegacyClockView = [[UIView alloc] initWithFrame:clockView.frame];
+    [parentView addSubview:lateLegacyClockView];
+    [attachmentSource noteLockScreenClockViewDidLoad:lateLegacyClockView];
+    [recorder
+          expect:clockView.gestureRecognizers.count == 0 &&
+                 [attachmentSource la_testingInstalledRecognizersInClockView:clockView] == nil &&
+                 [attachmentSource la_testingInstalledRecognizersInClockView:preciseClockView].count == 5 &&
+                 [attachmentSource la_testingInstalledRecognizersInClockView:lateLegacyClockView] == nil &&
+                 [attachmentSource la_testingKnownClockViewCount] == 1
+        caseName:@"lock-screen-clock-source-prefers-observed-precise-clock-view"
+          reason:@"Lock screen clock source did not replace legacy candidates after observing a precise clock view"];
+    [attachmentSource invalidate];
+    [recorder expect:clockView.gestureRecognizers.count == 0 && !rootView.userInteractionEnabled &&
+                     preciseClockView.gestureRecognizers.count == 0 && !parentView.userInteractionEnabled &&
+                     !clockView.userInteractionEnabled &&
+                     [attachmentSource la_testingInstalledRecognizersInClockView:clockView] == nil
+            caseName:@"lock-screen-clock-source-removes-recognizers-on-invalidate"
+              reason:@"Invalidated lock screen clock source left recognizers or interaction changes behind"];
+
+    LATLockScreenClockEventSource *dispatchSource =
+        [fixture interestedEventSourceOfClass:LATLockScreenClockEventSource.class previousEventSources:@[]];
+    [activator la_resetDispatchCounts];
+    BOOL dispatchedBeforeStart =
+        [dispatchSource la_testingHandleRecognizerState:UIGestureRecognizerStateEnded
+                                              eventName:LAEventNameLockScreenClockDoubleTap];
+    [dispatchSource start];
+    BOOL dispatchedDoubleTap =
+        [dispatchSource la_testingHandleRecognizerState:UIGestureRecognizerStateEnded
+                                              eventName:LAEventNameLockScreenClockDoubleTap];
+    BOOL dispatchedHoldAtEnd =
+        [dispatchSource la_testingHandleRecognizerState:UIGestureRecognizerStateEnded
+                                              eventName:LAEventNameLockScreenClockTapHold];
+    BOOL dispatchedHoldAtBegin =
+        [dispatchSource la_testingHandleRecognizerState:UIGestureRecognizerStateBegan
+                                              eventName:LAEventNameLockScreenClockTapHold];
+    BOOL dispatchedSwipeLeft =
+        [dispatchSource la_testingHandleRecognizerState:UIGestureRecognizerStateEnded
+                                              eventName:LAEventNameLockScreenClockSwipeLeft];
+    BOOL dispatchedSwipeRight =
+        [dispatchSource la_testingHandleRecognizerState:UIGestureRecognizerStateEnded
+                                              eventName:LAEventNameLockScreenClockSwipeRight];
+    BOOL dispatchedSwipeDown =
+        [dispatchSource la_testingHandleRecognizerState:UIGestureRecognizerStateEnded
+                                              eventName:LAEventNameLockScreenClockSwipeDown];
+    [recorder
+          expect:!dispatchedBeforeStart && dispatchedDoubleTap && !dispatchedHoldAtEnd && dispatchedHoldAtBegin &&
+                 dispatchedSwipeLeft && dispatchedSwipeRight && dispatchedSwipeDown &&
+                 [fixture dispatchCountForEventName:LAEventNameLockScreenClockDoubleTap] == 1 &&
+                 [fixture dispatchCountForEventName:LAEventNameLockScreenClockTapHold] == 1 &&
+                 [fixture dispatchCountForEventName:LAEventNameLockScreenClockSwipeLeft] == 1 &&
+                 [fixture dispatchCountForEventName:LAEventNameLockScreenClockSwipeRight] == 1 &&
+                 [fixture dispatchCountForEventName:LAEventNameLockScreenClockSwipeDown] == 1
+        caseName:@"lock-screen-clock-source-dispatches-legacy-recognizer-states"
+          reason:@"Lock screen clock source did not dispatch long press at began and completed gestures at ended"];
+    [dispatchSource invalidate];
+    BOOL dispatchedAfterInvalidation =
+        [dispatchSource la_testingHandleRecognizerState:UIGestureRecognizerStateEnded
+                                              eventName:LAEventNameLockScreenClockDoubleTap];
+    [recorder expect:!dispatchedAfterInvalidation &&
+                     [fixture dispatchCountForEventName:LAEventNameLockScreenClockDoubleTap] == 1
+            caseName:@"lock-screen-clock-source-invalidation-is-terminal"
+              reason:@"Invalidated lock screen clock source continued dispatching events"];
 }
 
 + (void)runMultiTouchEventSourceDispatchTestsWithRecorder:(LATestRecorder *)recorder

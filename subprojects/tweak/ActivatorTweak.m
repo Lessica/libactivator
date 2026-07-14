@@ -35,6 +35,11 @@ CHDeclareClass(SBMainSwitcherControllerCoordinator);
 CHDeclareClass(SBVolumeControl);
 CHDeclareClass(SBElasticVolumeViewController);
 CHDeclareClass(SBHomeGrabberRevealGesturesManager);
+CHDeclareClass(SBFLockScreenDateViewController);
+CHDeclareClass(SBFLockScreenDateView);
+CHDeclareClass(SBFTouchPassThroughView);
+CHDeclareClass(CSProminentDisplayViewController);
+CHDeclareClass(CSProminentTimeView);
 CHDeclareClass(SBHIconManager);
 CHDeclareClass(SBIconScrollView);
 CHDeclareClass(SBWiFiManager);
@@ -60,6 +65,7 @@ static NSArray<id<LATEventSourceStatusBarTouchIngress>> *gStatusBarTouchEventSou
 static NSArray<id<LATEventSourceSystemGestureWindowIngress>> *gSystemGestureWindowEventSources = nil;
 static NSArray<id<LATEventSourceVolumeHUDViewIngress>> *gVolumeHUDViewEventSources = nil;
 static NSArray<id<LATEventSourceGestureBarIngress>> *gGestureBarEventSources = nil;
+static NSArray<id<LATEventSourceLockScreenClockViewIngress>> *gLockScreenClockViewEventSources = nil;
 
 static Class gApplicationControllerClass = nil;
 static Class gCoverSheetViewControllerClass = nil;
@@ -85,6 +91,10 @@ static Ivar gHomeGrabberRevealDoubleTapRecognizerIvar = nil;
 - (void)applicationsRemoved:(id)removed;
 - (void)applicationsReplaced:(id)replaced;
 - (void)applicationsUpdated:(id)updated;
+@end
+
+@interface CSProminentDisplayView : UIView
+- (UIView *)timeView;
 @end
 
 static void LATNoteHIDEvent(IOHIDEventRef event) {
@@ -310,6 +320,60 @@ CHOptimizedMethod0(self, id, SBHomeGrabberRevealGesturesManager, init) {
     return instance;
 }
 
+#pragma mark - SBFLockScreenDateViewController
+
+CHOptimizedMethod0(self, void, SBFLockScreenDateViewController, loadView) {
+    CHSuper0(SBFLockScreenDateViewController, loadView);
+    UIView *clockView = [(UIViewController *)self view];
+    for (id<LATEventSourceLockScreenClockViewIngress> eventSource in gLockScreenClockViewEventSources) {
+        [eventSource noteLockScreenClockViewDidLoad:clockView];
+    }
+}
+
+#pragma mark - SBFLockScreenDateView
+
+CHOptimizedMethod0(self, void, SBFLockScreenDateView, didMoveToSuperview) {
+    CHSuper0(SBFLockScreenDateView, didMoveToSuperview);
+    for (id<LATEventSourceLockScreenClockViewIngress> eventSource in gLockScreenClockViewEventSources) {
+        [eventSource noteLockScreenClockViewDidLoad:(UIView *)self];
+    }
+}
+
+#pragma mark - SBFTouchPassThroughView
+
+CHOptimizedMethod2(self, UIView *, SBFTouchPassThroughView, hitTest, CGPoint, point, withEvent, UIEvent *, event) {
+    UIView *originalHitView = CHSuper2(SBFTouchPassThroughView, hitTest, point, withEvent, event);
+    for (id<LATEventSourceLockScreenClockViewIngress> eventSource in gLockScreenClockViewEventSources) {
+        UIView *clockHitView = [eventSource lockScreenClockHitViewForContainerView:(UIView *)self
+                                                                             point:point
+                                                                         withEvent:event];
+        if (clockHitView) {
+            return clockHitView;
+        }
+    }
+    return originalHitView;
+}
+
+#pragma mark - CSProminentDisplayViewController
+
+CHOptimizedMethod0(self, void, CSProminentDisplayViewController, loadView) {
+    CHSuper0(CSProminentDisplayViewController, loadView);
+    UIView *displayView = [(UIViewController *)self view];
+    UIView *clockView = [(CSProminentDisplayView *)displayView timeView];
+    for (id<LATEventSourceLockScreenClockViewIngress> eventSource in gLockScreenClockViewEventSources) {
+        [eventSource notePreciseLockScreenClockViewDidLoad:clockView];
+    }
+}
+
+#pragma mark - CSProminentTimeView
+
+CHOptimizedMethod0(self, void, CSProminentTimeView, didMoveToSuperview) {
+    CHSuper0(CSProminentTimeView, didMoveToSuperview);
+    for (id<LATEventSourceLockScreenClockViewIngress> eventSource in gLockScreenClockViewEventSources) {
+        [eventSource notePreciseLockScreenClockViewDidLoad:(UIView *)self];
+    }
+}
+
 #pragma mark - SBHIconManager
 
 CHOptimizedMethod1(self, void, SBHIconManager, rootFolderControllerViewWillAppear, id, controller) {
@@ -473,6 +537,11 @@ static void LATLoadSpringBoardClasses(void) {
     CHLoadClass_(&SBVolumeControl$, NSClassFromString(@"SBVolumeControl"));
     CHLoadClass_(&SBElasticVolumeViewController$, gElasticVolumeViewControllerClass);
     CHLoadClass_(&SBHomeGrabberRevealGesturesManager$, gHomeGrabberRevealGesturesManagerClass);
+    CHLoadClass_(&SBFLockScreenDateViewController$, NSClassFromString(@"SBFLockScreenDateViewController"));
+    CHLoadClass_(&SBFLockScreenDateView$, NSClassFromString(@"SBFLockScreenDateView"));
+    CHLoadClass_(&SBFTouchPassThroughView$, NSClassFromString(@"SBFTouchPassThroughView"));
+    CHLoadClass_(&CSProminentDisplayViewController$, NSClassFromString(@"CSProminentDisplayViewController"));
+    CHLoadClass_(&CSProminentTimeView$, NSClassFromString(@"CSProminentTimeView"));
     CHLoadClass_(&SBHIconManager$, NSClassFromString(@"SBHIconManager"));
     if (gIconScrollViewClass) {
         CHLoadClass_(&SBIconScrollView$, gIconScrollViewClass);
@@ -548,6 +617,11 @@ static void LATInstallHooks(void) {
 
         CHHook0(SBElasticVolumeViewController, viewDidLoad);
         CHHook0(SBHomeGrabberRevealGesturesManager, init);
+        CHHook0(SBFLockScreenDateViewController, loadView);
+        CHHook0(SBFLockScreenDateView, didMoveToSuperview);
+        CHHook2(SBFTouchPassThroughView, hitTest, withEvent);
+        CHHook0(CSProminentDisplayViewController, loadView);
+        CHHook0(CSProminentTimeView, didMoveToSuperview);
 
         if (@available(iOS 17, *)) {
             CHHook1(SBHIconManager, rootFolderControllerViewWillAppear);
@@ -612,5 +686,7 @@ __attribute__((constructor)) static void LATweakInitialize(void) {
         eventSourcesConformingToProtocol:@protocol(LATEventSourceVolumeHUDViewIngress)];
     gGestureBarEventSources = (NSArray<id<LATEventSourceGestureBarIngress>> *)[gBuiltInRegistry
         eventSourcesConformingToProtocol:@protocol(LATEventSourceGestureBarIngress)];
+    gLockScreenClockViewEventSources = (NSArray<id<LATEventSourceLockScreenClockViewIngress>> *)[gBuiltInRegistry
+        eventSourcesConformingToProtocol:@protocol(LATEventSourceLockScreenClockViewIngress)];
     LATInstallHooks();
 }
