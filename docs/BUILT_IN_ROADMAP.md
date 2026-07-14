@@ -85,7 +85,7 @@
 CLI 是 production compatibility tool，不是测试入口。
 
 - 命令面保持 1.9.13 兼容：`listeners`、`events`、`modes`、`current-mode`、`current-app`、`get <key>`、`set <key> <value>`、`activate <event> [<listener>]`、`send <listener>`、`deactivate <event>`。
-- `postinst` 是隐藏安装后入口，旧 usage 不展示；当前保留 no-op。
+- `postinst` 是隐藏安装后入口，旧 usage 不展示；当前用于为 `jbroot(/usr/libexec/activator/user-reboot)` 设置 `root:wheel` 与 setuid/setgid mode，不恢复旧版 BulletinBoard 清理副作用。
 - `prerm` 是隐藏卸载前入口，用于包卸载前关闭 application accessibility。
 - `get` / `set` 只负责调用 libactivator compatibility facade，不在 CLI 内实现 flat key 解析或直接读写 plist。
 - 事件触发命令使用当前 event mode 构造 `LAEvent`，按旧语义以 `event.handled ? 0 : 1` 作为退出状态。

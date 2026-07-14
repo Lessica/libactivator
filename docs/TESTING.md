@@ -88,7 +88,11 @@ SpringBoard 内仍只有一个 testing IPC server 和一个结果流。`LAActiva
 - Dynamic provider tests 必须覆盖 duplicate identifier、single-registry attachment、property-list catalog/create/config/remove、generation、added/removed/unchanged atomic diff、mapping failure rollback、delegate reentrancy、delegate-side owner replacement postflight、retained foreign-owned inactive declaration、pre-existing same-owner definition 不被 registry 接管、foreign/replacement owner reconciliation、notification observer 只能看到 committed state 和已推进 generation、provider teardown 不影响 source lifecycle、磁盘恢复，以及 metadata-only definition 不被误判为 runtime producer。
 - 会打开 URL、启动 App、投递 HID、显示系统 UI、修改 ringer/audio 状态的行为不进入 stable fake path；应通过 Frida probe、`run-device-runtime` 或手工真机清单验证。
 - 需要打开 App、回主屏幕、锁屏、解锁、App Switcher、强杀 App 的测试默认不进 stable，先放 `run-device-runtime` 或手工观察。
-- 为测试而新增 production 入口必须先证明必要性，并用 `LIBACTIVATOR_TEST_SUPPORT` 宏隔离。普通构建不能包含 testing IPC、testing path 或测试自动化接口。
+- 为自动化测试新增的 production 入口必须先证明必要性，并用 `LIBACTIVATOR_TEST_SUPPORT` 宏隔离。Owner 明确要求的命令行手工诊断能力可以用 `DEBUG` 隔离，但 release image 不得包含对应命令、IPC、计数采集或 Usage 文本；普通构建不能包含 testing IPC、testing path 或测试自动化接口。
+
+## DEBUG CLI 手工测试
+
+DEBUG build 的 `activator debug` 提供 assignments 的 `list/get/set/add/remove/clear/reset` 与 dispatch/abort statistics 的 summary、明细、单项查询和 reset；完整参数以 CLI 的 `DEBUG only commands` Usage 为准。Assignment 查询直接读取 SpringBoard 当前 profile 的 authoritative snapshot，不得使用会过滤不兼容或暂时不可用绑定的 Public query 结果冒充原始状态；`debug assignments reset` 只清空当前 profile，`debug stats reset` 只清空进程内 dispatch/abort counters。
 
 ## 当前专项清单
 
@@ -98,6 +102,6 @@ power connected/disconnected、headset connected/disconnected、media route / no
 
 ## API 与静态检查
 
-- `scripts/check-public-api.sh` 负责 1.9.13 Public API 的 compile/link/runtime metadata 检查。它不是设备 runtime 测试，但 Public API 或导出符号有变化时必须运行。
+- `scripts/check-public-api.sh` 负责 1.9.13 Public API 的 compile/link/runtime metadata 检查，并逐个生产架构校验 `scripts/public-api-abi-manifest.json` 中独立冻结的 binary-only 导出符号及其绑定值。它不是设备 runtime 测试，但 Public API、导出符号或 ABI/value manifest 有变化时必须运行。
 - 静态检查应覆盖：无 Logos、无 Objective-C exception handling、无 direct XPC、无 `CFMessagePort`、无不必要 `libSandy`、无 `ROOT_PATH` 宏族、无用户 App 注入 filter、无直接 `objc_msgSend`、新增代码/注释/日志无中文；`subprojects/tweak/events` 的 concrete sources 无 `LASharedActivator`；Event Source 路径无 runtime class enumeration、module/loader/factory 残留和 `+load` / constructor 自注册；concrete source import 与中央 class 清单只出现在 `LATBuiltInRegistry`，其构造循环没有逐类型 initializer 或 capability 分支；static built-in listener 路径没有 factory configuration dictionary、`MissingMetadataReason`、逐类型 initializer 分支、完整 `LATBuiltInRegistry` 依赖或绕过中央 class 清单的单独注册；`subprojects/libactivator/Makefile` 无 tweak include/source，tweak-owned suite 只由 testing `ActivatorTweak` 编译，测试目录无项目自有 class 的 `NSClassFromString` 和复制 concrete 方法表的影子协议。
 - 文档-only 改动通常运行 `git diff --check` 即可；代码、资源、脚本改动应按影响范围运行匹配的测试。

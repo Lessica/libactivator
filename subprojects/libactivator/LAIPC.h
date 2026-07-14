@@ -34,6 +34,10 @@ LA_IPC_EXTERN NSString *const LAIPCMessageAssignEvent;
 LA_IPC_EXTERN NSString *const LAIPCMessageAddListenerAssignment;
 LA_IPC_EXTERN NSString *const LAIPCMessageRemoveListenerAssignment;
 LA_IPC_EXTERN NSString *const LAIPCMessageUnassignEvent;
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+LA_IPC_EXTERN NSString *const LAIPCMessageDebugAssignmentSnapshot;
+LA_IPC_EXTERN NSString *const LAIPCMessageDebugResetAssignments;
+#endif
 LA_IPC_EXTERN NSString *const LAIPCMessageApplicationIsBlacklisted;
 LA_IPC_EXTERN NSString *const LAIPCMessageSetApplicationBlacklisted;
 LA_IPC_EXTERN NSString *const LAIPCMessageAvailableProfileNames;
@@ -152,7 +156,7 @@ LA_IPC_EXTERN NSString *const LAIPCKeyTestingFailureCount;
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingSkipCount;
 #endif
 
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
 LA_IPC_EXTERN NSString *const LAIPCMessageEventDispatchCounts;
 LA_IPC_EXTERN NSString *const LAIPCMessageListenerReceiveCounts;
 LA_IPC_EXTERN NSString *const LAIPCMessageEventAbortCounts;

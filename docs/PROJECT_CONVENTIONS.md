@@ -21,6 +21,7 @@
 ## 兼容契约
 
 - Public API 的类名、协议名、selector、常量、通知名和 import 入口是兼容契约：`#import <libactivator.h>`、`#import <Activator/Activator.h>`、`@import Activator` 都必须持续可用。
+- `scripts/public-api-abi-manifest.json` 是独立冻结的 1.9.13 binary-only ABI/value 基线，不得从当前 headers 或实现动态生成；生产门禁必须逐个架构验证其中的导出符号和绑定值，修改该清单必须具备明确的兼容依据。
 - 旧 API 中过时或不再实现的部分要保留 source/ABI 兼容符号，并明确标为 deprecated 或 no-op。
 - 不确定的 SPI 不许编造实现，也不要靠联网搜索拼答案；先留下占位和待决策点，然后问 owner。
 - 原实现使用过的 iOS SPI 默认视为失效；原实现使用过的 Public API 必须确认 iOS 16.5 SDK 下的现代用法后才能采用；不得新增使用 deprecated API。
@@ -75,10 +76,10 @@
 - 当前没有具体沙盒穿透需求时不引入 `libSandy`；如果未来某个 system service bridge 需要穿透沙盒，只为那个具体 bridge 引入。
 - IPC payload 只使用 property-list-safe dictionary。`LAEvent` 跨进程只传 `EventName`、`EventMode`、`EventHandled` 和 property-list-safe `UserInfo`。
 - `LAIPCServer` 只能是 transport adapter；业务规则、通知触发、listener/resource fallback、dispatch sequencing 不应放在 IPC server 里。
-- Public change notifications 是进程内 `NSNotification` 名称。跨进程传播使用私有 Darwin notification 名称，再由各进程 facade 重新投递本地 public notification。
+- 为保持 1.9.13 跨进程兼容，available listeners、available events、assignments、event mode 四个 Public change notification 字符串同时作为 Darwin notification channel，各进程 facade 收到后重新投递同名的进程内 `NSNotification`；新增通知默认不得复用 Public 名称作为 Darwin channel，除非兼容基线明确要求。
 - v2 运行时偏好路径固定为 `jbroot(@"/var/mobile/Library/Preferences/libactivator.plist")`；`LIBACTIVATOR_TEST_SUPPORT=1` 测试构建使用隔离路径，不读取或写入用户真实配置。
 - 非 SpringBoard 客户端不得写运行时持久化文件。无效或不可读 plist 当作不存在；不删除、不重命名、不备份、不立即覆盖。
-- 配置变更先更新 SpringBoard in-memory state，磁盘写入可以在 main run loop 合并 flush；Public API 或 IPC 应返回最新内存状态。
+- 配置变更先更新 SpringBoard in-memory state，磁盘写入可以在 main run loop 合并 flush；Public API 或 IPC 应返回最新内存状态。写入失败必须保留 dirty state，不得在缺少故障模型或实测依据时自行引入定时重试策略。
 - 所有 assignment mutation 入口，包括 Public API、IPC 和 `_setObject:forPreference:` legacy compatibility bridge，都必须在 SpringBoard authoritative state 实际改变后同步发布同一条进程内 assignment change notification；不得依赖后续 mode/profile/UI lifecycle 变化补做 Event Source interest 刷新。
 - 持久化文件写入后使用旧式兼容权限 `0666`，并设置 `NSFileProtectionNone`。
 - 资源基线来自 1.9.13：event metadata 使用 `Library/Activator/Events/bundled.plist`，listener/action metadata 使用 `Library/Activator/Listeners/bundled.plist`，目录式 `Info.plist` lookup 只作为第三方扩展兼容路径。

@@ -54,6 +54,10 @@ __attribute__((visibility("hidden")))
 - (NSArray<NSString *> *)assignedListenerNamesForEvent:(LAEvent *)event;
 - (NSArray<NSString *> *)assignedListenerNamesForEventName:(NSString *)eventName mode:(nullable NSString *)mode;
 - (NSArray<LAEvent *> *)eventsAssignedToListenerWithName:(NSString *)listenerName;
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+- (NSDictionary<NSString *, NSDictionary<NSString *, NSArray<NSString *> *> *> *)debugAssignmentSnapshot;
+- (BOOL)debugResetAssignmentsForCurrentProfile;
+#endif
 
 #pragma mark - Blacklist And Legacy Preferences
 

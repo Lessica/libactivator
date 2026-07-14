@@ -8,9 +8,14 @@
 
 #import "LAListenerMetadataCache.h"
 
+#import <os/lock.h>
+
 static NSUInteger const LAListenerMetadataCacheCountLimit = 512;
 
-@interface LAListenerMetadataCache ()
+@interface LAListenerMetadataCache () {
+    os_unfair_lock _stateLock;
+    NSUInteger _generation;
+}
 
 // Underlying caches
 @property(nonatomic, strong) NSCache<NSString *, id> *smallIcons;
@@ -25,6 +30,7 @@ static NSUInteger const LAListenerMetadataCacheCountLimit = 512;
 - (instancetype)init {
     self = [super init];
     if (self) {
+        _stateLock = OS_UNFAIR_LOCK_INIT;
         _smallIcons = [self cacheWithName:@"libactivator.listener-metadata.small-icons"];
         _localizedTitles = [self cacheWithName:@"libactivator.listener-metadata.localized-titles"];
         _localizedGroups = [self cacheWithName:@"libactivator.listener-metadata.localized-groups"];
@@ -41,10 +47,13 @@ static NSUInteger const LAListenerMetadataCacheCountLimit = 512;
 }
 
 - (void)removeAllObjects {
+    os_unfair_lock_lock(&_stateLock);
+    _generation += 1;
     [self.smallIcons removeAllObjects];
     [self.localizedTitles removeAllObjects];
     [self.localizedGroups removeAllObjects];
     [self.localizedDescriptions removeAllObjects];
+    os_unfair_lock_unlock(&_stateLock);
 }
 
 - (UIImage *)smallIconForListenerName:(NSString *)listenerName resolver:(UIImage * (^)(void))resolver {
@@ -70,13 +79,20 @@ static NSUInteger const LAListenerMetadataCacheCountLimit = 512;
         return resolver ? resolver() : nil;
     }
 
+    os_unfair_lock_lock(&_stateLock);
+    NSUInteger generation = _generation;
     id cachedObject = [cache objectForKey:listenerName];
+    os_unfair_lock_unlock(&_stateLock);
     if (cachedObject) {
         return cachedObject == NSNull.null ? nil : cachedObject;
     }
 
     id resolvedObject = resolver ? resolver() : nil;
-    [cache setObject:resolvedObject ?: NSNull.null forKey:listenerName];
+    os_unfair_lock_lock(&_stateLock);
+    if (_generation == generation) {
+        [cache setObject:resolvedObject ?: NSNull.null forKey:listenerName];
+    }
+    os_unfair_lock_unlock(&_stateLock);
 
     return resolvedObject;
 }

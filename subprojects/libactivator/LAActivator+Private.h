@@ -24,6 +24,10 @@ extern NSString *const LAActivatorEventRegistryChangedNotification;
 #pragma mark - Runtime State
 
 - (nullable LARuntimeContext *)la_runtimeContext;
+- (BOOL)la_isSpringBoardServiceReachable;
+#if LIBACTIVATOR_TEST_SUPPORT
+- (BOOL)la_flushPendingPersistentState;
+#endif
 
 #pragma mark - Device Capabilities
 
@@ -62,6 +66,10 @@ extern NSString *const LAActivatorEventRegistryChangedNotification;
 - (BOOL)la_removeListenerAssignmentAndNotifyIfChanged:(NSString *)listenerName fromEvent:(LAEvent *)event;
 - (BOOL)la_unassignEventAndNotifyIfChanged:(LAEvent *)event;
 - (BOOL)la_unassignEventNameFromAllProfilesAndNotifyIfChanged:(NSString *)eventName;
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+- (NSDictionary<NSString *, NSDictionary<NSString *, NSArray<NSString *> *> *> *)la_debugAssignmentSnapshot;
+- (BOOL)la_debugResetAssignmentsAndNotifyIfChanged;
+#endif
 
 #pragma mark - Profiles And Blacklist
 
@@ -75,7 +83,7 @@ extern NSString *const LAActivatorEventRegistryChangedNotification;
 
 #pragma mark - Statistics
 
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
 - (NSDictionary<NSString *, NSNumber *> *)la_eventDispatchCounts;
 - (NSDictionary<NSString *, NSNumber *> *)la_listenerReceiveCounts;
 - (NSDictionary<NSString *, NSNumber *> *)la_eventAbortCounts;

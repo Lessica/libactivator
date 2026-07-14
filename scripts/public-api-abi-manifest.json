@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "baseline": "libactivator 1.9.13~rc6",
+  "architectures": [
+    "arm64",
+    "arm64e"
+  ],
+  "binaryOnlyNSStringExports": {
+    "LAEventNameMenuPressAtSpringBoard": "libactivator.menu.press.at-springboard",
+    "LAEventNameSpringBoardIcon3DTouch": "libactivator.icon.3d-touch",
+    "LAEventNameSpringBoardIconDoubleTap": "libactivator.icon.tap.double",
+    "LAEventNameSpringBoardIconHold": "libactivator.icon.hold"
+  }
+}

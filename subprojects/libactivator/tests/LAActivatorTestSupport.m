@@ -124,7 +124,10 @@
 
 + (NSDictionary *)runStableTestsWithActivator:(LAActivator *)activator {
     LATestRecorder *recorder = [[LATestRecorder alloc] init];
+    NSDictionary<NSString *, id> *runtimeInputState =
+        [LATestEnvironment runtimeInputStateSnapshotWithActivator:activator];
     [self cleanTestStateWithActivator:activator];
+    [activator la_flushPendingPersistentState];
     [LATestEnvironment removeTestPlist];
     [LATestEventSuite runWithRecorder:recorder];
     [LATestPersistenceSuite runWithRecorder:recorder];
@@ -134,16 +137,24 @@
     [LATestDispatchSuite runWithRecorder:recorder activator:activator];
     [LAActivatorTestRegistry runRegisteredStableTestsWithRecorder:recorder activator:activator];
     [self cleanTestStateWithActivator:activator];
+    [activator la_flushPendingPersistentState];
+    [LATestEnvironment removeTestPlist];
+    [LATestEnvironment restoreRuntimeInputStateSnapshot:runtimeInputState activator:activator];
     return [recorder resultDictionary];
 }
 
 + (NSDictionary *)runRuntimeInputTestsWithActivator:(LAActivator *)activator {
     LATestRecorder *recorder = [[LATestRecorder alloc] init];
+    NSDictionary<NSString *, id> *runtimeInputState =
+        [LATestEnvironment runtimeInputStateSnapshotWithActivator:activator];
     [LATestEnvironment cleanActivator:activator];
-    [LATestEnvironment cleanRuntimeInputStateWithActivator:activator];
+    [activator la_flushPendingPersistentState];
+    [LATestEnvironment removeTestPlist];
     [LATestRuntimeInputSuite runWithRecorder:recorder activator:activator];
-    [LATestEnvironment cleanRuntimeInputStateWithActivator:activator];
     [LATestEnvironment cleanActivator:activator];
+    [activator la_flushPendingPersistentState];
+    [LATestEnvironment removeTestPlist];
+    [LATestEnvironment restoreRuntimeInputStateSnapshot:runtimeInputState activator:activator];
     return [recorder resultDictionary];
 }
 

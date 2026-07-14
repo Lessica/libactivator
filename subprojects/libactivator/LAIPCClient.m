@@ -32,7 +32,9 @@
 
 - (NSDictionary *)replyForMessageName:(NSString *)messageName userInfo:(NSDictionary *)userInfo {
     NSDictionary *reply = [self.center sendMessageAndReceiveReplyName:messageName userInfo:userInfo ?: @{}];
-    if (![reply isKindOfClass:NSDictionary.class] || ![reply[LAIPCKeyOK] boolValue]) {
+    NSNumber *ok =
+        [reply isKindOfClass:NSDictionary.class] ? [LAIPCCodec numberInUserInfo:reply forKey:LAIPCKeyOK] : nil;
+    if (!ok.boolValue) {
         return nil;
     }
     return reply;

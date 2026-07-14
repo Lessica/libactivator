@@ -30,6 +30,8 @@
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"Dispatch"];
 
+    NSDictionary<NSString *, id> *runtimeInputState =
+        [LATestEnvironment runtimeInputStateSnapshotWithActivator:activator];
     NSString *eventName = @"libactivator.test.dispatch";
     NSString *listenerAName = @"libactivator.test.dispatch.a";
     NSString *listenerBName = @"libactivator.test.dispatch.b";
@@ -93,6 +95,49 @@
     [recorder expect:listenerB.receiveCount == 1
             caseName:@"explicit-dispatch-deduplicates-listeners"
               reason:@"Explicit dispatch delivered to a repeated listener name"];
+
+    NSMutableString *mutableListenerAName = [listenerAName mutableCopy];
+    NSMutableArray<NSString *> *mutableListenerNames =
+        [@[ mutableListenerAName, [mutableListenerAName copy], listenerBName ] mutableCopy];
+    NSInteger listenerAReceiveCount = listenerA.receiveCount;
+    NSInteger listenerBReceiveCount = listenerB.receiveCount;
+    listenerA.receiveHandler = ^{
+        [mutableListenerNames removeAllObjects];
+        [mutableListenerAName appendString:@".changed"];
+    };
+    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
+        toListenersWithNames:mutableListenerNames];
+    [recorder expect:mutableListenerNames.count == 0 && listenerA.receiveCount == listenerAReceiveCount + 1 &&
+                     listenerB.receiveCount == listenerBReceiveCount + 1
+            caseName:@"dispatch-snapshots-listener-name-array"
+              reason:@"Reentrant mutation of the caller's listener array disrupted dispatch"];
+
+    LATestListener *metadataReplacementListenerB = [[LATestListener alloc] init];
+    listenerBReceiveCount = listenerB.receiveCount;
+    listenerB.metadataHandler = ^{
+        [activator registerListener:metadataReplacementListenerB forName:listenerBName];
+    };
+    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
+        toListenersWithNames:@[ listenerBName ]];
+    [recorder expect:listenerB.receiveCount == listenerBReceiveCount && metadataReplacementListenerB.receiveCount == 0
+            caseName:@"dispatch-revalidates-owner-after-metadata"
+              reason:@"Dispatch delivered after listener ownership changed during metadata lookup"];
+    listenerB.metadataHandler = nil;
+    [activator registerListener:listenerB forName:listenerBName];
+
+    LATestListener *replacementListenerB = [[LATestListener alloc] init];
+    replacementListenerB.compatibleModes = @[ LAEventModeApplication ];
+    listenerBReceiveCount = listenerB.receiveCount;
+    listenerA.receiveHandler = ^{
+        [activator registerListener:replacementListenerB forName:listenerBName];
+    };
+    [activator sendEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
+        toListenersWithNames:@[ listenerAName, listenerBName ]];
+    [recorder expect:listenerB.receiveCount == listenerBReceiveCount && replacementListenerB.receiveCount == 0
+            caseName:@"dispatch-revalidates-replaced-listener"
+              reason:@"Dispatch delivered to a listener owner that changed after preflight"];
+    listenerA.receiveHandler = nil;
+    [activator registerListener:listenerB forName:listenerBName];
 
     [activator sendAbortEvent:[LAEvent eventWithName:eventName mode:LAEventModeSpringBoard]
          toListenersWithNames:@[ simpleAbortName ]];
@@ -158,7 +203,7 @@
     [recorder expect:listenerB.otherHandledCount == 1
             caseName:@"deferred-no-touch-notifies-next-listener"
               reason:@"Deferred no-touch dispatch did not notify the next listener"];
-    listenerA.compatibleModes = @[];
+    listenerA.compatibleModes = @[ LAEventModeApplication ];
     touchActive = NO;
     dispatch_block_t touchesEndedBlock = pendingTouchesEndedBlock;
     pendingTouchesEndedBlock = nil;
@@ -175,10 +220,26 @@
     [recorder expect:listenerA.lastReceivedEventMode == nil
             caseName:@"nil-mode-deferred-dispatch"
               reason:@"Deferred dispatch rewrote nil event mode"];
+    listenerA.compatibleModes = @[ LAEventModeSpringBoard, LAEventModeApplication, LAEventModeLockScreen ];
+    touchActive = YES;
+    [activator sendEvent:[LAEvent eventWithName:eventName] toListenersWithNames:@[ listenerAName ]];
+    LATestListener *deferredReplacementListener = [[LATestListener alloc] init];
+    deferredReplacementListener.compatibleModes = @[ LAEventModeApplication ];
+    [activator registerListener:deferredReplacementListener forName:listenerAName];
+    touchActive = NO;
+    touchesEndedBlock = pendingTouchesEndedBlock;
+    pendingTouchesEndedBlock = nil;
+    if (touchesEndedBlock) {
+        dispatch_async(dispatch_get_main_queue(), touchesEndedBlock);
+    }
+    [LATestEnvironment waitForMainQueue];
+    [recorder expect:listenerA.receiveCount == 1 && deferredReplacementListener.receiveCount == 1
+            caseName:@"deferred-no-touch-resolves-current-name-owner"
+              reason:@"Deferred dispatch retained a stale listener owner instead of the listener name"];
+    [activator registerListener:listenerA forName:listenerAName];
     [runtimeContext setTouchActivityProvider:previousTouchActiveProvider
                        touchesEndedPerformer:previousTouchesEndedPerformer];
 
-    listenerA.compatibleModes = @[ LAEventModeSpringBoard, LAEventModeApplication, LAEventModeLockScreen ];
     listenerA.requiresNoTouchEvents = NO;
     listenerA.needsPoweredDisplay = YES;
     listenerA.receiveCount = 0;
@@ -202,6 +263,7 @@
             caseName:@"needs-powered-display-runs-with-screen-on"
               reason:@"Listener requiring powered display did not run after the screen powered on"];
     [activator la_resetDispatchCounts];
+    [LATestEnvironment restoreRuntimeInputStateSnapshot:runtimeInputState activator:activator];
 }
 
 @end

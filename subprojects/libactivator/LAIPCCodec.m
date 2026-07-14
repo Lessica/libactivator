@@ -11,6 +11,7 @@
 #import "LAIPC.h"
 
 #import <Activator/Activator.h>
+#import <math.h>
 
 static NSUInteger const LAIPCCodecMaximumPropertyListDepth = 32;
 
@@ -32,6 +33,11 @@ static NSUInteger const LAIPCCodecMaximumPropertyListDepth = 32;
     return [value isKindOfClass:NSString.class] ? value : nil;
 }
 
++ (NSNumber *)numberInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key {
+    id value = userInfo[key];
+    return [value isKindOfClass:NSNumber.class] ? value : nil;
+}
+
 + (NSArray *)stringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key {
     id value = userInfo[key];
     if (![value isKindOfClass:NSArray.class]) {
@@ -41,24 +47,28 @@ static NSUInteger const LAIPCCodecMaximumPropertyListDepth = 32;
     NSMutableArray *strings = [NSMutableArray arrayWithCapacity:[value count]];
     for (id item in value) {
         if ([item isKindOfClass:NSString.class] && [item length] > 0 && ![strings containsObject:item]) {
-            [strings addObject:item];
+            [strings addObject:[item copy]];
         }
     }
     return [[strings sortedArrayUsingSelector:@selector(compare:)] copy];
 }
 
 + (NSArray *)uniqueOrderedStringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key {
-    id value = userInfo[key];
-    if (![value isKindOfClass:NSArray.class]) {
+    return [self uniqueOrderedStringArray:userInfo[key]];
+}
+
++ (NSArray *)uniqueOrderedStringArray:(NSArray *)array {
+    if (![array isKindOfClass:NSArray.class]) {
         return @[];
     }
 
-    NSMutableArray *strings = [NSMutableArray arrayWithCapacity:[value count]];
+    NSMutableArray *strings = [NSMutableArray arrayWithCapacity:array.count];
     NSMutableSet *seenStrings = [NSMutableSet set];
-    for (id item in value) {
+    for (id item in array) {
         if ([item isKindOfClass:NSString.class] && [item length] > 0 && ![seenStrings containsObject:item]) {
-            [seenStrings addObject:item];
-            [strings addObject:item];
+            NSString *string = [item copy];
+            [seenStrings addObject:string];
+            [strings addObject:string];
         }
     }
     return [strings copy];
@@ -70,12 +80,24 @@ static NSUInteger const LAIPCCodecMaximumPropertyListDepth = 32;
         return nil;
     }
 
-    LAEvent *event = [LAEvent eventWithName:eventName mode:[self stringInUserInfo:userInfo forKey:LAIPCKeyEventMode]];
-    event.handled = [userInfo[LAIPCKeyEventHandled] boolValue];
-
+    id handledValue = userInfo[LAIPCKeyEventHandled];
+    if (handledValue && ![handledValue isKindOfClass:NSNumber.class]) {
+        return nil;
+    }
+    id modeValue = userInfo[LAIPCKeyEventMode];
+    if (modeValue && ![modeValue isKindOfClass:NSString.class]) {
+        return nil;
+    }
     id eventUserInfo = userInfo[LAIPCKeyEventUserInfo];
-    if ([eventUserInfo isKindOfClass:NSDictionary.class]) {
-        event.userInfo = eventUserInfo;
+    if (eventUserInfo &&
+        (![eventUserInfo isKindOfClass:NSDictionary.class] || ![self isPropertyListValue:eventUserInfo])) {
+        return nil;
+    }
+
+    LAEvent *event = [LAEvent eventWithName:eventName mode:modeValue];
+    event.handled = [handledValue boolValue];
+    if (eventUserInfo) {
+        event.userInfo = [self propertyListValue:eventUserInfo];
     }
     return event;
 }
@@ -94,6 +116,15 @@ static NSUInteger const LAIPCCodecMaximumPropertyListDepth = 32;
     if (eventUserInfo) {
         userInfo[LAIPCKeyEventUserInfo] = eventUserInfo;
     }
+    return [userInfo copy];
+}
+
++ (NSDictionary *)userInfoWithEvent:(LAEvent *)event listenerName:(NSString *)listenerName {
+    if (event.name.length == 0) {
+        return @{};
+    }
+    NSMutableDictionary *userInfo = [[self userInfoWithEvent:event] mutableCopy];
+    userInfo[LAIPCKeyListenerName] = [listenerName copy] ?: @"";
     return [userInfo copy];
 }
 
@@ -195,7 +226,7 @@ static NSUInteger const LAIPCCodecMaximumPropertyListDepth = 32;
 
     if ([value isKindOfClass:NSString.class] || [value isKindOfClass:NSNumber.class] ||
         [value isKindOfClass:NSData.class] || [value isKindOfClass:NSDate.class]) {
-        return value;
+        return [value copy];
     }
 
     if (depth >= LAIPCCodecMaximumPropertyListDepth) {
@@ -243,7 +274,7 @@ static NSUInteger const LAIPCCodecMaximumPropertyListDepth = 32;
 }
 
 + (NSDictionary *)smallIconDataReplyWithData:(NSData *)data scale:(CGFloat)scale {
-    if (data.length == 0) {
+    if (data.length == 0 || !isfinite((double)scale) || scale <= 0.0) {
         return [self replyWithOK:NO value:nil];
     }
     return @{LAIPCKeyOK : @YES, LAIPCKeyValue : data, LAIPCKeyScale : @(scale)};

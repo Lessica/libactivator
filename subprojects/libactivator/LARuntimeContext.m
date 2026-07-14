@@ -47,7 +47,9 @@
 
     NSString *effectiveMode = eventMode.length > 0 ? eventMode : LAEventModeSpringBoard;
     NSString *effectiveUnderneathMode = underneathMode.length > 0 ? underneathMode : LAEventModeSpringBoard;
-    NSString *effectiveDisplayIdentifier = displayIdentifier.length > 0 ? displayIdentifier : nil;
+    NSString *effectiveDisplayIdentifier =
+        [effectiveMode isEqualToString:LAEventModeApplication] && displayIdentifier.length > 0 ? displayIdentifier
+                                                                                               : nil;
 
     NSString *previousMode = [self.cachedEventMode copy];
     self.cachedEventMode = [effectiveMode copy];

@@ -21,7 +21,8 @@
 + (void)runWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     [recorder beginSuite:@"RuntimeInput"];
 
-    [LATestEnvironment cleanRuntimeInputStateWithActivator:activator];
+    NSDictionary<NSString *, id> *runtimeInputState =
+        [LATestEnvironment runtimeInputStateSnapshotWithActivator:activator];
     LARuntimeContext *runtimeContext = [LATestEnvironment runtimeContextForActivator:activator];
     [runtimeContext updateEventMode:LAEventModeApplication
                underneathLockScreen:LAEventModeApplication
@@ -35,6 +36,24 @@
             caseName:@"foreground-app-display-identifier"
               reason:[LATestEnvironment runtimeDebugReasonWithPrefix:@"Foreground app display identifier was not cached"
                                                            activator:activator]];
+    [runtimeContext updateEventMode:LAEventModeSpringBoard
+               underneathLockScreen:LAEventModeSpringBoard
+                  displayIdentifier:@"com.apple.StaleApplication"
+                           screenOn:YES];
+    [recorder expect:activator.displayIdentifierForCurrentApplication == nil
+            caseName:@"springboard-mode-rejects-display-identifier"
+              reason:@"SpringBoard mode retained an application display identifier"];
+    [runtimeContext updateEventMode:LAEventModeLockScreen
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:@"com.apple.StaleApplication"
+                           screenOn:YES];
+    [recorder expect:activator.displayIdentifierForCurrentApplication == nil
+            caseName:@"lockscreen-mode-rejects-display-identifier"
+              reason:@"Lock screen mode retained an application display identifier"];
+    [runtimeContext updateEventMode:LAEventModeApplication
+               underneathLockScreen:LAEventModeApplication
+                  displayIdentifier:@"com.apple.Preferences"
+                           screenOn:YES];
     [LATestEnvironment waitForMainQueue];
     __block NSUInteger modeNotificationCount = 0;
     id modeObserver = [NSNotificationCenter.defaultCenter addObserverForName:LAActivatorEventModeChangedNotification
@@ -167,7 +186,11 @@
             caseName:@"snapshot-screen-on-powered-display-gate"
               reason:@"Runtime snapshot screen-on state did not allow a powered-display listener"];
 
-    [LATestEnvironment cleanRuntimeInputStateWithActivator:activator];
+    [LATestEnvironment restoreRuntimeInputStateSnapshot:runtimeInputState activator:activator];
+    [recorder expect:[[LATestEnvironment runtimeInputStateSnapshotWithActivator:activator]
+                         isEqualToDictionary:runtimeInputState]
+            caseName:@"runtime-input-state-restored"
+              reason:@"Runtime input tests did not restore their original runtime state"];
 }
 
 @end

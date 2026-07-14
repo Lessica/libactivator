@@ -16,6 +16,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface LATestEnvironment : NSObject
 
 + (LARuntimeContext *)runtimeContextForActivator:(LAActivator *)activator;
++ (NSDictionary<NSString *, id> *)runtimeInputStateSnapshotWithActivator:(LAActivator *)activator;
++ (void)restoreRuntimeInputStateSnapshot:(NSDictionary<NSString *, id> *)snapshot activator:(LAActivator *)activator;
 
 #pragma mark - Cleanup
 

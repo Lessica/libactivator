@@ -25,13 +25,16 @@ __attribute__((visibility("hidden")))
 #pragma mark - UserInfo Parsing
 
 + (nullable NSString *)stringInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
++ (nullable NSNumber *)numberInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
 + (NSArray<NSString *> *)stringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
++ (NSArray<NSString *> *)uniqueOrderedStringArray:(nullable NSArray *)array;
 + (NSArray<NSString *> *)uniqueOrderedStringArrayInUserInfo:(NSDictionary *)userInfo forKey:(NSString *)key;
 + (nullable LAEvent *)eventWithUserInfo:(NSDictionary *)userInfo;
 
 #pragma mark - Serialization
 
 + (NSDictionary *)userInfoWithEvent:(LAEvent *)event;
++ (NSDictionary *)userInfoWithEvent:(LAEvent *)event listenerName:(nullable NSString *)listenerName;
 + (NSArray<NSDictionary<NSString *, id> *> *)eventDictionariesWithEvents:(NSArray<LAEvent *> *)events;
 + (NSArray<LAEvent *> *)eventsWithDictionaries:(NSArray<NSDictionary<NSString *, id> *> *)eventDictionaries;
 + (BOOL)isPropertyListValue:(nullable id)value;

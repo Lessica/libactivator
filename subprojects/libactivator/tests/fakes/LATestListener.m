@@ -24,6 +24,9 @@
     self.lastReceivedEventName = event.name;
     self.lastReceivedEventMode = event.mode;
     self.lastReceivedUserInfo = event.userInfo;
+    if (self.receiveHandler) {
+        self.receiveHandler();
+    }
     if (self.handlesReceivedEvents) {
         event.handled = YES;
     }
@@ -60,6 +63,9 @@
 
 - (NSArray *)activator:(LAActivator *)activator
     requiresCompatibleEventModesForListenerWithName:(NSString *)listenerName {
+    if (self.metadataHandler) {
+        self.metadataHandler();
+    }
     return self.compatibleModes;
 }
 

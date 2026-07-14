@@ -13,6 +13,7 @@
 #import "LAResourceManager.h"
 
 #import <dispatch/dispatch.h>
+#import <math.h>
 
 @interface LARemoteListener ()
 @property(nonatomic, strong) LAIPCClient *ipcClient;
@@ -34,13 +35,13 @@
 
 - (void)activator:(LAActivator *)activator receiveEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
     [self.ipcClient sendEventMessageName:LAIPCMessageRemoteListenerReceiveEvent
-                                userInfo:[self userInfoForEvent:event listenerName:listenerName]
+                                userInfo:[LAIPCCodec userInfoWithEvent:event listenerName:listenerName]
                                    event:event];
 }
 
 - (void)activator:(LAActivator *)activator abortEvent:(LAEvent *)event forListenerName:(NSString *)listenerName {
     [self.ipcClient sendEventMessageName:LAIPCMessageRemoteListenerAbortEvent
-                                userInfo:[self userInfoForEvent:event listenerName:listenerName]
+                                userInfo:[LAIPCCodec userInfoWithEvent:event listenerName:listenerName]
                                    event:event];
 }
 
@@ -146,35 +147,10 @@
     [self.ipcClient sendMessageName:LAIPCMessageRequestListenerRemoval userInfo:userInfo];
 }
 
-#pragma mark - Serialization
-
-- (id)propertyListValue:(id)value {
-    return [LAIPCCodec propertyListValue:value];
-}
-
-- (NSDictionary *)userInfoForEvent:(LAEvent *)event listenerName:(NSString *)listenerName {
-    if (event.name.length == 0) {
-        return @{};
-    }
-
-    NSMutableDictionary *userInfo = [@{
-        LAIPCKeyEventName : event.name,
-        LAIPCKeyEventHandled : @(event.handled),
-        LAIPCKeyListenerName : listenerName ?: @"",
-    } mutableCopy];
-    if (event.mode.length > 0) {
-        userInfo[LAIPCKeyEventMode] = event.mode;
-    }
-    NSDictionary *eventUserInfo = [self propertyListValue:event.userInfo];
-    if (eventUserInfo) {
-        userInfo[LAIPCKeyEventUserInfo] = eventUserInfo;
-    }
-    return [userInfo copy];
-}
-
 - (CGFloat)scaleInReply:(NSDictionary *)reply defaultScale:(CGFloat)defaultScale {
     id value = reply[LAIPCKeyScale];
-    return [value isKindOfClass:NSNumber.class] ? [value doubleValue] : defaultScale;
+    CGFloat scale = [value isKindOfClass:NSNumber.class] ? [value doubleValue] : defaultScale;
+    return isfinite((double)scale) && scale > 0.0 ? scale : defaultScale;
 }
 
 - (NSData *)dataValueForMessageName:(NSString *)messageName
@@ -189,6 +165,10 @@
         return localData;
     }
 
+    if (!isfinite((double)requestedScale) || requestedScale <= 0.0) {
+        requestedScale = UIScreen.mainScreen.scale;
+    }
+
     NSDictionary *userInfo = @{
         LAIPCKeyListenerName : listenerName ?: @"",
         LAIPCKeyScale : @(requestedScale),
@@ -201,7 +181,7 @@
     if (scale) {
         *scale = [self scaleInReply:reply defaultScale:requestedScale];
     }
-    return value;
+    return [value copy];
 }
 
 @end

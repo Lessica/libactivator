@@ -28,7 +28,7 @@
 #pragma mark - Class Extension
 
 @interface LAActivator () {
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
     os_unfair_lock _dispatchDiagnosticsLock;
 #endif
 }
@@ -52,7 +52,7 @@
 // Caches
 @property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
 
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
 // Dispatch diagnostics
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *eventDispatchCounts;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *listenerReceiveCounts;
@@ -64,14 +64,6 @@
 - (void)la_handleSystemNotificationNamed:(NSString *)darwinName;
 
 @end
-
-static NSString *const LAActivatorDarwinAvailableListenersChangedNotification =
-    @"libactivator.notification.available-listeners-changed";
-static NSString *const LAActivatorDarwinAvailableEventsChangedNotification =
-    @"libactivator.notification.available-events-changed";
-static NSString *const LAActivatorDarwinAssignmentsChangedNotification =
-    @"libactivator.notification.assignments-changed";
-static NSString *const LAActivatorDarwinEventModeChangedNotification = @"libactivator.notification.event-mode-changed";
 
 static void LAActivatorSystemNotificationCallback(CFNotificationCenterRef center, void *observer, CFStringRef name,
                                                   const void *object, CFDictionaryRef userInfo) {
@@ -118,14 +110,16 @@ LAActivator *LASharedActivator;
             _backend = [[LAServerBackend alloc] initWithPersistence:[self defaultPersistence]];
             _legacyPreferenceBridge = [[LALegacyBridge alloc] initWithBackend:_backend];
             _defaultEventDataSource = [[LADefaultEventDataSource alloc] init];
+            [self la_beginEventRegistryMutation];
             [_defaultEventDataSource registerAvailableEventsWithActivator:self];
+            [self la_endEventRegistryMutation];
         } else {
             _ipcClient = [[LAIPCClient alloc] init];
             _remoteListener = [[LARemoteListener alloc] init];
             [self la_registerSystemNotificationBridgeIfNeeded];
         }
 
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
         _dispatchDiagnosticsLock = OS_UNFAIR_LOCK_INIT;
         _eventDispatchCounts = [NSMutableDictionary dictionary];
         _listenerReceiveCounts = [NSMutableDictionary dictionary];
@@ -164,8 +158,11 @@ LAActivator *LASharedActivator;
         return;
     }
     if (!self.runningInsideSpringBoard) {
+        if (value && ![LAIPCCodec isPropertyListValue:value]) {
+            return;
+        }
         NSMutableDictionary *userInfo = [@{LAIPCKeyPreferenceKey : preference ?: @""} mutableCopy];
-        id propertyListValue = [self la_ipcPropertyListValue:value];
+        id propertyListValue = value ? [LAIPCCodec propertyListValue:value] : nil;
         if (propertyListValue) {
             userInfo[LAIPCKeyPreferenceValue] = propertyListValue;
         }
@@ -215,6 +212,19 @@ LAActivator *LASharedActivator;
     return self.runtimeContext;
 }
 
+- (BOOL)la_isSpringBoardServiceReachable {
+    if (self.runningInsideSpringBoard) {
+        return YES;
+    }
+    return [self.ipcClient replyForMessageName:LAIPCMessageCurrentEventMode userInfo:nil] != nil;
+}
+
+#if LIBACTIVATOR_TEST_SUPPORT
+- (BOOL)la_flushPendingPersistentState {
+    return self.runningInsideSpringBoard && [self.backend flushPendingPersistentState];
+}
+#endif
+
 #pragma mark - Device Capabilities
 
 - (BOOL)la_hasRealHomeButton {
@@ -246,10 +256,10 @@ LAActivator *LASharedActivator;
 
 - (void)la_registerSystemNotificationBridgeIfNeeded {
     NSArray *notificationNames = @[
-        LAActivatorDarwinAvailableListenersChangedNotification,
-        LAActivatorDarwinAvailableEventsChangedNotification,
-        LAActivatorDarwinAssignmentsChangedNotification,
-        LAActivatorDarwinEventModeChangedNotification,
+        LAActivatorAvailableListenersChangedNotification,
+        LAActivatorAvailableEventsChangedNotification,
+        LAActivatorAssignmentsChangedNotification,
+        LAActivatorEventModeChangedNotification,
     ];
     for (NSString *notificationName in notificationNames) {
         CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self,
@@ -258,40 +268,20 @@ LAActivator *LASharedActivator;
     }
 }
 
-- (NSString *)la_publicNotificationNameForDarwinName:(NSString *)darwinName {
-    if ([darwinName isEqualToString:LAActivatorDarwinAvailableListenersChangedNotification]) {
-        return LAActivatorAvailableListenersChangedNotification;
-    }
-    if ([darwinName isEqualToString:LAActivatorDarwinAvailableEventsChangedNotification]) {
-        return LAActivatorAvailableEventsChangedNotification;
-    }
-    if ([darwinName isEqualToString:LAActivatorDarwinAssignmentsChangedNotification]) {
-        return LAActivatorAssignmentsChangedNotification;
-    }
-    if ([darwinName isEqualToString:LAActivatorDarwinEventModeChangedNotification]) {
-        return LAActivatorEventModeChangedNotification;
-    }
-    return nil;
-}
-
-- (NSString *)la_darwinNotificationNameForPublicName:(NSString *)publicName {
-    if ([publicName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
-        return LAActivatorDarwinAvailableListenersChangedNotification;
-    }
-    if ([publicName isEqualToString:LAActivatorAvailableEventsChangedNotification]) {
-        return LAActivatorDarwinAvailableEventsChangedNotification;
-    }
-    if ([publicName isEqualToString:LAActivatorAssignmentsChangedNotification]) {
-        return LAActivatorDarwinAssignmentsChangedNotification;
-    }
-    if ([publicName isEqualToString:LAActivatorEventModeChangedNotification]) {
-        return LAActivatorDarwinEventModeChangedNotification;
-    }
-    return nil;
-}
-
 - (void)la_handleSystemNotificationNamed:(NSString *)darwinName {
-    NSString *notificationName = [self la_publicNotificationNameForDarwinName:darwinName];
+    if (darwinName.length == 0) {
+        return;
+    }
+    if ([darwinName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
+        [self la_clearListenerMetadataCaches];
+    }
+    [NSNotificationCenter.defaultCenter postNotificationName:darwinName object:self];
+}
+
+- (void)la_postSystemNotificationName:(NSString *)notificationName {
+    if (!self.runningInsideSpringBoard) {
+        return;
+    }
     if (notificationName.length == 0) {
         return;
     }
@@ -299,21 +289,7 @@ LAActivator *LASharedActivator;
         [self la_clearListenerMetadataCaches];
     }
     [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:self];
-}
-
-- (void)la_postSystemNotificationName:(NSString *)notificationName {
-    if (!self.runningInsideSpringBoard) {
-        return;
-    }
-    NSString *darwinName = [self la_darwinNotificationNameForPublicName:notificationName];
-    if (darwinName.length == 0) {
-        return;
-    }
-    if ([notificationName isEqualToString:LAActivatorAvailableListenersChangedNotification]) {
-        [self la_clearListenerMetadataCaches];
-    }
-    [NSNotificationCenter.defaultCenter postNotificationName:notificationName object:self];
-    notify_post(darwinName.UTF8String);
+    notify_post(notificationName.UTF8String);
 }
 
 - (void)la_noteEventRegistryOwnerChanged:(BOOL)ownerChanged availableEventsChanged:(BOOL)availableEventsChanged {
@@ -371,7 +347,7 @@ LAActivator *LASharedActivator;
     }
     if (!self.runningInsideSpringBoard) {
         [self.ipcClient sendEventMessageName:LAIPCMessageDispatchAssignedEvent
-                                    userInfo:[self la_ipcUserInfoForEvent:event]
+                                    userInfo:[LAIPCCodec userInfoWithEvent:event]
                                        event:event];
         return;
     }
@@ -393,8 +369,8 @@ LAActivator *LASharedActivator;
         return;
     }
     if (!self.runningInsideSpringBoard) {
-        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAIPCKeyListenerNames] = [self la_ipcUniqueStringArrayPreservingOrder:listenerNames];
+        NSMutableDictionary *userInfo = [[LAIPCCodec userInfoWithEvent:event] mutableCopy];
+        userInfo[LAIPCKeyListenerNames] = [LAIPCCodec uniqueOrderedStringArray:listenerNames];
         [self.ipcClient sendEventMessageName:LAIPCMessageDispatchEventToListeners userInfo:userInfo event:event];
         return;
     }
@@ -413,7 +389,7 @@ LAActivator *LASharedActivator;
     }
     if (!self.runningInsideSpringBoard) {
         [self.ipcClient sendEventMessageName:LAIPCMessageDispatchAssignedAbortEvent
-                                    userInfo:[self la_ipcUserInfoForEvent:event]
+                                    userInfo:[LAIPCCodec userInfoWithEvent:event]
                                        event:event];
         return;
     }
@@ -435,8 +411,8 @@ LAActivator *LASharedActivator;
         return;
     }
     if (!self.runningInsideSpringBoard) {
-        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAIPCKeyListenerNames] = [self la_ipcUniqueStringArrayPreservingOrder:listenerNames];
+        NSMutableDictionary *userInfo = [[LAIPCCodec userInfoWithEvent:event] mutableCopy];
+        userInfo[LAIPCKeyListenerNames] = [LAIPCCodec uniqueOrderedStringArray:listenerNames];
         [self.ipcClient sendEventMessageName:LAIPCMessageDispatchAbortEventToListeners userInfo:userInfo event:event];
         return;
     }
@@ -476,7 +452,7 @@ LAActivator *LASharedActivator;
     }
     if (!self.runningInsideSpringBoard) {
         [self.ipcClient sendEventMessageName:LAIPCMessageDispatchDeactivateEvent
-                                    userInfo:[self la_ipcUserInfoForEvent:event]
+                                    userInfo:[LAIPCCodec userInfoWithEvent:event]
                                        event:event];
         return;
     }
@@ -500,25 +476,22 @@ LAActivator *LASharedActivator;
     event.handled = handled;
 }
 
-- (NSArray *)la_dispatchableListenerNames:(NSArray *)listenerNames forEvent:(LAEvent *)event {
-    if (!self.runningInsideSpringBoard || event.name.length == 0) {
-        return @[];
+- (void)la_enumerateDispatchableListenersForNames:(NSArray *)listenerNames
+                                            event:(LAEvent *)event
+                                       usingBlock:(void (^)(NSString *listenerName, id<LAListener> listener))block {
+    if (!self.runningInsideSpringBoard || event.name.length == 0 || !block) {
+        return;
     }
 
     NSString *eventMode = event.mode ?: self.currentEventMode;
     if (eventMode.length == 0) {
-        return @[];
+        return;
     }
 
-    NSMutableArray *dispatchableNames = [NSMutableArray array];
-    NSMutableSet *seenNames = [NSMutableSet set];
-    for (id value in listenerNames) {
-        if (![value isKindOfClass:NSString.class] || [value length] == 0 || [seenNames containsObject:value]) {
-            continue;
-        }
-        NSString *listenerName = value;
-        [seenNames addObject:listenerName];
-        if (![self listenerForName:listenerName]) {
+    NSArray<NSString *> *listenerNameSnapshot = [LAIPCCodec uniqueOrderedStringArray:listenerNames];
+    for (NSString *listenerName in listenerNameSnapshot) {
+        id<LAListener> listener = [self listenerForName:listenerName];
+        if (!listener) {
             continue;
         }
         if (![self listenerWithName:listenerName isCompatibleWithMode:eventMode]) {
@@ -531,16 +504,18 @@ LAActivator *LASharedActivator;
             !self.runtimeContext.screenIsOn) {
             continue;
         }
-        [dispatchableNames addObject:listenerName];
+        if ([self listenerForName:listenerName] != listener) {
+            continue;
+        }
+        block(listenerName, listener);
     }
-    return [dispatchableNames copy];
 }
 
 - (void)la_sendEvent:(LAEvent *)event toListenerNames:(NSArray *)listenerNames allowDeferral:(BOOL)allowDeferral {
     if (!self.runningInsideSpringBoard || !event) {
         return;
     }
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
     [self la_incrementEventDispatchCountForEvent:event];
 #endif
 
@@ -557,41 +532,51 @@ LAActivator *LASharedActivator;
     }
 
     BOOL touchActive = allowDeferral && self.runtimeContext && self.runtimeContext.touchActive;
-    for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
-        id<LAListener> listener = [self listenerForName:listenerName];
-        if (touchActive && [self la_listenerWithNameRequiresNoTouchEvents:listenerName]) {
-            LAEvent *deferredEvent = [LAEvent eventWithName:event.name mode:event.mode];
-            deferredEvent.userInfo = event.userInfo;
-            BOOL wasHandled = event.handled;
-            event.handled = YES;
-            if (!wasHandled) {
-                [self la_notifyListenersThatListener:listener handledEvent:event];
-            }
-            __weak typeof(self) weakSelf = self;
-            [self.runtimeContext performWhenTouchesEnd:^{
-                __strong typeof(weakSelf) strongSelf = weakSelf;
-                deferredEvent.handled = NO;
-                [strongSelf la_sendEvent:deferredEvent directlyToListenerWithName:listenerName abort:NO];
-            }];
-            continue;
-        }
+    [self la_enumerateDispatchableListenersForNames:listenerNames
+                                              event:event
+                                         usingBlock:^(NSString *listenerName, id<LAListener> listener) {
+                                             BOOL requiresNoTouchEvents =
+                                                 touchActive &&
+                                                 [self la_listenerWithNameRequiresNoTouchEvents:listenerName];
+                                             if ([self listenerForName:listenerName] != listener) {
+                                                 return;
+                                             }
+                                             if (requiresNoTouchEvents) {
+                                                 LAEvent *deferredEvent = [LAEvent eventWithName:event.name
+                                                                                            mode:event.mode];
+                                                 deferredEvent.userInfo = event.userInfo;
+                                                 BOOL wasHandled = event.handled;
+                                                 event.handled = YES;
+                                                 if (!wasHandled) {
+                                                     [self la_notifyListenersThatListener:listener handledEvent:event];
+                                                 }
+                                                 __weak typeof(self) weakSelf = self;
+                                                 [self.runtimeContext performWhenTouchesEnd:^{
+                                                     __strong typeof(weakSelf) strongSelf = weakSelf;
+                                                     deferredEvent.handled = NO;
+                                                     [strongSelf la_sendEvent:deferredEvent
+                                                         directlyToListenerWithName:listenerName
+                                                                              abort:NO];
+                                                 }];
+                                                 return;
+                                             }
 
-        BOOL wasHandled = event.handled;
-        [self la_deliverEvent:event toListener:listener listenerName:listenerName];
-        if (!wasHandled && event.handled) {
-            [self la_notifyListenersThatListener:listener handledEvent:event];
-        }
-    }
+                                             BOOL wasHandled = event.handled;
+                                             [self la_deliverEvent:event toListener:listener listenerName:listenerName];
+                                             if (!wasHandled && event.handled) {
+                                                 [self la_notifyListenersThatListener:listener handledEvent:event];
+                                             }
+                                         }];
 }
 
 - (void)la_deliverEvent:(LAEvent *)event toListener:(id<LAListener>)listener listenerName:(NSString *)listenerName {
     if ([listener respondsToSelector:@selector(activator:receiveEvent:forListenerName:)]) {
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
         [self la_incrementListenerReceiveCountForName:listenerName];
 #endif
         [listener activator:self receiveEvent:event forListenerName:listenerName];
     } else if ([listener respondsToSelector:@selector(activator:receiveEvent:)]) {
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
         [self la_incrementListenerReceiveCountForName:listenerName];
 #endif
         [listener activator:self receiveEvent:event];
@@ -612,14 +597,8 @@ LAActivator *LASharedActivator;
     }
 
     BOOL unlockingEventWasHandled = NO;
-    NSMutableSet *seenNames = [NSMutableSet set];
-    for (id value in listenerNames) {
-        if (![value isKindOfClass:NSString.class] || [value length] == 0 || [seenNames containsObject:value]) {
-            continue;
-        }
-        NSString *listenerName = value;
-        [seenNames addObject:listenerName];
-
+    NSArray<NSString *> *listenerNameSnapshot = [LAIPCCodec uniqueOrderedStringArray:listenerNames];
+    for (NSString *listenerName in listenerNameSnapshot) {
         id<LAListener> listener = [self listenerForName:listenerName];
         if (!listener ||
             ![listener respondsToSelector:@selector(activator:receiveUnlockingDeviceEvent:forListenerName:)]) {
@@ -632,6 +611,9 @@ LAActivator *LASharedActivator;
             continue;
         }
         if (![self listenerWithName:listenerName isCompatibleWithEventName:event.name]) {
+            continue;
+        }
+        if ([self listenerForName:listenerName] != listener) {
             continue;
         }
 
@@ -657,24 +639,28 @@ LAActivator *LASharedActivator;
     if (!self.runningInsideSpringBoard || !event) {
         return;
     }
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
     [self la_incrementEventAbortCountForEvent:event];
 #endif
 
-    for (NSString *listenerName in [self la_dispatchableListenerNames:listenerNames forEvent:event]) {
-        id<LAListener> listener = [self listenerForName:listenerName];
-        if ([listener respondsToSelector:@selector(activator:abortEvent:forListenerName:)]) {
-#if LIBACTIVATOR_TEST_SUPPORT
-            [self la_incrementListenerAbortCountForName:listenerName];
+    [self
+        la_enumerateDispatchableListenersForNames:listenerNames
+                                            event:event
+                                       usingBlock:^(NSString *listenerName, id<LAListener> listener) {
+                                           if ([listener
+                                                   respondsToSelector:@selector(
+                                                                          activator:abortEvent:forListenerName:)]) {
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+                                               [self la_incrementListenerAbortCountForName:listenerName];
 #endif
-            [listener activator:self abortEvent:event forListenerName:listenerName];
-        } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
-#if LIBACTIVATOR_TEST_SUPPORT
-            [self la_incrementListenerAbortCountForName:listenerName];
+                                               [listener activator:self abortEvent:event forListenerName:listenerName];
+                                           } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+                                               [self la_incrementListenerAbortCountForName:listenerName];
 #endif
-            [listener activator:self abortEvent:event];
-        }
-    }
+                                               [listener activator:self abortEvent:event];
+                                           }
+                                       }];
 }
 
 - (void)la_sendEvent:(LAEvent *)event directlyToListenerWithName:(NSString *)listenerName abort:(BOOL)abort {
@@ -694,13 +680,13 @@ LAActivator *LASharedActivator;
     }
     if (abort) {
         if ([listener respondsToSelector:@selector(activator:abortEvent:forListenerName:)]) {
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
             [self la_incrementEventAbortCountForEvent:event];
             [self la_incrementListenerAbortCountForName:listenerName];
 #endif
             [listener activator:self abortEvent:event forListenerName:listenerName];
         } else if ([listener respondsToSelector:@selector(activator:abortEvent:)]) {
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
             [self la_incrementEventAbortCountForEvent:event];
             [self la_incrementListenerAbortCountForName:listenerName];
 #endif
@@ -757,42 +743,6 @@ LAActivator *LASharedActivator;
         culprit = NSProcessInfo.processInfo.processName;
     }
     return culprit.length > 0 ? culprit : @"This process";
-}
-
-#pragma mark - IPC Serialization
-
-- (id)la_ipcPropertyListValue:(id)value {
-    return [LAIPCCodec propertyListValue:value];
-}
-
-- (NSDictionary *)la_ipcUserInfoForEvent:(LAEvent *)event {
-    if (event.name.length == 0) {
-        return @{};
-    }
-
-    NSMutableDictionary *userInfo = [@{LAIPCKeyEventName : event.name} mutableCopy];
-    if (event.mode.length > 0) {
-        userInfo[LAIPCKeyEventMode] = event.mode;
-    }
-    userInfo[LAIPCKeyEventHandled] = @(event.handled);
-
-    NSDictionary *eventUserInfo = [self la_ipcPropertyListValue:event.userInfo];
-    if (eventUserInfo) {
-        userInfo[LAIPCKeyEventUserInfo] = eventUserInfo;
-    }
-    return [userInfo copy];
-}
-
-- (NSArray *)la_ipcUniqueStringArrayPreservingOrder:(NSArray *)array {
-    NSMutableArray *strings = [NSMutableArray arrayWithCapacity:array.count];
-    NSMutableSet *seenStrings = [NSMutableSet set];
-    for (id value in array) {
-        if ([value isKindOfClass:NSString.class] && [value length] > 0 && ![seenStrings containsObject:value]) {
-            [seenStrings addObject:value];
-            [strings addObject:value];
-        }
-    }
-    return [strings copy];
 }
 
 #pragma mark - Listener Registry
@@ -898,7 +848,7 @@ LAActivator *LASharedActivator;
         return NO;
     }
     if (!self.runningInsideSpringBoard) {
-        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
+        NSMutableDictionary *userInfo = [[LAIPCCodec userInfoWithEvent:event] mutableCopy];
         userInfo[LAIPCKeyListenerNames] = [LAServerBackend normalizedStringArray:listenerNames];
         return [self.ipcClient boolValueForMessageName:LAIPCMessageAssignEvent userInfo:userInfo defaultValue:NO];
     }
@@ -947,8 +897,7 @@ LAActivator *LASharedActivator;
         return NO;
     }
     if (!self.runningInsideSpringBoard) {
-        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAIPCKeyListenerName] = listenerName ?: @"";
+        NSDictionary *userInfo = [LAIPCCodec userInfoWithEvent:event listenerName:listenerName];
         return [self.ipcClient boolValueForMessageName:LAIPCMessageAddListenerAssignment
                                               userInfo:userInfo
                                           defaultValue:NO];
@@ -974,8 +923,7 @@ LAActivator *LASharedActivator;
         return NO;
     }
     if (!self.runningInsideSpringBoard) {
-        NSMutableDictionary *userInfo = [[self la_ipcUserInfoForEvent:event] mutableCopy];
-        userInfo[LAIPCKeyListenerName] = listenerName ?: @"";
+        NSDictionary *userInfo = [LAIPCCodec userInfoWithEvent:event listenerName:listenerName];
         return [self.ipcClient boolValueForMessageName:LAIPCMessageRemoveListenerAssignment
                                               userInfo:userInfo
                                           defaultValue:NO];
@@ -1020,13 +968,38 @@ LAActivator *LASharedActivator;
     return changed;
 }
 
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+- (NSDictionary<NSString *, NSDictionary<NSString *, NSArray<NSString *> *> *> *)la_debugAssignmentSnapshot {
+    if (!self.runningInsideSpringBoard) {
+        id value = [self.ipcClient propertyListValueForMessageName:LAIPCMessageDebugAssignmentSnapshot userInfo:nil];
+        return [value isKindOfClass:NSDictionary.class] ? value : @{};
+    }
+    return [self.backend debugAssignmentSnapshot];
+}
+
+- (BOOL)la_debugResetAssignmentsAndNotifyIfChanged {
+    BOOL changed = NO;
+    if (!self.runningInsideSpringBoard) {
+        changed = [self.ipcClient boolValueForMessageName:LAIPCMessageDebugResetAssignments
+                                                 userInfo:nil
+                                             defaultValue:NO];
+    } else {
+        changed = [self.backend debugResetAssignmentsForCurrentProfile];
+    }
+    if (changed) {
+        [self la_postSystemNotificationName:LAActivatorAssignmentsChangedNotification];
+    }
+    return changed;
+}
+#endif
+
 - (BOOL)la_unassignEvent:(LAEvent *)event {
     if (event.name.length == 0) {
         return NO;
     }
     if (!self.runningInsideSpringBoard) {
         return [self.ipcClient boolValueForMessageName:LAIPCMessageUnassignEvent
-                                              userInfo:[self la_ipcUserInfoForEvent:event]
+                                              userInfo:[LAIPCCodec userInfoWithEvent:event]
                                           defaultValue:NO];
     }
     if (event.mode.length > 0) {
@@ -1081,7 +1054,7 @@ LAActivator *LASharedActivator;
     }
     if (!self.runningInsideSpringBoard) {
         return [self.ipcClient arrayValueForMessageName:LAIPCMessageAssignedListenerNames
-                                               userInfo:[self la_ipcUserInfoForEvent:event]];
+                                               userInfo:[LAIPCCodec userInfoWithEvent:event]];
     }
     return [self la_compatibleAssignedListenerNames:[self.backend assignedListenerNamesForEvent:event] forEvent:event];
 }
@@ -1418,14 +1391,14 @@ LAActivator *LASharedActivator;
     if ([self eventDataSourceForEventName:eventName] != dataSource || ![LAIPCCodec isPropertyListValue:configuration]) {
         return nil;
     }
-    return [self la_ipcPropertyListValue:configuration];
+    return [LAIPCCodec propertyListValue:configuration];
 }
 
 - (BOOL)la_saveConfiguration:(id)configuration forEventWithName:(NSString *)eventName {
     if (eventName.length == 0 || ![LAIPCCodec isPropertyListValue:configuration]) {
         return NO;
     }
-    id propertyListConfiguration = [self la_ipcPropertyListValue:configuration];
+    id propertyListConfiguration = [LAIPCCodec propertyListValue:configuration];
     if (!self.runningInsideSpringBoard) {
         NSDictionary *userInfo = @{
             LAIPCKeyEventName : eventName,
@@ -2032,7 +2005,7 @@ LAActivator *LASharedActivator;
 
 #pragma mark - Statistics
 
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
 - (void)la_performWithDispatchDiagnosticsLock:(dispatch_block_t)block {
     os_unfair_lock_lock(&_dispatchDiagnosticsLock);
     block();

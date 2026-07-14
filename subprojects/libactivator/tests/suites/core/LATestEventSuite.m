@@ -12,6 +12,31 @@
 
 #import <Activator/Activator.h>
 
+extern NSString *const LAEventNameMenuPressAtSpringBoard;
+extern NSString *const LAEventNameSpringBoardIcon3DTouch;
+extern NSString *const LAEventNameSpringBoardIconDoubleTap;
+extern NSString *const LAEventNameSpringBoardIconHold;
+
+@interface LATestEventDecoder : NSCoder
+@property(nonatomic, copy) NSDictionary<NSString *, id> *values;
+@end
+
+@implementation LATestEventDecoder
+
+- (BOOL)allowsKeyedCoding {
+    return YES;
+}
+
+- (id)decodeObjectForKey:(NSString *)key {
+    return self.values[key];
+}
+
+- (BOOL)decodeBoolForKey:(NSString *)key {
+    return [self.values[key] boolValue];
+}
+
+@end
+
 @implementation LATestEventSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder {
@@ -28,6 +53,18 @@
     [recorder expect:[event.userInfo[@"Key"] isEqualToString:@"Value"]
             caseName:@"user-info"
               reason:@"User info mismatch"];
+    LATestEventDecoder *malformedDecoder = [[LATestEventDecoder alloc] init];
+    malformedDecoder.values = @{
+        @"name" : @[],
+        @"mode" : @1,
+        @"handled" : @YES,
+        @"userInfo" : @"invalid",
+    };
+    LAEvent *malformedEvent = [[LAEvent alloc] initWithCoder:malformedDecoder];
+    [recorder expect:[malformedEvent.name isEqualToString:@""] && malformedEvent.mode == nil &&
+                     malformedEvent.handled && malformedEvent.userInfo == nil
+            caseName:@"malformed-coder-values-fall-back"
+              reason:@"Malformed archive fields escaped LAEvent type validation"];
     [recorder
           expect:[LAEventScreenBottomSwipeLeft
                      isEqualToString:@"libactivator.drag-along.screen-bottom.right-to-left"] &&
@@ -39,6 +76,25 @@
                  [LAEventScreenRightSwipeUp isEqualToString:@"libactivator.drag-along.screen-right.bottom-to-top"]
         caseName:@"screen-side-swipe-constant-values"
           reason:@"Screen-side swipe constants did not match the 1.9.13 drag-along event names"];
+    [recorder
+          expect:[LAActivatorAvailableListenersChangedNotification isEqualToString:@"libactivator.listeners.changed"] &&
+                 [LAActivatorAvailableEventsChangedNotification isEqualToString:@"libactivator.events.changed"] &&
+                 [LAActivatorAssignmentsChangedNotification isEqualToString:@"libactivator.assignments.changed"] &&
+                 [LAActivatorEventModeChangedNotification isEqualToString:@"libactivator.eventmode.changed"] &&
+                 [LAActivatorAuthorizationChangedNotification isEqualToString:@"libactivator.authorization.changed"]
+        caseName:@"public-notification-constant-values"
+          reason:@"Public notification constants did not match the 1.9.13 runtime values"];
+    [recorder expect:[LAEventUserInfoDisplayIdentifier isEqualToString:@"displayIdentifier"] &&
+                     [LAEventUserInfoIconView isEqualToString:@"iconView"] &&
+                     [LAEventUserInfoUnlockedDeviceToSendEvent isEqualToString:@"unlockedDeviceToSendEvent"]
+            caseName:@"public-event-user-info-key-values"
+              reason:@"Public event user-info keys did not match the 1.9.13 runtime values"];
+    [recorder expect:[LAEventNameMenuPressAtSpringBoard isEqualToString:@"libactivator.menu.press.at-springboard"] &&
+                     [LAEventNameSpringBoardIcon3DTouch isEqualToString:@"libactivator.icon.3d-touch"] &&
+                     [LAEventNameSpringBoardIconDoubleTap isEqualToString:@"libactivator.icon.tap.double"] &&
+                     [LAEventNameSpringBoardIconHold isEqualToString:@"libactivator.icon.hold"]
+            caseName:@"legacy-binary-only-event-constant-values"
+              reason:@"Binary-only event constants did not match the 1.9.13 exported values"];
 
     NSDictionary<NSString *, NSString *> *resourceBackedEventConstants = @{
         @"LAEventNameCarConnected" : LAEventNameCarConnected,

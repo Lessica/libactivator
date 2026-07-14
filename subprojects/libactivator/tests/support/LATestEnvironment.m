@@ -13,6 +13,7 @@
 
 #import <Activator/Activator.h>
 #import <UIKit/UIKit.h>
+#import <roothide.h>
 
 @implementation LATestEnvironment
 
@@ -20,6 +21,29 @@
     LARuntimeContext *runtimeContext = [activator la_runtimeContext];
     NSCAssert(runtimeContext, @"Runtime context must be available in SpringBoard-owned tests");
     return runtimeContext;
+}
+
++ (NSDictionary<NSString *, id> *)runtimeInputStateSnapshotWithActivator:(LAActivator *)activator {
+    LARuntimeContext *runtimeContext = [self runtimeContextForActivator:activator];
+    return @{
+        @"Mode" : runtimeContext.currentEventMode,
+        @"UnderneathMode" : runtimeContext.currentEventModeUnderneathLockScreen,
+        @"DisplayIdentifier" : runtimeContext.displayIdentifierForCurrentApplication ?: NSNull.null,
+        @"ScreenOn" : @(runtimeContext.screenIsOn),
+    };
+}
+
++ (void)restoreRuntimeInputStateSnapshot:(NSDictionary<NSString *, id> *)snapshot activator:(LAActivator *)activator {
+    NSString *mode = [snapshot[@"Mode"] isKindOfClass:NSString.class] ? snapshot[@"Mode"] : LAEventModeSpringBoard;
+    NSString *underneathMode = [snapshot[@"UnderneathMode"] isKindOfClass:NSString.class] ? snapshot[@"UnderneathMode"]
+                                                                                          : LAEventModeSpringBoard;
+    NSString *displayIdentifier =
+        [snapshot[@"DisplayIdentifier"] isKindOfClass:NSString.class] ? snapshot[@"DisplayIdentifier"] : nil;
+    NSNumber *screenOn = [snapshot[@"ScreenOn"] isKindOfClass:NSNumber.class] ? snapshot[@"ScreenOn"] : @YES;
+    [[self runtimeContextForActivator:activator] updateEventMode:mode
+                                            underneathLockScreen:underneathMode
+                                               displayIdentifier:displayIdentifier
+                                                        screenOn:screenOn.boolValue];
 }
 
 #pragma mark - Cleanup
@@ -66,6 +90,7 @@
         [activator unregisterEventDataSourceWithEventName:eventName];
     }
     for (NSString *listenerName in listenerNames) {
+        [activator _setObject:nil forPreference:[NSString stringWithFormat:@"LAHasSeenListener-%@", listenerName]];
         [activator unregisterListenerWithName:listenerName];
     }
     [activator la_resetDispatchCounts];
@@ -80,6 +105,8 @@
 
 + (void)removeTestPlist {
     [NSFileManager.defaultManager removeItemAtPath:[self testCachePathWithFileName:@"libactivator.tests.plist"]
+                                             error:nil];
+    [NSFileManager.defaultManager removeItemAtPath:jbroot(@"/var/mobile/Library/Preferences/libactivator-tests.plist")
                                              error:nil];
 }
 

@@ -22,7 +22,6 @@
 #import "LATestRecorder.h"
 
 #import <Activator/Activator.h>
-#import <roothide.h>
 
 @interface LATNetworkEventSource (LATestEventDefinitionRegistry)
 - (void)la_testingSendWiFiEventWithBaseName:(NSString *)baseEventName networkName:(NSString *)networkName;
@@ -97,7 +96,7 @@
 @implementation LATestEventDefinitionRegistrySuite
 
 + (id)persistedLegacyPreferenceValueForKey:(NSString *)key {
-    NSString *path = jbroot(@"/var/mobile/Library/Preferences/libactivator-tests.plist");
+    NSString *path = @"/var/mobile/Library/Caches/libactivator.tests.plist";
     NSData *data = [NSData dataWithContentsOfFile:path];
     if (data.length == 0) {
         return nil;

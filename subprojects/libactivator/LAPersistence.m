@@ -20,7 +20,7 @@
 
 #if LIBACTIVATOR_TEST_SUPPORT
 + (instancetype)testingPersistence {
-    return [[self alloc] initWithFilePath:jbroot(@"/var/mobile/Library/Preferences/libactivator-tests.plist")];
+    return [[self alloc] initWithFilePath:@"/var/mobile/Library/Caches/libactivator.tests.plist"];
 }
 #endif
 
@@ -37,8 +37,12 @@
         return nil;
     }
 
-    NSData *data = [NSData dataWithContentsOfFile:self.filePath];
+    NSError *readError = nil;
+    NSData *data = [NSData dataWithContentsOfFile:self.filePath options:0 error:&readError];
     if (data.length == 0) {
+        if (readError) {
+            HBLogWarn(@"Failed to read persistence file: %@", readError);
+        }
         return nil;
     }
 
@@ -48,6 +52,7 @@
                                                           format:nil
                                                            error:&error];
     if (![plist isKindOfClass:NSDictionary.class]) {
+        HBLogWarn(@"Failed to decode persistence dictionary: %@", error ?: @"Unexpected root object type");
         return nil;
     }
     return plist;
@@ -64,6 +69,7 @@
                                  withIntermediateDirectories:YES
                                                   attributes:nil
                                                        error:&directoryError]) {
+        HBLogError(@"Failed to create persistence directory: %@", directoryError);
         return NO;
     }
 
@@ -73,11 +79,13 @@
                                                              options:0
                                                                error:&serializationError];
     if (!data) {
+        HBLogError(@"Failed to serialize persistent state: %@", serializationError);
         return NO;
     }
 
     NSError *writeError = nil;
     if (![data writeToFile:self.filePath options:NSDataWritingAtomic error:&writeError]) {
+        HBLogError(@"Failed to write persistence file: %@", writeError);
         return NO;
     }
 

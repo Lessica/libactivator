@@ -14,11 +14,11 @@ NSString *const LAEventModeSpringBoard = @"springboard";
 NSString *const LAEventModeApplication = @"application";
 NSString *const LAEventModeLockScreen = @"lockscreen";
 
-NSString *const LAActivatorAvailableListenersChangedNotification = @"LAActivatorAvailableListenersChangedNotification";
-NSString *const LAActivatorAvailableEventsChangedNotification = @"LAActivatorAvailableEventsChangedNotification";
-NSString *const LAActivatorAssignmentsChangedNotification = @"LAActivatorAssignmentsChangedNotification";
-NSString *const LAActivatorEventModeChangedNotification = @"LAActivatorEventModeChangedNotification";
-NSString *const LAActivatorAuthorizationChangedNotification = @"LAActivatorAuthorizationChangedNotification";
+NSString *const LAActivatorAvailableListenersChangedNotification = @"libactivator.listeners.changed";
+NSString *const LAActivatorAvailableEventsChangedNotification = @"libactivator.events.changed";
+NSString *const LAActivatorAssignmentsChangedNotification = @"libactivator.assignments.changed";
+NSString *const LAActivatorEventModeChangedNotification = @"libactivator.eventmode.changed";
+NSString *const LAActivatorAuthorizationChangedNotification = @"libactivator.authorization.changed";
 NSString *const LAActivatorListenerRegistryChangedNotification = @"LAActivatorListenerRegistryChangedNotification";
 NSString *const LAActivatorEventRegistryChangedNotification = @"LAActivatorEventRegistryChangedNotification";
 
@@ -27,6 +27,8 @@ NSString *const LAEventNameMenuPressDouble = @"libactivator.menu.press.double";
 NSString *const LAEventNameMenuPressTriple = @"libactivator.menu.press.triple";
 NSString *const LAEventNameMenuHoldShort = @"libactivator.menu.hold.short";
 NSString *const LAEventNameMenuHoldLong = @"libactivator.menu.hold.long";
+__attribute__((visibility("default"))) NSString *const LAEventNameMenuPressAtSpringBoard =
+    @"libactivator.menu.press.at-springboard";
 
 NSString *const LAEventNameLockHoldShort = @"libactivator.lock.hold.short";
 NSString *const LAEventNameLockHoldLong = @"libactivator.lock.hold.long";
@@ -155,6 +157,11 @@ NSString *const LAEventNameSpringBoardIconFlickUp = @"libactivator.icon.flick.up
 NSString *const LAEventNameSpringBoardIconFlickDown = @"libactivator.icon.flick.down";
 NSString *const LAEventNameSpringBoardIconFlickLeft = @"libactivator.icon.flick.left";
 NSString *const LAEventNameSpringBoardIconFlickRight = @"libactivator.icon.flick.right";
+__attribute__((visibility("default"))) NSString *const LAEventNameSpringBoardIcon3DTouch =
+    @"libactivator.icon.3d-touch";
+__attribute__((visibility("default"))) NSString *const LAEventNameSpringBoardIconDoubleTap =
+    @"libactivator.icon.tap.double";
+__attribute__((visibility("default"))) NSString *const LAEventNameSpringBoardIconHold = @"libactivator.icon.hold";
 
 NSString *const LAEventNameDeviceLocked = @"libactivator.device.locked";
 NSString *const LAEventNameDeviceUnlocked = @"libactivator.device.unlocked";
@@ -174,6 +181,6 @@ NSString *const LAEventNameFingerprintSensorPressSingleAndSlideIn =
 NSString *const LAEventNameFingerprintSensorPressSingleAndHold =
     @"libactivator.fingerprint-sensor.press.single.with-hold";
 
-NSString *const LAEventUserInfoDisplayIdentifier = @"LAEventUserInfoDisplayIdentifier";
-NSString *const LAEventUserInfoIconView = @"LAEventUserInfoIconView";
-NSString *const LAEventUserInfoUnlockedDeviceToSendEvent = @"LAEventUserInfoUnlockedDeviceToSendEvent";
+NSString *const LAEventUserInfoDisplayIdentifier = @"displayIdentifier";
+NSString *const LAEventUserInfoIconView = @"iconView";
+NSString *const LAEventUserInfoUnlockedDeviceToSendEvent = @"unlockedDeviceToSendEvent";

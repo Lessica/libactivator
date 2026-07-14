@@ -91,7 +91,7 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 }
 
 - (NSBundle *)eventBundleForName:(NSString *)eventName {
-    if (eventName.length == 0) {
+    if (![self isValidResourceName:eventName]) {
         return nil;
     }
 
@@ -126,7 +126,7 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 }
 
 - (NSDictionary *)eventInfoDictionaryForName:(NSString *)eventName {
-    if (eventName.length == 0) {
+    if (![self isValidResourceName:eventName]) {
         return nil;
     }
 
@@ -227,7 +227,7 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 }
 
 - (NSBundle *)listenerBundleForName:(NSString *)listenerName {
-    if (listenerName.length == 0) {
+    if (![self isValidResourceName:listenerName]) {
         return nil;
     }
 
@@ -276,7 +276,7 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
 }
 
 - (NSDictionary *)listenerInfoDictionaryForName:(NSString *)listenerName {
-    if (listenerName.length == 0) {
+    if (![self isValidResourceName:listenerName]) {
         return nil;
     }
 
@@ -494,7 +494,7 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
     return @[ scaledPath, resolvedPath ];
 }
 
-- (CGFloat)scaleForIconPath:(NSString *)path requestedScale:(CGFloat)requestedScale {
+- (CGFloat)scaleForIconPath:(NSString *)path requestedScale:(__unused CGFloat)requestedScale {
     NSString *lastPathComponent = path.lastPathComponent;
     if ([lastPathComponent containsString:@"@3x"]) {
         return 3.0f;
@@ -502,7 +502,15 @@ extern Boolean MGGetBoolAnswer(CFStringRef key);
     if ([lastPathComponent containsString:@"@2x"]) {
         return 2.0f;
     }
-    return requestedScale == 1.0f ? 1.0f : 1.0f;
+    return 1.0f;
+}
+
+- (BOOL)isValidResourceName:(NSString *)resourceName {
+    if (![resourceName isKindOfClass:NSString.class] || resourceName.length == 0 ||
+        [resourceName rangeOfString:@"/"].location != NSNotFound) {
+        return NO;
+    }
+    return ![resourceName isEqualToString:@"."] && ![resourceName isEqualToString:@".."];
 }
 
 - (NSString *)resolvedPathForResourcePath:(NSString *)path {

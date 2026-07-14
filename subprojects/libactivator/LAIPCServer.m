@@ -14,6 +14,8 @@
 #endif
 
 #import <AppSupport/CPDistributedMessagingCenter.h>
+#import <dispatch/dispatch.h>
+#import <math.h>
 
 @interface LAIPCServer ()
 @property(nonatomic, strong) LAActivator *activator;
@@ -63,6 +65,10 @@
         LAIPCMessageAddListenerAssignment,
         LAIPCMessageRemoveListenerAssignment,
         LAIPCMessageUnassignEvent,
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+        LAIPCMessageDebugAssignmentSnapshot,
+        LAIPCMessageDebugResetAssignments,
+#endif
         LAIPCMessageApplicationIsBlacklisted,
         LAIPCMessageSetApplicationBlacklisted,
         LAIPCMessageAvailableProfileNames,
@@ -119,7 +125,7 @@
 #if LIBACTIVATOR_TEST_SUPPORT
         LAIPCMessageTesting,
 #endif
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
         LAIPCMessageEventDispatchCounts,
         LAIPCMessageListenerReceiveCounts,
         LAIPCMessageEventAbortCounts,
@@ -130,6 +136,14 @@
 }
 
 - (NSDictionary *)handleMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
+    if (!NSThread.isMainThread) {
+        // Listener and data-source callbacks share SpringBoard state that is confined to the main queue.
+        __block NSDictionary *reply = nil;
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            reply = [self handleMessageNamed:messageName withUserInfo:userInfo];
+        });
+        return reply ?: [LAIPCCodec replyWithOK:NO value:nil];
+    }
     if (![messageName isKindOfClass:NSString.class] || ![userInfo isKindOfClass:NSDictionary.class]) {
         return [LAIPCCodec replyWithOK:NO value:nil];
     }
@@ -221,7 +235,11 @@
     }
     if ([messageName isEqualToString:LAIPCMessageSetPreferenceValue]) {
         NSString *preferenceKey = [LAIPCCodec stringInUserInfo:userInfo forKey:LAIPCKeyPreferenceKey];
-        id preferenceValue = [LAIPCCodec propertyListValue:userInfo[LAIPCKeyPreferenceValue]];
+        id rawPreferenceValue = userInfo[LAIPCKeyPreferenceValue];
+        if (preferenceKey.length == 0 || (rawPreferenceValue && ![LAIPCCodec isPropertyListValue:rawPreferenceValue])) {
+            return [LAIPCCodec replyWithOK:NO value:nil];
+        }
+        id preferenceValue = rawPreferenceValue ? [LAIPCCodec propertyListValue:rawPreferenceValue] : nil;
         [_activator _setObject:preferenceValue forPreference:preferenceKey];
         return [LAIPCCodec replyWithOK:YES value:nil];
     }
@@ -273,6 +291,15 @@
         BOOL changed = [_activator la_unassignEventAndNotifyIfChanged:event];
         return [LAIPCCodec replyWithOK:YES value:@(changed)];
     }
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+    if ([messageName isEqualToString:LAIPCMessageDebugAssignmentSnapshot]) {
+        return [LAIPCCodec replyWithOK:YES value:[_activator la_debugAssignmentSnapshot]];
+    }
+    if ([messageName isEqualToString:LAIPCMessageDebugResetAssignments]) {
+        BOOL changed = [_activator la_debugResetAssignmentsAndNotifyIfChanged];
+        return [LAIPCCodec replyWithOK:YES value:@(changed)];
+    }
+#endif
     if ([messageName isEqualToString:LAIPCMessageApplicationIsBlacklisted]) {
         NSString *displayIdentifier = [LAIPCCodec stringInUserInfo:userInfo forKey:LAIPCKeyDisplayIdentifier];
         BOOL blacklisted = [_activator applicationWithDisplayIdentifierIsBlacklisted:displayIdentifier];
@@ -280,8 +307,12 @@
     }
     if ([messageName isEqualToString:LAIPCMessageSetApplicationBlacklisted]) {
         NSString *displayIdentifier = [LAIPCCodec stringInUserInfo:userInfo forKey:LAIPCKeyDisplayIdentifier];
+        NSNumber *blacklisted = [LAIPCCodec numberInUserInfo:userInfo forKey:LAIPCKeyBlacklisted];
+        if (!blacklisted) {
+            return [LAIPCCodec replyWithOK:NO value:nil];
+        }
         BOOL changed = [_activator la_setApplicationWithDisplayIdentifier:displayIdentifier
-                                                            isBlacklisted:[userInfo[LAIPCKeyBlacklisted] boolValue]];
+                                                            isBlacklisted:blacklisted.boolValue];
         return [LAIPCCodec replyWithOK:YES value:@(changed)];
     }
     return nil;
@@ -293,8 +324,11 @@
         return [LAIPCCodec replyWithOK:YES value:@([_activator la_applicationAccessibilityEnabled])];
     }
     if ([messageName isEqualToString:LAIPCMessageSetApplicationAccessibilityEnabled]) {
-        BOOL enabled = [userInfo[LAIPCKeyApplicationAccessibilityEnabled] boolValue];
-        BOOL ok = [_activator la_setApplicationAccessibilityEnabled:enabled];
+        NSNumber *enabled = [LAIPCCodec numberInUserInfo:userInfo forKey:LAIPCKeyApplicationAccessibilityEnabled];
+        if (!enabled) {
+            return [LAIPCCodec replyWithOK:NO value:nil];
+        }
+        BOOL ok = [_activator la_setApplicationAccessibilityEnabled:enabled.boolValue];
         return [LAIPCCodec replyWithOK:ok value:@(ok)];
     }
     return nil;
@@ -313,7 +347,7 @@
     if ([messageName isEqualToString:LAIPCMessageCurrentApplicationDisplayIdentifier]) {
         return [LAIPCCodec replyWithOK:YES value:_activator.displayIdentifierForCurrentApplication ?: @""];
     }
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
     if ([messageName isEqualToString:LAIPCMessageEventDispatchCounts]) {
         return [LAIPCCodec replyWithOK:YES value:[_activator la_eventDispatchCounts]];
     }
@@ -503,7 +537,14 @@
         return [LAIPCCodec replyWithOK:YES value:@([_activator listenerWithNameSupportsConfiguration:listenerName])];
     }
     if ([messageName isEqualToString:LAIPCMessageListenerSmallIconData]) {
-        CGFloat scale = [userInfo[LAIPCKeyScale] doubleValue];
+        NSNumber *scaleNumber = [LAIPCCodec numberInUserInfo:userInfo forKey:LAIPCKeyScale];
+        if (!scaleNumber) {
+            return [LAIPCCodec replyWithOK:NO value:nil];
+        }
+        CGFloat scale = scaleNumber.doubleValue;
+        if (!isfinite((double)scale) || scale <= 0.0) {
+            scale = 0.0;
+        }
         NSData *data = [_activator la_smallIconDataForListenerName:listenerName scale:&scale];
         return [LAIPCCodec smallIconDataReplyWithData:data scale:scale];
     }

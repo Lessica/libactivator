@@ -10,6 +10,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+__attribute__((visibility("hidden")))
 @interface LAApplicationAccessibility : NSObject
 
 #pragma mark - State Queries

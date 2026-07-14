@@ -122,6 +122,15 @@
             caseName:@"event-configuration-save-rejects-malformed-payload"
               reason:@"Client facade accepted or partially saved a malformed event configuration"];
 
+    NSString *legacyPreferenceKey = @"libactivator.tests.client.invalid-preference";
+    id previousLegacyPreference = [activator _getObjectForPreference:legacyPreferenceKey];
+    [activator _setObject:@"Original" forPreference:legacyPreferenceKey];
+    [activator _setObject:@{@"Invalid" : [[NSObject alloc] init]} forPreference:legacyPreferenceKey];
+    [recorder expect:[[activator _getObjectForPreference:legacyPreferenceKey] isEqual:@"Original"]
+            caseName:@"legacy-preference-rejects-malformed-client-value-atomically"
+              reason:@"A malformed client preference value removed or replaced the stored value"];
+    [activator _setObject:previousLegacyPreference forPreference:legacyPreferenceKey];
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     id largeIcon = [activator iconForListenerName:nothingName];
@@ -164,6 +173,10 @@
     [recorder expect:[[activator assignedListenerNamesForEvent:event] isEqualToArray:@[ nothingName ]]
             caseName:@"assignment-round-trip"
               reason:@"Client assignment did not round-trip through SpringBoard"];
+    NSDictionary *debugAssignmentSnapshot = activator.la_debugAssignmentSnapshot;
+    [recorder expect:[debugAssignmentSnapshot[eventName][LAEventModeSpringBoard] isEqualToArray:@[ nothingName ]]
+            caseName:@"debug-assignment-snapshot-round-trip"
+              reason:@"Client debug assignment snapshot did not round-trip through SpringBoard"];
     [recorder expect:[self events:[activator eventsAssignedToListenerWithName:nothingName]
                          containEventName:eventName
                                      mode:LAEventModeSpringBoard]

@@ -100,6 +100,12 @@ extern CFTypeRef MGCopyAnswer(CFStringRef key);
     [recorder expect:[self bundledListenerSelectorsHaveOnlyExpectedDuplicates:bundledListeners]
             caseName:@"bundled-listener-selector-duplicates"
               reason:@"Bundled listener selector metadata has an unexpected duplicate"];
+    [recorder expect:[resourceManager eventBundleForName:@".."] == nil &&
+                     [resourceManager eventInfoDictionaryForName:@"../bundled.plist"] == nil &&
+                     [resourceManager listenerBundleForName:@".."] == nil &&
+                     [resourceManager listenerInfoDictionaryForName:@"../bundled.plist"] == nil
+            caseName:@"resource-name-path-containment"
+              reason:@"Resource lookup accepted a name that escaped its catalog directory"];
 
     NSString *resourceRootPath = [LATestEnvironment testCachePathWithFileName:@"libactivator.tests.resource-path.dat"];
     NSString *resourcePath = resourceRootPath;

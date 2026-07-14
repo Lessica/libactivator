@@ -34,10 +34,13 @@
 - (instancetype)initWithCoder:(NSCoder *)coder {
     self = [super init];
     if (self) {
-        _name = [[coder decodeObjectForKey:@"name"] copy];
-        _mode = [[coder decodeObjectForKey:@"mode"] copy];
+        id name = [coder decodeObjectForKey:@"name"];
+        id mode = [coder decodeObjectForKey:@"mode"];
+        id userInfo = [coder decodeObjectForKey:@"userInfo"];
+        _name = [name isKindOfClass:NSString.class] ? [name copy] : @"";
+        _mode = [mode isKindOfClass:NSString.class] ? [mode copy] : nil;
         _handled = [coder decodeBoolForKey:@"handled"];
-        _userInfo = [[coder decodeObjectForKey:@"userInfo"] copy];
+        _userInfo = [userInfo isKindOfClass:NSDictionary.class] ? [userInfo copy] : nil;
     }
     return self;
 }

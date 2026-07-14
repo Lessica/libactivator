@@ -23,6 +23,10 @@ NSString *const LAIPCMessageAssignEvent = @"libactivator.request.assign-event";
 NSString *const LAIPCMessageAddListenerAssignment = @"libactivator.request.add-listener-assignment";
 NSString *const LAIPCMessageRemoveListenerAssignment = @"libactivator.request.remove-listener-assignment";
 NSString *const LAIPCMessageUnassignEvent = @"libactivator.request.unassign-event";
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+NSString *const LAIPCMessageDebugAssignmentSnapshot = @"libactivator.debug.assignment-snapshot";
+NSString *const LAIPCMessageDebugResetAssignments = @"libactivator.debug.reset-assignments";
+#endif
 NSString *const LAIPCMessageApplicationIsBlacklisted = @"libactivator.request.application-is-blacklisted";
 NSString *const LAIPCMessageSetApplicationBlacklisted = @"libactivator.request.set-application-blacklisted";
 NSString *const LAIPCMessageAvailableProfileNames = @"libactivator.request.available-profile-names";
@@ -150,7 +154,7 @@ NSString *const LAIPCKeyTestingFailureCount = @"TestingFailureCount";
 NSString *const LAIPCKeyTestingSkipCount = @"TestingSkipCount";
 #endif
 
-#if LIBACTIVATOR_TEST_SUPPORT
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
 NSString *const LAIPCMessageEventDispatchCounts = @"libactivator.request.event-dispatch-counts";
 NSString *const LAIPCMessageListenerReceiveCounts = @"libactivator.request.listener-receive-counts";
 NSString *const LAIPCMessageEventAbortCounts = @"libactivator.request.event-abort-counts";

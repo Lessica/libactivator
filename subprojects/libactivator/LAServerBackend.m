@@ -45,6 +45,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 
 // State protection
 @property(nonatomic, strong) NSRecursiveLock *stateLock;
+@property(nonatomic, strong) NSLock *persistenceWriteLock;
 
 @end
 
@@ -64,6 +65,8 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
         _legacyPreferences = [[NSMutableDictionary alloc] init];
         _stateLock = [[NSRecursiveLock alloc] init];
         _stateLock.name = @"libactivator.state";
+        _persistenceWriteLock = [[NSLock alloc] init];
+        _persistenceWriteLock.name = @"libactivator.persistence-write";
         [self resetRuntimeState];
         [self loadPersistentState];
     }
@@ -95,7 +98,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     NSMutableArray *strings = [NSMutableArray arrayWithCapacity:array.count];
     for (id value in array) {
         if ([value isKindOfClass:NSString.class] && [value length] > 0 && ![strings containsObject:value]) {
-            [strings addObject:value];
+            [strings addObject:[value copy]];
         }
     }
     return [[strings sortedArrayUsingSelector:@selector(compare:)] copy];
@@ -136,6 +139,8 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
 }
 
 - (BOOL)flushPendingPersistentState {
+    [self.persistenceWriteLock lock];
+
     __block NSDictionary *dictionary = nil;
 
     void (^copyPendingDictionary)(void) = ^{
@@ -151,13 +156,18 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     [self performWithStateLock:copyPendingDictionary];
 
     if (!dictionary) {
+        [self.persistenceWriteLock unlock];
         return YES;
     }
 
     BOOL saved = [self.persistence saveDictionary:dictionary];
     if (!saved) {
+        [self performWithStateLock:^{
+            self.persistentStateDirty = YES;
+        }];
         HBLogError(@"Failed to save persistent state");
     }
+    [self.persistenceWriteLock unlock];
     return saved;
 }
 
@@ -364,7 +374,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
             self.cachedListenerNames = nil;
         }
         if (markSeen && ![self.seenListenerNames containsObject:name]) {
-            [self.seenListenerNames addObject:name];
+            [self.seenListenerNames addObject:[name copy]];
             [self savePersistentState];
         }
     }];
@@ -559,6 +569,49 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     return changed;
 }
 
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+- (NSDictionary<NSString *, NSDictionary<NSString *, NSArray<NSString *> *> *> *)debugAssignmentSnapshot {
+    __block NSDictionary *snapshot = nil;
+    [self performWithStateLock:^{
+        NSMutableDictionary *assignmentSnapshot = [[NSMutableDictionary alloc] init];
+        NSDictionary *assignments = [self assignmentsForCurrentProfile];
+        for (NSString *eventName in assignments) {
+            NSDictionary *eventAssignments = assignments[eventName];
+            if (![eventName isKindOfClass:NSString.class] || ![eventAssignments isKindOfClass:NSDictionary.class]) {
+                continue;
+            }
+
+            NSMutableDictionary *eventSnapshot = [[NSMutableDictionary alloc] init];
+            for (NSString *eventMode in eventAssignments) {
+                NSArray *listenerNames = eventAssignments[eventMode];
+                if (![eventMode isKindOfClass:NSString.class] || ![listenerNames isKindOfClass:NSArray.class]) {
+                    continue;
+                }
+                eventSnapshot[eventMode] = [LAServerBackend normalizedStringArray:listenerNames];
+            }
+            if (eventSnapshot.count > 0) {
+                assignmentSnapshot[eventName] = [eventSnapshot copy];
+            }
+        }
+        snapshot = [assignmentSnapshot copy];
+    }];
+    return snapshot ?: @{};
+}
+
+- (BOOL)debugResetAssignmentsForCurrentProfile {
+    __block BOOL changed = NO;
+    [self performWithStateLock:^{
+        NSMutableDictionary *assignments = [self assignmentsForCurrentProfile];
+        changed = assignments.count > 0;
+        if (changed) {
+            [assignments removeAllObjects];
+            [self savePersistentState];
+        }
+    }];
+    return changed;
+}
+#endif
+
 - (BOOL)addListenerName:(NSString *)listenerName toEvent:(LAEvent *)event {
     if (listenerName.length == 0 || event.name.length == 0) {
         return NO;
@@ -678,7 +731,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
             return;
         }
         if (blacklisted) {
-            [self.blacklistedDisplayIdentifiers addObject:displayIdentifier];
+            [self.blacklistedDisplayIdentifiers addObject:[displayIdentifier copy]];
         } else {
             [self.blacklistedDisplayIdentifiers removeObject:displayIdentifier];
         }
@@ -701,7 +754,7 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
             return;
         }
         if (seen) {
-            [self.seenListenerNames addObject:listenerName];
+            [self.seenListenerNames addObject:[listenerName copy]];
         } else {
             [self.seenListenerNames removeObject:listenerName];
         }
@@ -725,10 +778,10 @@ static NSString *const LAActivatorLegacyPreferencesKey = @"LegacyPreferences";
     if (key.length == 0) {
         return NO;
     }
-    id storedObject = object ? [LAIPCCodec propertyListValue:object] : nil;
-    if (object && !storedObject) {
+    if (object && ![LAIPCCodec isPropertyListValue:object]) {
         return NO;
     }
+    id storedObject = object ? [LAIPCCodec propertyListValue:object] : nil;
 
     __block BOOL changed = NO;
     [self performWithStateLock:^{

@@ -152,9 +152,9 @@ CHOptimizedMethod1(self, void, UIApplication, setWantsVolumeButtonEvents, BOOL, 
 CHOptimizedMethod2(self, void, CAMViewfinderViewController, _updateEnabledControlsWithReason, NSString *, reason,
                    forceLog, BOOL, forceLog) {
     CHSuper2(CAMViewfinderViewController, _updateEnabledControlsWithReason, reason, forceLog, forceLog);
-    BOOL active = LATCameraApplicationIsActive();
     HBLogDebug(@"Camera controls updated for reason=%@ active=%d wantsVolumeButtonEvents=%d pendingReady=%d",
-               reason ?: @"", active, gCameraWantsVolumeButtonEvents, gCameraReadyNotificationPending);
+               reason ?: @"", LATCameraApplicationIsActive(), gCameraWantsVolumeButtonEvents,
+               gCameraReadyNotificationPending);
     LATScheduleCameraReadyNotificationAfterControlsUpdate();
 }
 

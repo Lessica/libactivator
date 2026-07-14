@@ -10,6 +10,7 @@
 
 #import "LAActivator+Private.h"
 #import "LAIPC.h"
+#import "LAListenerMetadataCache.h"
 #import "LAServerBackend.h"
 #import "LATestEnvironment.h"
 #import "LATestEventDataSource.h"
@@ -17,6 +18,7 @@
 #import "LATestRecorder.h"
 
 #import <Activator/Activator.h>
+#import <notify.h>
 
 @implementation LATestSpringBoardCoreSuite
 
@@ -330,6 +332,19 @@
                      localizationListener.localizedTitleRequestCount == 2
             caseName:@"listener-cache-cleared-by-memory-warning"
               reason:@"Listener metadata cache was not cleared by memory warning"];
+    LAListenerMetadataCache *reentrantCache = [[LAListenerMetadataCache alloc] init];
+    NSString *staleTitle = [reentrantCache localizedTitleForListenerName:localizationListenerName
+                                                                resolver:^NSString * {
+                                                                    [reentrantCache removeAllObjects];
+                                                                    return @"Stale Title";
+                                                                }];
+    NSString *freshTitle = [reentrantCache localizedTitleForListenerName:localizationListenerName
+                                                                resolver:^NSString * {
+                                                                    return @"Fresh Title";
+                                                                }];
+    [recorder expect:[staleTitle isEqualToString:@"Stale Title"] && [freshTitle isEqualToString:@"Fresh Title"]
+            caseName:@"listener-cache-reentrant-invalidation"
+              reason:@"A resolver repopulated listener metadata after reentrant invalidation"];
     LATestListener *replacementLocalizationListener = [[LATestListener alloc] init];
     replacementLocalizationListener.localizedTitle = @"Replacement Title";
     [activator registerListener:replacementLocalizationListener forName:localizationListenerName];
@@ -392,7 +407,25 @@
               reason:@"Exclusive listeners were reported compatible"];
 
     LAEvent *springboardEvent = [LAEvent eventWithName:eventName mode:LAEventModeSpringBoard];
+    dispatch_semaphore_t assignmentNotificationSemaphore = dispatch_semaphore_create(0);
+    int assignmentNotificationToken = 0;
+    uint32_t assignmentNotificationRegistrationStatus =
+        notify_register_dispatch(LAActivatorAssignmentsChangedNotification.UTF8String, &assignmentNotificationToken,
+                                 dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(__unused int token) {
+                                     dispatch_semaphore_signal(assignmentNotificationSemaphore);
+                                 });
     [activator assignEvent:springboardEvent toListenersWithNames:@[ listenerBName, listenerAName ]];
+    long assignmentNotificationWaitStatus =
+        assignmentNotificationRegistrationStatus == NOTIFY_STATUS_OK
+            ? dispatch_semaphore_wait(assignmentNotificationSemaphore, dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC))
+            : -1;
+    if (assignmentNotificationRegistrationStatus == NOTIFY_STATUS_OK) {
+        notify_cancel(assignmentNotificationToken);
+    }
+    [recorder
+          expect:assignmentNotificationRegistrationStatus == NOTIFY_STATUS_OK && assignmentNotificationWaitStatus == 0
+        caseName:@"assignment-uses-public-darwin-notification-name"
+          reason:@"Assignment changes did not publish on the 1.9.13 public Darwin notification channel"];
     NSArray *assignedNames = [activator assignedListenerNamesForEvent:springboardEvent];
     [recorder expect:[assignedNames isEqualToArray:@[ listenerAName, listenerBName ]]
             caseName:@"assignment-normalization"

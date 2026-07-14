@@ -10,6 +10,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+__attribute__((visibility("hidden")))
 @interface LARuntimeContext : NSObject
 
 #pragma mark - Setters

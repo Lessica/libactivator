@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -46,6 +47,13 @@ class HeaderAPI:
     protocols: set[str] = field(default_factory=set)
     methods: list[MethodDecl] = field(default_factory=list)
     properties: list[PropertyDecl] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class FrozenABIManifest:
+    baseline: str
+    architectures: tuple[str, ...]
+    binary_only_nsstring_exports: dict[str, str]
 
 
 FORBIDDEN_SELECTORS = {
@@ -378,12 +386,175 @@ void LAModuleImportCheck(void) {
 
 
 def macho_binaries(path: Path):
-    parsed = lief.parse(str(path))
+    parsed = lief.MachO.parse(str(path))
     if parsed is None:
         raise SystemExit(f"Unable to parse Mach-O binary: {path}")
     if isinstance(parsed, lief.MachO.FatBinary):
-        return list(parsed)
-    return [parsed]
+        return parsed
+    return (parsed,)
+
+
+def load_frozen_abi_manifest(path: Path) -> FrozenABIManifest:
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise SystemExit(f"Frozen ABI/value manifest not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Invalid frozen ABI/value manifest JSON: {path}: {exc}") from exc
+
+    check(isinstance(manifest, dict), "Frozen ABI/value manifest root must be an object")
+    expected_keys = {
+        "schemaVersion",
+        "baseline",
+        "architectures",
+        "binaryOnlyNSStringExports",
+    }
+    actual_keys = set(manifest)
+    check(
+        actual_keys == expected_keys,
+        "Frozen ABI/value manifest fields do not match schema: "
+        f"expected {sorted(expected_keys)}, got {sorted(actual_keys)}",
+    )
+    check(manifest["schemaVersion"] == 1, "Unsupported frozen ABI/value manifest schema version")
+
+    baseline = manifest["baseline"]
+    check(isinstance(baseline, str) and baseline, "Frozen ABI/value manifest baseline must be a non-empty string")
+
+    architectures = manifest["architectures"]
+    check(
+        isinstance(architectures, list)
+        and architectures
+        and all(isinstance(architecture, str) and architecture for architecture in architectures),
+        "Frozen ABI/value manifest architectures must be a non-empty string array",
+    )
+    check(
+        len(architectures) == len(set(architectures)),
+        "Frozen ABI/value manifest architectures must be unique",
+    )
+
+    exports = manifest["binaryOnlyNSStringExports"]
+    check(
+        isinstance(exports, dict) and exports,
+        "Frozen ABI/value manifest binaryOnlyNSStringExports must be a non-empty object",
+    )
+    for symbol, value in exports.items():
+        check(
+            isinstance(symbol, str) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", symbol) is not None,
+            f"Invalid binary-only export name in frozen ABI/value manifest: {symbol!r}",
+        )
+        check(
+            isinstance(value, str) and value,
+            f"Frozen value for binary-only export must be a non-empty string: {symbol}",
+        )
+
+    return FrozenABIManifest(
+        baseline=baseline,
+        architectures=tuple(architectures),
+        binary_only_nsstring_exports=dict(exports),
+    )
+
+
+def macho_architecture_name(binary: Any) -> str:
+    cpu_type = binary.header.cpu_type
+    cpu_subtype = int(binary.header.cpu_subtype) & 0x00FFFFFF
+    if cpu_type == lief.MachO.Header.CPU_TYPE.ARM64:
+        if cpu_subtype == 0:
+            return "arm64"
+        if cpu_subtype == 2:
+            return "arm64e"
+    raise SystemExit(f"Unsupported production Mach-O architecture: {cpu_type}/{cpu_subtype}")
+
+
+def exported_symbol_names(binary: Any) -> set[str]:
+    names: set[str] = set()
+    for symbol in getattr(binary, "exported_symbols", ()):
+        name = normalize_symbol_name(getattr(symbol, "name", None))
+        if name is not None:
+            names.add(name)
+    return names
+
+
+def resolve_pointer(binary: Any, address: int, expected_section: str) -> int:
+    raw_pointer = binary.get_int_from_virtual_address(address, 8)
+    candidates = (raw_pointer, raw_pointer & 0x0000FFFFFFFFFFFF)
+    for candidate in dict.fromkeys(candidates):
+        section = binary.section_from_virtual_address(candidate)
+        if section is not None and section.name == expected_section:
+            return candidate
+    raise SystemExit(
+        f"Unable to resolve pointer at 0x{address:x} into {expected_section}: 0x{raw_pointer:x}"
+    )
+
+
+def read_exported_nsstring(binary: Any, symbol_name: str) -> str:
+    mach_symbol_name = f"_{symbol_name}"
+    symbol_addresses = {
+        int(symbol.value)
+        for symbol in binary.symbols
+        if normalize_symbol_name(symbol.name) == mach_symbol_name and int(symbol.value) != 0
+    }
+    check(
+        len(symbol_addresses) == 1,
+        f"Unable to locate one defined NSString export for {symbol_name}: {sorted(symbol_addresses)}",
+    )
+
+    object_address = resolve_pointer(binary, symbol_addresses.pop(), "__cfstring")
+    character_address = resolve_pointer(binary, object_address + 16, "__cstring")
+    byte_length = binary.get_int_from_virtual_address(object_address + 24, 8)
+    check(byte_length <= 1024 * 1024, f"Unreasonable NSString byte length for {symbol_name}: {byte_length}")
+    content = bytes(binary.get_content_from_virtual_address(character_address, byte_length))
+    check(
+        len(content) == byte_length,
+        f"Truncated NSString storage for {symbol_name}: expected {byte_length}, got {len(content)}",
+    )
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise SystemExit(f"NSString export is not UTF-8 for {symbol_name}: {exc}") from exc
+
+
+def validate_frozen_abi_manifest(
+    api: HeaderAPI,
+    manifest: FrozenABIManifest,
+    dylib: Path,
+) -> tuple[int, tuple[str, ...]]:
+    overlap = sorted(api.constants.intersection(manifest.binary_only_nsstring_exports))
+    check(
+        not overlap,
+        "Frozen binary-only exports must not be declared by current public headers: " + ", ".join(overlap),
+    )
+
+    parsed_binaries = macho_binaries(dylib)
+    binaries: dict[str, Any] = {}
+    for binary in parsed_binaries:
+        architecture = macho_architecture_name(binary)
+        check(architecture not in binaries, f"Duplicate production Mach-O architecture: {architecture}")
+        binaries[architecture] = binary
+
+    actual_architectures = tuple(sorted(binaries))
+    expected_architectures = tuple(sorted(manifest.architectures))
+    check(
+        actual_architectures == expected_architectures,
+        "Production Mach-O architectures do not match frozen ABI/value manifest: "
+        f"expected {expected_architectures}, got {actual_architectures}",
+    )
+
+    for architecture in expected_architectures:
+        binary = binaries[architecture]
+        exported_symbols = exported_symbol_names(binary)
+        for symbol, expected_value in sorted(manifest.binary_only_nsstring_exports.items()):
+            check(
+                f"_{symbol}" in exported_symbols,
+                f"Missing frozen binary-only export in {architecture}: {symbol}",
+            )
+            actual_value = read_exported_nsstring(binary, symbol)
+            check(
+                actual_value == expected_value,
+                f"Frozen value mismatch in {architecture} for {symbol}: "
+                f"expected {expected_value!r}, got {actual_value!r}",
+            )
+
+    return len(manifest.binary_only_nsstring_exports), expected_architectures
 
 
 def normalize_symbol_name(name: Any) -> str | None:
@@ -397,7 +568,8 @@ def normalize_symbol_name(name: Any) -> str | None:
 def collect_symbols(path: Path) -> tuple[set[str], set[str]]:
     all_symbols: set[str] = set()
     exported_symbols: set[str] = set()
-    for binary in macho_binaries(path):
+    parsed_binaries = macho_binaries(path)
+    for binary in parsed_binaries:
         for symbol in binary.symbols:
             symbol_name = normalize_symbol_name(symbol.name)
             if symbol_name is not None:
@@ -610,12 +782,14 @@ def main() -> int:
     staging_dir = Path(os.environ.get("THEOS_STAGING_DIR", project_root / ".theos/_"))
     sdk = Path(os.environ["THEOS"]) / "sdks/iPhoneOS16.5.sdk"
     dylib = staging_dir / "usr/lib/libactivator.dylib"
+    abi_manifest_path = project_root / "scripts/public-api-abi-manifest.json"
 
     check(sdk.is_dir(), f"SDK not found: {sdk}")
     check(staging_dir.is_dir(), f"Staging directory not found: {staging_dir}")
     check(dylib.is_file(), f"libactivator.dylib not found: {dylib}")
 
     api = parse_headers(project_root / "include/Activator")
+    abi_manifest = load_frozen_abi_manifest(abi_manifest_path)
     unique_methods = {
         (method.context_kind, method.owner, method.kind, method.selector)
         for method in api.methods
@@ -635,6 +809,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="libactivator-public-api-check.") as tmp:
         compile_import_checks(project_root, staging_dir, sdk, Path(tmp))
         checked_symbols, checked_metadata, checked_properties = validate_api(api, dylib)
+    frozen_export_count, frozen_architectures = validate_frozen_abi_manifest(api, abi_manifest, dylib)
     validate_forbidden_api(api, dylib)
     validate_resource_catalog(project_root)
 
@@ -643,6 +818,11 @@ def main() -> int:
         f"{checked_symbols} exported symbols, "
         f"{checked_metadata} Objective-C metadata entries, "
         f"{checked_properties} properties"
+    )
+    log(
+        f"Frozen ABI/value manifest ({abi_manifest.baseline}): "
+        f"{frozen_export_count} binary-only NSString exports across "
+        f"{', '.join(frozen_architectures)}"
     )
     log("Resource catalog validation: 123 events, 119 listeners.")
     log("Metadata check passed.")

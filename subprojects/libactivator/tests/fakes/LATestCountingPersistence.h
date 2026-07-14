@@ -8,11 +8,17 @@
 
 #import "LAPersistence.h"
 
+#import <dispatch/dispatch.h>
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface LATestCountingPersistence : LAPersistence
-@property(nonatomic, assign) NSUInteger saveCount;
-@property(nonatomic, strong) NSDictionary *lastSavedDictionary;
+@property(atomic, assign) NSUInteger saveCount;
+@property(atomic, strong) NSDictionary *lastSavedDictionary;
+@property(atomic, assign) BOOL failsSaves;
+@property(atomic, assign) NSTimeInterval saveDelay;
+@property(atomic, strong, nullable) dispatch_semaphore_t saveStartedSemaphore;
+@property(atomic, assign) NSUInteger maximumConcurrentSaveCount;
 @end
 
 NS_ASSUME_NONNULL_END

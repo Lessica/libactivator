@@ -44,6 +44,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, copy, nullable) NSString *lastReceivedEventMode;
 @property(nonatomic, copy, nullable) NSDictionary *lastReceivedUserInfo;
 @property(nonatomic, copy, nullable) NSString *lastAbortedEventName;
+@property(nonatomic, copy, nullable) dispatch_block_t receiveHandler;
+@property(nonatomic, copy, nullable) dispatch_block_t metadataHandler;
 @end
 
 NS_ASSUME_NONNULL_END
