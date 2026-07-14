@@ -70,7 +70,8 @@
             fputs("Unable to connect to the SpringBoard Activator service\n", stderr);
             return 1;
         }
-        return [self runDebugCommandWithArguments:[self.arguments subarrayWithRange:NSMakeRange(2, self.arguments.count - 2)]];
+        return [self
+            runDebugCommandWithArguments:[self.arguments subarrayWithRange:NSMakeRange(2, self.arguments.count - 2)]];
     }
 #endif
     if ([self commandRequiresSpringBoardService:command argumentCount:self.arguments.count] &&
@@ -246,8 +247,7 @@
         [self printAssignmentsForEventName:eventName modeArgument:arguments[3]];
         return 0;
     }
-    if (arguments.count == 5 &&
-        ([arguments[1] isEqualToString:@"add"] || [arguments[1] isEqualToString:@"remove"])) {
+    if (arguments.count == 5 && ([arguments[1] isEqualToString:@"add"] || [arguments[1] isEqualToString:@"remove"])) {
         NSString *eventName = arguments[2];
         NSString *listenerName = arguments[4];
         LAEvent *event = [self assignmentEventWithName:eventName modeArgument:arguments[3]];
@@ -315,8 +315,7 @@
     NSArray<NSString *> *eventModes =
         event.mode ? @[ event.mode ] : [eventAssignments.allKeys sortedArrayUsingSelector:@selector(compare:)];
     for (NSString *eventMode in eventModes) {
-        NSArray<NSString *> *listenerNames =
-            [eventAssignments[eventMode] sortedArrayUsingSelector:@selector(compare:)];
+        NSArray<NSString *> *listenerNames = [eventAssignments[eventMode] sortedArrayUsingSelector:@selector(compare:)];
         for (NSString *listenerName in listenerNames) {
             NSString *displayMode = eventMode.length > 0 ? eventMode : @"<default>";
             printf("%s\t%s\t%s\n", [displayMode UTF8String], [eventName UTF8String], [listenerName UTF8String]);
@@ -336,8 +335,7 @@
                 [eventAssignments[eventMode] sortedArrayUsingSelector:@selector(compare:)];
             for (NSString *listenerName in listenerNames) {
                 NSString *displayMode = eventMode.length > 0 ? eventMode : @"<default>";
-                printf("%s\t%s\t%s\n", [displayMode UTF8String], [eventName UTF8String],
-                       [listenerName UTF8String]);
+                printf("%s\t%s\t%s\n", [displayMode UTF8String], [eventName UTF8String], [listenerName UTF8String]);
             }
         }
     }
@@ -548,16 +546,16 @@
     fputs("  activator <command> [arguments]\n", stderr);
     fputs("\n", stderr);
     fputs("Commands:\n", stderr);
-    [self printUsageCommand:@"listeners" description:@"List available listeners."];
-    [self printUsageCommand:@"events" description:@"List available events."];
-    [self printUsageCommand:@"modes" description:@"List available event modes."];
-    [self printUsageCommand:@"current-mode" description:@"Print the active event mode."];
-    [self printUsageCommand:@"current-app" description:@"Print the active application identifier."];
-    [self printUsageCommand:@"get <key>" description:@"Print a compatibility preference value."];
-    [self printUsageCommand:@"set <key> <value>" description:@"Set a compatibility preference value."];
-    [self printUsageCommand:@"activate <event> [<listener>]" description:@"Send an activation event."];
-    [self printUsageCommand:@"send <listener>" description:@"Send the default event to a listener."];
-    [self printUsageCommand:@"deactivate <event>" description:@"Send a deactivation event."];
+    [self printUsageCommand:@"listeners" maximumWidth:32 description:@"List available listeners."];
+    [self printUsageCommand:@"events" maximumWidth:32 description:@"List available events."];
+    [self printUsageCommand:@"modes" maximumWidth:32 description:@"List available event modes."];
+    [self printUsageCommand:@"current-mode" maximumWidth:32 description:@"Print the active event mode."];
+    [self printUsageCommand:@"current-app" maximumWidth:32 description:@"Print the active application identifier."];
+    [self printUsageCommand:@"get <key>" maximumWidth:32 description:@"Print a compatibility preference value."];
+    [self printUsageCommand:@"set <key> <value>" maximumWidth:32 description:@"Set a compatibility preference value."];
+    [self printUsageCommand:@"activate <event> [<listener>]" maximumWidth:32 description:@"Send an activation event."];
+    [self printUsageCommand:@"send <listener>" maximumWidth:32 description:@"Send the default event to a listener."];
+    [self printUsageCommand:@"deactivate <event>" maximumWidth:32 description:@"Send a deactivation event."];
 #if DEBUG
     fputs("\n", stderr);
     [self printDebugUsageCommands];
@@ -574,28 +572,45 @@
 
 - (void)printDebugUsageCommands {
     fputs("DEBUG only commands:\n", stderr);
-    [self printUsageCommand:@"debug assignments list" description:@"List assignments as mode, event, listener TSV."];
-    [self printUsageCommand:@"debug assignments get <event> <mode>" description:@"Print matching assignments."];
+    [self printUsageCommand:@"debug assignments list"
+               maximumWidth:70
+                description:@"List assignments as mode, event, listener TSV."];
+    [self printUsageCommand:@"debug assignments get <event> <mode>"
+               maximumWidth:70
+                description:@"Print matching assignments."];
     [self printUsageCommand:@"debug assignments set <event> <mode> <listener> [...]"
-                 description:@"Replace matching assignments."];
+               maximumWidth:70
+                description:@"Replace matching assignments."];
     [self printUsageCommand:@"debug assignments add <event> <mode> <listener>"
-                 description:@"Add one listener assignment."];
+               maximumWidth:70
+                description:@"Add one listener assignment."];
     [self printUsageCommand:@"debug assignments remove <event> <mode> <listener>"
-                 description:@"Remove one listener assignment."];
-    [self printUsageCommand:@"debug assignments clear <event> <mode>" description:@"Clear matching assignments."];
-    [self printUsageCommand:@"debug assignments reset" description:@"Clear current-profile assignments."];
-    [self printUsageCommand:@"debug stats [summary]" description:@"Print runtime and assignment statistics."];
+               maximumWidth:70
+                description:@"Remove one listener assignment."];
+    [self printUsageCommand:@"debug assignments clear <event> <mode>"
+               maximumWidth:70
+                description:@"Clear matching assignments."];
+    [self printUsageCommand:@"debug assignments reset"
+               maximumWidth:70
+                description:@"Clear current-profile assignments."];
+    [self printUsageCommand:@"debug stats [summary]"
+               maximumWidth:70
+                description:@"Print runtime and assignment statistics."];
     [self printUsageCommand:@"debug stats <events|listeners|abort-events|abort-listeners>"
-                 description:@"List non-zero dispatch counters."];
+               maximumWidth:70
+                description:@"List non-zero dispatch counters."];
     [self printUsageCommand:@"debug stats <event|listener|abort-event|abort-listener> <name>"
-                 description:@"Print one dispatch counter."];
-    [self printUsageCommand:@"debug stats reset" description:@"Reset dispatch and abort counters."];
+               maximumWidth:70
+                description:@"Print one dispatch counter."];
+    [self printUsageCommand:@"debug stats reset" maximumWidth:70 description:@"Reset dispatch and abort counters."];
     fputs("  <mode> accepts a mode name, current, or all.\n", stderr);
 }
 #endif
 
-- (void)printUsageCommand:(NSString *)command description:(NSString *)description {
-    fprintf(stderr, "  %-36s %s\n", [command UTF8String], [description UTF8String]);
+- (void)printUsageCommand:(NSString *)command
+             maximumWidth:(NSUInteger)maximumWidth
+              description:(NSString *)description {
+    fprintf(stderr, "  %-*s %s\n", (int)maximumWidth, [command UTF8String], [description UTF8String]);
 }
 
 - (void)printObject:(id)object {
