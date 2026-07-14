@@ -25,6 +25,7 @@
 #import "LATEventSourceRegistry.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
+#import "LATGestureBarEventSource.h"
 #import "LATHardwareActionListener.h"
 #import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
@@ -75,6 +76,7 @@
         LATNetworkEventSource.class,
         LATButtonEventSource.class,
         LATVolumeHUDTapEventSource.class,
+        LATGestureBarEventSource.class,
         LATForceTouchEventSource.class,
         LATMultiTouchEventSource.class,
         LATSpringBoardIconGestureEventSource.class,

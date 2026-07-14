@@ -45,4 +45,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)noteVolumeHUDSliderContainerViewDidLoad:(UIView *)sliderContainerView;
 @end
 
+@protocol LATEventSourceGestureBarIngress <NSObject>
+- (void)noteGestureBarDoubleTapRecognizerDidLoad:(UITapGestureRecognizer *)recognizer;
+@end
+
 NS_ASSUME_NONNULL_END

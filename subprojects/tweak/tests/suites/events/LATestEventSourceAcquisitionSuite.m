@@ -12,6 +12,7 @@
 #import "LATEdgeGestureEventSource.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
+#import "LATGestureBarEventSource.h"
 #import "LATMotionEventSource.h"
 #import "LATMultiTouchEventSource.h"
 #import "LATSpringBoardIconGestureEventSource.h"
@@ -34,6 +35,7 @@
     [self runSpringBoardIconGestureEventSourceTestsWithRecorder:recorder activator:activator];
     [self runMotionEventSourceTestsWithRecorder:recorder activator:activator];
     [self runVolumeHUDTapEventSourceTestsWithRecorder:recorder activator:activator];
+    [self runGestureBarEventSourceTestsWithRecorder:recorder activator:activator];
     [self runFingerprintSensorEventSourceTestsWithRecorder:recorder activator:activator];
     [self runEdgeGestureEventSourceDispatchTestsWithRecorder:recorder activator:activator];
     [self runForceTouchEventSourceTestsWithRecorder:recorder activator:activator];
@@ -72,16 +74,21 @@
             caseName:@"edge-interest-change-resets-classifier"
               reason:@"Edge source kept classifier state after losing interest"];
 
-    [forceSource start];
-    [forceSource la_testingNoteTouchSnapshots:@[
-        [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:0 location:CGPointMake(200.0, 762.0) force:0.0],
-    ]
-                                       bounds:bounds
-                                    timestamp:0.0];
-    [forceSource eventSourceInterestDidChange:NO];
-    [recorder expect:![forceSource la_testingHasRecognitionState]
-            caseName:@"force-touch-interest-change-resets-state"
-              reason:@"Force touch source kept recognition state after losing interest"];
+    if (forceSource) {
+        [forceSource start];
+        [forceSource la_testingNoteTouchSnapshots:@[
+            [self forceTouchSnapshotWithIdentifier:@"touch-0" phase:0 location:CGPointMake(200.0, 762.0) force:0.0],
+        ]
+                                           bounds:bounds
+                                        timestamp:0.0];
+        [forceSource eventSourceInterestDidChange:NO];
+        [recorder expect:![forceSource la_testingHasRecognitionState]
+                caseName:@"force-touch-interest-change-resets-state"
+                  reason:@"Force touch source kept recognition state after losing interest"];
+    } else {
+        [recorder skip:@"force-touch-interest-change-resets-state"
+                reason:@"Force touch metadata is not available on this device"];
+    }
 
     [multiTouchSource start];
     [multiTouchSource la_testingUpdateWithTouchLocations:@[
@@ -312,6 +319,11 @@
 
 + (void)runForceTouchEventSourceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
     LATestEventSourceFixture *fixture = [[LATestEventSourceFixture alloc] initWithActivator:activator];
+    if (![[activator availableEventNames] containsObject:LAEventNameForceTouchScreenBottom]) {
+        [recorder skip:@"force-touch-recognizer-logic" reason:@"Force touch metadata is not available on this device"];
+        return;
+    }
+
     LATForceTouchEventSource *source =
         [fixture interestedEventSourceOfClass:LATForceTouchEventSource.class previousEventSources:@[]];
     [source start];
@@ -683,6 +695,14 @@
 
     LATFingerprintSensorEventSource *fingerprintSource =
         [fixture interestedEventSourceOfClass:LATFingerprintSensorEventSource.class previousEventSources:@[]];
+    BOOL fingerprintEventAvailable =
+        [[activator availableEventNames] containsObject:LAEventNameFingerprintSensorPressSingle];
+    [recorder expect:(fingerprintSource != nil) == fingerprintEventAvailable
+            caseName:@"edge-gesture-fingerprint-composite-matches-device-capability"
+              reason:@"Fingerprint composite acquisition did not match the registered device capability"];
+    if (!fingerprintSource) {
+        return;
+    }
     [fingerprintSource start];
     LATEdgeGestureEventSource *fingerprintEdgeSource =
         [fixture interestedEventSourceOfClass:LATEdgeGestureEventSource.class
@@ -887,6 +907,67 @@
           expect:!dispatchedAfterInvalidation && [fixture dispatchCountForEventName:LAEventNameVolumeDisplayTap] == 1
         caseName:@"volume-hud-tap-source-invalidation-is-terminal"
           reason:@"Invalidated Volume HUD tap source continued dispatching events"];
+}
+
++ (void)runGestureBarEventSourceTestsWithRecorder:(LATestRecorder *)recorder activator:(LAActivator *)activator {
+    LATestEventSourceFixture *fixture = [[LATestEventSourceFixture alloc] initWithActivator:activator];
+    LATGestureBarEventSource *attachmentSource =
+        [fixture interestedEventSourceOfClass:LATGestureBarEventSource.class previousEventSources:@[]];
+    BOOL eventIsAvailable = [[activator availableEventNames] containsObject:LAEventNameGestureBarTapDouble];
+    if (!eventIsAvailable) {
+        [recorder expect:attachmentSource == nil
+                caseName:@"gesture-bar-source-skips-non-fake-home-devices"
+                  reason:@"Gesture bar source registered without its fake-home-button event definition"];
+        return;
+    }
+
+    UITapGestureRecognizer *recognizer = [[UITapGestureRecognizer alloc] initWithTarget:nil action:nil];
+    recognizer.numberOfTapsRequired = 2;
+    recognizer.cancelsTouchesInView = NO;
+    [attachmentSource noteGestureBarDoubleTapRecognizerDidLoad:recognizer];
+    [attachmentSource noteGestureBarDoubleTapRecognizerDidLoad:recognizer];
+    BOOL capturedBeforeStart = [attachmentSource la_testingKnownRecognizerCount] == 1 &&
+                               ![attachmentSource la_testingIsAttachedToRecognizer:recognizer];
+    [attachmentSource start];
+    [recorder expect:capturedBeforeStart && [attachmentSource la_testingIsAttachedToRecognizer:recognizer] &&
+                     recognizer.numberOfTapsRequired == 2 && !recognizer.cancelsTouchesInView
+            caseName:@"gesture-bar-source-targets-system-double-tap-recognizer"
+              reason:@"Gesture bar source did not attach once without changing the system recognizer contract"];
+    [attachmentSource invalidate];
+    [recorder expect:![attachmentSource la_testingIsAttachedToRecognizer:recognizer]
+            caseName:@"gesture-bar-source-removes-target-on-invalidate"
+              reason:@"Invalidated gesture bar source kept its target attachment"];
+
+    LATGestureBarEventSource *dispatchSource =
+        [fixture interestedEventSourceOfClass:LATGestureBarEventSource.class previousEventSources:@[]];
+    CGRect bounds = CGRectMake(0.0, 0.0, 414.0, 896.0);
+    [activator la_resetDispatchCounts];
+    BOOL dispatchedBeforeStart = [dispatchSource la_testingHandleTapState:UIGestureRecognizerStateEnded
+                                                                 location:CGPointMake(180.0, 881.0)
+                                                                   bounds:bounds];
+    [dispatchSource start];
+    BOOL dispatchedChanged = [dispatchSource la_testingHandleTapState:UIGestureRecognizerStateChanged
+                                                             location:CGPointMake(180.0, 881.0)
+                                                               bounds:bounds];
+    BOOL dispatchedOutsideBottomRegion = [dispatchSource la_testingHandleTapState:UIGestureRecognizerStateEnded
+                                                                         location:CGPointMake(180.0, 865.0)
+                                                                           bounds:bounds];
+    BOOL dispatchedAtBottomBoundary = [dispatchSource la_testingHandleTapState:UIGestureRecognizerStateEnded
+                                                                      location:CGPointMake(180.0, 866.0)
+                                                                        bounds:bounds];
+    [recorder
+          expect:!dispatchedBeforeStart && !dispatchedChanged && !dispatchedOutsideBottomRegion &&
+                 dispatchedAtBottomBoundary && [fixture dispatchCountForEventName:LAEventNameGestureBarTapDouble] == 1
+        caseName:@"gesture-bar-source-dispatches-ended-taps-in-bottom-thirty-points"
+          reason:@"Gesture bar source did not preserve the 1.9.13 state and bottom-region gates"];
+    [dispatchSource invalidate];
+    BOOL dispatchedAfterInvalidation = [dispatchSource la_testingHandleTapState:UIGestureRecognizerStateEnded
+                                                                       location:CGPointMake(180.0, 881.0)
+                                                                         bounds:bounds];
+    [recorder
+          expect:!dispatchedAfterInvalidation && [fixture dispatchCountForEventName:LAEventNameGestureBarTapDouble] == 1
+        caseName:@"gesture-bar-source-invalidation-is-terminal"
+          reason:@"Invalidated gesture bar source continued dispatching events"];
 }
 
 + (void)runMultiTouchEventSourceDispatchTestsWithRecorder:(LATestRecorder *)recorder

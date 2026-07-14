@@ -13,6 +13,7 @@
 #import "LATEdgeGestureEventSource.h"
 #import "LATFingerprintSensorEventSource.h"
 #import "LATForceTouchEventSource.h"
+#import "LATGestureBarEventSource.h"
 #import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
 #import "LATMotionEventSource.h"
@@ -42,6 +43,7 @@
         LATNetworkEventSource.class,
         LATButtonEventSource.class,
         LATVolumeHUDTapEventSource.class,
+        LATGestureBarEventSource.class,
         LATForceTouchEventSource.class,
         LATMultiTouchEventSource.class,
         LATSpringBoardIconGestureEventSource.class,
@@ -229,6 +231,7 @@
     BOOL menuPressDoubleIsAvailable = [availableEventNames containsObject:LAEventNameMenuPressDouble];
     BOOL menuPressSingleIsAvailable = [availableEventNames containsObject:LAEventNameMenuPressSingle];
     BOOL menuPressTripleIsAvailable = [availableEventNames containsObject:LAEventNameMenuPressTriple];
+    BOOL gestureBarDoubleTapIsAvailable = [availableEventNames containsObject:LAEventNameGestureBarTapDouble];
     [recorder expect:volumeUpPressWithMenuIsAvailable == volumeDownPressWithMenuIsAvailable
             caseName:@"volume-with-menu-events-share-capability-filter"
               reason:@"Volume with menu events did not share the same required-capabilities filter"];
@@ -241,6 +244,19 @@
                      menuPressSingleIsAvailable == menuPressTripleIsAvailable
             caseName:@"menu-button-events-share-capability-filter"
               reason:@"Menu button events did not share the same required-capabilities filter"];
+    [recorder expect:!(gestureBarDoubleTapIsAvailable && menuPressSingleIsAvailable)
+            caseName:@"gesture-bar-and-real-home-events-are-mutually-exclusive"
+              reason:@"Gesture bar and real Home button events were both available on the same device"];
+    if (gestureBarDoubleTapIsAvailable) {
+        [recorder expect:[activator eventWithName:LAEventNameGestureBarTapDouble
+                             isCompatibleWithMode:LAEventModeSpringBoard] &&
+                         [activator eventWithName:LAEventNameGestureBarTapDouble
+                             isCompatibleWithMode:LAEventModeApplication] &&
+                         [activator eventWithName:LAEventNameGestureBarTapDouble
+                             isCompatibleWithMode:LAEventModeLockScreen]
+                caseName:@"gesture-bar-double-tap-all-modes-compatible"
+                  reason:@"Gesture bar double tap was not compatible with all event modes"];
+    }
     [recorder expect:[[activator availableEventNames] containsObject:LAEventNameVolumeUpHoldShort]
             caseName:@"volume-up-hold-short-event-available"
               reason:@"Volume up short hold event metadata was not available"];
@@ -537,6 +553,8 @@
         [fixture interestedEventSourceOfClass:LATStatusBarEventSource.class previousEventSources:@[]];
     LATVolumeHUDTapEventSource *volumeHUDTapSource =
         [fixture interestedEventSourceOfClass:LATVolumeHUDTapEventSource.class previousEventSources:@[]];
+    LATGestureBarEventSource *gestureBarSource =
+        [fixture interestedEventSourceOfClass:LATGestureBarEventSource.class previousEventSources:@[]];
 
     [recorder expect:[edgeSource.eventNames containsObject:LAEventNameStatusBarSwipeDown] &&
                      [statusBarSource.eventNames containsObject:LAEventNameStatusBarSwipeDown]
@@ -548,15 +566,17 @@
               reason:@"Edge source claimed a fingerprint composite without an injected fingerprint producer"];
     LATFingerprintSensorEventSource *fingerprintSensorSource =
         [fixture interestedEventSourceOfClass:LATFingerprintSensorEventSource.class previousEventSources:@[]];
+    NSArray<id<LATEventSource>> *fingerprintDependencies = fingerprintSensorSource ? @[ fingerprintSensorSource ] : @[];
     LATEdgeGestureEventSource *edgeSourceWithFingerprint =
         [fixture interestedEventSourceOfClass:LATEdgeGestureEventSource.class
-                         previousEventSources:@[ fingerprintSensorSource ]];
-    [recorder expect:![edgeSourceWithFingerprint.eventNames
-                         containsObject:LAEventNameFingerprintSensorPressSingleAndSlideIn] &&
-                     [edgeSourceWithFingerprint.interestEventNames
-                         containsObject:LAEventNameFingerprintSensorPressSingleAndSlideIn]
+                         previousEventSources:fingerprintDependencies];
+    BOOL fingerprintDependencyMatchesCapability =
+        ![edgeSourceWithFingerprint.eventNames containsObject:LAEventNameFingerprintSensorPressSingleAndSlideIn] &&
+        ([edgeSourceWithFingerprint.interestEventNames
+             containsObject:LAEventNameFingerprintSensorPressSingleAndSlideIn] == (fingerprintSensorSource != nil));
+    [recorder expect:fingerprintDependencyMatchesCapability
             caseName:@"edge-catalog-separates-fingerprint-interest-dependency"
-              reason:@"Edge source did not separate its fingerprint dependency from its producer catalog"];
+              reason:@"Edge source did not match the optional fingerprint dependency capability"];
     [recorder expect:[multiTouchSource.eventNames containsObject:LAEventNameThreeFingerTap] &&
                      [multiTouchSource.eventNames containsObject:LAEventNameFiveFingerSpread]
             caseName:@"event-source-catalog-includes-multi-touch"
@@ -566,18 +586,33 @@
                      ![springBoardIconSource.eventNames containsObject:LAEventNameSpringBoardIconFlickUp]
             caseName:@"event-source-catalog-excludes-unimplemented-icon-flick"
               reason:@"SpringBoard icon source catalog included events it cannot produce"];
-    [recorder expect:edgeSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode &&
-                     forceSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode &&
-                     multiTouchSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode &&
-                     springBoardIconSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode &&
-                     statusBarSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode
-            caseName:@"event-source-catalog-declares-assignment-aware-policy"
-              reason:@"A high-cost Event Source did not declare assignment-aware interest"];
+    BOOL forceTouchEventIsAvailable =
+        [[activator availableEventNames] containsObject:LAEventNameForceTouchScreenBottom];
+    [recorder expect:(forceSource != nil) == forceTouchEventIsAvailable
+            caseName:@"force-touch-source-registration-follows-device-capability"
+              reason:@"Force touch source registration did not follow the SupportsForceTouch event gate"];
+    [recorder
+          expect:edgeSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode &&
+                 (!forceSource || forceSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode) &&
+                 multiTouchSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode &&
+                 springBoardIconSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode &&
+                 statusBarSource.interestPolicy == LATEventSourceInterestPolicyAssignedInCurrentMode
+        caseName:@"event-source-catalog-declares-assignment-aware-policy"
+          reason:@"A high-cost Event Source did not declare assignment-aware interest"];
     [recorder expect:[volumeHUDTapSource.eventNames isEqualToSet:[NSSet setWithObject:LAEventNameVolumeDisplayTap]] &&
                      volumeHUDTapSource.interestPolicy == LATEventSourceInterestPolicyAlways
             caseName:@"volume-hud-tap-source-declares-always-on-catalog"
               reason:@"Volume HUD tap source did not match the 1.9.13 always-on recognizer policy"];
+    BOOL gestureBarEventIsAvailable = [[activator availableEventNames] containsObject:LAEventNameGestureBarTapDouble];
+    [recorder
+          expect:gestureBarEventIsAvailable ? ([gestureBarSource.eventNames
+                                                   isEqualToSet:[NSSet setWithObject:LAEventNameGestureBarTapDouble]] &&
+                                               gestureBarSource.interestPolicy == LATEventSourceInterestPolicyAlways)
+                                            : gestureBarSource == nil
+        caseName:@"gesture-bar-source-registration-follows-fake-home-capability"
+          reason:@"Gesture bar source registration did not follow the fake-home-button event gate"];
 
+    [gestureBarSource invalidate];
     [volumeHUDTapSource invalidate];
     [statusBarSource invalidate];
     [springBoardIconSource invalidate];

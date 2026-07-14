@@ -34,6 +34,7 @@ CHDeclareClass(SBMainSwitcherViewController);
 CHDeclareClass(SBMainSwitcherControllerCoordinator);
 CHDeclareClass(SBVolumeControl);
 CHDeclareClass(SBElasticVolumeViewController);
+CHDeclareClass(SBHomeGrabberRevealGesturesManager);
 CHDeclareClass(SBHIconManager);
 CHDeclareClass(SBIconScrollView);
 CHDeclareClass(SBWiFiManager);
@@ -58,6 +59,7 @@ static NSArray<id<LATEventSourceNetworkStateIngress>> *gNetworkStateEventSources
 static NSArray<id<LATEventSourceStatusBarTouchIngress>> *gStatusBarTouchEventSources = nil;
 static NSArray<id<LATEventSourceSystemGestureWindowIngress>> *gSystemGestureWindowEventSources = nil;
 static NSArray<id<LATEventSourceVolumeHUDViewIngress>> *gVolumeHUDViewEventSources = nil;
+static NSArray<id<LATEventSourceGestureBarIngress>> *gGestureBarEventSources = nil;
 
 static Class gApplicationControllerClass = nil;
 static Class gCoverSheetViewControllerClass = nil;
@@ -69,6 +71,8 @@ static Class gIconControllerClass = nil;
 static Class gIconScrollViewClass = nil;
 static Class gElasticVolumeViewControllerClass = nil;
 static Ivar gElasticVolumeSliderContainerViewIvar = nil;
+static Class gHomeGrabberRevealGesturesManagerClass = nil;
+static Ivar gHomeGrabberRevealDoubleTapRecognizerIvar = nil;
 
 @interface CCUIModuleCollectionViewController : UIViewController
 - (void)viewDidLoad;
@@ -272,6 +276,9 @@ CHOptimizedMethod4(self, id, SBVolumeControl, initWithHUDController, id, hudCont
 CHOptimizedMethod0(self, void, SBElasticVolumeViewController, viewDidLoad) {
     CHSuper0(SBElasticVolumeViewController, viewDidLoad);
 
+    if (!gElasticVolumeSliderContainerViewIvar) {
+        return;
+    }
     UIView *sliderContainerView = object_getIvar(self, gElasticVolumeSliderContainerViewIvar);
     if (![sliderContainerView isKindOfClass:UIView.class]) {
         HBLogWarn(@"Skipping Volume HUD tap attachment because _sliderContainerView is unavailable");
@@ -281,6 +288,26 @@ CHOptimizedMethod0(self, void, SBElasticVolumeViewController, viewDidLoad) {
     for (id<LATEventSourceVolumeHUDViewIngress> eventSource in gVolumeHUDViewEventSources) {
         [eventSource noteVolumeHUDSliderContainerViewDidLoad:sliderContainerView];
     }
+}
+
+#pragma mark - SBHomeGrabberRevealGesturesManager
+
+CHOptimizedMethod0(self, id, SBHomeGrabberRevealGesturesManager, init) {
+    id instance = CHSuper0(SBHomeGrabberRevealGesturesManager, init);
+    if (!instance || !gHomeGrabberRevealDoubleTapRecognizerIvar) {
+        return instance;
+    }
+
+    UITapGestureRecognizer *recognizer = object_getIvar(instance, gHomeGrabberRevealDoubleTapRecognizerIvar);
+    if (![recognizer isKindOfClass:UITapGestureRecognizer.class]) {
+        HBLogWarn(@"Skipping gesture bar attachment because _revealDoubleTapRecognizer is unavailable");
+        return instance;
+    }
+
+    for (id<LATEventSourceGestureBarIngress> eventSource in gGestureBarEventSources) {
+        [eventSource noteGestureBarDoubleTapRecognizerDidLoad:recognizer];
+    }
+    return instance;
 }
 
 #pragma mark - SBHIconManager
@@ -424,6 +451,11 @@ static void LATLoadRuntimeStateClasses(void) {
         gElasticVolumeSliderContainerViewIvar =
             class_getInstanceVariable(gElasticVolumeViewControllerClass, "_sliderContainerView");
     }
+    gHomeGrabberRevealGesturesManagerClass = NSClassFromString(@"SBHomeGrabberRevealGesturesManager");
+    if (gHomeGrabberRevealGesturesManagerClass) {
+        gHomeGrabberRevealDoubleTapRecognizerIvar =
+            class_getInstanceVariable(gHomeGrabberRevealGesturesManagerClass, "_revealDoubleTapRecognizer");
+    }
 }
 
 static void LATLoadSpringBoardClasses(void) {
@@ -439,9 +471,8 @@ static void LATLoadSpringBoardClasses(void) {
     CHLoadClass_(&SBMainSwitcherViewController$, NSClassFromString(@"SBMainSwitcherViewController"));
     CHLoadClass_(&SBMainSwitcherControllerCoordinator$, NSClassFromString(@"SBMainSwitcherControllerCoordinator"));
     CHLoadClass_(&SBVolumeControl$, NSClassFromString(@"SBVolumeControl"));
-    if (gElasticVolumeViewControllerClass) {
-        CHLoadClass_(&SBElasticVolumeViewController$, gElasticVolumeViewControllerClass);
-    }
+    CHLoadClass_(&SBElasticVolumeViewController$, gElasticVolumeViewControllerClass);
+    CHLoadClass_(&SBHomeGrabberRevealGesturesManager$, gHomeGrabberRevealGesturesManagerClass);
     CHLoadClass_(&SBHIconManager$, NSClassFromString(@"SBHIconManager"));
     if (gIconScrollViewClass) {
         CHLoadClass_(&SBIconScrollView$, gIconScrollViewClass);
@@ -515,12 +546,8 @@ static void LATInstallHooks(void) {
                 transitionDidEndWithTransitionContext);
         CHHook4(SBVolumeControl, initWithHUDController, ringerControl, telephonyManager, conferenceManager);
 
-        if (gElasticVolumeViewControllerClass && gElasticVolumeSliderContainerViewIvar &&
-            [gElasticVolumeViewControllerClass instancesRespondToSelector:@selector(viewDidLoad)]) {
-            CHHook0(SBElasticVolumeViewController, viewDidLoad);
-        } else {
-            HBLogWarn(@"Skipping SBElasticVolumeViewController hook because the class contract is unavailable");
-        }
+        CHHook0(SBElasticVolumeViewController, viewDidLoad);
+        CHHook0(SBHomeGrabberRevealGesturesManager, init);
 
         if (@available(iOS 17, *)) {
             CHHook1(SBHIconManager, rootFolderControllerViewWillAppear);
@@ -583,5 +610,7 @@ __attribute__((constructor)) static void LATweakInitialize(void) {
         eventSourcesConformingToProtocol:@protocol(LATEventSourceSystemGestureWindowIngress)];
     gVolumeHUDViewEventSources = (NSArray<id<LATEventSourceVolumeHUDViewIngress>> *)[gBuiltInRegistry
         eventSourcesConformingToProtocol:@protocol(LATEventSourceVolumeHUDViewIngress)];
+    gGestureBarEventSources = (NSArray<id<LATEventSourceGestureBarIngress>> *)[gBuiltInRegistry
+        eventSourcesConformingToProtocol:@protocol(LATEventSourceGestureBarIngress)];
     LATInstallHooks();
 }

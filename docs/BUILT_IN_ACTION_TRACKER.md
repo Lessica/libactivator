@@ -14,7 +14,7 @@
 
 | Catalog | 1.9.13 资源 | 当前 staged | 当前剩余关注点 |
 | --- | ---: | ---: | --- |
-| Events | 121 | 123 | 2 个 2.x additive now-playing 状态事件已加入；1.9.13 event 中仍有 20 个 runtime source 未实现。 |
+| Events | 121 | 123 | 2 个 2.x additive now-playing 状态事件已加入；1.9.13 event 中仍有 19 个 runtime source 未实现。 |
 | Static listeners/actions | 117 | 119 | 5 个 obsolete 旧项已移除，7 个 2.x additive name 曾加入；除 `libactivator.watch.haptic.tap` 因设备能力保持 metadata-only 外，当前静态 listener/action 的 handled 语义审计已收口。 |
 
 当前 listener staged 移除项：`libactivator.settings.facebook`、`libactivator.settings.twitter`、`libactivator.twitter.compose-tweet`、`libactivator.facebook.compose-post`、`libactivator.weibo.compose-post`。
@@ -60,7 +60,7 @@
 
 ## Events 未完成交叉比对
 
-1.9.13 event 资源共 121 个。当前未实现的 1.9.13 event name 共 20 个，按 family 归类如下。
+1.9.13 event 资源共 121 个。当前未实现的 1.9.13 event name 共 19 个，按 family 归类如下。
 
 Multi-touch gesture family（3/4/5 指 tap、pinch、spread 共 9 个 event）已通过 `LATMultiTouchEventSource` + `LATMultiTouchGestureRecognizer` 接入 `_UISystemGestureWindow -sendEvent:`，状态为 `implemented`，并从未完成计数移除；stable tests 与 owner 实机手工冒烟均已通过。资源 metadata 中这 9 个 event 的 `compatible-modes` 均为 `springboard`、`application`，不包含 `lockscreen`。
 
@@ -68,15 +68,17 @@ SpringBoard icon pinch/spread 已通过 `LATSpringBoardIconGestureEventSource` �
 
 Motion shake 已通过独立 `LATMotionEventSource` 接入 SpringBoard 进程内 `UIApplication -motionEnded:withEvent:`，状态为 `implemented`，并从未完成计数移除；source 使用 always-on interest policy，每次 `UIEventSubtypeMotionShake` 回调均按当前 mode dispatch，不额外合并连续 shake。Owner 已确认该 event 完成实机验证并验收通过。
 
-Volume HUD tap 已通过独立 `LATVolumeHUDTapEventSource` 接入 `SBElasticVolumeViewController -viewDidLoad`，状态为 `implemented`，并从未完成计数移除。1.9.13 的 iOS 13 路径会在 `_sliderContainerView` 上无条件安装单击 recognizer，不使用 assignment interest gate；现代实现同样采用 always-on policy，并把 recognizer 配置为不取消或延迟 HUD 原触摸。真机 probe 已确认目标 class、ivar、HUD 命中链和 ended touch 均存在；安装后的端到端手势验收仍待 owner 完成。
+Volume HUD tap 已通过独立 `LATVolumeHUDTapEventSource` 接入 `SBElasticVolumeViewController -viewDidLoad`，状态为 `implemented`，并从未完成计数移除。1.9.13 的 iOS 13 路径会在 `_sliderContainerView` 上无条件安装单击 recognizer，不使用 assignment interest gate；现代实现同样采用 always-on policy，并把 recognizer 配置为不取消或延迟 HUD 原触摸。真机 probe、安装后端到端手势验证和 owner 验收均已完成。
+
+Gesture bar double tap 已通过独立 `LATGestureBarEventSource` 接入 `SBHomeGrabberRevealGesturesManager -init`，状态为 `implemented`，并从未完成计数移除。旧 master 尚无该事件；1.9.13 与 iOS 15 probe 均确认应复用 `_revealDoubleTapRecognizer`，只在 `Ended` 且触点位于参考 view 底部 `30pt` 内时 dispatch。Source 采用 always-on policy，但其统一 initializer 只有在 `fake-home-button` metadata gate 后仍存在 `libactivator.gesture-bar.double-tap` definition 时才返回实例，因此实体 Home 键设备不会注册该 source。现代 recognizer 对象链与真实双击已经完成 probe；安装后的端到端 event 验收仍待 owner 完成。
 
 | Family | Event names | 当前状态 | 下一步 |
 | --- | --- | --- | --- |
 | SpringBoard / icon gestures | `libactivator.icon.flick.up`、`libactivator.icon.flick.down`、`libactivator.icon.flick.left`、`libactivator.icon.flick.right` | `partial` | `libactivator.springboard.pinch` / `libactivator.springboard.spread` 已实现：hook `SBIconScrollView -initWithFrame:`，始终弱记录已初始化实例；获得 assignment interest 时立即为既存实例复用 `pinchGestureRecognizer` 追加 target，并按 1.9.13 阈值 `scale < 0.95` / `scale > 1.05` 同 session 只 dispatch 一次。实现不扫描 SpringBoard window/view hierarchy，也不再要求主屏幕视图先经历锁屏或 App 往返。剩余 4 个 icon flick event 继续只针对 SpringBoard UI 层实现，下一步确认并接入 `SBIconView` 手势。 |
 | Lock screen clock gestures | `libactivator.lockscreen.clock.double-tap`、`libactivator.lockscreen.clock.tap-hold`、`libactivator.lockscreen.clock.swipe-left`、`libactivator.lockscreen.clock.swipe-right`、`libactivator.lockscreen.clock.swipe-down` | `blocked` | CoverSheet/lock screen clock 视图结构与 passcode/notification/camera 入口强相关，需单独 probe。 |
 | Headset button | `libactivator.headset-button.press.single`、`libactivator.headset-button.hold.short` | `blocked` | 已实现 headset connected/disconnected，但线控按钮需要确认现代 audio route / HID / MediaRemote 信号来源。 |
-| Volume HUD tap | `libactivator.volume.display-tap` | `implemented` | 已作为独立 HUD/UI source 接入 `SBElasticVolumeViewController`，不属于 HID 按键热路径；待 owner 完成安装后的端到端手势验收。 |
-| Gesture bar | `libactivator.gesture-bar.double-tap` | `blocked` | 现代 home indicator / gesture bar 设备相关，需按设备能力和 iOS 版本 probe。 |
+| Volume HUD tap | `libactivator.volume.display-tap` | `implemented` | 已作为独立 HUD/UI source 接入 `SBElasticVolumeViewController`，并完成端到端手势验收。 |
+| Gesture bar | `libactivator.gesture-bar.double-tap` | `implemented` | 复用系统 `_revealDoubleTapRecognizer`，只在 `fake-home-button` 设备注册 source；待安装后端到端 event 验收。 |
 | Scheduled | `libactivator.scheduled.sunrise`、`libactivator.scheduled.sunset` | `metadata-only` | 需要定位旧实现语义和现代定位/日出日落调度来源；当前不作为阶段 4 主线。 |
 | Car / watch / smart cover | `libactivator.car.connected`、`libactivator.car.disconnected`、`libactivator.watch.connected`、`libactivator.watch.disconnected`、`libactivator.clamshell.open`、`libactivator.clamshell.close` | `metadata-only` | 依赖外设、设备能力或私有服务；先保留资源，不用 metadata presence 推断可用性。 |
 
