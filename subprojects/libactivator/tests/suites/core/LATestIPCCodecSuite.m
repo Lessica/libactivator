@@ -22,6 +22,47 @@
 - (NSDictionary *)handleMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo;
 @end
 
+@interface LAActivator (LATestIPCCodecSuite)
+- (instancetype)initPrivate;
+@end
+
+@interface LATestEventDefinitionManager : NSObject <LAEventDefinitionManaging>
+@property(nonatomic, assign) NSUInteger createCount;
+@property(nonatomic, assign) NSUInteger removeCount;
+@property(nonatomic, copy) NSString *lastProviderIdentifier;
+@property(nonatomic, copy) NSString *lastTemplateIdentifier;
+@property(nonatomic, copy) id lastConfiguration;
+@property(nonatomic, copy) NSString *lastRemovedEventName;
+@property(nonatomic, assign) NSUInteger lastExpectedGeneration;
+@end
+
+@implementation LATestEventDefinitionManager
+
+- (NSDictionary<NSString *, id> *)eventCreationCatalog {
+    return @{LAEventDefinitionCatalogGenerationKey : @7, LAEventDefinitionCatalogProvidersKey : @[]};
+}
+
+- (NSString *)createEventWithProviderIdentifier:(NSString *)providerIdentifier
+                             templateIdentifier:(NSString *)templateIdentifier
+                                  configuration:(id)configuration
+                             expectedGeneration:(NSUInteger)expectedGeneration {
+    self.createCount += 1;
+    self.lastProviderIdentifier = providerIdentifier;
+    self.lastTemplateIdentifier = templateIdentifier;
+    self.lastConfiguration = configuration;
+    self.lastExpectedGeneration = expectedGeneration;
+    return @"libactivator.test.dynamic-definition";
+}
+
+- (BOOL)removeEventWithName:(NSString *)eventName expectedGeneration:(NSUInteger)expectedGeneration {
+    self.removeCount += 1;
+    self.lastRemovedEventName = eventName;
+    self.lastExpectedGeneration = expectedGeneration;
+    return YES;
+}
+
+@end
+
 @implementation LATestIPCCodecSuite
 
 + (void)runWithRecorder:(LATestRecorder *)recorder {
@@ -120,9 +161,11 @@
             caseName:@"malformed-optional-event-fields-rejected"
               reason:@"Event decoding treated malformed optional fields as absent"];
 
-    LAActivator *serverActivator = LAActivator.sharedInstance;
+    LAActivator *serverActivator = [[LAActivator alloc] initPrivate];
     NSString *serverPreferenceKey = @"libactivator.tests.invalid-server-preference";
     [serverActivator _setObject:@"Original" forPreference:serverPreferenceKey];
+    LATestEventDefinitionManager *eventDefinitionManager = [[LATestEventDefinitionManager alloc] init];
+    [serverActivator la_setEventDefinitionManager:eventDefinitionManager];
     LAIPCServer *server = [[LAIPCServer alloc] initWithActivator:serverActivator];
     NSArray *malformedRequestReplies = @[
         [server handleMessageNamed:LAIPCMessageSetApplicationBlacklisted
@@ -139,6 +182,42 @@
                           LAIPCKeyPreferenceKey : serverPreferenceKey,
                           LAIPCKeyPreferenceValue : @{@"Unsafe" : [[NSObject alloc] init]},
                       }],
+        [server handleMessageNamed:LAIPCMessageCreateEventDefinition
+                      withUserInfo:@{
+                          LAIPCKeyEventDefinitionProviderIdentifier : @[],
+                          LAIPCKeyEventDefinitionTemplateIdentifier : @"template",
+                          LAIPCKeyEventDefinitionCreationConfiguration : @{},
+                          LAIPCKeyEventDefinitionExpectedGeneration : @7,
+                      }],
+        [server handleMessageNamed:LAIPCMessageCreateEventDefinition
+                      withUserInfo:@{
+                          LAIPCKeyEventDefinitionProviderIdentifier : @"provider",
+                          LAIPCKeyEventDefinitionTemplateIdentifier : @"template",
+                          LAIPCKeyEventDefinitionCreationConfiguration : @{@"Unsafe" : [[NSObject alloc] init]},
+                          LAIPCKeyEventDefinitionExpectedGeneration : @7,
+                      }],
+        [server handleMessageNamed:LAIPCMessageCreateEventDefinition
+                      withUserInfo:@{
+                          LAIPCKeyEventDefinitionProviderIdentifier : @"provider",
+                          LAIPCKeyEventDefinitionTemplateIdentifier : @"template",
+                          LAIPCKeyEventDefinitionCreationConfiguration : @{},
+                          LAIPCKeyEventDefinitionExpectedGeneration : @(-1),
+                      }],
+        [server handleMessageNamed:LAIPCMessageRemoveEventDefinition
+                      withUserInfo:@{
+                          LAIPCKeyEventName : @"libactivator.test.dynamic-definition",
+                          LAIPCKeyEventDefinitionExpectedGeneration : @1.5,
+                      }],
+        [server handleMessageNamed:LAIPCMessageRemoveEventDefinition
+                      withUserInfo:@{
+                          LAIPCKeyEventName : @"libactivator.test.dynamic-definition",
+                          LAIPCKeyEventDefinitionExpectedGeneration : @YES,
+                      }],
+        [server handleMessageNamed:LAIPCMessageRemoveEventDefinition
+                      withUserInfo:@{
+                          LAIPCKeyEventName : @"libactivator.test.dynamic-definition",
+                          LAIPCKeyEventDefinitionExpectedGeneration : @7.0,
+                      }],
     ];
     BOOL rejectedMalformedRequests = YES;
     for (NSDictionary *reply in malformedRequestReplies) {
@@ -148,10 +227,43 @@
             break;
         }
     }
-    [recorder expect:rejectedMalformedRequests &&
+    [recorder expect:rejectedMalformedRequests && eventDefinitionManager.createCount == 0 &&
+                     eventDefinitionManager.removeCount == 0 &&
                      [[serverActivator _getObjectForPreference:serverPreferenceKey] isEqual:@"Original"]
             caseName:@"malformed-server-requests-rejected"
               reason:@"IPC server accepted or partially applied a malformed request"];
+
+    NSDictionary *eventDefinitionCatalogReply = [server handleMessageNamed:LAIPCMessageEventDefinitionCatalog
+                                                              withUserInfo:@{}];
+    NSDictionary *createEventDefinitionReply =
+        [server handleMessageNamed:LAIPCMessageCreateEventDefinition
+                      withUserInfo:@{
+                          LAIPCKeyEventDefinitionProviderIdentifier : @"network",
+                          LAIPCKeyEventDefinitionTemplateIdentifier : @"joined",
+                          LAIPCKeyEventDefinitionCreationConfiguration : @{@"NetworkName" : @"Test Network"},
+                          LAIPCKeyEventDefinitionExpectedGeneration : @7,
+                      }];
+    NSDictionary *removeEventDefinitionReply =
+        [server handleMessageNamed:LAIPCMessageRemoveEventDefinition
+                      withUserInfo:@{
+                          LAIPCKeyEventName : @"libactivator.test.dynamic-definition",
+                          LAIPCKeyEventDefinitionExpectedGeneration : @8,
+                      }];
+    [recorder
+          expect:[eventDefinitionCatalogReply[LAIPCKeyOK] boolValue] &&
+                 [eventDefinitionCatalogReply[LAIPCKeyValue][LAEventDefinitionCatalogGenerationKey] isEqual:@7] &&
+                 [createEventDefinitionReply[LAIPCKeyOK] boolValue] &&
+                 [createEventDefinitionReply[LAIPCKeyValue] isEqualToString:@"libactivator.test.dynamic-definition"] &&
+                 [removeEventDefinitionReply[LAIPCKeyOK] boolValue] && eventDefinitionManager.createCount == 1 &&
+                 eventDefinitionManager.removeCount == 1 &&
+                 [eventDefinitionManager.lastProviderIdentifier isEqualToString:@"network"] &&
+                 [eventDefinitionManager.lastTemplateIdentifier isEqualToString:@"joined"] &&
+                 [eventDefinitionManager.lastConfiguration isEqual:@{@"NetworkName" : @"Test Network"}] &&
+                 [eventDefinitionManager.lastRemovedEventName
+                     isEqualToString:@"libactivator.test.dynamic-definition"] &&
+                 eventDefinitionManager.lastExpectedGeneration == 8
+        caseName:@"event-definition-management-server-round-trip"
+          reason:@"IPC server did not preserve the dynamic event definition management contract"];
     [serverActivator _setObject:nil forPreference:serverPreferenceKey];
 
     NSString *backgroundListenerName = @"libactivator.test.listener.a";

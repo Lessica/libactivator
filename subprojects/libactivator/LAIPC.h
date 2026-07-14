@@ -28,6 +28,9 @@ LA_IPC_EXTERN NSString *const LAIPCMessageHasEvent;
 LA_IPC_EXTERN NSString *const LAIPCMessageAvailableListenerNames;
 LA_IPC_EXTERN NSString *const LAIPCMessageHasListener;
 LA_IPC_EXTERN NSString *const LAIPCMessageHasSeenListener;
+
+#pragma mark - Assignment Messages
+
 LA_IPC_EXTERN NSString *const LAIPCMessageAssignedListenerNames;
 LA_IPC_EXTERN NSString *const LAIPCMessageEventsAssignedToListener;
 LA_IPC_EXTERN NSString *const LAIPCMessageAssignEvent;
@@ -38,6 +41,15 @@ LA_IPC_EXTERN NSString *const LAIPCMessageUnassignEvent;
 LA_IPC_EXTERN NSString *const LAIPCMessageDebugAssignmentSnapshot;
 LA_IPC_EXTERN NSString *const LAIPCMessageDebugResetAssignments;
 #endif
+
+#pragma mark - Event Definition Messages
+
+LA_IPC_EXTERN NSString *const LAIPCMessageEventDefinitionCatalog;
+LA_IPC_EXTERN NSString *const LAIPCMessageCreateEventDefinition;
+LA_IPC_EXTERN NSString *const LAIPCMessageRemoveEventDefinition;
+
+#pragma mark - Activator Configuration Messages
+
 LA_IPC_EXTERN NSString *const LAIPCMessageApplicationIsBlacklisted;
 LA_IPC_EXTERN NSString *const LAIPCMessageSetApplicationBlacklisted;
 LA_IPC_EXTERN NSString *const LAIPCMessageAvailableProfileNames;
@@ -110,6 +122,8 @@ LA_IPC_EXTERN NSString *const LAIPCMessageListenerSmallIconData;
 LA_IPC_EXTERN NSString *const LAIPCMessageRequestListenerRemoval;
 LA_IPC_EXTERN NSString *const LAIPCMessageRemoveEvent;
 
+#pragma mark - Testing Messages
+
 #if LIBACTIVATOR_TEST_SUPPORT
 LA_IPC_EXTERN NSString *const LAIPCMessageTesting;
 LA_IPC_EXTERN NSString *const LAIPCTestingCommandPing;
@@ -121,6 +135,16 @@ LA_IPC_EXTERN NSString *const LAIPCTestingCommandRuntimeState;
 LA_IPC_EXTERN NSString *const LAIPCTestingCommandPrepareUserInfoProbe;
 LA_IPC_EXTERN NSString *const LAIPCTestingCommandUserInfoProbeResult;
 LA_IPC_EXTERN NSString *const LAIPCTestingCommandPrepareEventConfigurationProbe;
+#endif
+
+#pragma mark - Diagnostics Messages
+
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+LA_IPC_EXTERN NSString *const LAIPCMessageEventDispatchCounts;
+LA_IPC_EXTERN NSString *const LAIPCMessageListenerReceiveCounts;
+LA_IPC_EXTERN NSString *const LAIPCMessageEventAbortCounts;
+LA_IPC_EXTERN NSString *const LAIPCMessageListenerAbortCounts;
+LA_IPC_EXTERN NSString *const LAIPCMessageResetDispatchCounts;
 #endif
 
 #pragma mark - UserInfo Keys
@@ -145,6 +169,15 @@ LA_IPC_EXTERN NSString *const LAIPCKeyEventConfiguration;
 LA_IPC_EXTERN NSString *const LAIPCKeyEventConfigurationClassName;
 LA_IPC_EXTERN NSString *const LAIPCKeyEventConfigurationBundlePath;
 
+#pragma mark - Event Definition UserInfo Keys
+
+LA_IPC_EXTERN NSString *const LAIPCKeyEventDefinitionProviderIdentifier;
+LA_IPC_EXTERN NSString *const LAIPCKeyEventDefinitionTemplateIdentifier;
+LA_IPC_EXTERN NSString *const LAIPCKeyEventDefinitionCreationConfiguration;
+LA_IPC_EXTERN NSString *const LAIPCKeyEventDefinitionExpectedGeneration;
+
+#pragma mark - Testing UserInfo Keys
+
 #if LIBACTIVATOR_TEST_SUPPORT
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingCommand;
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingSuites;
@@ -156,15 +189,9 @@ LA_IPC_EXTERN NSString *const LAIPCKeyTestingFailureCount;
 LA_IPC_EXTERN NSString *const LAIPCKeyTestingSkipCount;
 #endif
 
-#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
-LA_IPC_EXTERN NSString *const LAIPCMessageEventDispatchCounts;
-LA_IPC_EXTERN NSString *const LAIPCMessageListenerReceiveCounts;
-LA_IPC_EXTERN NSString *const LAIPCMessageEventAbortCounts;
-LA_IPC_EXTERN NSString *const LAIPCMessageListenerAbortCounts;
-LA_IPC_EXTERN NSString *const LAIPCMessageResetDispatchCounts;
-#endif
-
 #undef LA_IPC_EXTERN
+
+#pragma mark - Client
 
 __attribute__((visibility("hidden")))
 @interface LAIPCClient : NSObject
@@ -190,6 +217,8 @@ __attribute__((visibility("hidden")))
 - (BOOL)sendMessageName:(NSString *)messageName userInfo:(nullable NSDictionary<NSString *, id> *)userInfo;
 
 @end
+
+#pragma mark - Server
 
 __attribute__((visibility("hidden")))
 @interface LAIPCServer : NSObject

@@ -11,6 +11,7 @@
 #import <Activator/Activator.h>
 #import <errno.h>
 #import <roothide.h>
+#import <stdlib.h>
 #import <string.h>
 #import <sys/stat.h>
 #import <sysexits.h>
@@ -219,8 +220,111 @@
     if ([command isEqualToString:@"stats"]) {
         return [self runDebugStatisticsCommandWithArguments:arguments];
     }
+    if ([command isEqualToString:@"event-definitions"]) {
+        return [self runDebugEventDefinitionsCommandWithArguments:arguments];
+    }
     [self printDebugUsage];
     return EX_USAGE;
+}
+
+- (int)runDebugEventDefinitionsCommandWithArguments:(NSArray<NSString *> *)arguments {
+    if (arguments.count == 2 && [arguments[1] isEqualToString:@"catalog"]) {
+        NSDictionary *catalog = self.activator.la_eventDefinitionCreationCatalog;
+        if (!catalog) {
+            fputs("Dynamic event definition catalog is unavailable\n", stderr);
+            return EX_UNAVAILABLE;
+        }
+        NSError *error = nil;
+        NSData *data = [NSJSONSerialization dataWithJSONObject:catalog
+                                                       options:NSJSONWritingPrettyPrinted | NSJSONWritingSortedKeys
+                                                         error:&error];
+        if (!data) {
+            fprintf(stderr, "Unable to encode dynamic event definition catalog: %s\n",
+                    [error.localizedDescription UTF8String]);
+            return EX_DATAERR;
+        }
+        fwrite(data.bytes, 1, data.length, stdout);
+        fputc('\n', stdout);
+        return 0;
+    }
+    if (arguments.count == 6 && [arguments[1] isEqualToString:@"create"]) {
+        NSUInteger generation = 0;
+        if (![self parseEventDefinitionGeneration:arguments[2] value:&generation]) {
+            fprintf(stderr, "Invalid event definition generation: %s\n", [arguments[2] UTF8String]);
+            return EX_USAGE;
+        }
+        id configuration = [self eventDefinitionConfigurationFromJSON:arguments[5]];
+        if (!configuration) {
+            return EX_DATAERR;
+        }
+        NSString *eventName = [self.activator la_createEventWithProviderIdentifier:arguments[3]
+                                                                templateIdentifier:arguments[4]
+                                                                     configuration:configuration
+                                                                expectedGeneration:generation];
+        if (eventName.length == 0) {
+            fputs("Unable to create dynamic event definition; refresh the catalog and verify the configuration\n",
+                  stderr);
+            return EX_TEMPFAIL;
+        }
+        printf("event\t%s\n", [eventName UTF8String]);
+        return 0;
+    }
+    if (arguments.count == 4 && [arguments[1] isEqualToString:@"remove"]) {
+        NSUInteger generation = 0;
+        if (![self parseEventDefinitionGeneration:arguments[2] value:&generation]) {
+            fprintf(stderr, "Invalid event definition generation: %s\n", [arguments[2] UTF8String]);
+            return EX_USAGE;
+        }
+        NSString *eventName = arguments[3];
+        if (![self.activator la_removeEventWithName:eventName expectedGeneration:generation]) {
+            fputs("Unable to remove dynamic event definition; refresh the catalog and verify the event name\n", stderr);
+            return EX_TEMPFAIL;
+        }
+        printf("removed\t%s\n", [eventName UTF8String]);
+        return 0;
+    }
+    [self printDebugUsage];
+    return EX_USAGE;
+}
+
+- (BOOL)parseEventDefinitionGeneration:(NSString *)argument value:(NSUInteger *)value {
+    const char *string = argument.UTF8String;
+    if (!string || string[0] == '\0') {
+        return NO;
+    }
+    for (const char *cursor = string; *cursor != '\0'; cursor++) {
+        if (*cursor < '0' || *cursor > '9') {
+            return NO;
+        }
+    }
+    errno = 0;
+    char *end = NULL;
+    unsigned long long parsed = strtoull(string, &end, 10);
+    if (errno == ERANGE || end == string || *end != '\0' || parsed > NSUIntegerMax) {
+        return NO;
+    }
+    if (value) {
+        *value = (NSUInteger)parsed;
+    }
+    return YES;
+}
+
+- (id)eventDefinitionConfigurationFromJSON:(NSString *)JSON {
+    NSData *data = [JSON dataUsingEncoding:NSUTF8StringEncoding];
+    if (!data) {
+        fputs("Event definition configuration is not valid UTF-8 JSON\n", stderr);
+        return nil;
+    }
+    NSError *error = nil;
+    id configuration = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingAllowFragments error:&error];
+    if (!configuration || ![NSPropertyListSerialization propertyList:configuration
+                                                    isValidForFormat:NSPropertyListBinaryFormat_v1_0]) {
+        NSString *errorDescription = error.localizedDescription ?: @"unsupported JSON value";
+        fprintf(stderr, "Invalid property-list-safe event definition configuration JSON: %s\n",
+                [errorDescription UTF8String]);
+        return nil;
+    }
+    return configuration;
 }
 
 - (int)runDebugAssignmentsCommandWithArguments:(NSArray<NSString *> *)arguments {
@@ -603,6 +707,15 @@
                maximumWidth:70
                 description:@"Print one dispatch counter."];
     [self printUsageCommand:@"debug stats reset" maximumWidth:70 description:@"Reset dispatch and abort counters."];
+    [self printUsageCommand:@"debug event-definitions catalog"
+               maximumWidth:92
+                description:@"Print the generation-bound dynamic event catalog as JSON."];
+    [self printUsageCommand:@"debug event-definitions create <generation> <provider> <template> <configuration-json>"
+               maximumWidth:92
+                description:@"Create a dynamic event using a catalog generation."];
+    [self printUsageCommand:@"debug event-definitions remove <generation> <event>"
+               maximumWidth:92
+                description:@"Remove a dynamic event using a catalog generation."];
     fputs("  <mode> accepts a mode name, current, or all.\n", stderr);
 }
 #endif

@@ -14,12 +14,6 @@
 #import <Activator/Activator.h>
 #import <HBLog.h>
 
-static NSString *const LATEventDefinitionTemplateIdentifierKey = @"Identifier";
-static NSString *const LATEventDefinitionCatalogGenerationKey = @"Generation";
-static NSString *const LATEventDefinitionCatalogProvidersKey = @"Providers";
-static NSString *const LATEventDefinitionCatalogEventNamesKey = @"EventNames";
-static NSString *const LATEventDefinitionCatalogTemplatesKey = @"Templates";
-
 @interface LATEventDefinitionRegistry ()
 
 @property(nonatomic, weak) LAActivator *activator;
@@ -386,14 +380,14 @@ static NSString *const LATEventDefinitionCatalogTemplatesKey = @"Templates";
             [[self activeEventNamesForProvider:provider].allObjects sortedArrayUsingSelector:@selector(compare:)];
         NSArray<NSDictionary<NSString *, id> *> *templates = [self.templatesByProvider objectForKey:provider] ?: @[];
         [providers addObject:@{
-            LATEventDefinitionTemplateIdentifierKey : identifier,
-            LATEventDefinitionCatalogEventNamesKey : eventNames,
-            LATEventDefinitionCatalogTemplatesKey : templates,
+            LAEventDefinitionCatalogProviderIdentifierKey : identifier,
+            LAEventDefinitionCatalogEventNamesKey : eventNames,
+            LAEventDefinitionCatalogTemplatesKey : templates,
         }];
     }
     return @{
-        LATEventDefinitionCatalogGenerationKey : @(self.generation),
-        LATEventDefinitionCatalogProvidersKey : [providers copy],
+        LAEventDefinitionCatalogGenerationKey : @(self.generation),
+        LAEventDefinitionCatalogProvidersKey : [providers copy],
     };
 }
 
@@ -463,9 +457,23 @@ static NSString *const LATEventDefinitionCatalogTemplatesKey = @"Templates";
     if (self.invalidated || self.applyingMutation || expectedGeneration != self.generation || !provider) {
         return NO;
     }
-    [self.activator removeEventWithName:eventName];
-    return ![provider.eventDefinitionNames containsObject:eventName] &&
-           [self providerForEventName:eventName] != provider;
+    NSSet<NSString *> *ownedEventNames = [self.ownedEventNamesByProvider objectForKey:provider];
+    id<LAEventDataSource> dataSource = provider.eventDataSource;
+    if (![ownedEventNames containsObject:eventName] ||
+        [self.activator eventDataSourceForEventName:eventName] != dataSource ||
+        ![dataSource respondsToSelector:@selector(eventWithNameSupportsRemoval:)] ||
+        ![dataSource eventWithNameSupportsRemoval:eventName] ||
+        ![dataSource respondsToSelector:@selector(removeEventWithName:)]) {
+        return NO;
+    }
+
+    [dataSource removeEventWithName:eventName];
+    if ([provider.eventDefinitionNames containsObject:eventName] || [self providerForEventName:eventName] == provider ||
+        [self.activator eventDataSourceForEventName:eventName] == dataSource) {
+        return NO;
+    }
+    [self.activator la_unassignEventNameFromAllProfilesAndNotifyIfChanged:eventName];
+    return YES;
 }
 
 #pragma mark - Event Registry Reconciliation
@@ -704,8 +712,8 @@ static NSString *const LATEventDefinitionCatalogTemplatesKey = @"Templates";
         if (![template isKindOfClass:NSDictionary.class]) {
             return nil;
         }
-        NSString *identifier = [template[LATEventDefinitionTemplateIdentifierKey] isKindOfClass:NSString.class]
-                                   ? template[LATEventDefinitionTemplateIdentifierKey]
+        NSString *identifier = [template[LAEventDefinitionCatalogTemplateIdentifierKey] isKindOfClass:NSString.class]
+                                   ? template[LAEventDefinitionCatalogTemplateIdentifierKey]
                                    : nil;
         if (identifier.length == 0 || [identifiers containsObject:identifier]) {
             return nil;
@@ -720,7 +728,7 @@ static NSString *const LATEventDefinitionCatalogTemplatesKey = @"Templates";
         return NO;
     }
     for (NSDictionary<NSString *, id> *template in [self.templatesByProvider objectForKey:provider]) {
-        if ([template[LATEventDefinitionTemplateIdentifierKey] isEqualToString:templateIdentifier]) {
+        if ([template[LAEventDefinitionCatalogTemplateIdentifierKey] isEqualToString:templateIdentifier]) {
             return YES;
         }
     }

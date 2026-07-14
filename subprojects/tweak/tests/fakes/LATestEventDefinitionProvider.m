@@ -8,6 +8,7 @@
 
 #import "LATestEventDefinitionProvider.h"
 
+#import "LAEventDefinitionManaging.h"
 #import "LATEventDefinitionRegistry.h"
 
 @implementation LATestEventDefinitionProvider
@@ -18,8 +19,8 @@
         _eventDefinitionProviderIdentifier = [identifier copy];
         _eventDefinitionNames = [eventNames copy];
         _eventCreationTemplates = @[ @{
-            @"Identifier" : @"testing",
-            @"Title" : @"Testing",
+            LAEventDefinitionCatalogTemplateIdentifierKey : @"testing",
+            LAEventDefinitionCatalogTemplateTitleKey : @"Testing",
         } ];
     }
     return self;

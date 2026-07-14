@@ -27,8 +27,8 @@
 #import "LATForceTouchEventSource.h"
 #import "LATGestureBarEventSource.h"
 #import "LATHardwareActionListener.h"
-#import "LATLockStateEventSource.h"
 #import "LATLockScreenClockEventSource.h"
+#import "LATLockStateEventSource.h"
 #import "LATMediaEventSource.h"
 #import "LATMotionEventSource.h"
 #import "LATMultiTouchEventSource.h"
@@ -45,6 +45,8 @@
 #import "LATVolumeHUDTapEventSource.h"
 
 #import <HBLog.h>
+
+#pragma mark - Class Extension
 
 @interface LATBuiltInRegistry () <LATEventDefinitionRegistryDelegate>
 
@@ -67,6 +69,8 @@
 @end
 
 @implementation LATBuiltInRegistry
+
+#pragma mark - Built-In Classes
 
 + (NSArray<Class> *)builtInEventSourceClasses {
     return @[
@@ -101,6 +105,8 @@
     ];
 }
 
+#pragma mark - Lifecycle
+
 - (instancetype)initWithActivator:(LAActivator *)activator {
     NSParameterAssert(activator);
 
@@ -121,14 +127,20 @@
             initWithKeyOptions:NSPointerFunctionsStrongMemory | NSPointerFunctionsObjectPointerPersonality
                   valueOptions:NSPointerFunctionsStrongMemory
                       capacity:0];
-        if (![self registerBuiltInEventSourcesWithActivator:activator]) {
+        BOOL registeredEventSources = [self registerBuiltInEventSourcesWithActivator:activator];
+        if (!registeredEventSources) {
             HBLogError(@"Unable to register built-in Event Sources");
+        }
+        if (registeredEventSources) {
+            [activator la_setEventDefinitionManager:_eventDefinitionRegistry];
         }
 
         [self registerBuiltInListenersWithActivator:activator];
     }
     return self;
 }
+
+#pragma mark - Event Source Registration
 
 - (BOOL)registerBuiltInEventSourcesWithActivator:(LAActivator *)activator {
     NSMutableArray<id<LATEventSource>> *registeredEventSources = [[NSMutableArray alloc] init];
@@ -209,6 +221,8 @@
     [self.bindingsByProvider removeAllObjects];
 }
 
+#pragma mark - LATEventDefinitionRegistryDelegate
+
 - (BOOL)eventDefinitionRegistry:(__unused LATEventDefinitionRegistry *)registry
                 applyEventNames:(NSSet<NSString *> *)eventNames
              previousEventNames:(NSSet<NSString *> *)previousEventNames
@@ -221,6 +235,8 @@
                  previousEventNames:previousEventNames
                 eventSourceRegistry:self.eventSourceRegistry];
 }
+
+#pragma mark - Event Sources
 
 - (void)startEventSources {
     [self.runtimeStateSource start];
@@ -240,13 +256,19 @@
     return [matchingEventSources copy];
 }
 
+#pragma mark - Application Catalog
+
 - (void)noteApplicationCatalogMayHaveChangedWithReason:(NSString *)reason {
     [self.dynamicApplicationListenerProvider noteApplicationsMayHaveChangedWithReason:reason];
 }
 
+#pragma mark - Device Capabilities
+
 - (BOOL)legacyHomeButtonTouchStreamHookShouldBeInstalled {
     return [self.activator la_hasRealHomeButton];
 }
+
+#pragma mark - Listener Registration
 
 - (void)registerBuiltInListenersWithActivator:(LAActivator *)activator {
     LATBuiltInListenerContext *context =

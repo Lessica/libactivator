@@ -6,6 +6,7 @@
 //  Copyright © 2026 Lessica. All rights reserved.
 //
 
+#import "LAEventDefinitionManaging.h"
 #import "LATEventDefinitionProvider.h"
 
 @class LAActivator;
@@ -23,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 // All registry access is main-queue confined.
-@interface LATEventDefinitionRegistry : NSObject
+@interface LATEventDefinitionRegistry : NSObject <LAEventDefinitionManaging>
 
 // Configure before registering providers. The composition delegate remains
 // stable while any provider is registered.

@@ -54,10 +54,12 @@ static NSString *const LATNetworkCreationNetworkNameKey = @"NetworkName";
 - (NSArray<NSDictionary<NSString *, id> *> *)eventCreationTemplates {
     NSMutableArray<NSDictionary<NSString *, id> *> *templates = [[NSMutableArray alloc] init];
     for (NSString *baseEventName in @[ LAEventNameNetworkJoinedWiFi, LAEventNameNetworkLeftWiFi ]) {
+        NSString *title = [self.activator localizedTitleForEventName:baseEventName] ?: baseEventName;
+        NSString *eventDescription = [self.activator localizedDescriptionForEventName:baseEventName] ?: @"";
         [templates addObject:@{
-            @"Identifier" : baseEventName,
-            @"Title" : [self.activator localizedTitleForEventName:baseEventName] ?: baseEventName,
-            @"Description" : [self.activator localizedDescriptionForEventName:baseEventName] ?: @"",
+            LAEventDefinitionCatalogTemplateIdentifierKey : baseEventName,
+            LAEventDefinitionCatalogTemplateTitleKey : title,
+            LAEventDefinitionCatalogTemplateDescriptionKey : eventDescription,
         }];
     }
     return [templates copy];

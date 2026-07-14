@@ -14,13 +14,17 @@
 #endif
 
 #import <AppSupport/CPDistributedMessagingCenter.h>
+#import <CoreFoundation/CoreFoundation.h>
 #import <dispatch/dispatch.h>
 #import <math.h>
+
+#pragma mark - Class Extension
 
 @interface LAIPCServer ()
 @property(nonatomic, strong) LAActivator *activator;
 @property(nonatomic, strong) CPDistributedMessagingCenter *center;
 @property(nonatomic, assign, getter=isStarted) BOOL started;
+- (nullable NSNumber *)eventDefinitionGenerationInUserInfo:(NSDictionary *)userInfo;
 @end
 
 @implementation LAIPCServer
@@ -69,6 +73,9 @@
         LAIPCMessageDebugAssignmentSnapshot,
         LAIPCMessageDebugResetAssignments,
 #endif
+        LAIPCMessageEventDefinitionCatalog,
+        LAIPCMessageCreateEventDefinition,
+        LAIPCMessageRemoveEventDefinition,
         LAIPCMessageApplicationIsBlacklisted,
         LAIPCMessageSetApplicationBlacklisted,
         LAIPCMessageAvailableProfileNames,
@@ -135,6 +142,8 @@
     ];
 }
 
+#pragma mark - Message Dispatch
+
 - (NSDictionary *)handleMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if (!NSThread.isMainThread) {
         // Listener and data-source callbacks share SpringBoard state that is confined to the main queue.
@@ -157,6 +166,10 @@
         return reply;
     }
     reply = [self handleAssignmentMessageNamed:messageName withUserInfo:userInfo];
+    if (reply) {
+        return reply;
+    }
+    reply = [self handleEventDefinitionMessageNamed:messageName withUserInfo:userInfo];
     if (reply) {
         return reply;
     }
@@ -188,7 +201,7 @@
     return [LAIPCCodec replyWithOK:NO value:nil];
 }
 
-#pragma mark - Message Handling
+#pragma mark - Testing Messages
 
 - (NSDictionary *)handleTestingMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
 #if LIBACTIVATOR_TEST_SUPPORT
@@ -198,6 +211,8 @@
 #endif
     return nil;
 }
+
+#pragma mark - Registry Messages
 
 - (NSDictionary *)handleRegistryMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAIPCMessageAvailableEventNames]) {
@@ -245,6 +260,8 @@
     }
     return nil;
 }
+
+#pragma mark - Assignment Messages
 
 - (NSDictionary *)handleAssignmentMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAIPCMessageAssignedListenerNames]) {
@@ -318,6 +335,72 @@
     return nil;
 }
 
+#pragma mark - Event Definition Messages
+
+- (NSDictionary *)handleEventDefinitionMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
+    if ([messageName isEqualToString:LAIPCMessageEventDefinitionCatalog]) {
+        NSDictionary *catalog = [_activator la_eventDefinitionCreationCatalog];
+        return [LAIPCCodec replyWithOK:catalog != nil value:catalog];
+    }
+    if ([messageName isEqualToString:LAIPCMessageCreateEventDefinition]) {
+        NSString *providerIdentifier = [LAIPCCodec stringInUserInfo:userInfo
+                                                             forKey:LAIPCKeyEventDefinitionProviderIdentifier];
+        NSString *templateIdentifier = [LAIPCCodec stringInUserInfo:userInfo
+                                                             forKey:LAIPCKeyEventDefinitionTemplateIdentifier];
+        NSNumber *generation = [self eventDefinitionGenerationInUserInfo:userInfo];
+        id configuration = userInfo[LAIPCKeyEventDefinitionCreationConfiguration];
+        if (providerIdentifier.length == 0 || templateIdentifier.length == 0 || !generation ||
+            ![LAIPCCodec isPropertyListValue:configuration]) {
+            return [LAIPCCodec replyWithOK:NO value:nil];
+        }
+        NSString *eventName = [_activator la_createEventWithProviderIdentifier:providerIdentifier
+                                                            templateIdentifier:templateIdentifier
+                                                                 configuration:configuration
+                                                            expectedGeneration:generation.unsignedIntegerValue];
+        return [LAIPCCodec replyWithOK:eventName != nil value:eventName];
+    }
+    if ([messageName isEqualToString:LAIPCMessageRemoveEventDefinition]) {
+        NSString *eventName = [LAIPCCodec stringInUserInfo:userInfo forKey:LAIPCKeyEventName];
+        NSNumber *generation = [self eventDefinitionGenerationInUserInfo:userInfo];
+        if (eventName.length == 0 || !generation) {
+            return [LAIPCCodec replyWithOK:NO value:nil];
+        }
+        BOOL removed = [_activator la_removeEventWithName:eventName expectedGeneration:generation.unsignedIntegerValue];
+        return [LAIPCCodec replyWithOK:removed value:@(removed)];
+    }
+    return nil;
+}
+
+- (NSNumber *)eventDefinitionGenerationInUserInfo:(NSDictionary *)userInfo {
+    NSNumber *generation = [LAIPCCodec numberInUserInfo:userInfo forKey:LAIPCKeyEventDefinitionExpectedGeneration];
+    if (!generation || CFGetTypeID((__bridge CFTypeRef)generation) == CFBooleanGetTypeID()) {
+        return nil;
+    }
+
+    switch (generation.objCType[0]) {
+    case 'c':
+    case 's':
+    case 'i':
+    case 'l':
+    case 'q': {
+        long long value = generation.longLongValue;
+        return value >= 0 ? @((NSUInteger)value) : nil;
+    }
+    case 'C':
+    case 'S':
+    case 'I':
+    case 'L':
+    case 'Q': {
+        unsigned long long value = generation.unsignedLongLongValue;
+        return value <= NSUIntegerMax ? @((NSUInteger)value) : nil;
+    }
+    default:
+        return nil;
+    }
+}
+
+#pragma mark - Application Accessibility Messages
+
 - (NSDictionary *)handleApplicationAccessibilityMessageNamed:(NSString *)messageName
                                                 withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAIPCMessageApplicationAccessibilityEnabled]) {
@@ -333,6 +416,8 @@
     }
     return nil;
 }
+
+#pragma mark - Runtime And Diagnostics Messages
 
 - (NSDictionary *)handleRuntimeMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAIPCMessageCurrentEventMode]) {
@@ -367,6 +452,8 @@
 #endif
     return nil;
 }
+
+#pragma mark - Dispatch Messages
 
 - (NSDictionary *)handleDispatchMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     if ([messageName isEqualToString:LAIPCMessageDispatchAssignedEvent]) {
@@ -438,6 +525,8 @@
     return nil;
 }
 
+#pragma mark - Event Metadata Messages
+
 - (NSDictionary *)handleEventMetadataMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     NSString *eventName = [LAIPCCodec stringInUserInfo:userInfo forKey:LAIPCKeyEventName];
     NSString *eventMode = [LAIPCCodec stringInUserInfo:userInfo forKey:LAIPCKeyEventMode];
@@ -493,6 +582,8 @@
     }
     return nil;
 }
+
+#pragma mark - Listener Metadata Messages
 
 - (NSDictionary *)handleListenerMetadataMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     NSString *eventName = [LAIPCCodec stringInUserInfo:userInfo forKey:LAIPCKeyEventName];
@@ -554,6 +645,8 @@
     }
     return nil;
 }
+
+#pragma mark - Localization Messages
 
 - (NSDictionary *)handleLocalizationMessageNamed:(NSString *)messageName withUserInfo:(NSDictionary *)userInfo {
     NSString *eventName = [LAIPCCodec stringInUserInfo:userInfo forKey:LAIPCKeyEventName];

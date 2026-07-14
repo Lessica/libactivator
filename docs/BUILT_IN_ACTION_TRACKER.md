@@ -7,15 +7,15 @@
 - `listener` 在 Activator 语义里通常就是 action executor：它是被 assignment 选中的响应器，也是实际完成动作的主体。
 - 同一个 listener class 可以注册到多个 listener name。name 决定 metadata、标题、分组、URL 或 selector；class 决定 runtime 行为。
 - Metadata presence 不等于 runtime behavior implemented。只有注册了真实 `LAListener` object 的 name 才能进入 `availableListenerNames` 并处理事件；只有存在 event source hook/adapter 的 event name 才能被真实触发。
-- 1.9.13 资源 catalog 是当前内置能力范围的主要依据；旧 master 只用于证明历史承载方式和语义，不用于照搬实现。
+- 1.9.13 bundled 资源 catalog 只覆盖静态 name；运行时生成的 event definition 与 listener catalog 必须按二进制中的 provider/data-source class 另行盘点。旧 master 只用于证明历史承载方式和语义，不用于照搬实现。
 - 状态值：`candidate` 表示可作为后续实现候选；`metadata-only` 表示当前只保留资源；`partial` 表示已有部分基础能力但语义未完整兑现；`implemented` 表示 runtime 已实现但可能仍待最终设备验收；`blocked` 表示需要 owner、SPI、设备或架构决策；`obsolete` 表示不计划恢复。
 
 ## 资源基线
 
 | Catalog | 1.9.13 资源 | 当前 staged | 当前剩余关注点 |
 | --- | ---: | ---: | --- |
-| Events | 121 | 123 | 2 个 2.x additive now-playing 状态事件已加入；1.9.13 event 中仍有 13 个尚未完成验收。 |
-| Static listeners/actions | 117 | 119 | 5 个 obsolete 旧项已移除，7 个 2.x additive name 曾加入；除 `libactivator.watch.haptic.tap` 因设备能力保持 metadata-only 外，当前静态 listener/action 的 handled 语义审计已收口。 |
+| Static events | 121 | 123 | 2 个 2.x additive now-playing 状态事件已加入；1.9.13 bundled event 中仍有 8 个可用 name 尚未完成验收。动态 definition 不计入此数量。 |
+| Static listeners/actions | 117 | 119 | 5 个 obsolete 旧项已移除，7 个 2.x additive name 曾加入；除 `libactivator.watch.haptic.tap` 因设备能力保持 metadata-only 外，当前静态 listener/action 的 handled 语义审计已收口。动态 listener catalog 不计入此数量。 |
 
 当前 listener staged 移除项：`libactivator.settings.facebook`、`libactivator.settings.twitter`、`libactivator.twitter.compose-tweet`、`libactivator.facebook.compose-post`、`libactivator.weibo.compose-post`。
 
@@ -31,7 +31,7 @@
 | --- | ---: | --- | --- |
 | `is-unprotected` | 12 | `partial` | Metadata/API 已暴露，但旧版 API protection prompt 与 unprotected 豁免体系尚未实现。 |
 | `supports-unlocking-device` | 8 | `partial` | 当前只有 callback-only unlock-to-send compatibility，不实现 passcode submit 或完整主动解锁流程；仍需确认 1.9.13 是否是“默认允许、key=0 排除”的语义。 |
-| `settings-view-controller-*` | 44 / 20 | `partial` | Existing-event core descriptor、property-list get/save IPC 与本进程 configuration controller factory 已实现；dynamic provider registry/generation/generic create 已在 SpringBoard 内部实现，但跨进程 provider catalog/create bridge、实际 Settings host 导航和 creation UI 仍待实现。 |
+| `settings-view-controller-*` | 44 / 20 | `partial` | Existing-event core descriptor、property-list get/save IPC 与本进程 configuration controller factory 已实现；dynamic provider 的 production typed manager、`LAActivator` facade 和 generation-bound catalog/create/remove IPC 也已实现。实际 Settings host 导航、provider catalog/creation UI，以及长生命周期 controller 对 existing-event generation token 的持有与校验仍待实现。 |
 
 ### Listeners keys
 
@@ -58,15 +58,46 @@
 | --- | --- | --- | --- |
 | obsolete URL 或旧服务 | `libactivator.settings.facebook`、`libactivator.settings.twitter`、`libactivator.facebook.compose-post`、`libactivator.twitter.compose-tweet`、`libactivator.weibo.compose-post` | `obsolete` | 旧 Settings URL 经真机验证失效、重复或打开错误页面；旧 social compose 服务不作为内置 action 恢复。 |
 
-## Events 未完成交叉比对
+### 1.9.13 动态 listener catalog 欠账
 
-1.9.13 event 资源共 121 个。当前尚未完成验收的 1.9.13 event name 共 13 个。
+1.9.13 不只提供 bundled 的 117 个静态 listener name。解混淆 class inventory 还确认了多组运行时 catalog；当前已有 application bundle listener provider 不列入欠账，以下 family 尚未兑现或尚未形成可验收的配置路径。
+
+| Family | 1.9.13 动态 name 形态 | 当前状态 | 剩余问题 |
+| --- | --- | --- | --- |
+| Application shortcuts | `libactivator.shortcut:<bundle>:<shortcut>` | `candidate` | 从 SpringBoard App shortcut items 建立动态 listener catalog 与执行路径。 |
+| Menus | 用户创建的 menu listener | `blocked` | 依赖 menu editor、持久化、runtime provider 与跨进程 Settings bridge。 |
+| Contact actions | `libactivator.mail.*`、`libactivator.text.*`、`libactivator.call.*` | `candidate` | 恢复联系人选择、配置持久化与 Mail/Text/Call 三类动态 listener。 |
+| Flipswitch | `switch-flip.*`、`switch-on.*`、`switch-off.*` | `blocked` | 依赖 Flipswitch framework/API 与现代越狱环境可用性决策。 |
+| Ringtones | `libactivator.ringtone.*` | `candidate` | 恢复系统铃声 catalog、选择和播放 listener。 |
+| Brightness / volume presets | `libactivator.screen.brightness.*`、`libactivator.audio.volume.media.*`、`libactivator.audio.volume.ringer.*` | `candidate` | 当前静态增减动作不等于旧版可配置绝对值 listener；需独立 provider 与配置入口。 |
+| Profiles | `libactivator.profile.*` | `blocked` | 依赖 profiles 配置模型与 Settings UI。 |
+| Configurable actions | `libactivator.speech.synthesize.*`、`libactivator.assistant.ask.*`、`libactivator.message.show.*`、`libactivator.command.run.*`、`libactivator.pause.*` | `candidate` | 每组都需要 provider、配置 schema、持久化与安全边界；不能用一个静态 listener name 代替。 |
+| PreferenceLoader / Shortcuts | `libactivator.settings.preferenceloader.*`、`libactivator.shortcuts.*` | `blocked` | 分别依赖 PreferenceLoader panel catalog 与 Shortcuts workflow catalog，需先确认现代运行环境。 |
+
+## Static events 未完成交叉比对
+
+1.9.13 bundled event 资源共 121 个。当前尚未完成验收的可用静态 event name 共 8 个；另有两个 `car.*` name 在旧资源中以 `CoreFoundationVersion = 9999` 禁用，单独保留为 metadata-only，不计入该数量。
 
 | Family | Event names | 当前状态 | 下一步 |
 | --- | --- | --- | --- |
-| Icon flick gestures | `libactivator.icon.flick.up`、`libactivator.icon.flick.down`、`libactivator.icon.flick.left`、`libactivator.icon.flick.right` | `blocked` | 确认并接入现代 `SBIconView` 的四向 flick 手势点位。 |
-| Lock screen clock gestures | `libactivator.lockscreen.clock.double-tap`、`libactivator.lockscreen.clock.tap-hold`、`libactivator.lockscreen.clock.swipe-left`、`libactivator.lockscreen.clock.swipe-right`、`libactivator.lockscreen.clock.swipe-down` | `implemented` | iOS 15 RootHide 与 iOS 16 rootless 均已完成视图结构 probe 和五种手势交互校验；待 owner 完成 assignment 端到端验收。 |
-| Car / watch / smart cover | `libactivator.car.connected`、`libactivator.car.disconnected`、`libactivator.watch.connected`、`libactivator.watch.disconnected`、`libactivator.clamshell.open`、`libactivator.clamshell.close` | `metadata-only` | 依赖外设、设备能力或私有服务；先保留资源，不用 metadata presence 推断可用性。 |
+| Icon flick gestures | `libactivator.icon.flick.up`、`libactivator.icon.flick.down`、`libactivator.icon.flick.left`、`libactivator.icon.flick.right` | `candidate` | 接入现代 `SBIconView` 四向 flick，并同时实现按 App 配置的 exact definition；只实现四个 base event 不完整。 |
+| Watch / smart cover | `libactivator.watch.connected`、`libactivator.watch.disconnected`、`libactivator.clamshell.open`、`libactivator.clamshell.close` | `metadata-only` | 依赖外设、设备能力或私有服务；先保留资源，不用 metadata presence 推断可用性。 |
+| Car | `libactivator.car.connected`、`libactivator.car.disconnected` | `metadata-only` | 旧资源以 `CoreFoundationVersion = 9999` 禁用；先保留资源，不计入当前 8 个可用静态欠账。 |
+
+## 1.9.13 动态 event definition 欠账
+
+解混淆 class inventory 共确认 15 个 concrete dynamic/meta event data source：Network、Bluetooth、Touch ID、8 个 application-specific family、Mail、Notification、Scheduled 与 Battery Level。其中 13 个 family 支持用户创建 concrete event；Bluetooth 与 Touch ID 根据系统状态动态发布 catalog。以下数量与 bundled 的 121 个静态 event name 分开跟踪。
+
+| Family | 1.9.13 动态 name 形态 | 当前状态 | 剩余问题 |
+| --- | --- | --- | --- |
+| Icon flick per App | `libactivator.icon.flick.{up,down,left,right}.<bundle>` | `candidate` | 与四个 base gesture 共用 acquisition；exact definition 存在时先派发 exact，未 handled 再 fallback base。 |
+| Other application-specific events | `libactivator.application-launch.<bundle>`、`libactivator.icon.hold.<bundle>`、`libactivator.icon.3d-touch.<bundle>`、`libactivator.icon.tap.double.<bundle>` | `candidate` | 补齐按 App 创建、移除、持久化与 exact-first dispatch；不能由 base event 代表。 |
+| Network per SSID | `libactivator.network.{joined-wifi,left-wifi}.<SSID>` | `partial` | Provider、definition registry/binding、acquisition、production typed manager/facade/IPC、DEBUG CLI 临时前端与 stable tests 已有；手工“跨进程 catalog/create → assignment → SSID 变化 → exact handled/base fallback → remove 清理”真机验收尚未执行，Settings creation UI 也未实现。 |
+| Mail / notification | `libactivator.mail-received.<UUID>`、`libactivator.message-received.<UUID>` | `candidate` | 需要配置 schema、持久化及现代消息信号选择。 |
+| Custom scheduled | `libactivator.scheduled.<UUID>` | `candidate` | Sunrise/sunset 静态事件不覆盖用户创建的自定义时间事件；需独立 provider 与调度 snapshot。 |
+| Battery thresholds | `libactivator.power.{charge-past,drain-past}.<level>` | `candidate` | 需要阈值配置、跨阈值状态机与持久化。 |
+| Bluetooth per device | `libactivator.network.bluetooth-{connect,disconnect}.<address>` | `candidate` | 旧版按发现设备动态发布 exact catalog；需确认现代 Bluetooth signal 与稳定设备 identifier。 |
+| Touch ID per finger | `libactivator.fingerprint-sensor.match.<UUID>` | `candidate` | 当前 fingerprint 手势不等于按 enrolled finger 发布的 match event；需确认现代 biometric match identity 是否仍可取得。 |
 
 ## 遗留问题
 

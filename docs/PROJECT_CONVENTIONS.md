@@ -128,9 +128,10 @@
 
 ## CLI 与 Settings UI
 
-- `/usr/bin/activator` 是 production compatibility tool，不是测试入口；不得为了端到端测试增加 1.9.13 不存在的子命令。
+- `/usr/bin/activator` 的 production 命令面只保留兼容和安装维护职责，不得为了测试扩张 release 子命令。Owner 明确要求的临时手工诊断前端可以用 `DEBUG` 完整隔离，但必须调用现有 product facade/IPC，不得为 CLI 再造一套测试 backend。
 - CLI 的 `get` / `set` 语义通过 libactivator 私有 preference compatibility bridge 进入 SpringBoard authoritative backend；不要在 CLI 内解析或直接写 preference 文件。
 - `postinst` 是隐藏安装后入口；当前只允许执行 shell maintainer script 不适合表达的安装后修复，例如为 `jbroot(/usr/libexec/activator/user-reboot)` 设置 root:wheel 与 setuid/setgid mode。其他现代 rootless/rootless-era 安装逻辑仍优先放在 shell maintainer script。
+- Dynamic event definition 的 typed manager、`LAActivator` 私有 facade 与 generation-bound catalog/create/remove IPC 属于 production 产品配置面，不受 `DEBUG` 隔离；当前 DEBUG CLI 与后续 Settings UI 必须复用这一条路径。调用方必须把 catalog generation 当作 opaque token 传回 mutation，失配时刷新 catalog，不得绕过 manager 直写 provider preference。
 - Settings UI 真实逻辑属于独立动态库 `libactivatorsettings.dylib`，PreferenceBundle、Activator.app 和第三方越狱 App 都只是 host。
 - `libactivator.dylib` 只保留 public settings class compatibility shims，让旧第三方代码能链接和解析类名。
 - `LASettingsShims.m` 是占位兼容例外，不得作为后续 UI 或 runtime 实现的文件组织范式。

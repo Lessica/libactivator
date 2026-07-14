@@ -122,6 +122,102 @@
             caseName:@"event-configuration-save-rejects-malformed-payload"
               reason:@"Client facade accepted or partially saved a malformed event configuration"];
 
+    NSString *networkName = @"libactivator-test-client-facade";
+    NSString *expectedNetworkEventName = [LAEventNameNetworkJoinedWiFi stringByAppendingFormat:@".%@", networkName];
+    NSDictionary<NSString *, id> *definitionCatalog = activator.la_eventDefinitionCreationCatalog;
+    NSNumber *cleanupGeneration =
+        [definitionCatalog[LAEventDefinitionCatalogGenerationKey] isKindOfClass:NSNumber.class]
+            ? definitionCatalog[LAEventDefinitionCatalogGenerationKey]
+            : nil;
+    if ([activator hasEventWithName:expectedNetworkEventName] && cleanupGeneration) {
+        [activator la_removeEventWithName:expectedNetworkEventName
+                       expectedGeneration:cleanupGeneration.unsignedIntegerValue];
+        definitionCatalog = activator.la_eventDefinitionCreationCatalog;
+    }
+    [recorder expect:![activator hasEventWithName:expectedNetworkEventName]
+            caseName:@"event-definition-test-namespace-clean"
+              reason:@"A dynamic event definition left by an interrupted test could not be removed"];
+
+    NSNumber *definitionGeneration =
+        [definitionCatalog[LAEventDefinitionCatalogGenerationKey] isKindOfClass:NSNumber.class]
+            ? definitionCatalog[LAEventDefinitionCatalogGenerationKey]
+            : nil;
+    NSArray *definitionProviders = [definitionCatalog[LAEventDefinitionCatalogProvidersKey] isKindOfClass:NSArray.class]
+                                       ? definitionCatalog[LAEventDefinitionCatalogProvidersKey]
+                                       : nil;
+    NSDictionary *networkProvider = nil;
+    for (id provider in definitionProviders) {
+        if ([provider isKindOfClass:NSDictionary.class] &&
+            [provider[LAEventDefinitionCatalogProviderIdentifierKey] isEqualToString:@"network"]) {
+            networkProvider = provider;
+            break;
+        }
+    }
+    NSArray *networkTemplates = [networkProvider[LAEventDefinitionCatalogTemplatesKey] isKindOfClass:NSArray.class]
+                                    ? networkProvider[LAEventDefinitionCatalogTemplatesKey]
+                                    : nil;
+    BOOL hasJoinedNetworkTemplate = NO;
+    BOOL hasLeftNetworkTemplate = NO;
+    for (id template in networkTemplates) {
+        NSString *identifier = [template[LAEventDefinitionCatalogTemplateIdentifierKey] isKindOfClass:NSString.class]
+                                   ? template[LAEventDefinitionCatalogTemplateIdentifierKey]
+                                   : nil;
+        hasJoinedNetworkTemplate =
+            hasJoinedNetworkTemplate || [identifier isEqualToString:LAEventNameNetworkJoinedWiFi];
+        hasLeftNetworkTemplate = hasLeftNetworkTemplate || [identifier isEqualToString:LAEventNameNetworkLeftWiFi];
+    }
+    [recorder expect:definitionGeneration != nil && networkProvider != nil && hasJoinedNetworkTemplate &&
+                     hasLeftNetworkTemplate
+            caseName:@"event-definition-catalog-round-trip"
+              reason:@"Client facade did not expose the generation-bound Network event definition catalog"];
+
+    NSString *createdNetworkEventName = nil;
+    if (definitionGeneration && networkProvider) {
+        createdNetworkEventName =
+            [activator la_createEventWithProviderIdentifier:@"network"
+                                         templateIdentifier:LAEventNameNetworkJoinedWiFi
+                                              configuration:@{@"NetworkName" : networkName}
+                                         expectedGeneration:definitionGeneration.unsignedIntegerValue];
+    }
+    NSDictionary<NSString *, id> *catalogAfterNetworkCreate = activator.la_eventDefinitionCreationCatalog;
+    NSNumber *generationAfterNetworkCreate =
+        [catalogAfterNetworkCreate[LAEventDefinitionCatalogGenerationKey] isKindOfClass:NSNumber.class]
+            ? catalogAfterNetworkCreate[LAEventDefinitionCatalogGenerationKey]
+            : nil;
+    [recorder
+          expect:[createdNetworkEventName isEqualToString:expectedNetworkEventName] &&
+                 generationAfterNetworkCreate.unsignedIntegerValue == definitionGeneration.unsignedIntegerValue + 1 &&
+                 [activator hasEventWithName:expectedNetworkEventName] &&
+                 [activator eventWithNameSupportsRemoval:expectedNetworkEventName]
+        caseName:@"event-definition-create-round-trip"
+          reason:@"Client facade did not atomically create and publish a Network exact event"];
+
+    LAEvent *createdNetworkEvent = [LAEvent eventWithName:expectedNetworkEventName mode:LAEventModeSpringBoard];
+    if ([activator hasEventWithName:expectedNetworkEventName]) {
+        [activator assignEvent:createdNetworkEvent toListenerWithName:nothingName];
+    }
+    BOOL staleNetworkRemoval =
+        definitionGeneration && [activator la_removeEventWithName:expectedNetworkEventName
+                                               expectedGeneration:definitionGeneration.unsignedIntegerValue];
+    [recorder expect:!staleNetworkRemoval && [activator hasEventWithName:expectedNetworkEventName] &&
+                     [[activator assignedListenerNamesForEvent:createdNetworkEvent] isEqualToArray:@[ nothingName ]]
+            caseName:@"event-definition-stale-remove-rejected"
+              reason:@"A stale client removal changed the Network definition or its assignment"];
+
+    BOOL removedNetworkEvent = generationAfterNetworkCreate &&
+                               [activator la_removeEventWithName:expectedNetworkEventName
+                                              expectedGeneration:generationAfterNetworkCreate.unsignedIntegerValue];
+    NSDictionary<NSString *, id> *catalogAfterNetworkRemoval = activator.la_eventDefinitionCreationCatalog;
+    [recorder expect:removedNetworkEvent && ![activator hasEventWithName:expectedNetworkEventName] &&
+                     [activator assignedListenerNamesForEvent:createdNetworkEvent].count == 0 &&
+                     [catalogAfterNetworkRemoval[LAEventDefinitionCatalogGenerationKey] unsignedIntegerValue] ==
+                         generationAfterNetworkCreate.unsignedIntegerValue + 1
+            caseName:@"event-definition-remove-round-trip"
+              reason:@"Client facade did not atomically remove the Network definition and its assignment"];
+    if ([activator hasEventWithName:expectedNetworkEventName]) {
+        [activator removeEventWithName:expectedNetworkEventName];
+    }
+
     NSString *legacyPreferenceKey = @"libactivator.tests.client.invalid-preference";
     id previousLegacyPreference = [activator _getObjectForPreference:legacyPreferenceKey];
     [activator _setObject:@"Original" forPreference:legacyPreferenceKey];

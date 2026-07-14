@@ -8,6 +8,8 @@
 
 #import <Activator/Activator.h>
 
+#import "LAEventDefinitionManaging.h"
+
 @class LARuntimeContext;
 
 NS_ASSUME_NONNULL_BEGIN
@@ -20,6 +22,11 @@ extern NSString *const LAActivatorEventRegistryChangedNotification;
 #pragma mark - Lifecycle
 
 - (void)startIPCServerIfNeeded;
+
+#pragma mark - Legacy Preferences
+
+- (nullable id)_getObjectForPreference:(NSString *)preference;
+- (void)_setObject:(nullable id)value forPreference:(NSString *)preference;
 
 #pragma mark - Runtime State
 
@@ -38,26 +45,14 @@ extern NSString *const LAActivatorEventRegistryChangedNotification;
 - (BOOL)la_applicationAccessibilityEnabled;
 - (BOOL)la_setApplicationAccessibilityEnabled:(BOOL)enabled;
 
-#pragma mark - Legacy Preferences
+#pragma mark - Event Delivery
 
-- (nullable id)_getObjectForPreference:(NSString *)preference;
-- (void)_setObject:(nullable id)value forPreference:(NSString *)preference;
+- (nullable NSData *)la_smallIconDataForListenerName:(NSString *)listenerName scale:(nullable CGFloat *)scale;
+- (void)la_sendEvent:(LAEvent *)event directlyToListenerWithName:(NSString *)listenerName abort:(BOOL)abort;
 
-#pragma mark - Listener And Event Registration
+#pragma mark - Listener Registry
 
 - (void)registerListener:(id<LAListener>)listener forName:(NSString *)name ignoreHasSeen:(BOOL)ignoreHasSeen;
-- (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
-- (void)la_beginEventRegistryMutation;
-- (void)la_endEventRegistryMutation;
-- (BOOL)la_registerEventDataSourceIfAbsent:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName;
-- (BOOL)la_unregisterEventDataSourceWithEventName:(NSString *)eventName
-                              ifOwnedByDataSource:(id<LAEventDataSource>)dataSource;
-
-#pragma mark - Event Configuration
-
-- (nullable NSDictionary<NSString *, NSString *> *)la_eventConfigurationDescriptorForEventName:(NSString *)eventName;
-- (nullable id)la_configurationForEventWithName:(NSString *)eventName;
-- (BOOL)la_saveConfiguration:(id)configuration forEventWithName:(NSString *)eventName;
 
 #pragma mark - Assignment Model
 
@@ -71,15 +66,35 @@ extern NSString *const LAActivatorEventRegistryChangedNotification;
 - (BOOL)la_debugResetAssignmentsAndNotifyIfChanged;
 #endif
 
-#pragma mark - Profiles And Blacklist
+#pragma mark - Event Registry
+
+- (nullable id<LAEventDataSource>)eventDataSourceForEventName:(NSString *)eventName;
+- (void)la_beginEventRegistryMutation;
+- (void)la_endEventRegistryMutation;
+- (BOOL)la_registerEventDataSourceIfAbsent:(id<LAEventDataSource>)dataSource forEventName:(NSString *)eventName;
+- (BOOL)la_unregisterEventDataSourceWithEventName:(NSString *)eventName
+                              ifOwnedByDataSource:(id<LAEventDataSource>)dataSource;
+
+#pragma mark - Event Configuration
+
+- (nullable NSDictionary<NSString *, NSString *> *)la_eventConfigurationDescriptorForEventName:(NSString *)eventName;
+- (nullable id)la_configurationForEventWithName:(NSString *)eventName;
+- (BOOL)la_saveConfiguration:(id)configuration forEventWithName:(NSString *)eventName;
+
+#pragma mark - Event Definitions
+
+- (void)la_setEventDefinitionManager:(nullable id<LAEventDefinitionManaging>)manager;
+- (nullable NSDictionary<NSString *, id> *)la_eventDefinitionCreationCatalog;
+- (nullable NSString *)la_createEventWithProviderIdentifier:(NSString *)providerIdentifier
+                                         templateIdentifier:(NSString *)templateIdentifier
+                                              configuration:(id)configuration
+                                         expectedGeneration:(NSUInteger)expectedGeneration;
+- (BOOL)la_removeEventWithName:(NSString *)eventName expectedGeneration:(NSUInteger)expectedGeneration;
+
+#pragma mark - Blacklist And Profiles
 
 - (BOOL)la_setApplicationWithDisplayIdentifier:(NSString *)displayIdentifier isBlacklisted:(BOOL)blacklisted;
 - (BOOL)la_setCurrentProfileName:(nullable NSString *)currentProfileName;
-
-#pragma mark - Event Dispatch Helpers
-
-- (nullable NSData *)la_smallIconDataForListenerName:(NSString *)listenerName scale:(nullable CGFloat *)scale;
-- (void)la_sendEvent:(LAEvent *)event directlyToListenerWithName:(NSString *)listenerName abort:(BOOL)abort;
 
 #pragma mark - Statistics
 

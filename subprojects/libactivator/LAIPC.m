@@ -17,6 +17,9 @@ NSString *const LAIPCMessageHasEvent = @"libactivator.request.has-event";
 NSString *const LAIPCMessageAvailableListenerNames = @"libactivator.request.available-listener-names";
 NSString *const LAIPCMessageHasListener = @"libactivator.request.has-listener";
 NSString *const LAIPCMessageHasSeenListener = @"libactivator.request.has-seen-listener";
+
+#pragma mark - Assignment Messages
+
 NSString *const LAIPCMessageAssignedListenerNames = @"libactivator.request.assigned-listener-names";
 NSString *const LAIPCMessageEventsAssignedToListener = @"libactivator.request.events-assigned-to-listener";
 NSString *const LAIPCMessageAssignEvent = @"libactivator.request.assign-event";
@@ -27,6 +30,15 @@ NSString *const LAIPCMessageUnassignEvent = @"libactivator.request.unassign-even
 NSString *const LAIPCMessageDebugAssignmentSnapshot = @"libactivator.debug.assignment-snapshot";
 NSString *const LAIPCMessageDebugResetAssignments = @"libactivator.debug.reset-assignments";
 #endif
+
+#pragma mark - Event Definition Messages
+
+NSString *const LAIPCMessageEventDefinitionCatalog = @"libactivator.request.event-definition-catalog";
+NSString *const LAIPCMessageCreateEventDefinition = @"libactivator.request.create-event-definition";
+NSString *const LAIPCMessageRemoveEventDefinition = @"libactivator.request.remove-event-definition";
+
+#pragma mark - Activator Configuration Messages
+
 NSString *const LAIPCMessageApplicationIsBlacklisted = @"libactivator.request.application-is-blacklisted";
 NSString *const LAIPCMessageSetApplicationBlacklisted = @"libactivator.request.set-application-blacklisted";
 NSString *const LAIPCMessageAvailableProfileNames = @"libactivator.request.available-profile-names";
@@ -108,6 +120,8 @@ NSString *const LAIPCMessageListenerSmallIconData = @"libactivator.request.liste
 NSString *const LAIPCMessageRequestListenerRemoval = @"libactivator.request.listener-request-removal";
 NSString *const LAIPCMessageRemoveEvent = @"libactivator.request.remove-event";
 
+#pragma mark - Testing Messages
+
 #if LIBACTIVATOR_TEST_SUPPORT
 NSString *const LAIPCMessageTesting = @"libactivator.testing";
 NSString *const LAIPCTestingCommandPing = @"ping";
@@ -119,6 +133,16 @@ NSString *const LAIPCTestingCommandRuntimeState = @"runtime-state";
 NSString *const LAIPCTestingCommandPrepareUserInfoProbe = @"prepare-user-info-probe";
 NSString *const LAIPCTestingCommandUserInfoProbeResult = @"user-info-probe-result";
 NSString *const LAIPCTestingCommandPrepareEventConfigurationProbe = @"prepare-event-configuration-probe";
+#endif
+
+#pragma mark - Diagnostics Messages
+
+#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
+NSString *const LAIPCMessageEventDispatchCounts = @"libactivator.request.event-dispatch-counts";
+NSString *const LAIPCMessageListenerReceiveCounts = @"libactivator.request.listener-receive-counts";
+NSString *const LAIPCMessageEventAbortCounts = @"libactivator.request.event-abort-counts";
+NSString *const LAIPCMessageListenerAbortCounts = @"libactivator.request.listener-abort-counts";
+NSString *const LAIPCMessageResetDispatchCounts = @"libactivator.request.reset-dispatch-counts";
 #endif
 
 #pragma mark - UserInfo Keys
@@ -143,6 +167,15 @@ NSString *const LAIPCKeyEventConfiguration = @"EventConfiguration";
 NSString *const LAIPCKeyEventConfigurationClassName = @"className";
 NSString *const LAIPCKeyEventConfigurationBundlePath = @"bundlePath";
 
+#pragma mark - Event Definition UserInfo Keys
+
+NSString *const LAIPCKeyEventDefinitionProviderIdentifier = @"EventDefinitionProviderIdentifier";
+NSString *const LAIPCKeyEventDefinitionTemplateIdentifier = @"EventDefinitionTemplateIdentifier";
+NSString *const LAIPCKeyEventDefinitionCreationConfiguration = @"EventDefinitionCreationConfiguration";
+NSString *const LAIPCKeyEventDefinitionExpectedGeneration = @"EventDefinitionExpectedGeneration";
+
+#pragma mark - Testing UserInfo Keys
+
 #if LIBACTIVATOR_TEST_SUPPORT
 NSString *const LAIPCKeyTestingCommand = @"TestingCommand";
 NSString *const LAIPCKeyTestingSuites = @"TestingSuites";
@@ -152,12 +185,4 @@ NSString *const LAIPCKeyTestingCaseCount = @"TestingCaseCount";
 NSString *const LAIPCKeyTestingPassCount = @"TestingPassCount";
 NSString *const LAIPCKeyTestingFailureCount = @"TestingFailureCount";
 NSString *const LAIPCKeyTestingSkipCount = @"TestingSkipCount";
-#endif
-
-#if DEBUG || LIBACTIVATOR_TEST_SUPPORT
-NSString *const LAIPCMessageEventDispatchCounts = @"libactivator.request.event-dispatch-counts";
-NSString *const LAIPCMessageListenerReceiveCounts = @"libactivator.request.listener-receive-counts";
-NSString *const LAIPCMessageEventAbortCounts = @"libactivator.request.event-abort-counts";
-NSString *const LAIPCMessageListenerAbortCounts = @"libactivator.request.listener-abort-counts";
-NSString *const LAIPCMessageResetDispatchCounts = @"libactivator.request.reset-dispatch-counts";
 #endif

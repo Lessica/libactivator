@@ -52,6 +52,8 @@
 // Caches
 @property(nonatomic, strong) LAListenerMetadataCache *listenerMetadataCache;
 
+@property(nonatomic, weak, nullable) id<LAEventDefinitionManaging> eventDefinitionManager;
+
 #if DEBUG || LIBACTIVATOR_TEST_SUPPORT
 // Dispatch diagnostics
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSNumber *> *eventDispatchCounts;
@@ -1418,6 +1420,75 @@ LAActivator *LASharedActivator;
     }
     [dataSource eventWithName:eventName didSaveNewConfiguration:propertyListConfiguration];
     return [self eventDataSourceForEventName:eventName] == dataSource;
+}
+
+#pragma mark - Event Definitions
+
+- (void)la_setEventDefinitionManager:(id<LAEventDefinitionManaging>)manager {
+    self.eventDefinitionManager = manager;
+}
+
+- (NSDictionary<NSString *, id> *)la_eventDefinitionCreationCatalog {
+    id<LAEventDefinitionManaging> manager = self.eventDefinitionManager;
+    if (manager) {
+        id catalog = [manager eventCreationCatalog];
+        return [LAIPCCodec isPropertyListValue:catalog] && [catalog isKindOfClass:NSDictionary.class]
+                   ? [LAIPCCodec propertyListValue:catalog]
+                   : nil;
+    }
+    if (!self.runningInsideSpringBoard) {
+        id catalog = [self.ipcClient propertyListValueForMessageName:LAIPCMessageEventDefinitionCatalog userInfo:nil];
+        return [catalog isKindOfClass:NSDictionary.class] ? catalog : nil;
+    }
+    return nil;
+}
+
+- (NSString *)la_createEventWithProviderIdentifier:(NSString *)providerIdentifier
+                                templateIdentifier:(NSString *)templateIdentifier
+                                     configuration:(id)configuration
+                                expectedGeneration:(NSUInteger)expectedGeneration {
+    if (providerIdentifier.length == 0 || templateIdentifier.length == 0 ||
+        ![LAIPCCodec isPropertyListValue:configuration]) {
+        return nil;
+    }
+    id propertyListConfiguration = [LAIPCCodec propertyListValue:configuration];
+    id<LAEventDefinitionManaging> manager = self.eventDefinitionManager;
+    if (manager) {
+        return [manager createEventWithProviderIdentifier:providerIdentifier
+                                       templateIdentifier:templateIdentifier
+                                            configuration:propertyListConfiguration
+                                       expectedGeneration:expectedGeneration];
+    }
+    if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{
+            LAIPCKeyEventDefinitionProviderIdentifier : providerIdentifier,
+            LAIPCKeyEventDefinitionTemplateIdentifier : templateIdentifier,
+            LAIPCKeyEventDefinitionCreationConfiguration : propertyListConfiguration,
+            LAIPCKeyEventDefinitionExpectedGeneration : @(expectedGeneration),
+        };
+        return [self.ipcClient stringValueForMessageName:LAIPCMessageCreateEventDefinition userInfo:userInfo];
+    }
+    return nil;
+}
+
+- (BOOL)la_removeEventWithName:(NSString *)eventName expectedGeneration:(NSUInteger)expectedGeneration {
+    if (eventName.length == 0) {
+        return NO;
+    }
+    id<LAEventDefinitionManaging> manager = self.eventDefinitionManager;
+    if (manager) {
+        return [manager removeEventWithName:eventName expectedGeneration:expectedGeneration];
+    }
+    if (!self.runningInsideSpringBoard) {
+        NSDictionary *userInfo = @{
+            LAIPCKeyEventName : eventName,
+            LAIPCKeyEventDefinitionExpectedGeneration : @(expectedGeneration),
+        };
+        return [self.ipcClient boolValueForMessageName:LAIPCMessageRemoveEventDefinition
+                                              userInfo:userInfo
+                                          defaultValue:NO];
+    }
+    return NO;
 }
 
 #pragma mark - Listener Metadata

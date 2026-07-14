@@ -173,13 +173,15 @@
               reason:@"Definition registry accepted two providers with the same identifier"];
 
     NSDictionary<NSString *, id> *catalog = [registry eventCreationCatalog];
-    NSArray *catalogProviders = catalog[@"Providers"];
+    NSArray *catalogProviders = catalog[LAEventDefinitionCatalogProvidersKey];
     BOOL validCatalog = [NSPropertyListSerialization propertyList:catalog
                                                  isValidForFormat:NSPropertyListBinaryFormat_v1_0];
-    [recorder expect:validCatalog && [catalog[@"Generation"] unsignedIntegerValue] == registry.generation &&
+    [recorder expect:validCatalog &&
+                     [catalog[LAEventDefinitionCatalogGenerationKey] unsignedIntegerValue] == registry.generation &&
                      catalogProviders.count == 1 &&
-                     [catalogProviders.firstObject[@"Identifier"] isEqualToString:@"testing"] &&
-                     [catalogProviders.firstObject[@"Templates"] count] == 1
+                     [catalogProviders.firstObject[LAEventDefinitionCatalogProviderIdentifierKey]
+                         isEqualToString:@"testing"] &&
+                     [catalogProviders.firstObject[LAEventDefinitionCatalogTemplatesKey] count] == 1
             caseName:@"definition-registry-exposes-property-list-creation-catalog"
               reason:@"Definition registry did not expose a generation-bound provider catalog"];
 
@@ -198,8 +200,8 @@
                             [registry providerForEventName:eventNameB] == provider &&
                             [mappedEventNames containsObject:eventNameB] &&
                             [activator eventDataSourceForEventName:eventNameB] == provider &&
-                            [registry.eventCreationCatalog[@"Generation"] unsignedIntegerValue] ==
-                                generationBeforeCreate + 1;
+                            [registry.eventCreationCatalog[LAEventDefinitionCatalogGenerationKey]
+                                unsignedIntegerValue] == generationBeforeCreate + 1;
                     }
                 }];
     NSString *createdEventName = [registry createEventWithProviderIdentifier:@"testing"
@@ -400,8 +402,13 @@
                                                        eventNames:[NSSet setWithObject:preownedEventName]];
     [activator registerEventDataSource:preownedProvider forEventName:preownedEventName];
     BOOL registeredPreownedProvider = [registry registerProvider:preownedProvider];
+    NSUInteger generationBeforePreownedRemoval = registry.generation;
+    BOOL rejectedPreownedRemoval =
+        ![registry removeEventWithName:preownedEventName expectedGeneration:generationBeforePreownedRemoval];
     BOOL unregisteredPreownedProvider = [registry unregisterProvider:preownedProvider];
-    [recorder expect:registeredPreownedProvider && unregisteredPreownedProvider &&
+    [recorder expect:registeredPreownedProvider && rejectedPreownedRemoval &&
+                     registry.generation == generationBeforePreownedRemoval + 1 && unregisteredPreownedProvider &&
+                     [preownedProvider.eventDefinitionNames containsObject:preownedEventName] &&
                      [activator eventDataSourceForEventName:preownedEventName] == preownedProvider
             caseName:@"definition-registry-does-not-adopt-preexisting-ownership"
               reason:@"Definition registry removed a definition owned before provider registration"];
@@ -592,6 +599,27 @@
         [activator setCurrentProfileName:@"Testing"];
         [activator assignEvent:specificEvent toListenerWithName:specificListenerName];
         [activator setCurrentProfileName:@"Default"];
+        NSUInteger generationBeforeFailedRemoval = definitionRegistry.generation;
+        delegate.failNextApply = YES;
+        BOOL rejectedFailedRemoval = ![definitionRegistry removeEventWithName:configuredEventName
+                                                           expectedGeneration:generationBeforeFailedRemoval];
+        BOOL defaultAssignmentSurvivedFailedRemoval =
+            [[activator assignedListenerNamesForEvent:specificEvent] isEqualToArray:@[ specificListenerName ]];
+        [activator setCurrentProfileName:@"Testing"];
+        BOOL testingAssignmentSurvivedFailedRemoval =
+            [[activator assignedListenerNamesForEvent:specificEvent] isEqualToArray:@[ specificListenerName ]];
+        [activator setCurrentProfileName:@"Default"];
+        NSArray *persistedEventNamesAfterFailedRemoval = [activator _getObjectForPreference:networkPreferenceKey];
+        [recorder expect:rejectedFailedRemoval && definitionRegistry.generation == generationBeforeFailedRemoval &&
+                         defaultAssignmentSurvivedFailedRemoval && testingAssignmentSurvivedFailedRemoval &&
+                         [provider.configuredEventNames containsObject:configuredEventName] &&
+                         [source.configuredEventNames containsObject:configuredEventName] &&
+                         [definitionRegistry providerForEventName:configuredEventName] == provider &&
+                         [sourceRegistry eventSourcesForEventName:configuredEventName].firstObject == source &&
+                         [activator eventDataSourceForEventName:configuredEventName] == provider &&
+                         [persistedEventNamesAfterFailedRemoval containsObject:configuredEventName]
+                caseName:@"network-provider-failed-remove-preserves-definition-and-assignments"
+                  reason:@"A failed Network removal changed definition state or deleted assignments"];
         BOOL removed = [definitionRegistry removeEventWithName:configuredEventName
                                             expectedGeneration:definitionRegistry.generation];
         BOOL defaultProfileAssignmentRemoved = [activator assignedListenerNamesForEvent:specificEvent].count == 0;

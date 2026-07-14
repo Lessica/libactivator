@@ -15,11 +15,13 @@
 
 `LAActivator` 是三层之外的核心总线，保存 definition/listener mapping、assignment，并负责 configuration bridge 与最终 dispatch。Tweak-side adapter 通过注入的窄协议使用这些能力，不直接取得 `LASharedActivator`；`LATEventDefinitionRegistry` 不发送事件，`LATEventSourceRegistry` 不注册、拥有或删除 definition。
 
+Dynamic definition 的产品配置面由 production `LAEventDefinitionManaging` typed contract、`LAActivator` 私有 facade 与 generation-bound catalog/create/remove IPC 组成。`LATBuiltInRegistry` 在 SpringBoard 内把已完成 source/provider/binding 组合的 `LATEventDefinitionRegistry` 接到 facade；SpringBoard 内调用直达 manager，其他进程中的 facade 通过 production IPC 访问同一 authoritative registry。后续 Settings UI 直接复用这一路径；当前 `activator debug event-definitions` 只是受 `DEBUG` 隔离的临时前端，不是单独的测试 backend。
+
 ## 1.9.13 证据与现代取舍
 
 1.9.13 解混淆产物 `ActivatorSpringBoard.arm64.decrypted.i64` 证明旧版已经区分三类能力：`LADefaultEventDataSource` 提供静态 catalog；私有 `LAMetaEventDataSource` 通过 `activator:supportsEventName:` / `activator:addAvailableEventNamesToArray:` 暴露 concrete dynamic definitions；私有 `LAEventEmitter` 通过 configuration controller 和 `eventEmitterWithName:shouldAddNewEventWithConfiguration:` 创建新 event。`_LAActivator` 另有 emitter registry、通用创建入口和 existing-event configuration get/save。
 
-Network、Application、Mail、Notification、Scheduled、Battery Level data source 使用了这些动态能力。当前 rewrite 借鉴其一等 provider catalog、创建与 concrete definition 分层，不恢复 runtime class enumeration、全局 UIKit 注入或旧对象布局。内置 Event Source 使用中央显式 class 清单；这里的固定清单只定义 acquisition family 的成员与构造顺序，不限制 provider 在运行期创建、配置和删除 concrete definitions。
+Concrete class inventory 进一步确认 15 个 dynamic/meta event data source：Network、Bluetooth、Touch ID、Application Launch、Icon Flick 四向、Icon Hold、Icon 3D Touch、Icon Double Tap、Mail、Notification、Scheduled 与 Battery Level。除 Bluetooth、Touch ID 根据系统状态发布 catalog 外，其余 13 个 family 都有用户创建 concrete event 的 emitter 路径。当前 rewrite 借鉴其一等 provider catalog、创建与 concrete definition 分层，不恢复 runtime class enumeration、全局 UIKit 注入或旧对象布局。内置 Event Source 使用中央显式 class 清单；这里的固定清单只定义 acquisition family 的成员与构造顺序，不限制 provider 在运行期创建、配置和删除 concrete definitions。
 
 ## Dynamic Definition Provider
 
@@ -38,6 +40,7 @@ Network、Application、Mail、Notification、Scheduled、Battery Level data sou
 
 - 注册时拒绝重复 provider identifier、同一 provider 同时附着多个 registry、非法 template descriptor 和 bundled/foreign owner 冲突；definition/acquisition binding delegate 必须在首个 provider 注册前设置，并在 provider catalog 非空期间保持稳定。
 - `eventCreationCatalog` 返回 generation-bound property list；通用 create、existing-event configuration read/save 和 remove 都要求 expected generation。
+- Catalog 的 `Generation` 是跨进程乐观并发 token，调用方不解读其数值，只在随后 mutation 中原样传回；旧 generation 必须失败且不改变 provider、definition、binding、persistence 或 assignment，Settings UI 与 DEBUG CLI 都应刷新 catalog 后重试。
 - Registry 只回收自己实际创建、且仍由原 data source 持有的 definition；同一 data source 预先注册的 definition 不会被接管。
 - Public API replacement 改变同名 definition owner 时，registry 通过进程内 event-registry notification 立即撤销 active provider mapping，并由 binding delegate 撤销 exact producer mapping；provider 的持久 declared snapshot 保留。Foreign owner 移除后，registry 会重新发布仍声明的 definition。
 - 已声明但被 foreign owner 接管的 name 保持 declared/inactive，不会阻塞同一 provider 新增或删除其他 name；只有本次新增的 declaration 遇到 foreign owner 才拒绝整个 mutation。
@@ -81,9 +84,11 @@ Hook glue 与 listener 通过 `LATBuiltInRegistry -eventSourcesConformingToProto
 
 ## Network 垂直切片
 
-`LATNetworkEventDataSource` 是首个 `LATEventDefinitionProvider`。它从 `LANetworkStatusEvents` 恢复显式配置的 `joined-wifi.SSID` / `left-wifi.SSID`，提供 joined/left creation templates、stable exact name、metadata、removal 和持久化；它不持有 `LATNetworkEventSource` 或 `LATEventSourceRegistry`。
+`LATNetworkEventDataSource` 是首个 `LATEventDefinitionProvider`。它从 `LANetworkStatusEvents` 恢复显式配置的 `joined-wifi.SSID` / `left-wifi.SSID`，提供 joined/left creation templates、stable exact name、metadata、removal 和持久化；它不持有 `LATNetworkEventSource` 或 `LATEventSourceRegistry`。这里的 `DataSource` 沿用 Public `LAEventDataSource` 对 definition metadata/configuration owner 的命名语义，并不表示系统信号采集，因此放在 `events/definitions` 而不是 `events/sources`。
 
 `LATNetworkEventSource` 通过统一 initializer 构造，并由 optional provider hook 创建 `LATNetworkEventDataSource`；中央注册流程为二者建立 definition binding。Binding delegate 在 definition-registry 事务内把 provider active snapshot 应用给 source 并 reload producer mapping；Source 只把该 snapshot 视作能够产生的 exact-name mapping。没有 active exact definition 时直接发送 base event，有 exact definition 时先发送 exact event，未 handled 再 fallback 到 base event；删除时先从 producer mapping 移除 exact name，再注销 definition，base Network producer 始终保留。
+
+该垂直切片已有 SpringBoard 内部 provider/registry/binding/acquisition、production typed manager/facade/IPC 与 stable tests，并提供受 `DEBUG` 隔离的 CLI 临时前端。Settings creation UI 仍未实现，“跨进程 catalog/create → 配置 assignment → SSID 变化 → exact handled/base fallback → remove 清理”的真机手工端到端验收也尚未执行；base joined/left event 的验收不能替代这项动态配置验收。
 
 当前 binding contract 是 provider/source 一对一。若未来多个 provider 共享同一个 acquisition engine，必须先引入按 provider 分片并求 union 的 binding 类型；不能直接放宽一对一校验，否则任一 provider mutation 会覆盖另一 provider 的 producer mapping。
 
@@ -107,7 +112,7 @@ Hook glue 与 listener 通过 `LATBuiltInRegistry -eventSourcesConformingToProto
 
 ## 尚未完成
 
-- Settings host 尚未接入跨进程 provider catalog/create bridge 和 creation UI；当前 generation-bound catalog/create API 只存在于 SpringBoard 内部 registry。
+- Settings host 尚未消费 production dynamic provider facade/IPC，creation UI 也未实现；跨进程 generation-bound catalog/create/remove 产品配置路径已存在，当前只由 DEBUG CLI 作为临时前端暴露给手工验收。
 - Existing-event descriptor/get/save 已有 IPC，但 Settings controller 长时间存活时仍需把 definition-registry generation 作为 opaque token 带过 IPC 并在保存时校验。
 - Handled-default interception 仍是独立设计任务。
-- 当前尚未完成验收的 13 个 1.9.13 event 仍逐 family 推进，不因本次架构拆分改变状态。
+- 当前尚未完成验收的 8 个可用 bundled 1.9.13 static event 与逆向补出的动态 event definition family 分开推进；不能再用静态资源数量代表完整 event inventory。
